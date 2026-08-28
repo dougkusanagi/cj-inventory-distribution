@@ -31,7 +31,7 @@ class ProductController extends Controller
 
         $products = Product::query()
             ->select(['id', 'code', 'model', 'name', 'image_path', 'notes', 'created_at', 'updated_at'])
-            ->with('variants:id,product_id,size,sort_order')
+            ->with(['variants:id,product_id,size,sort_order', 'latestOffer.items'])
             ->latest()
             ->paginate(12);
 
@@ -76,7 +76,7 @@ class ProductController extends Controller
         Gate::authorize('update', $product);
 
         return Inertia::render('products/edit', [
-            'product' => ProductResource::make($product->load('variants'))->resolve(),
+            'product' => ProductResource::make($product->load(['variants', 'latestOffer.items']))->resolve(),
         ]);
     }
 

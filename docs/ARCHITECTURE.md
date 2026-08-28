@@ -159,24 +159,31 @@ Campos sugeridos:
 id
 stock_offer_id
 product_variant_id
+is_active
 quantity nullable
 created_at
 updated_at
 ```
 
-### Quantidade por tamanho
+### Tamanho presente e quantidade por tamanho
 
-É opcional.
+`is_active` registra se aquele tamanho está presente no lote da oferta. Essa
+informação é independente da quantidade e pode ser usada mesmo quando o
+estoquista não souber ou não quiser informar números.
+
+Quando `is_active` é `false`, o tamanho não deve aparecer como disponível para
+as vendedoras e sua quantidade deve permanecer nula. Quando é `true`, a
+quantidade continua opcional.
 
 Isso permite casos como:
 
 ```text
 Estoque total: 30
 
-34: 4
-36: desconhecido
-38: 8
-40: desconhecido
+34: presente, 4
+36: presente, desconhecido
+38: ausente
+40: presente, desconhecido
 ```
 
 O sistema não deve exigir que a soma das quantidades conhecidas seja igual ao estoque total quando existirem valores desconhecidos.

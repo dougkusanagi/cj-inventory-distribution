@@ -3,7 +3,9 @@
 namespace App\Actions\Products;
 
 use App\Models\Product;
+use App\Models\ProductVariant;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -13,6 +15,7 @@ class CreateProduct
 {
     public function __construct(
         private readonly StoreProductImage $storeProductImage,
+        private readonly SyncProductStockOffer $syncProductStockOffer,
     ) {}
 
     /**
@@ -40,9 +43,10 @@ class CreateProduct
                     'code' => 'CJ-'.str_pad((string) $product->id, 6, '0', STR_PAD_LEFT),
                 ]);
 
-                $this->syncVariants($product, $data['variants'] ?? []);
+                $createdVariants = $this->syncVariants($product, $data['variants'] ?? []);
+                $this->syncProductStockOffer->handle($product, $createdVariants, $data);
 
-                return $product->load('variants');
+                return $product->load(['variants', 'latestOffer.items']);
             });
         } catch (Throwable $exception) {
             if ($imagePath !== null) {
@@ -66,18 +70,18 @@ class CreateProduct
     /**
      * Replace the product's size variants in their display order.
      *
-     * @param  array<int, array{size: string}>  $variants
+     * @param  array<int, array{size: string, quantity?: int|null, is_active?: bool}>  $variants
+     * @return Collection<int, ProductVariant>
      */
-    private function syncVariants(Product $product, array $variants): void
+    private function syncVariants(Product $product, array $variants): Collection
     {
-        $product->variants()->createMany(
-            collect($variants)
-                ->values()
-                ->map(fn (array $variant, int $index): array => [
+        return collect($variants)
+            ->values()
+            ->map(function (array $variant, int $index) use ($product) {
+                return $product->variants()->create([
                     'size' => $variant['size'],
                     'sort_order' => $index,
-                ])
-                ->all(),
-        );
+                ]);
+            });
     }
 }

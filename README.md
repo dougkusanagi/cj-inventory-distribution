@@ -63,6 +63,7 @@ Ela guarda:
 
 - tipo: `Reposição`, `Grade Nova` ou `Grade Furada`
 - estoque total obrigatório
+- tamanhos presentes naquele lote, quando informados
 - quantidades opcionais por tamanho
 - status ativo/inativo
 

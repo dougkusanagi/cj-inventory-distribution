@@ -1,7 +1,9 @@
 <?php
 
+use App\Enums\StockOfferType;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\StockOffer;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -36,6 +38,16 @@ test('authenticated users can view the product catalog', function () {
 test('authenticated users can open the product forms', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
+    $variant = $product->variants()->create(['size' => 'M', 'sort_order' => 0]);
+    $offer = $product->offers()->create([
+        'type' => StockOfferType::NewGrade,
+        'total_quantity' => 8,
+    ]);
+    $offer->items()->create([
+        'product_variant_id' => $variant->id,
+        'quantity' => 8,
+        'is_active' => true,
+    ]);
 
     $this->actingAs($user)
         ->get(route('products.create'))
@@ -49,21 +61,53 @@ test('authenticated users can open the product forms', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('products/edit')
-            ->where('product.id', $product->id),
+            ->where('product.id', $product->id)
+            ->where('product.variants.0.is_active', true)
+            ->where('product.variants.0.quantity', 8),
         );
 });
 
-test('authenticated users can create a product with optional model and ordered sizes', function () {
+test('authenticated users can create a product with optional model, ordered sizes and stock', function () {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->post(route('products.store'), [
         'name' => '  Jaqueta Jeans Oversized  ',
         'model' => '  ',
         'notes' => 'Lavagem média',
+        'total_quantity' => 15,
         'variants' => [
-            ['size' => 'P'],
-            ['size' => 'M'],
-            ['size' => 'G'],
+            ['size' => 'P', 'quantity' => 5, 'is_active' => true],
+            ['size' => 'M', 'quantity' => 5, 'is_active' => true],
+            ['size' => 'G', 'quantity' => 5, 'is_active' => true],
+        ],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $product = Product::query()->with(['variants', 'latestOffer.items'])->sole();
+
+    $this->assertModelExists($product);
+    expect($product->code)->toBe('CJ-000001');
+    expect($product->name)->toBe('Jaqueta Jeans Oversized');
+    expect($product->model)->toBeNull();
+    expect($product->variants()->pluck('size')->all())->toBe(['P', 'M', 'G']);
+    expect($product->latestOffer)->not->toBeNull();
+    expect($product->latestOffer->total_quantity)->toBe(15);
+    expect($product->latestOffer->type)->toBe(StockOfferType::NewGrade);
+    expect($product->latestOffer->items->pluck('is_active')->all())->toBe([true, true, true]);
+    expect($product->latestOffer->items->pluck('quantity')->all())->toBe([5, 5, 5]);
+});
+
+test('authenticated users can create a product without any stock (stock is optional)', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->post(route('products.store'), [
+        'name' => 'Calça Mom Básica',
+        'variants' => [
+            ['size' => '36', 'quantity' => null, 'is_active' => false],
+            ['size' => '38', 'quantity' => null, 'is_active' => false],
         ],
     ]);
 
@@ -72,12 +116,31 @@ test('authenticated users can create a product with optional model and ordered s
         ->assertRedirect(route('products.index'));
 
     $product = Product::query()->sole();
+    expect($product->offers()->count())->toBe(0);
+});
 
-    $this->assertModelExists($product);
-    expect($product->code)->toBe('CJ-000001');
-    expect($product->name)->toBe('Jaqueta Jeans Oversized');
-    expect($product->model)->toBeNull();
-    expect($product->variants()->pluck('size')->all())->toBe(['P', 'M', 'G']);
+test('authenticated users can save which sizes are present without quantities', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->post(route('products.store'), [
+        'name' => 'Blusa de malha',
+        'variants' => [
+            ['size' => 'P', 'is_active' => true],
+            ['size' => 'M', 'is_active' => false],
+            ['size' => 'G', 'is_active' => true],
+        ],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $product = Product::query()->with('latestOffer.items')->sole();
+
+    expect($product->latestOffer)->not->toBeNull();
+    expect($product->latestOffer->total_quantity)->toBe(0);
+    expect($product->latestOffer->items->pluck('is_active')->all())->toBe([true, false, true]);
+    expect($product->latestOffer->items->pluck('quantity')->all())->toBe([null, null, null]);
 });
 
 test('product creation returns validation errors and does not persist invalid data', function () {
@@ -85,15 +148,18 @@ test('product creation returns validation errors and does not persist invalid da
 
     $response = $this->actingAs($user)->from(route('products.create'))->post(route('products.store'), [
         'name' => '   ',
+        'total_quantity' => -5,
         'variants' => [
-            ['size' => 'M'],
-            ['size' => 'M'],
+            ['size' => 'M', 'quantity' => -2],
+            ['size' => 'M', 'quantity' => 3],
         ],
     ]);
 
     $response
         ->assertSessionHasErrors([
             'name' => 'Informe o nome do produto.',
+            'total_quantity' => 'O estoque total não pode ser negativo.',
+            'variants.0.quantity' => 'A quantidade por tamanho não pode ser negativa.',
             'variants.1.size' => 'Os tamanhos precisam ser diferentes.',
         ])
         ->assertRedirect(route('products.create'));
@@ -116,7 +182,7 @@ test('product creation rejects non-image uploads', function () {
     expect(Product::query()->count())->toBe(0);
 });
 
-test('authenticated users can update product details and sizes without changing its code', function () {
+test('authenticated users can update product details, sizes and stock without changing its code', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create([
         'name' => 'Nome anterior',
@@ -129,9 +195,10 @@ test('authenticated users can update product details and sizes without changing 
         'name' => 'Short Mom',
         'model' => '3002',
         'notes' => 'Nova observação',
+        'total_quantity' => 20,
         'variants' => [
-            ['size' => '36'],
-            ['size' => '38'],
+            ['size' => '36', 'quantity' => 10, 'is_active' => true],
+            ['size' => '38', 'quantity' => null, 'is_active' => false],
         ],
     ]);
 
@@ -144,6 +211,40 @@ test('authenticated users can update product details and sizes without changing 
     expect($product->name)->toBe('Short Mom');
     expect($product->model)->toBe('3002');
     expect($product->variants()->pluck('size')->all())->toBe(['36', '38']);
+    expect($product->latestOffer->total_quantity)->toBe(20);
+    expect($product->latestOffer->items->pluck('is_active')->all())->toBe([true, false]);
+    expect($product->latestOffer->items->pluck('quantity')->all())->toBe([10, null]);
+});
+
+test('updating a product without stock deactivates its previous offer', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $variant = $product->variants()->create(['size' => 'M', 'sort_order' => 0]);
+    $offer = $product->offers()->create([
+        'type' => StockOfferType::NewGrade,
+        'total_quantity' => 10,
+    ]);
+    $offer->items()->create([
+        'product_variant_id' => $variant->id,
+        'quantity' => 10,
+        'is_active' => true,
+    ]);
+
+    $response = $this->actingAs($user)->put(route('products.update', $product), [
+        'name' => $product->name,
+        'variants' => [
+            ['size' => 'M', 'quantity' => null, 'is_active' => false],
+        ],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $offer->refresh();
+    expect($offer->is_active)->toBeFalse();
+    expect($offer->total_quantity)->toBe(0);
+    expect($offer->items()->count())->toBe(0);
 });
 
 test('product images can be replaced and removed', function () {
@@ -184,14 +285,16 @@ test('product images can be replaced and removed', function () {
     Storage::disk('public')->assertMissing($replacedImagePath);
 });
 
-test('authenticated users can delete a product with its variants and image', function () {
+test('authenticated users can delete a product with its variants, stock offer and image', function () {
     Storage::fake('public');
 
     $user = User::factory()->create();
     $imagePath = 'products/delete-me.jpg';
     Storage::disk('public')->put($imagePath, 'image');
     $product = Product::factory()->create(['image_path' => $imagePath]);
-    $product->variants()->create(['size' => 'M', 'sort_order' => 0]);
+    $variant = $product->variants()->create(['size' => 'M', 'sort_order' => 0]);
+    $offer = $product->offers()->create(['type' => StockOfferType::NewGrade, 'total_quantity' => 10]);
+    $offer->items()->create(['product_variant_id' => $variant->id, 'quantity' => 10]);
 
     $response = $this->actingAs($user)->delete(route('products.destroy', $product));
 
@@ -201,5 +304,6 @@ test('authenticated users can delete a product with its variants and image', fun
 
     $this->assertModelMissing($product);
     expect(ProductVariant::query()->where('product_id', $product->id)->exists())->toBeFalse();
+    expect(StockOffer::query()->where('product_id', $product->id)->exists())->toBeFalse();
     Storage::disk('public')->assertMissing($imagePath);
 });

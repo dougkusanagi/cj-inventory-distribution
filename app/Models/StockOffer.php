@@ -1,0 +1,61 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\StockOfferType;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
+
+/**
+ * @property int $id
+ * @property int $product_id
+ * @property StockOfferType $type
+ * @property int $total_quantity
+ * @property bool $is_active
+ * @property string|null $notes
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
+#[Fillable(['product_id', 'type', 'total_quantity', 'is_active', 'notes'])]
+class StockOffer extends Model
+{
+    use HasFactory;
+
+    /**
+     * Get the product that owns the stock offer.
+     *
+     * @return BelongsTo<Product, $this>
+     */
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * Get the items detailing stock per variant.
+     *
+     * @return HasMany<StockOfferItem, $this>
+     */
+    public function items(): HasMany
+    {
+        return $this->hasMany(StockOfferItem::class);
+    }
+
+    /**
+     * Get the model's attribute casts.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'type' => StockOfferType::class,
+            'total_quantity' => 'integer',
+            'is_active' => 'boolean',
+        ];
+    }
+}

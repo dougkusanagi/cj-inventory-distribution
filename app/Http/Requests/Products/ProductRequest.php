@@ -22,20 +22,27 @@ abstract class ProductRequest extends FormRequest
     {
         $name = $this->input('name');
         $model = $this->input('model');
+        $totalQuantity = $this->input('total_quantity');
         $inputVariants = $this->input('variants', []);
         $inputVariants = is_array($inputVariants) ? $inputVariants : [];
         $variants = [];
 
         foreach ($inputVariants as $variant) {
             $size = is_array($variant) ? ($variant['size'] ?? '') : '';
+            $quantity = is_array($variant) ? ($variant['quantity'] ?? null) : null;
+            $isActive = is_array($variant) ? ($variant['is_active'] ?? true) : true;
+
             $variants[] = [
                 'size' => is_string($size) ? Str::squish($size) : '',
+                'quantity' => $quantity === '' || $quantity === null ? null : $quantity,
+                'is_active' => $isActive,
             ];
         }
 
         $this->merge([
             'name' => is_string($name) ? Str::squish($name) : $name,
             'model' => is_string($model) ? Str::squish($model) ?: null : $model,
+            'total_quantity' => $totalQuantity === '' || $totalQuantity === null ? null : $totalQuantity,
             'variants' => $variants,
         ]);
     }
@@ -51,9 +58,12 @@ abstract class ProductRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'total_quantity' => ['nullable', 'integer', 'min:0'],
             'variants' => ['nullable', 'array', 'max:50'],
-            'variants.*' => ['array:size'],
+            'variants.*' => ['array:size,quantity,is_active'],
             'variants.*.size' => ['required', 'string', 'max:30', 'distinct'],
+            'variants.*.quantity' => ['nullable', 'integer', 'min:0'],
+            'variants.*.is_active' => ['required', 'boolean'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'remove_image' => ['sometimes', 'boolean'],
         ];
@@ -71,10 +81,15 @@ abstract class ProductRequest extends FormRequest
             'name.max' => 'O nome do produto deve ter no máximo 255 caracteres.',
             'model.max' => 'O modelo deve ter no máximo 100 caracteres.',
             'notes.max' => 'A observação deve ter no máximo 5.000 caracteres.',
+            'total_quantity.integer' => 'O estoque total deve ser um número.',
+            'total_quantity.min' => 'O estoque total não pode ser negativo.',
             'variants.max' => 'Cadastre no máximo 50 tamanhos.',
             'variants.*.size.required' => 'Informe o tamanho ou remova esta linha.',
             'variants.*.size.max' => 'O tamanho deve ter no máximo 30 caracteres.',
             'variants.*.size.distinct' => 'Os tamanhos precisam ser diferentes.',
+            'variants.*.quantity.integer' => 'A quantidade por tamanho deve ser um número.',
+            'variants.*.quantity.min' => 'A quantidade por tamanho não pode ser negativa.',
+            'variants.*.is_active.boolean' => 'Informe se o tamanho está disponível neste lote.',
             'image.image' => 'Envie uma imagem válida.',
             'image.mimes' => 'A foto deve estar em JPG, PNG ou WebP.',
             'image.max' => 'A foto deve ter no máximo 5 MB.',

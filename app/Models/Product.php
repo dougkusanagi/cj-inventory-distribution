@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -33,5 +34,27 @@ class Product extends Model
     public function variants(): HasMany
     {
         return $this->hasMany(ProductVariant::class)->orderBy('sort_order');
+    }
+
+    /**
+     * Get all stock offers for the product.
+     *
+     * @return HasMany<StockOffer, $this>
+     */
+    public function offers(): HasMany
+    {
+        return $this->hasMany(StockOffer::class);
+    }
+
+    /**
+     * Get the latest active stock offer for the product.
+     *
+     * @return HasOne<StockOffer, $this>
+     */
+    public function latestOffer(): HasOne
+    {
+        return $this->hasOne(StockOffer::class)
+            ->where('is_active', true)
+            ->latestOfMany();
     }
 }

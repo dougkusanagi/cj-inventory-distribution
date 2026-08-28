@@ -1,7 +1,9 @@
 export type ProductVariant = {
-    id: number;
+    id?: number;
     size: string;
-    sort_order: number;
+    sort_order?: number;
+    is_active?: boolean;
+    quantity?: number | null;
 };
 
 export type Product = {
@@ -11,6 +13,7 @@ export type Product = {
     name: string;
     image_url: string | null;
     notes: string | null;
+    total_quantity?: number | null;
     variants: ProductVariant[];
     created_at: string | null;
     updated_at: string | null;

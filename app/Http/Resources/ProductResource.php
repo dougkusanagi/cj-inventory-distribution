@@ -20,6 +20,11 @@ class ProductResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $offer = $this->relationLoaded('latestOffer') ? $this->latestOffer : null;
+        $itemsByVariant = $offer && $offer->relationLoaded('items')
+            ? $offer->items->keyBy('product_variant_id')
+            : collect();
+
         return [
             'id' => $this->id,
             'code' => $this->code,
@@ -29,12 +34,19 @@ class ProductResource extends JsonResource
                 ? Storage::disk('public')->url($this->image_path)
                 : null,
             'notes' => $this->notes,
+            'total_quantity' => $offer?->total_quantity,
             'variants' => $this->whenLoaded('variants', fn () => $this->variants
-                ->map(fn (ProductVariant $variant): array => [
-                    'id' => $variant->id,
-                    'size' => $variant->size,
-                    'sort_order' => $variant->sort_order,
-                ])
+                ->map(function (ProductVariant $variant) use ($itemsByVariant): array {
+                    $stockItem = $itemsByVariant->get($variant->id);
+
+                    return [
+                        'id' => $variant->id,
+                        'size' => $variant->size,
+                        'sort_order' => $variant->sort_order,
+                        'is_active' => $stockItem?->is_active ?? false,
+                        'quantity' => $stockItem?->is_active ? $stockItem->quantity : null,
+                    ];
+                })
                 ->values()),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),

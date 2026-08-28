@@ -31,3 +31,4 @@ ADRs iniciais:
 - [0001 — Produto e variações de tamanho](0001-product-and-size-variants.md)
 - [0002 — Modelo opcional e código interno automático](0002-optional-model-and-generated-code.md)
 - [0003 — Classificação pertence à oferta de estoque](0003-stock-type-belongs-to-offer.md)
+- [0004 — Disponibilidade de tamanhos na oferta de estoque](0004-stock-offer-size-availability.md)

@@ -3,7 +3,9 @@
 namespace App\Actions\Products;
 
 use App\Models\Product;
+use App\Models\ProductVariant;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
@@ -12,6 +14,7 @@ class UpdateProduct
 {
     public function __construct(
         private readonly StoreProductImage $storeProductImage,
+        private readonly SyncProductStockOffer $syncProductStockOffer,
     ) {}
 
     /**
@@ -41,23 +44,13 @@ class UpdateProduct
 
                 $product->variants()->delete();
 
-                $variants = $data['variants'] ?? [];
-                $variants = is_array($variants) ? $variants : [];
-                $sortOrder = 0;
+                $rawVariants = $data['variants'] ?? [];
+                $rawVariants = is_array($rawVariants) ? $rawVariants : [];
+                $createdVariants = $this->syncVariants($product, $rawVariants);
 
-                foreach ($variants as $variant) {
-                    if (! is_array($variant) || ! is_string($variant['size'] ?? null)) {
-                        continue;
-                    }
+                $this->syncProductStockOffer->handle($product, $createdVariants, $data);
 
-                    $product->variants()->create([
-                        'size' => $variant['size'],
-                        'sort_order' => $sortOrder,
-                    ]);
-                    $sortOrder++;
-                }
-
-                return $product->load('variants');
+                return $product->load(['variants', 'latestOffer.items']);
             });
 
             if ($oldImagePath !== $newImagePath && $oldImagePath !== null) {
@@ -72,5 +65,23 @@ class UpdateProduct
 
             throw $exception;
         }
+    }
+
+    /**
+     * Replace the product's size variants in their display order.
+     *
+     * @param  array<int, array{size: string, quantity?: int|null, is_active?: bool}>  $variants
+     * @return Collection<int, ProductVariant>
+     */
+    private function syncVariants(Product $product, array $variants): Collection
+    {
+        return collect($variants)
+            ->values()
+            ->map(function (array $variant, int $index) use ($product) {
+                return $product->variants()->create([
+                    'size' => $variant['size'],
+                    'sort_order' => $index,
+                ]);
+            });
     }
 }
