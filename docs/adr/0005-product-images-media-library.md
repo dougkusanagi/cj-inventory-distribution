@@ -17,8 +17,11 @@ Media Library, no disco público, com limite de cinco itens. Cada imagem terá
 uma conversão síncrona thumb em WebP para uso nas listas.
 
 O formulário envia novas imagens em images[] e os IDs removidos em
-remove_media_ids[]. A imagem original permanece disponível para o formulário
-e a conversão é usada quando a velocidade de carregamento for prioritária.
+remove_media_ids[]. A ordem da coleção é persistida no order_column da
+biblioteca: a primeira imagem é a principal. Para atualizações, o formulário
+também envia image_order[] para preservar a posição de imagens existentes e
+novas. A imagem original permanece disponível para o formulário e a conversão
+é usada quando a velocidade de carregamento for prioritária.
 
 ## Consequências
 

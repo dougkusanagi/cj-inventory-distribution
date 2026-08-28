@@ -1,4 +1,12 @@
-import { Camera, ImagePlus, Pencil, Trash2 } from 'lucide-react';
+import {
+    Camera,
+    ChevronLeft,
+    ChevronRight,
+    ChevronsLeft,
+    ImagePlus,
+    Pencil,
+    Trash2,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import InputError from '@/components/input-error';
@@ -9,12 +17,14 @@ import { cn } from '@/lib/utils';
 import type { ProductImage } from '@/types';
 
 const MAX_IMAGES = 5;
+const EXISTING_IMAGE_PREFIX = 'existing:';
+const NEW_IMAGE_PREFIX = 'new:';
 
 type ProductImageUploaderProps = {
     value: File[];
     existingImages?: ProductImage[];
     error?: string;
-    onChange: (files: File[]) => void;
+    onChange: (files: File[], imageOrder: string[]) => void;
     onRemoveExisting: (id: number) => void;
     onProcessingChange?: (processing: boolean) => void;
 };
@@ -25,6 +35,20 @@ type NewImageItem = {
     sourceFile: File;
     previewUrl: string;
 };
+
+type ExistingGalleryItem = {
+    key: string;
+    kind: 'existing';
+    image: ProductImage;
+};
+
+type NewGalleryItem = {
+    key: string;
+    kind: 'new';
+    image: NewImageItem;
+};
+
+type GalleryItem = ExistingGalleryItem | NewGalleryItem;
 
 export function ProductImageUploader({
     value,
@@ -45,7 +69,10 @@ export function ProductImageUploader({
             previewUrl: '',
         })),
     );
-    const [selectedIndex, setSelectedIndex] = useState(0);
+    const [galleryOrder, setGalleryOrder] = useState<string[]>(() =>
+        existingImages.map((image) => existingImageKey(image.id)),
+    );
+    const [selectedKey, setSelectedKey] = useState<string | null>(null);
     const [pendingPhoto, setPendingPhoto] = useState<PendingPhoto | null>(null);
     const [editingItemId, setEditingItemId] = useState<string | null>(null);
     const [processing, setProcessing] = useState(false);
@@ -83,11 +110,29 @@ export function ProductImageUploader({
         };
     }, []);
 
-    const imageCount = existingImages.length + items.length;
+    const availableKeys = [
+        ...existingImages.map((image) => existingImageKey(image.id)),
+        ...items.map((item) => newImageKey(item.id)),
+    ];
+    const currentGalleryOrder = reconcileGalleryOrder(
+        galleryOrder,
+        availableKeys,
+    );
+    const galleryItems = getGalleryItems(
+        currentGalleryOrder,
+        existingImages,
+        items,
+    );
+    const imageCount = galleryItems.length;
     const hasRoom = imageCount < MAX_IMAGES;
-    const selectedItem = items[selectedIndex] ?? null;
-    const primaryPreviewUrl =
-        selectedItem?.previewUrl ?? existingImages[0]?.url ?? null;
+    const selectedIndex = selectedKey
+        ? galleryItems.findIndex((item) => item.key === selectedKey)
+        : -1;
+    const activeIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    const selectedGalleryItem = galleryItems[activeIndex] ?? null;
+    const primaryPreviewUrl = selectedGalleryItem
+        ? getGalleryImageUrl(selectedGalleryItem)
+        : null;
 
     const createPreviewUrl = (file: File): string =>
         createObjectUrl(file, objectUrls.current);
@@ -97,22 +142,14 @@ export function ProductImageUploader({
         objectUrls.current.delete(url);
     };
 
-    const updateItems = (
-        nextItems: NewImageItem[],
-        nextSelectedIndex?: number,
-    ) => {
-        setItems(nextItems);
-        onChange(nextItems.map((item) => item.file));
-
-        if (nextItems.length === 0) {
-            setSelectedIndex(0);
-
-            return;
-        }
-
-        setSelectedIndex(
-            Math.min(nextSelectedIndex ?? selectedIndex, nextItems.length - 1),
+    const notifyChange = (nextOrder: string[], nextItems: NewImageItem[]) => {
+        const { files, imageOrder } = serializeGallery(
+            nextOrder,
+            existingImages,
+            nextItems,
         );
+
+        onChange(files, imageOrder);
     };
 
     const closePendingPhoto = () => {
@@ -168,21 +205,27 @@ export function ProductImageUploader({
                       previewUrl,
                   },
               ];
+        const nextOrder = editingItem
+            ? currentGalleryOrder
+            : [
+                  ...currentGalleryOrder,
+                  newImageKey(nextItems[nextItems.length - 1].id),
+              ];
 
-        updateItems(
-            nextItems,
+        setItems(nextItems);
+        setGalleryOrder(nextOrder);
+        setSelectedKey(
             editingItem
-                ? items.findIndex((item) => item.id === editingItem.id)
-                : nextItems.length - 1,
+                ? newImageKey(editingItem.id)
+                : newImageKey(nextItems[nextItems.length - 1].id),
         );
+        notifyChange(nextOrder, nextItems);
         closePendingPhoto();
         setProcessing(false);
     };
 
-    const handleEditNewImage = (index: number) => {
-        const item = items[index];
-
-        if (!item || processing) {
+    const handleEditNewImage = (item: NewImageItem) => {
+        if (processing) {
             return;
         }
 
@@ -190,7 +233,7 @@ export function ProductImageUploader({
             revokeObjectUrl(pendingPhoto.url);
         }
 
-        setSelectedIndex(index);
+        setSelectedKey(newImageKey(item.id));
         setEditingItemId(item.id);
         setClientError(null);
         setPendingPhoto({
@@ -199,15 +242,79 @@ export function ProductImageUploader({
         });
     };
 
-    const handleRemoveNewImage = (index: number) => {
-        const item = items[index];
-
-        if (!item) {
+    const moveGalleryItem = (offset: -1 | 1) => {
+        if (!selectedGalleryItem) {
             return;
         }
 
-        revokeObjectUrl(item.previewUrl);
-        updateItems(items.filter((_, itemIndex) => itemIndex !== index));
+        const targetIndex = activeIndex + offset;
+
+        if (targetIndex < 0 || targetIndex >= currentGalleryOrder.length) {
+            return;
+        }
+
+        const nextOrder = [...currentGalleryOrder];
+        [nextOrder[activeIndex], nextOrder[targetIndex]] = [
+            nextOrder[targetIndex],
+            nextOrder[activeIndex],
+        ];
+        setGalleryOrder(nextOrder);
+        notifyChange(nextOrder, items);
+    };
+
+    const makeSelectedImagePrincipal = () => {
+        if (!selectedGalleryItem || activeIndex === 0) {
+            return;
+        }
+
+        const nextOrder = [
+            selectedGalleryItem.key,
+            ...currentGalleryOrder.filter(
+                (key) => key !== selectedGalleryItem.key,
+            ),
+        ];
+        setGalleryOrder(nextOrder);
+        setSelectedKey(selectedGalleryItem.key);
+        notifyChange(nextOrder, items);
+    };
+
+    const removeSelectedImage = () => {
+        if (!selectedGalleryItem) {
+            return;
+        }
+
+        const imageName = getGalleryImageName(selectedGalleryItem);
+
+        if (
+            !window.confirm(
+                `Remover ${activeIndex === 0 ? 'a foto principal' : 'esta foto'}${imageName ? ` (${imageName})` : ''}?`,
+            )
+        ) {
+            return;
+        }
+
+        const nextOrder = currentGalleryOrder.filter(
+            (key) => key !== selectedGalleryItem.key,
+        );
+        const nextSelectedKey =
+            nextOrder[Math.min(activeIndex, nextOrder.length - 1)] ?? null;
+
+        setGalleryOrder(nextOrder);
+        setSelectedKey(nextSelectedKey);
+
+        if (selectedGalleryItem.kind === 'existing') {
+            onRemoveExisting(selectedGalleryItem.image.id);
+            notifyChange(nextOrder, items);
+
+            return;
+        }
+
+        revokeObjectUrl(selectedGalleryItem.image.previewUrl);
+        const nextItems = items.filter(
+            (item) => item.id !== selectedGalleryItem.image.id,
+        );
+        setItems(nextItems);
+        notifyChange(nextOrder, nextItems);
     };
 
     const openCamera = () => cameraInputRef.current?.click();
@@ -218,12 +325,19 @@ export function ProductImageUploader({
             <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem]">
                 <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-dashed border-border bg-muted">
                     {primaryPreviewUrl ? (
-                        <img
-                            src={primaryPreviewUrl}
-                            alt="Pré-visualização da foto do produto"
-                            className="size-full object-cover"
-                            decoding="async"
-                        />
+                        <>
+                            <img
+                                src={primaryPreviewUrl}
+                                alt="Pré-visualização da foto do produto"
+                                className="size-full object-cover"
+                                decoding="async"
+                            />
+                            {activeIndex === 0 && (
+                                <span className="absolute top-3 left-3 rounded-full bg-background/90 px-2.5 py-1 text-[10px] font-semibold tracking-[0.12em] text-foreground uppercase shadow-sm">
+                                    Foto principal
+                                </span>
+                            )}
+                        </>
                     ) : (
                         <button
                             type="button"
@@ -243,83 +357,130 @@ export function ProductImageUploader({
                     )}
                 </div>
 
-                <div className="grid grid-cols-5 gap-2 sm:grid-cols-1">
-                    {existingImages.map((image) => (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-1">
+                    {galleryItems.map((item, index) => (
                         <div
-                            key={image.id}
-                            className="relative aspect-square overflow-hidden rounded-xl border border-border bg-muted"
-                        >
-                            <img
-                                src={image.thumb_url ?? image.url}
-                                alt=""
-                                className="size-full object-cover"
-                                loading="lazy"
-                                decoding="async"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => onRemoveExisting(image.id)}
-                                className="absolute top-1 right-1 flex size-6 items-center justify-center rounded-full bg-background/90 text-muted-foreground shadow-sm transition-colors hover:bg-destructive hover:text-destructive-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                                aria-label={'Remover imagem ' + image.name}
-                            >
-                                <Trash2 className="size-4" />
-                            </button>
-                        </div>
-                    ))}
-
-                    {items.map((item, index) => (
-                        <div
-                            key={item.id}
+                            key={item.key}
                             className={cn(
-                                'relative aspect-square overflow-hidden rounded-xl border bg-muted transition',
-                                selectedIndex === index
+                                'relative overflow-hidden rounded-xl border bg-muted transition',
+                                activeIndex === index
                                     ? 'border-primary ring-2 ring-primary/30'
                                     : 'border-border hover:border-primary/60',
                             )}
                         >
                             <button
                                 type="button"
-                                onClick={() => setSelectedIndex(index)}
-                                className="size-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                onClick={() => setSelectedKey(item.key)}
+                                className="block aspect-square w-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                aria-current={index === 0 ? 'true' : undefined}
                                 aria-label={
-                                    'Selecionar nova imagem ' + (index + 1)
+                                    index === 0
+                                        ? 'Selecionar foto principal'
+                                        : 'Selecionar foto ' + (index + 1)
                                 }
                             >
                                 <img
-                                    src={item.previewUrl}
+                                    src={getGalleryImageUrl(item, true)}
                                     alt=""
                                     className="size-full object-cover"
                                     loading="lazy"
                                     decoding="async"
                                 />
                             </button>
-                            <div className="absolute top-1 right-1 flex gap-1">
-                                <button
-                                    type="button"
-                                    className="flex size-6 items-center justify-center rounded-full bg-background/90 text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                                    onClick={() => handleEditNewImage(index)}
-                                    aria-label={
-                                        'Editar nova imagem ' + (index + 1)
-                                    }
-                                    disabled={processing}
-                                >
-                                    <Pencil className="size-3.5" />
-                                </button>
-                                <button
-                                    type="button"
-                                    className="flex size-6 items-center justify-center rounded-full bg-background/90 text-muted-foreground shadow-sm transition-colors hover:bg-destructive hover:text-destructive-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                                    onClick={() => handleRemoveNewImage(index)}
-                                    aria-label={
-                                        'Remover nova imagem ' + (index + 1)
-                                    }
-                                >
-                                    <Trash2 className="size-3.5" />
-                                </button>
-                            </div>
+                            {index === 0 && (
+                                <span className="pointer-events-none absolute right-1 bottom-1 left-1 rounded-md bg-background/90 px-1 py-0.5 text-center text-[9px] font-semibold text-foreground shadow-sm">
+                                    Principal
+                                </span>
+                            )}
                         </div>
                     ))}
                 </div>
             </div>
+
+            {selectedGalleryItem && (
+                <div className="grid gap-3 rounded-xl border border-border/80 bg-muted/30 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="grid gap-1">
+                            <p className="text-sm font-semibold text-foreground">
+                                Foto {activeIndex + 1} de {imageCount}
+                            </p>
+                            <p className="text-xs leading-5 text-muted-foreground">
+                                {activeIndex === 0
+                                    ? 'Esta é a foto usada como principal no catálogo.'
+                                    : 'Escolha uma ação para ajustar a posição desta foto.'}
+                            </p>
+                        </div>
+                        {activeIndex === 0 && (
+                            <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">
+                                Principal
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                        {activeIndex > 0 && (
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={makeSelectedImagePrincipal}
+                                disabled={processing}
+                            >
+                                <ChevronsLeft />
+                                Tornar principal
+                            </Button>
+                        )}
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => moveGalleryItem(-1)}
+                            disabled={processing || activeIndex === 0}
+                        >
+                            <ChevronLeft />
+                            Mover antes
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => moveGalleryItem(1)}
+                            disabled={
+                                processing || activeIndex === imageCount - 1
+                            }
+                        >
+                            Mover depois
+                            <ChevronRight />
+                        </Button>
+                        {selectedGalleryItem.kind === 'new' && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                    handleEditNewImage(
+                                        selectedGalleryItem.image,
+                                    )
+                                }
+                                disabled={processing}
+                            >
+                                <Pencil />
+                                Editar foto
+                            </Button>
+                        )}
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={removeSelectedImage}
+                            disabled={processing}
+                        >
+                            <Trash2 />
+                            Remover foto
+                        </Button>
+                    </div>
+                </div>
+            )}
 
             <input
                 ref={cameraInputRef}
@@ -403,4 +564,90 @@ function createObjectUrl(file: File, urls: Set<string>): string {
     urls.add(url);
 
     return url;
+}
+
+function existingImageKey(id: number): string {
+    return EXISTING_IMAGE_PREFIX + id;
+}
+
+function newImageKey(id: string): string {
+    return NEW_IMAGE_PREFIX + id;
+}
+
+function getGalleryItems(
+    order: string[],
+    existingImages: ProductImage[],
+    items: NewImageItem[],
+): GalleryItem[] {
+    const existingByKey = new Map(
+        existingImages.map((image) => [existingImageKey(image.id), image]),
+    );
+    const newItemsByKey = new Map(
+        items.map((item) => [newImageKey(item.id), item]),
+    );
+
+    return order.flatMap((key): GalleryItem[] => {
+        const existingImage = existingByKey.get(key);
+
+        if (existingImage) {
+            return [{ key, kind: 'existing' as const, image: existingImage }];
+        }
+
+        const newImage = newItemsByKey.get(key);
+
+        return newImage ? [{ key, kind: 'new' as const, image: newImage }] : [];
+    });
+}
+
+function getGalleryImageUrl(item: GalleryItem, thumbnail = false): string {
+    if (item.kind === 'new') {
+        return item.image.previewUrl;
+    }
+
+    return thumbnail
+        ? (item.image.thumb_url ?? item.image.url)
+        : item.image.url;
+}
+
+function getGalleryImageName(item: GalleryItem): string {
+    return item.kind === 'existing' ? item.image.name : item.image.file.name;
+}
+
+function serializeGallery(
+    order: string[],
+    existingImages: ProductImage[],
+    items: NewImageItem[],
+): { files: File[]; imageOrder: string[] } {
+    const galleryItems = getGalleryItems(order, existingImages, items);
+    const newItems = galleryItems
+        .filter((item): item is NewGalleryItem => item.kind === 'new')
+        .map((item) => item.image);
+    const newIndexByKey = new Map(
+        galleryItems
+            .filter((item): item is NewGalleryItem => item.kind === 'new')
+            .map((item, index) => [item.key, index]),
+    );
+
+    return {
+        files: newItems.map((item) => item.file),
+        imageOrder: galleryItems.map((item) =>
+            item.kind === 'existing'
+                ? 'media:' + item.image.id
+                : 'new:' + newIndexByKey.get(item.key),
+        ),
+    };
+}
+
+function reconcileGalleryOrder(
+    currentOrder: string[],
+    availableKeys: string[],
+): string[] {
+    const availableKeySet = new Set(availableKeys);
+    const retainedKeys = currentOrder.filter((key) => availableKeySet.has(key));
+    const retainedKeySet = new Set(retainedKeys);
+
+    return [
+        ...retainedKeys,
+        ...availableKeys.filter((key) => !retainedKeySet.has(key)),
+    ];
 }

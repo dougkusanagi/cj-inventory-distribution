@@ -59,6 +59,12 @@ class UpdateProduct
 
                 $this->syncProductStockOffer->handle($product, $createdVariants, $data);
                 $addedMedia = $this->storeImages($product, $data['images'] ?? [], $remainingMediaCount);
+                $this->reorderImages(
+                    $product,
+                    $data['image_order'] ?? null,
+                    $addedMedia,
+                    $removeMediaIds->all(),
+                );
 
                 return $product->load(['variants', 'latestOffer.items', 'media']);
             });
@@ -92,7 +98,7 @@ class UpdateProduct
 
         foreach ($images as $index => $image) {
             if ($image instanceof UploadedFile) {
-                $addedMedia[] = $this->storeProductImage->handle(
+                $addedMedia[$index] = $this->storeProductImage->handle(
                     $product,
                     $image,
                     $startingOrder + $index,
@@ -101,6 +107,75 @@ class UpdateProduct
         }
 
         return $addedMedia;
+    }
+
+    /**
+     * Persist the order selected in the product form.
+     *
+     * @param  array<int, Media>  $addedMedia
+     * @param  array<int, mixed>  $removeMediaIds
+     */
+    private function reorderImages(
+        Product $product,
+        mixed $imageOrder,
+        array $addedMedia,
+        array $removeMediaIds,
+    ): void {
+        if (! is_array($imageOrder)) {
+            return;
+        }
+
+        $mediaIdsByUploadIndex = collect($addedMedia)
+            ->mapWithKeys(fn (Media $media, int|string $index): array => [
+                (int) $index => (int) $media->getKey(),
+            ]);
+        $ownedMediaIds = $product->media()
+            ->where('collection_name', Product::MEDIA_COLLECTION)
+            ->whereNotIn('id', $removeMediaIds)
+            ->pluck('id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->all();
+        $orderedMediaIds = [];
+
+        foreach ($imageOrder as $token) {
+            if (! is_string($token)) {
+                return;
+            }
+
+            if (str_starts_with($token, 'media:')) {
+                $orderedMediaIds[] = (int) substr($token, strlen('media:'));
+
+                continue;
+            }
+
+            if (str_starts_with($token, 'new:')) {
+                $uploadIndex = (int) substr($token, strlen('new:'));
+
+                if (! $mediaIdsByUploadIndex->has($uploadIndex)) {
+                    return;
+                }
+
+                $orderedMediaIds[] = $mediaIdsByUploadIndex->get($uploadIndex);
+
+                continue;
+            }
+
+            return;
+        }
+
+        $expectedMediaIds = $ownedMediaIds;
+        sort($expectedMediaIds);
+        $actualMediaIds = $orderedMediaIds;
+        sort($actualMediaIds);
+
+        if (
+            $expectedMediaIds !== $actualMediaIds
+            || count($orderedMediaIds) !== count($ownedMediaIds)
+        ) {
+            return;
+        }
+
+        Media::setNewOrder($orderedMediaIds);
     }
 
     /**

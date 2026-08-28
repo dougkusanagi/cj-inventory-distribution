@@ -39,6 +39,7 @@ type ProductFormData = {
     total_quantity: number | string | null;
     variants: VariantFormItem[];
     images: File[];
+    image_order: string[];
     remove_media_ids: number[];
     _method?: 'PUT';
 };
@@ -119,6 +120,7 @@ export function ProductForm({ product }: ProductFormProps) {
         total_quantity: product?.total_quantity ?? null,
         variants: initialVariants,
         images: [],
+        image_order: product?.images.map((image) => 'media:' + image.id) ?? [],
         remove_media_ids: [],
         ...(isEditing ? { _method: 'PUT' as const } : {}),
     });
@@ -355,9 +357,13 @@ export function ProductForm({ product }: ProductFormProps) {
                                         ),
                                 ) ?? []
                             }
-                            error={error('images')}
-                            onChange={(files) => {
-                                form.setData('images', files);
+                            error={error('images') ?? error('image_order')}
+                            onChange={(files, imageOrder) => {
+                                form.setData((previousData) => ({
+                                    ...previousData,
+                                    images: files,
+                                    image_order: imageOrder,
+                                }));
                             }}
                             onProcessingChange={setProcessingImages}
                             onRemoveExisting={(id) =>

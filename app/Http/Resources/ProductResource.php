@@ -32,6 +32,7 @@ class ProductResource extends JsonResource
             'name' => $this->name,
             'images' => $this->whenLoaded('media', fn () => $this->media
                 ->where('collection_name', Product::MEDIA_COLLECTION)
+                ->sortBy('order_column')
                 ->map(function (Media $media): array {
                     return [
                         'id' => $media->id,
