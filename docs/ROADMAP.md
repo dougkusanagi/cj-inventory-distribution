@@ -4,18 +4,18 @@ O roadmap descreve direção, não compromisso de implementação imediata.
 
 ## Fase 1 — Cadastro de produtos
 
-- [ ] CRUD de produtos
-- [ ] código interno automático
-- [ ] modelo opcional
-- [ ] observação
-- [ ] upload de foto
-- [ ] captura pela câmera
-- [ ] corte
-- [ ] rotação
-- [ ] espelhamento
-- [ ] cadastro de tamanhos
-- [ ] presets de grade
-- [ ] grade personalizada
+- [x] CRUD de produtos
+- [x] código interno automático
+- [x] modelo opcional
+- [x] observação
+- [x] upload de foto
+- [x] captura pela câmera
+- [x] corte
+- [x] rotação
+- [x] espelhamento
+- [x] cadastro de tamanhos
+- [x] presets de grade
+- [x] grade personalizada
 
 ## Fase 2 — Estoque disponível
 

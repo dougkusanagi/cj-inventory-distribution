@@ -6,8 +6,8 @@ import {
     PanelRight,
     Plus,
     Sparkles,
-    type LucideIcon,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import AppearanceToggleTab from '@/components/appearance-tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
