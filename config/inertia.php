@@ -67,4 +67,21 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | DevTools
+    |--------------------------------------------------------------------------
+    |
+    | Inertia enables DevTools automatically in local environments when this
+    | option is not configured. Keep it opt-in so a stale storage directory
+    | never prevents the application from rendering during development.
+    |
+    */
+
+    'devtools' => [
+
+        'enabled' => env('INERTIA_DEVTOOLS_ENABLED', false),
+
+    ],
+
 ];
