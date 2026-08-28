@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Products;
 
+use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Validator;
 
 abstract class ProductRequest extends FormRequest
 {
@@ -58,14 +60,16 @@ abstract class ProductRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:5000'],
-            'total_quantity' => ['nullable', 'integer', 'min:0'],
+            'total_quantity' => ['required', 'integer', 'min:0'],
             'variants' => ['nullable', 'array', 'max:50'],
             'variants.*' => ['array:size,quantity,is_active'],
             'variants.*.size' => ['required', 'string', 'max:30', 'distinct'],
             'variants.*.quantity' => ['nullable', 'integer', 'min:0'],
             'variants.*.is_active' => ['required', 'boolean'],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'remove_image' => ['sometimes', 'boolean'],
+            'images' => ['nullable', 'array', 'max:5'],
+            'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'remove_media_ids' => ['nullable', 'array', 'max:5'],
+            'remove_media_ids.*' => ['integer', 'distinct', 'exists:media,id'],
         ];
     }
 
@@ -81,6 +85,7 @@ abstract class ProductRequest extends FormRequest
             'name.max' => 'O nome do produto deve ter no máximo 255 caracteres.',
             'model.max' => 'O modelo deve ter no máximo 100 caracteres.',
             'notes.max' => 'A observação deve ter no máximo 5.000 caracteres.',
+            'total_quantity.required' => 'Informe o estoque total.',
             'total_quantity.integer' => 'O estoque total deve ser um número.',
             'total_quantity.min' => 'O estoque total não pode ser negativo.',
             'variants.max' => 'Cadastre no máximo 50 tamanhos.',
@@ -90,9 +95,58 @@ abstract class ProductRequest extends FormRequest
             'variants.*.quantity.integer' => 'A quantidade por tamanho deve ser um número.',
             'variants.*.quantity.min' => 'A quantidade por tamanho não pode ser negativa.',
             'variants.*.is_active.boolean' => 'Informe se o tamanho está disponível neste lote.',
-            'image.image' => 'Envie uma imagem válida.',
-            'image.mimes' => 'A foto deve estar em JPG, PNG ou WebP.',
-            'image.max' => 'A foto deve ter no máximo 5 MB.',
+            'images.array' => 'Envie as fotos em uma lista válida.',
+            'images.max' => 'Adicione no máximo 5 fotos por produto.',
+            'images.*.image' => 'Envie imagens válidas.',
+            'images.*.mimes' => 'As fotos devem estar em JPG, PNG ou WebP.',
+            'images.*.max' => 'Cada foto deve ter no máximo 5 MB.',
+        ];
+    }
+
+    /**
+     * Validate the total number of images kept by a product.
+     *
+     * @return array<int, callable>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                $product = $this->route('product');
+                $removeMediaIds = $this->input('remove_media_ids', []);
+                $removeMediaIds = is_array($removeMediaIds) ? $removeMediaIds : [];
+                $uploadedImages = $this->file('images', []);
+                $uploadedImages = is_array($uploadedImages) ? $uploadedImages : [];
+                $productImageCount = 0;
+
+                if ($product instanceof Product) {
+                    $ownedMediaIds = $product->media()
+                        ->where('collection_name', Product::MEDIA_COLLECTION)
+                        ->whereKey($removeMediaIds)
+                        ->pluck('id')
+                        ->map(fn ($id): int => (int) $id)
+                        ->all();
+
+                    if (count($ownedMediaIds) !== count($removeMediaIds)) {
+                        $validator->errors()->add(
+                            'remove_media_ids',
+                            'Só é possível remover imagens deste produto.',
+                        );
+                    }
+
+                    $productImageCount = $product->media()
+                        ->where('collection_name', Product::MEDIA_COLLECTION)
+                        ->whereNotIn('id', $removeMediaIds)
+                        ->count();
+                }
+
+                if ($productImageCount + count($uploadedImages) > Product::MAX_IMAGES) {
+                    $validator->errors()->add(
+                        'images',
+                        'Um produto pode ter no máximo 5 fotos.',
+                    );
+                }
+            },
         ];
     }
 }

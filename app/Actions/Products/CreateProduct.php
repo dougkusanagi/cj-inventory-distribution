@@ -7,7 +7,6 @@ use App\Models\ProductVariant;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -25,17 +24,14 @@ class CreateProduct
      */
     public function handle(array $data): Product
     {
-        $imagePath = null;
+        $product = null;
 
         try {
-            return DB::transaction(function () use ($data, &$imagePath): Product {
-                $imagePath = $this->storeImage($data['image'] ?? null);
-
+            return DB::transaction(function () use ($data, &$product): Product {
                 $product = Product::create([
                     'code' => 'PENDING-'.Str::uuid(),
                     'name' => $data['name'],
                     'model' => ($data['model'] ?? null) ?: null,
-                    'image_path' => $imagePath,
                     'notes' => ($data['notes'] ?? null) ?: null,
                 ]);
 
@@ -45,12 +41,13 @@ class CreateProduct
 
                 $createdVariants = $this->syncVariants($product, $data['variants'] ?? []);
                 $this->syncProductStockOffer->handle($product, $createdVariants, $data);
+                $this->storeImages($product, $data['images'] ?? []);
 
-                return $product->load(['variants', 'latestOffer.items']);
+                return $product->load(['variants', 'latestOffer.items', 'media']);
             });
         } catch (Throwable $exception) {
-            if ($imagePath !== null) {
-                Storage::disk('public')->delete($imagePath);
+            if ($product !== null) {
+                $product->clearMediaCollection(Product::MEDIA_COLLECTION);
             }
 
             throw $exception;
@@ -58,13 +55,19 @@ class CreateProduct
     }
 
     /**
-     * Store a validated image with a generated filename.
+     * Store validated images in their collection order.
      */
-    private function storeImage(mixed $image): ?string
+    private function storeImages(Product $product, mixed $images): void
     {
-        return $image instanceof UploadedFile
-            ? $this->storeProductImage->handle($image)
-            : null;
+        if (! is_array($images)) {
+            return;
+        }
+
+        foreach ($images as $index => $image) {
+            if ($image instanceof UploadedFile) {
+                $this->storeProductImage->handle($product, $image, $index);
+            }
+        }
     }
 
     /**

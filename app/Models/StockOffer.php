@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\StockOfferType;
+use Database\Factories\StockOfferFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -23,6 +24,7 @@ use Illuminate\Support\Carbon;
 #[Fillable(['product_id', 'type', 'total_quantity', 'is_active', 'notes'])]
 class StockOffer extends Model
 {
+    /** @use HasFactory<StockOfferFactory> */
     use HasFactory;
 
     /**

@@ -7,7 +7,7 @@ use App\Models\ProductVariant;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Throwable;
 
 class UpdateProduct
@@ -24,23 +24,32 @@ class UpdateProduct
      */
     public function handle(Product $product, array $data): Product
     {
-        $oldImagePath = $product->image_path;
-        $newImagePath = $oldImagePath;
+        $addedMedia = [];
+        $removedMedia = [];
 
         try {
-            $updatedProduct = DB::transaction(function () use ($product, $data, &$newImagePath): Product {
-                if (($data['image'] ?? null) instanceof UploadedFile) {
-                    $newImagePath = $this->storeProductImage->handle($data['image']);
-                } elseif (filter_var($data['remove_image'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
-                    $newImagePath = null;
-                }
-
+            $updatedProduct = DB::transaction(function () use ($product, $data, &$addedMedia, &$removedMedia): Product {
                 $product->update([
                     'name' => $data['name'],
                     'model' => ($data['model'] ?? null) ?: null,
-                    'image_path' => $newImagePath,
                     'notes' => ($data['notes'] ?? null) ?: null,
                 ]);
+
+                $rawRemoveMediaIds = $data['remove_media_ids'] ?? [];
+                $rawRemoveMediaIds = is_array($rawRemoveMediaIds) ? $rawRemoveMediaIds : [];
+                $removeMediaIds = collect($rawRemoveMediaIds)
+                    ->filter(fn ($id): bool => is_numeric($id))
+                    ->map(fn ($id): int => (int) $id)
+                    ->values();
+                $mediaToRemove = $product->media()
+                    ->where('collection_name', Product::MEDIA_COLLECTION)
+                    ->whereKey($removeMediaIds)
+                    ->get();
+                $removedMedia = $mediaToRemove->all();
+                $remainingMediaCount = $product->media()
+                    ->where('collection_name', Product::MEDIA_COLLECTION)
+                    ->whereNotIn('id', $removeMediaIds)
+                    ->count();
 
                 $product->variants()->delete();
 
@@ -49,22 +58,49 @@ class UpdateProduct
                 $createdVariants = $this->syncVariants($product, $rawVariants);
 
                 $this->syncProductStockOffer->handle($product, $createdVariants, $data);
+                $addedMedia = $this->storeImages($product, $data['images'] ?? [], $remainingMediaCount);
 
-                return $product->load(['variants', 'latestOffer.items']);
+                return $product->load(['variants', 'latestOffer.items', 'media']);
             });
 
-            if ($oldImagePath !== $newImagePath && $oldImagePath !== null) {
-                Storage::disk('public')->delete($oldImagePath);
+            foreach ($removedMedia as $media) {
+                $media->delete();
             }
 
             return $updatedProduct;
         } catch (Throwable $exception) {
-            if ($newImagePath !== $oldImagePath && $newImagePath !== null) {
-                Storage::disk('public')->delete($newImagePath);
+            foreach ($addedMedia as $media) {
+                $media->delete();
             }
 
             throw $exception;
         }
+    }
+
+    /**
+     * Store validated images after the remaining media items.
+     *
+     * @return array<int, Media>
+     */
+    private function storeImages(Product $product, mixed $images, int $startingOrder): array
+    {
+        if (! is_array($images)) {
+            return [];
+        }
+
+        $addedMedia = [];
+
+        foreach ($images as $index => $image) {
+            if ($image instanceof UploadedFile) {
+                $addedMedia[] = $this->storeProductImage->handle(
+                    $product,
+                    $image,
+                    $startingOrder + $index,
+                );
+            }
+        }
+
+        return $addedMedia;
     }
 
     /**

@@ -29,7 +29,7 @@ Preferir recursos nativos:
 - Eloquent relationships;
 - casts;
 - PHP enums para estados/tipos;
-- Storage filesystem para imagens;
+- Spatie Media Library para imagens de produto;
 - transactions para operações compostas;
 - Services/Actions apenas quando reduzirem complexidade real.
 
@@ -78,7 +78,7 @@ Regras mínimas:
 ```text
 name: obrigatório
 model: opcional
-image: opcional
+images: opcional, até cinco imagens
 notes: opcional
 variants: zero ou mais
 ```

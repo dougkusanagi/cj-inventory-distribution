@@ -23,25 +23,20 @@ class ProductController extends Controller
     ) {}
 
     /**
-     * Display the product catalog in the dashboard.
+     * Display the product catalog.
      */
     public function index(): Response
     {
         Gate::authorize('viewAny', Product::class);
 
         $products = Product::query()
-            ->select(['id', 'code', 'model', 'name', 'image_path', 'notes', 'created_at', 'updated_at'])
-            ->with(['variants:id,product_id,size,sort_order', 'latestOffer.items'])
+            ->select(['id', 'code', 'model', 'name', 'notes', 'created_at', 'updated_at'])
+            ->with(['variants:id,product_id,size,sort_order', 'latestOffer.items', 'media'])
             ->latest()
             ->paginate(12);
 
         return Inertia::render('products/index', [
             'products' => ProductResource::collection($products),
-            'stats' => [
-                'total' => $products->total(),
-                'withPhotos' => Product::query()->whereNotNull('image_path')->count(),
-                'withSizes' => Product::query()->has('variants')->count(),
-            ],
         ]);
     }
 
@@ -76,7 +71,7 @@ class ProductController extends Controller
         Gate::authorize('update', $product);
 
         return Inertia::render('products/edit', [
-            'product' => ProductResource::make($product->load(['variants', 'latestOffer.items']))->resolve(),
+            'product' => ProductResource::make($product->load(['variants', 'latestOffer.items', 'media']))->resolve(),
         ]);
     }
 

@@ -32,7 +32,7 @@ Exemplos:
 
 Campos principais:
 
-- foto
+- até cinco fotos
 - nome
 - modelo opcional
 - código interno automático

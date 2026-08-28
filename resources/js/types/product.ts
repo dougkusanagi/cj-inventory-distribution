@@ -6,12 +6,19 @@ export type ProductVariant = {
     quantity?: number | null;
 };
 
+export type ProductImage = {
+    id: number;
+    url: string;
+    thumb_url: string | null;
+    name: string;
+};
+
 export type Product = {
     id: number;
     code: string;
     model: string | null;
     name: string;
-    image_url: string | null;
+    images: ProductImage[];
     notes: string | null;
     total_quantity?: number | null;
     variants: ProductVariant[];
@@ -35,8 +42,10 @@ export type Paginated<T> = {
     };
 };
 
-export type ProductStats = {
+export type DashboardStats = {
     total: number;
     withPhotos: number;
     withSizes: number;
+    activeOffers: number;
+    stockUnits: number;
 };

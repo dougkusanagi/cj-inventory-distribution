@@ -31,7 +31,6 @@ id
 code
 model nullable
 name
-image_path nullable
 notes nullable
 created_at
 updated_at
@@ -287,6 +286,11 @@ O cadastro deve aceitar:
 - upload de arquivo;
 - captura pela câmera do dispositivo.
 
+As imagens pertencem à coleção `product-images` da Spatie Media Library, com
+limite de cinco imagens por produto. As listagens devem preferir a conversão
+`thumb`, em WebP, para reduzir o carregamento; o formulário pode usar a imagem
+original quando necessário.
+
 Tratamentos necessários:
 
 - corte;
@@ -298,8 +302,8 @@ Preferir realizar manipulações interativas no cliente e enviar ao servidor a i
 No servidor:
 
 - validar formato e tamanho;
-- gerar nome seguro;
-- armazenar via filesystem do Laravel;
+- gerar e manter os arquivos pela Spatie Media Library;
+- armazenar a mídia no disco público configurado;
 - evitar confiar no nome original do arquivo.
 
 ## Tela compartilhada
@@ -309,7 +313,7 @@ Para o MVP, a tela deve priorizar simplicidade e uso mobile.
 Requisitos:
 
 - listar somente ofertas ativas;
-- mostrar foto, nome, modelo quando houver, tipo e estoque disponível;
+- mostrar a foto de capa, nome, modelo quando houver, tipo e estoque disponível;
 - permitir selecionar quantidades;
 - manter uma sacola;
 - revisar antes de enviar.

@@ -7,7 +7,6 @@ import {
     Package,
     Pencil,
     Plus,
-    Ruler,
     Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -34,11 +33,10 @@ import {
     edit as productEdit,
     create as productCreate,
 } from '@/routes/products';
-import type { Paginated, Product, ProductStats } from '@/types';
+import type { Paginated, Product } from '@/types';
 
 type ProductsIndexProps = {
     products: Paginated<Product>;
-    stats: ProductStats;
 };
 
 function paginationLabel(label: string): string {
@@ -60,14 +58,18 @@ function ProductCard({
     product: Product;
     onDelete: (product: Product) => void;
 }) {
+    const coverImage = product.images[0];
+
     return (
         <article className="group flex min-h-full flex-col overflow-hidden rounded-[1.75rem] border border-border/80 bg-card shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
             <div className="relative aspect-[4/3] overflow-hidden bg-featured-card">
-                {product.image_url ? (
+                {coverImage ? (
                     <img
-                        src={product.image_url}
+                        src={coverImage.thumb_url ?? coverImage.url}
                         alt={product.name}
                         className="size-full object-cover transition duration-500 group-hover:scale-105"
+                        loading="lazy"
+                        decoding="async"
                     />
                 ) : (
                     <div className="flex size-full flex-col items-center justify-center gap-2 text-featured-card-muted">
@@ -81,7 +83,7 @@ function ProductCard({
                     <span className="rounded-full bg-background/90 px-3 py-1 font-mono text-[11px] font-semibold tracking-[0.12em] text-foreground shadow-sm backdrop-blur">
                         {product.code}
                     </span>
-                    {product.image_url && (
+                    {coverImage && (
                         <span className="flex size-8 items-center justify-center rounded-full bg-background/90 text-highlight shadow-sm backdrop-blur">
                             <Camera className="size-4" />
                         </span>
@@ -156,7 +158,7 @@ function ProductCard({
     );
 }
 
-export default function ProductsIndex({ products, stats }: ProductsIndexProps) {
+export default function ProductsIndex({ products }: ProductsIndexProps) {
     const [productToDelete, setProductToDelete] = useState<Product | null>(
         null,
     );
@@ -192,7 +194,9 @@ export default function ProductsIndex({ products, stats }: ProductsIndexProps) {
                                 Produtos
                             </h1>
                             <span className="rounded-full bg-primary px-3 py-1 font-mono text-xs font-bold text-primary-foreground">
-                                {stats.total.toString().padStart(2, '0')}
+                                {products.meta.total
+                                    .toString()
+                                    .padStart(2, '0')}
                             </span>
                         </div>
                         <p className="max-w-xl text-base leading-7 text-muted-foreground">
@@ -208,60 +212,6 @@ export default function ProductsIndex({ products, stats }: ProductsIndexProps) {
                         </Link>
                     </Button>
                 </header>
-
-                <section
-                    className="grid gap-3 sm:grid-cols-3"
-                    aria-label="Resumo do catálogo"
-                >
-                    <Card className="rounded-2xl border-0 bg-featured-card text-featured-card-foreground shadow-none">
-                        <CardContent className="flex items-center justify-between gap-4 p-5">
-                            <div className="grid gap-1">
-                                <span className="text-xs tracking-[0.16em] text-featured-card-muted uppercase">
-                                    No catálogo
-                                </span>
-                                <strong className="text-3xl font-semibold tracking-tight">
-                                    {stats.total}
-                                </strong>
-                            </div>
-                            <Package
-                                className="size-7 text-primary"
-                                strokeWidth={1.5}
-                            />
-                        </CardContent>
-                    </Card>
-                    <Card className="rounded-2xl bg-card shadow-sm">
-                        <CardContent className="flex items-center justify-between gap-4 p-5">
-                            <div className="grid gap-1">
-                                <span className="text-xs tracking-[0.16em] text-muted-foreground uppercase">
-                                    Com foto
-                                </span>
-                                <strong className="text-3xl font-semibold tracking-tight">
-                                    {stats.withPhotos}
-                                </strong>
-                            </div>
-                            <Camera
-                                className="size-7 text-highlight"
-                                strokeWidth={1.5}
-                            />
-                        </CardContent>
-                    </Card>
-                    <Card className="rounded-2xl bg-card shadow-sm">
-                        <CardContent className="flex items-center justify-between gap-4 p-5">
-                            <div className="grid gap-1">
-                                <span className="text-xs tracking-[0.16em] text-muted-foreground uppercase">
-                                    Com grade
-                                </span>
-                                <strong className="text-3xl font-semibold tracking-tight">
-                                    {stats.withSizes}
-                                </strong>
-                            </div>
-                            <Ruler
-                                className="size-7 text-highlight"
-                                strokeWidth={1.5}
-                            />
-                        </CardContent>
-                    </Card>
-                </section>
 
                 {products.data.length > 0 ? (
                     <section

@@ -30,8 +30,7 @@ test('authenticated users can view the product catalog', function () {
             ->component('products/index')
             ->where('products.data.0.id', $product->id)
             ->where('products.data.0.variants.0.size', '34')
-            ->where('stats.total', 1)
-            ->where('stats.withSizes', 1),
+            ->where('products.data.0.images', []),
         );
 });
 
@@ -100,15 +99,18 @@ test('authenticated users can create a product with optional model, ordered size
     expect($product->latestOffer->items->pluck('quantity')->all())->toBe([5, 5, 5]);
 });
 
-test('authenticated users can create a product without any stock (stock is optional)', function () {
+test('product creation stores up to five images with thumbnails', function () {
+    Storage::fake('public');
+
     $user = User::factory()->create();
+    $images = collect(range(1, 5))
+        ->map(fn (int $number): UploadedFile => UploadedFile::fake()->image('product-'.$number.'.jpg'))
+        ->all();
 
     $response = $this->actingAs($user)->post(route('products.store'), [
-        'name' => 'Calça Mom Básica',
-        'variants' => [
-            ['size' => '36', 'quantity' => null, 'is_active' => false],
-            ['size' => '38', 'quantity' => null, 'is_active' => false],
-        ],
+        'name' => 'Produto com galeria',
+        'total_quantity' => 25,
+        'images' => $images,
     ]);
 
     $response
@@ -116,7 +118,35 @@ test('authenticated users can create a product without any stock (stock is optio
         ->assertRedirect(route('products.index'));
 
     $product = Product::query()->sole();
-    expect($product->offers()->count())->toBe(0);
+    $media = $product->getMedia(Product::MEDIA_COLLECTION);
+
+    expect($media)->toHaveCount(5);
+    $media->each(function ($image): void {
+        expect($image->hasGeneratedConversion('thumb'))->toBeTrue();
+        Storage::disk('public')->assertExists($image->getPathRelativeToRoot('thumb'));
+    });
+});
+
+test('product creation requires the total stock quantity', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)
+        ->from(route('products.create'))
+        ->post(route('products.store'), [
+            'name' => 'Calça Mom Básica',
+            'variants' => [
+                ['size' => '36', 'quantity' => null, 'is_active' => false],
+                ['size' => '38', 'quantity' => null, 'is_active' => false],
+            ],
+        ]);
+
+    $response
+        ->assertSessionHasErrors([
+            'total_quantity' => 'Informe o estoque total.',
+        ])
+        ->assertRedirect(route('products.create'));
+
+    expect(Product::query()->count())->toBe(0);
 });
 
 test('authenticated users can save which sizes are present without quantities', function () {
@@ -124,6 +154,7 @@ test('authenticated users can save which sizes are present without quantities', 
 
     $response = $this->actingAs($user)->post(route('products.store'), [
         'name' => 'Blusa de malha',
+        'total_quantity' => 0,
         'variants' => [
             ['size' => 'P', 'is_active' => true],
             ['size' => 'M', 'is_active' => false],
@@ -172,11 +203,14 @@ test('product creation rejects non-image uploads', function () {
 
     $response = $this->actingAs($user)->from(route('products.create'))->post(route('products.store'), [
         'name' => 'Produto com arquivo inválido',
-        'image' => UploadedFile::fake()->create('manual.txt', 10, 'text/plain'),
+        'total_quantity' => 0,
+        'images' => [
+            UploadedFile::fake()->create('manual.txt', 10, 'text/plain'),
+        ],
     ]);
 
     $response
-        ->assertSessionHasErrors('image')
+        ->assertSessionHasErrors('images.0')
         ->assertRedirect(route('products.create'));
 
     expect(Product::query()->count())->toBe(0);
@@ -216,7 +250,7 @@ test('authenticated users can update product details, sizes and stock without ch
     expect($product->latestOffer->items->pluck('quantity')->all())->toBe([10, null]);
 });
 
-test('updating a product without stock deactivates its previous offer', function () {
+test('updating a product with zero stock deactivates its previous offer', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
     $variant = $product->variants()->create(['size' => 'M', 'sort_order' => 0]);
@@ -232,6 +266,7 @@ test('updating a product without stock deactivates its previous offer', function
 
     $response = $this->actingAs($user)->put(route('products.update', $product), [
         'name' => $product->name,
+        'total_quantity' => 0,
         'variants' => [
             ['size' => 'M', 'quantity' => null, 'is_active' => false],
         ],
@@ -247,18 +282,22 @@ test('updating a product without stock deactivates its previous offer', function
     expect($offer->items()->count())->toBe(0);
 });
 
-test('product images can be replaced and removed', function () {
+test('product images can be replaced and removed from the media collection', function () {
     Storage::fake('public');
 
     $user = User::factory()->create();
-    $oldImagePath = 'products/old.jpg';
-    Storage::disk('public')->put($oldImagePath, 'old image');
-    $product = Product::factory()->create(['image_path' => $oldImagePath]);
+    $product = Product::factory()->create();
+    $oldMedia = $product->addMedia(UploadedFile::fake()->image('old.jpg'))
+        ->toMediaCollection(Product::MEDIA_COLLECTION);
+    $oldImagePath = $oldMedia->getPathRelativeToRoot();
+    $oldThumbPath = $oldMedia->getPathRelativeToRoot('thumb');
 
     $replaceResponse = $this->actingAs($user)->post(route('products.update', $product), [
         '_method' => 'PUT',
         'name' => $product->name,
-        'image' => UploadedFile::fake()->image('new.jpg'),
+        'total_quantity' => 0,
+        'remove_media_ids' => [$oldMedia->id],
+        'images' => [UploadedFile::fake()->image('new.jpg')],
     ]);
 
     $replaceResponse
@@ -266,32 +305,39 @@ test('product images can be replaced and removed', function () {
         ->assertRedirect(route('products.index'));
 
     $product->refresh();
-    expect($product->image_path)->not->toBe($oldImagePath);
+    $newMedia = $product->getFirstMedia(Product::MEDIA_COLLECTION);
+    expect($newMedia)->not->toBeNull();
+    expect($product->getMedia(Product::MEDIA_COLLECTION))->toHaveCount(1);
     Storage::disk('public')->assertMissing($oldImagePath);
-    Storage::disk('public')->assertExists($product->image_path);
-    $replacedImagePath = $product->image_path;
+    Storage::disk('public')->assertMissing($oldThumbPath);
+    Storage::disk('public')->assertExists($newMedia->getPathRelativeToRoot());
+    Storage::disk('public')->assertExists($newMedia->getPathRelativeToRoot('thumb'));
 
     $removeResponse = $this->actingAs($user)->post(route('products.update', $product), [
         '_method' => 'PUT',
         'name' => $product->name,
-        'remove_image' => '1',
+        'total_quantity' => 0,
+        'remove_media_ids' => [$newMedia->id],
     ]);
 
     $removeResponse
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('products.index'));
 
-    expect($product->refresh()->image_path)->toBeNull();
-    Storage::disk('public')->assertMissing($replacedImagePath);
+    expect($product->refresh()->getMedia(Product::MEDIA_COLLECTION))->toHaveCount(0);
+    Storage::disk('public')->assertMissing($newMedia->getPathRelativeToRoot());
+    Storage::disk('public')->assertMissing($newMedia->getPathRelativeToRoot('thumb'));
 });
 
-test('authenticated users can delete a product with its variants, stock offer and image', function () {
+test('authenticated users can delete a product with its variants, stock offer and media', function () {
     Storage::fake('public');
 
     $user = User::factory()->create();
-    $imagePath = 'products/delete-me.jpg';
-    Storage::disk('public')->put($imagePath, 'image');
-    $product = Product::factory()->create(['image_path' => $imagePath]);
+    $product = Product::factory()->create();
+    $media = $product->addMedia(UploadedFile::fake()->image('delete-me.jpg'))
+        ->toMediaCollection(Product::MEDIA_COLLECTION);
+    $imagePath = $media->getPathRelativeToRoot();
+    $thumbPath = $media->getPathRelativeToRoot('thumb');
     $variant = $product->variants()->create(['size' => 'M', 'sort_order' => 0]);
     $offer = $product->offers()->create(['type' => StockOfferType::NewGrade, 'total_quantity' => 10]);
     $offer->items()->create(['product_variant_id' => $variant->id, 'quantity' => 10]);
@@ -303,7 +349,9 @@ test('authenticated users can delete a product with its variants, stock offer an
         ->assertRedirect(route('products.index'));
 
     $this->assertModelMissing($product);
+    $this->assertModelMissing($media);
     expect(ProductVariant::query()->where('product_id', $product->id)->exists())->toBeFalse();
     expect(StockOffer::query()->where('product_id', $product->id)->exists())->toBeFalse();
     Storage::disk('public')->assertMissing($imagePath);
+    Storage::disk('public')->assertMissing($thumbPath);
 });

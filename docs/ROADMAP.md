@@ -8,7 +8,7 @@ O roadmap descreve direção, não compromisso de implementação imediata.
 - [x] código interno automático
 - [x] modelo opcional
 - [x] observação
-- [x] upload de foto
+- [x] upload de até cinco fotos com thumbnails
 - [x] captura pela câmera
 - [x] corte
 - [x] rotação

@@ -2,22 +2,21 @@
 
 namespace App\Actions\Products;
 
+use App\Models\Product;
 use Illuminate\Http\UploadedFile;
-use RuntimeException;
+use Illuminate\Support\Str;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class StoreProductImage
 {
     /**
      * Store a validated product image with a generated filename.
      */
-    public function handle(UploadedFile $image): string
+    public function handle(Product $product, UploadedFile $image, int $order): Media
     {
-        $path = $image->store('products', 'public');
-
-        if (! is_string($path)) {
-            throw new RuntimeException('Não foi possível armazenar a foto do produto.');
-        }
-
-        return $path;
+        return $product->addMedia($image)
+            ->usingFileName(Str::uuid().'.'.$image->extension())
+            ->setOrder($order)
+            ->toMediaCollection(Product::MEDIA_COLLECTION);
     }
 }

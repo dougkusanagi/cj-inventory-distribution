@@ -21,7 +21,6 @@ class ProductFactory extends Factory
             'code' => 'CJ-'.fake()->unique()->numerify('######'),
             'model' => fake()->optional()->numerify('####'),
             'name' => fake()->words(3, true),
-            'image_path' => null,
             'notes' => fake()->optional()->sentence(),
         ];
     }

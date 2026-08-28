@@ -38,8 +38,8 @@ type ProductFormData = {
     notes: string;
     total_quantity: number | string | null;
     variants: VariantFormItem[];
-    image: File | null;
-    remove_image: boolean;
+    images: File[];
+    remove_media_ids: number[];
     _method?: 'PUT';
 };
 
@@ -94,6 +94,7 @@ export function ProductForm({ product }: ProductFormProps) {
     const [selectedPreset, setSelectedPreset] = useState<'numeric' | 'letters'>(
         initialPreset,
     );
+    const [processingImages, setProcessingImages] = useState(false);
     const radioGroupId = useId();
 
     const initialVariants: VariantFormItem[] =
@@ -117,8 +118,8 @@ export function ProductForm({ product }: ProductFormProps) {
         notes: product?.notes ?? '',
         total_quantity: product?.total_quantity ?? null,
         variants: initialVariants,
-        image: null,
-        remove_image: false,
+        images: [],
+        remove_media_ids: [],
         ...(isEditing ? { _method: 'PUT' as const } : {}),
     });
 
@@ -335,28 +336,34 @@ export function ProductForm({ product }: ProductFormProps) {
                             Referência visual
                         </p>
                         <CardTitle className="text-xl tracking-tight sm:text-2xl">
-                            Foto do produto
+                            Fotos do produto
                         </CardTitle>
                         <CardDescription className="text-xs sm:text-sm">
-                            Use um arquivo ou abra a câmera no celular. Você
-                            pode cortar, girar e espelhar antes de salvar.
+                            Adicione até 5 imagens por arquivo ou pela câmera do
+                            celular. Edite cada imagem antes de salvar.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="p-5 pt-0 sm:p-6 sm:pt-0">
                         <ProductImageUploader
-                            value={form.data.image}
-                            existingUrl={
-                                form.data.remove_image
-                                    ? null
-                                    : product?.image_url
+                            value={form.data.images}
+                            existingImages={
+                                product?.images.filter(
+                                    (image) =>
+                                        !form.data.remove_media_ids.includes(
+                                            image.id,
+                                        ),
+                                ) ?? []
                             }
-                            error={error('image')}
-                            onChange={(file) => {
-                                form.setData('image', file);
-                                form.setData('remove_image', false);
+                            error={error('images')}
+                            onChange={(files) => {
+                                form.setData('images', files);
                             }}
-                            onRemoveExisting={() =>
-                                form.setData('remove_image', true)
+                            onProcessingChange={setProcessingImages}
+                            onRemoveExisting={(id) =>
+                                form.setData('remove_media_ids', [
+                                    ...form.data.remove_media_ids,
+                                    id,
+                                ])
                             }
                         />
                     </CardContent>
@@ -462,8 +469,8 @@ export function ProductForm({ product }: ProductFormProps) {
                         Estoque da peça
                     </CardTitle>
                     <CardDescription className="text-xs sm:text-sm">
-                        Informe o total se souber e ative os tamanhos presentes
-                        neste lote. A quantidade por tamanho é opcional.
+                        Informe o total e ative os tamanhos presentes neste
+                        lote. A quantidade por tamanho é opcional.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-7 p-5 pt-0 sm:p-6 sm:pt-0">
@@ -474,9 +481,7 @@ export function ProductForm({ product }: ProductFormProps) {
                                 className="text-sm font-semibold text-foreground"
                             >
                                 Estoque total{' '}
-                                <span className="text-xs font-normal text-muted-foreground">
-                                    (opcional)
-                                </span>
+                                <span className="text-destructive">*</span>
                             </Label>
                             <p className="text-xs text-muted-foreground">
                                 Quantidade total de peças prontas ou disponíveis
@@ -505,6 +510,7 @@ export function ProductForm({ product }: ProductFormProps) {
                                 }
                                 placeholder="Ex.: 30"
                                 className="h-11 text-base sm:h-10 sm:text-sm"
+                                required
                                 aria-invalid={
                                     error('total_quantity') ? true : undefined
                                 }
@@ -648,7 +654,8 @@ export function ProductForm({ product }: ProductFormProps) {
                 <p className="text-xs text-muted-foreground sm:text-sm">
                     Campos marcados com{' '}
                     <span className="text-destructive">*</span> são
-                    obrigatórios. Estoque e modelo podem ser definidos depois.
+                    obrigatórios. As quantidades por tamanho podem ficar em
+                    branco.
                 </p>
                 <div className="flex flex-col-reverse gap-3 sm:flex-row">
                     <Button
@@ -661,14 +668,16 @@ export function ProductForm({ product }: ProductFormProps) {
                     </Button>
                     <Button
                         type="submit"
-                        disabled={form.processing}
+                        disabled={form.processing || processingImages}
                         className="h-12 min-w-44 text-base font-semibold sm:h-10 sm:text-sm"
                     >
                         {form.processing
                             ? 'Salvando...'
-                            : isEditing
-                              ? 'Salvar alterações'
-                              : 'Cadastrar produto'}
+                            : processingImages
+                              ? 'Preparando fotos...'
+                              : isEditing
+                                ? 'Salvar alterações'
+                                : 'Cadastrar produto'}
                     </Button>
                 </div>
             </div>

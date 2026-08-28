@@ -18,16 +18,20 @@ class SyncProductStockOffer
      */
     public function handle(Product $product, Collection $variants, array $data): ?StockOffer
     {
-        $rawVariants = collect($data['variants'] ?? [])->values();
+        $rawVariants = collect($this->normalizeVariants($data['variants'] ?? []));
         $totalQuantityInput = $data['total_quantity'] ?? null;
         $activeVariants = $rawVariants->filter(
-            fn ($variant): bool => is_array($variant) && $this->isVariantActive($variant),
+            fn (array $variant): bool => $this->isVariantActive($variant),
         );
         $hasVariantQuantities = $activeVariants->contains(
             fn (array $variant): bool => is_numeric($variant['quantity'] ?? null),
         );
 
-        if ($totalQuantityInput === null && $activeVariants->isEmpty() && ! $hasVariantQuantities) {
+        if (
+            ($totalQuantityInput === null || (int) $totalQuantityInput === 0)
+            && $activeVariants->isEmpty()
+            && ! $hasVariantQuantities
+        ) {
             return $this->deactivateLatestOffer($product);
         }
 
@@ -59,8 +63,8 @@ class SyncProductStockOffer
 
         foreach ($variants as $index => $variantModel) {
             $rawVariant = $rawVariants->get($index, []);
-            $isActive = is_array($rawVariant) && $this->isVariantActive($rawVariant);
-            $quantity = $isActive && is_array($rawVariant) ? $rawVariant['quantity'] ?? null : null;
+            $isActive = $this->isVariantActive($rawVariant);
+            $quantity = $isActive ? $rawVariant['quantity'] ?? null : null;
 
             $offer->items()->create([
                 'product_variant_id' => $variantModel->id,
@@ -70,6 +74,28 @@ class SyncProductStockOffer
         }
 
         return $offer;
+    }
+
+    /**
+     * Normalize the flexible request payload into variant records.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeVariants(mixed $variants): array
+    {
+        if (! is_array($variants)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($variants as $variant) {
+            if (is_array($variant)) {
+                $normalized[] = $variant;
+            }
+        }
+
+        return $normalized;
     }
 
     /**
