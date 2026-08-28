@@ -1,26 +1,14 @@
-import {
-    Camera,
-    Crop,
-    FlipHorizontal2,
-    ImagePlus,
-    RotateCcw,
-    RotateCw,
-    Trash2,
-} from 'lucide-react';
+import { Camera, ImagePlus, Pencil, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import InputError from '@/components/input-error';
+import { PhotoCropModal } from '@/components/products/product-photo-modals';
+import type { PendingPhoto } from '@/components/products/product-photo-modals';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { ProductImage } from '@/types';
 
 const MAX_IMAGES = 5;
-const MAX_IMAGE_DIMENSION = 1600;
-const MAX_UPLOAD_BYTES = 1024 * 1024;
-const INITIAL_JPEG_QUALITY = 0.82;
-const MIN_JPEG_QUALITY = 0.5;
-const IMAGE_PROCESSING_ERROR =
-    'Não foi possível preparar uma das imagens. Tente usar uma foto JPG, PNG ou WebP.';
 
 type ProductImageUploaderProps = {
     value: File[];
@@ -31,161 +19,12 @@ type ProductImageUploaderProps = {
     onProcessingChange?: (processing: boolean) => void;
 };
 
-type ImageTransform = {
-    rotation: number;
-    mirrored: boolean;
-    cropped: boolean;
-};
-
 type NewImageItem = {
     id: string;
     file: File;
     sourceFile: File;
-    sourceUrl: string;
-    transform: ImageTransform;
+    previewUrl: string;
 };
-
-const emptyTransform = (): ImageTransform => ({
-    rotation: 0,
-    mirrored: false,
-    cropped: false,
-});
-
-function loadImage(sourceUrl: string): Promise<HTMLImageElement> {
-    return new Promise((resolve, reject) => {
-        const image = new Image();
-        image.onload = () => resolve(image);
-        image.onerror = reject;
-        image.src = sourceUrl;
-    });
-}
-
-function renderImage(
-    image: HTMLImageElement,
-    transform: ImageTransform,
-    scale: number,
-    quality: number,
-): Promise<Blob> {
-    const cropWidth = transform.cropped
-        ? Math.min(image.naturalWidth, image.naturalHeight)
-        : image.naturalWidth;
-    const cropHeight = transform.cropped
-        ? Math.min(image.naturalWidth, image.naturalHeight)
-        : image.naturalHeight;
-    const canvas = document.createElement('canvas');
-    const isSideways = transform.rotation === 90 || transform.rotation === 270;
-    const scaledWidth = Math.max(1, Math.round(cropWidth * scale));
-    const scaledHeight = Math.max(1, Math.round(cropHeight * scale));
-
-    canvas.width = isSideways ? scaledHeight : scaledWidth;
-    canvas.height = isSideways ? scaledWidth : scaledHeight;
-
-    const context = canvas.getContext('2d');
-
-    if (!context) {
-        return Promise.reject(new Error('Não foi possível criar o canvas.'));
-    }
-
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = 'high';
-    context.translate(canvas.width / 2, canvas.height / 2);
-    context.rotate((transform.rotation * Math.PI) / 180);
-    context.scale(transform.mirrored ? -1 : 1, 1);
-    context.drawImage(
-        image,
-        (transform.cropped
-            ? (cropWidth - image.naturalWidth) / 2
-            : -image.naturalWidth / 2) * scale,
-        (transform.cropped
-            ? (cropHeight - image.naturalHeight) / 2
-            : -image.naturalHeight / 2) * scale,
-        image.naturalWidth * scale,
-        image.naturalHeight * scale,
-    );
-
-    return new Promise((resolve, reject) => {
-        canvas.toBlob(
-            (blob) => {
-                if (blob) {
-                    resolve(blob);
-                } else {
-                    reject(new Error('Não foi possível exportar a imagem.'));
-                }
-            },
-            'image/jpeg',
-            quality,
-        );
-    });
-}
-
-async function transformImage(
-    sourceUrl: string,
-    transform: ImageTransform,
-): Promise<File> {
-    const image = await loadImage(sourceUrl);
-    const longestSide = Math.max(image.naturalWidth, image.naturalHeight);
-
-    if (longestSide === 0) {
-        throw new Error('A imagem não possui dimensões válidas.');
-    }
-
-    let scale = Math.min(1, MAX_IMAGE_DIMENSION / longestSide);
-    let quality = INITIAL_JPEG_QUALITY;
-
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-        const blob = await renderImage(image, transform, scale, quality);
-
-        if (blob.size <= MAX_UPLOAD_BYTES) {
-            return new File([blob], 'product-photo.jpg', {
-                type: 'image/jpeg',
-            });
-        }
-
-        if (quality > MIN_JPEG_QUALITY) {
-            quality = Math.max(MIN_JPEG_QUALITY, quality - 0.1);
-        } else {
-            scale *= 0.8;
-            quality = INITIAL_JPEG_QUALITY;
-        }
-    }
-
-    throw new Error('A imagem não pôde ser reduzida ao tamanho permitido.');
-}
-
-function createNewImageItem(file: File): NewImageItem {
-    return {
-        id: crypto.randomUUID(),
-        file,
-        sourceFile: file,
-        sourceUrl: URL.createObjectURL(file),
-        transform: emptyTransform(),
-    };
-}
-
-async function prepareNewImageItem(
-    file: File,
-    objectUrls: Set<string>,
-): Promise<NewImageItem> {
-    const sourceUrl = URL.createObjectURL(file);
-    objectUrls.add(sourceUrl);
-
-    try {
-        const uploadFile = await transformImage(sourceUrl, emptyTransform());
-
-        return {
-            id: crypto.randomUUID(),
-            file: uploadFile,
-            sourceFile: file,
-            sourceUrl,
-            transform: emptyTransform(),
-        };
-    } catch (error) {
-        URL.revokeObjectURL(sourceUrl);
-        objectUrls.delete(sourceUrl);
-
-        throw error;
-    }
-}
 
 export function ProductImageUploader({
     value,
@@ -195,18 +34,46 @@ export function ProductImageUploader({
     onRemoveExisting,
     onProcessingChange,
 }: ProductImageUploaderProps) {
+    const objectUrls = useRef<Set<string>>(new Set());
+    const cameraInputRef = useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [items, setItems] = useState<NewImageItem[]>(() =>
-        value.map(createNewImageItem),
+        value.map((file) => ({
+            id: crypto.randomUUID(),
+            file,
+            sourceFile: file,
+            previewUrl: '',
+        })),
     );
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [pendingPhoto, setPendingPhoto] = useState<PendingPhoto | null>(null);
+    const [editingItemId, setEditingItemId] = useState<string | null>(null);
     const [processing, setProcessing] = useState(false);
     const [clientError, setClientError] = useState<string | null>(null);
-    const objectUrls = useRef<Set<string>>(new Set());
-    const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        items.forEach((item) => objectUrls.current.add(item.sourceUrl));
+        if (!items.some((item) => item.previewUrl === '')) {
+            return;
+        }
+
+        setItems((currentItems) =>
+            currentItems.map((item) =>
+                item.previewUrl
+                    ? item
+                    : {
+                          ...item,
+                          previewUrl: createObjectUrl(
+                              item.file,
+                              objectUrls.current,
+                          ),
+                      },
+            ),
+        );
     }, [items]);
+
+    useEffect(() => {
+        onProcessingChange?.(processing);
+    }, [onProcessingChange, processing]);
 
     useEffect(() => {
         const urls = objectUrls.current;
@@ -216,157 +83,135 @@ export function ProductImageUploader({
         };
     }, []);
 
-    useEffect(() => {
-        onProcessingChange?.(processing);
-    }, [onProcessingChange, processing]);
-
-    const selectedItem = items[selectedIndex] ?? null;
     const imageCount = existingImages.length + items.length;
     const hasRoom = imageCount < MAX_IMAGES;
+    const selectedItem = items[selectedIndex] ?? null;
+    const primaryPreviewUrl =
+        selectedItem?.previewUrl ?? existingImages[0]?.url ?? null;
 
-    const updateItems = (nextItems: NewImageItem[]) => {
+    const createPreviewUrl = (file: File): string =>
+        createObjectUrl(file, objectUrls.current);
+
+    const revokeObjectUrl = (url: string) => {
+        URL.revokeObjectURL(url);
+        objectUrls.current.delete(url);
+    };
+
+    const updateItems = (
+        nextItems: NewImageItem[],
+        nextSelectedIndex?: number,
+    ) => {
         setItems(nextItems);
         onChange(nextItems.map((item) => item.file));
 
         if (nextItems.length === 0) {
             setSelectedIndex(0);
-        } else if (selectedIndex >= nextItems.length) {
-            setSelectedIndex(nextItems.length - 1);
-        }
-    };
 
-    const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(event.target.files ?? []);
-        const nextFiles = files.slice(0, MAX_IMAGES - imageCount);
-
-        event.target.value = '';
-
-        if (nextFiles.length === 0) {
             return;
         }
 
+        setSelectedIndex(
+            Math.min(nextSelectedIndex ?? selectedIndex, nextItems.length - 1),
+        );
+    };
+
+    const closePendingPhoto = () => {
+        if (pendingPhoto) {
+            revokeObjectUrl(pendingPhoto.url);
+        }
+
+        setPendingPhoto(null);
+        setEditingItemId(null);
+    };
+
+    const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+
+        event.target.value = '';
+
+        if (!file || !hasRoom || processing) {
+            return;
+        }
+
+        if (pendingPhoto) {
+            revokeObjectUrl(pendingPhoto.url);
+        }
+
         setClientError(null);
+        setPendingPhoto({ file, url: createPreviewUrl(file) });
+    };
+
+    const handleApplyPhoto = async (croppedFile: File) => {
         setProcessing(true);
 
-        const preparedItems: NewImageItem[] = [];
-        let hasProcessingError = false;
+        const previewUrl = createPreviewUrl(croppedFile);
+        const editingItem = editingItemId
+            ? items.find((item) => item.id === editingItemId)
+            : null;
 
-        for (const file of nextFiles) {
-            try {
-                preparedItems.push(
-                    await prepareNewImageItem(file, objectUrls.current),
-                );
-            } catch {
-                hasProcessingError = true;
-                break;
-            }
+        if (editingItem) {
+            revokeObjectUrl(editingItem.previewUrl);
         }
 
-        if (preparedItems.length > 0) {
-            const nextItems = [...items, ...preparedItems];
+        const nextItems = editingItem
+            ? items.map((item) =>
+                  item.id === editingItem.id
+                      ? { ...item, file: croppedFile, previewUrl }
+                      : item,
+              )
+            : [
+                  ...items,
+                  {
+                      id: crypto.randomUUID(),
+                      file: croppedFile,
+                      sourceFile: pendingPhoto?.file ?? croppedFile,
+                      previewUrl,
+                  },
+              ];
 
-            setItems(nextItems);
-            onChange(nextItems.map((item) => item.file));
-            setSelectedIndex(items.length);
-        }
-
-        if (hasProcessingError) {
-            setClientError(IMAGE_PROCESSING_ERROR);
-        }
-
+        updateItems(
+            nextItems,
+            editingItem
+                ? items.findIndex((item) => item.id === editingItem.id)
+                : nextItems.length - 1,
+        );
+        closePendingPhoto();
         setProcessing(false);
+    };
+
+    const handleEditNewImage = (index: number) => {
+        const item = items[index];
+
+        if (!item || processing) {
+            return;
+        }
+
+        if (pendingPhoto) {
+            revokeObjectUrl(pendingPhoto.url);
+        }
+
+        setSelectedIndex(index);
+        setEditingItemId(item.id);
+        setClientError(null);
+        setPendingPhoto({
+            file: item.sourceFile,
+            url: createPreviewUrl(item.sourceFile),
+        });
     };
 
     const handleRemoveNewImage = (index: number) => {
         const item = items[index];
 
-        if (item) {
-            URL.revokeObjectURL(item.sourceUrl);
-            objectUrls.current.delete(item.sourceUrl);
+        if (!item) {
+            return;
         }
 
+        revokeObjectUrl(item.previewUrl);
         updateItems(items.filter((_, itemIndex) => itemIndex !== index));
     };
 
-    const applyTransform = async (
-        item: NewImageItem,
-        nextTransform: ImageTransform,
-    ) => {
-        setClientError(null);
-        setProcessing(true);
-
-        try {
-            const nextFile = await transformImage(
-                item.sourceUrl,
-                nextTransform,
-            );
-            const nextItems = items.map((currentItem) =>
-                currentItem.id === item.id
-                    ? {
-                          ...currentItem,
-                          file: nextFile,
-                          transform: nextTransform,
-                      }
-                    : currentItem,
-            );
-
-            updateItems(nextItems);
-        } catch {
-            setClientError(IMAGE_PROCESSING_ERROR);
-        } finally {
-            setProcessing(false);
-        }
-    };
-
-    const handleRotate = (direction: 'left' | 'right') => {
-        if (!selectedItem) {
-            return;
-        }
-
-        const rotation =
-            (selectedItem.transform.rotation +
-                (direction === 'right' ? 90 : 270)) %
-            360;
-
-        void applyTransform(selectedItem, {
-            ...selectedItem.transform,
-            rotation,
-        });
-    };
-
-    const handleMirror = () => {
-        if (!selectedItem) {
-            return;
-        }
-
-        void applyTransform(selectedItem, {
-            ...selectedItem.transform,
-            mirrored: !selectedItem.transform.mirrored,
-        });
-    };
-
-    const handleCrop = () => {
-        if (!selectedItem || selectedItem.transform.cropped) {
-            return;
-        }
-
-        void applyTransform(selectedItem, {
-            ...selectedItem.transform,
-            cropped: true,
-        });
-    };
-
-    const handleReset = () => {
-        if (!selectedItem) {
-            return;
-        }
-
-        void applyTransform(selectedItem, emptyTransform());
-    };
-
-    const primaryPreviewUrl =
-        selectedItem?.sourceUrl ?? existingImages[0]?.url ?? null;
-    const primaryTransform = selectedItem?.transform;
+    const openCamera = () => cameraInputRef.current?.click();
+    const openFilePicker = () => fileInputRef.current?.click();
 
     return (
         <div className="grid gap-4">
@@ -376,37 +221,23 @@ export function ProductImageUploader({
                         <img
                             src={primaryPreviewUrl}
                             alt="Pré-visualização da foto do produto"
-                            className="size-full object-cover transition-transform duration-300"
-                            style={
-                                primaryTransform
-                                    ? {
-                                          transform:
-                                              'rotate(' +
-                                              primaryTransform.rotation +
-                                              'deg) scaleX(' +
-                                              (primaryTransform.mirrored
-                                                  ? -1
-                                                  : 1) +
-                                              ')',
-                                      }
-                                    : undefined
-                            }
+                            className="size-full object-cover"
                             decoding="async"
                         />
                     ) : (
                         <button
                             type="button"
-                            onClick={() => inputRef.current?.click()}
+                            onClick={openFilePicker}
                             className="flex size-full flex-col items-center justify-center gap-3 p-6 text-center transition-colors hover:bg-accent"
                         >
-                            <span className="flex size-14 items-center justify-center rounded-full bg-background text-highlight shadow-sm">
+                            <span className="flex size-14 items-center justify-center rounded-full bg-background text-primary shadow-sm">
                                 <ImagePlus className="size-6" />
                             </span>
                             <span className="text-sm font-medium text-foreground">
                                 Adicione fotos da peça
                             </span>
-                            <span className="max-w-48 text-xs leading-5 text-muted-foreground">
-                                JPG, PNG ou WebP · até 5 MB por foto
+                            <span className="max-w-52 text-xs leading-5 text-muted-foreground">
+                                Uma foto por vez · JPG, PNG ou WebP · até 5 MB
                             </span>
                         </button>
                     )}
@@ -435,6 +266,7 @@ export function ProductImageUploader({
                             </button>
                         </div>
                     ))}
+
                     {items.map((item, index) => (
                         <div
                             key={item.id}
@@ -454,35 +286,56 @@ export function ProductImageUploader({
                                 }
                             >
                                 <img
-                                    src={item.sourceUrl}
+                                    src={item.previewUrl}
                                     alt=""
                                     className="size-full object-cover"
                                     loading="lazy"
                                     decoding="async"
                                 />
                             </button>
-                            <button
-                                type="button"
-                                className="absolute top-1 right-1 flex size-6 items-center justify-center rounded-full bg-background/90 text-muted-foreground shadow-sm transition-colors hover:bg-destructive hover:text-destructive-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                                onClick={() => handleRemoveNewImage(index)}
-                                aria-label={
-                                    'Remover nova imagem ' + (index + 1)
-                                }
-                            >
-                                <Trash2 className="size-3.5" />
-                            </button>
+                            <div className="absolute top-1 right-1 flex gap-1">
+                                <button
+                                    type="button"
+                                    className="flex size-6 items-center justify-center rounded-full bg-background/90 text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                    onClick={() => handleEditNewImage(index)}
+                                    aria-label={
+                                        'Editar nova imagem ' + (index + 1)
+                                    }
+                                    disabled={processing}
+                                >
+                                    <Pencil className="size-3.5" />
+                                </button>
+                                <button
+                                    type="button"
+                                    className="flex size-6 items-center justify-center rounded-full bg-background/90 text-muted-foreground shadow-sm transition-colors hover:bg-destructive hover:text-destructive-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                    onClick={() => handleRemoveNewImage(index)}
+                                    aria-label={
+                                        'Remover nova imagem ' + (index + 1)
+                                    }
+                                >
+                                    <Trash2 className="size-3.5" />
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>
             </div>
 
             <input
-                ref={inputRef}
-                id="product-images"
+                ref={cameraInputRef}
+                id="product-images-camera"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 capture="environment"
-                multiple
+                className="sr-only"
+                onChange={handleFileChange}
+                disabled={!hasRoom || processing}
+            />
+            <input
+                ref={fileInputRef}
+                id="product-images-file"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
                 className="sr-only"
                 onChange={handleFileChange}
                 disabled={!hasRoom || processing}
@@ -493,88 +346,61 @@ export function ProductImageUploader({
                     type="button"
                     variant="secondary"
                     size="sm"
-                    onClick={() => inputRef.current?.click()}
+                    onClick={openCamera}
                     disabled={!hasRoom || processing}
                 >
                     <Camera />
-                    {imageCount > 0 ? 'Adicionar imagens' : 'Escolher imagens'}
+                    Tirar foto
                 </Button>
-
-                {selectedItem && (
-                    <>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleRotate('left')}
-                            disabled={processing}
-                            aria-label="Girar para a esquerda"
-                        >
-                            <RotateCcw />
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleRotate('right')}
-                            disabled={processing}
-                            aria-label="Girar para a direita"
-                        >
-                            <RotateCw />
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={handleMirror}
-                            disabled={processing}
-                            aria-label="Espelhar foto"
-                        >
-                            <FlipHorizontal2 />
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleCrop}
-                            disabled={
-                                processing || selectedItem.transform.cropped
-                            }
-                        >
-                            <Crop />
-                            Cortar
-                        </Button>
-                        {(selectedItem.transform.rotation !== 0 ||
-                            selectedItem.transform.mirrored ||
-                            selectedItem.transform.cropped) && (
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleReset}
-                                disabled={processing}
-                            >
-                                Desfazer edição
-                            </Button>
-                        )}
-                    </>
-                )}
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={openFilePicker}
+                    disabled={!hasRoom || processing}
+                >
+                    <ImagePlus />
+                    Escolher arquivo
+                </Button>
             </div>
 
             <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
                 <span>
-                    {imageCount} de {MAX_IMAGES} imagens
+                    {imageCount} de {MAX_IMAGES}{' '}
+                    {imageCount === 1 ? 'foto' : 'fotos'}
                 </span>
                 <span>
                     {processing
-                        ? 'Preparando fotos...'
+                        ? 'Processando foto...'
                         : hasRoom
-                          ? 'Você pode adicionar mais fotos.'
+                          ? 'Você pode adicionar outra foto.'
                           : 'Limite de fotos atingido.'}
                 </span>
             </div>
 
             <InputError message={clientError ?? error} />
+
+            {pendingPhoto && (
+                <PhotoCropModal
+                    key={pendingPhoto.url}
+                    pendingPhoto={pendingPhoto}
+                    onCancel={closePendingPhoto}
+                    onApply={handleApplyPhoto}
+                    onRetake={openCamera}
+                    onError={() =>
+                        setClientError(
+                            'Não foi possível preparar a foto. Tente usar uma imagem JPG, PNG ou WebP.',
+                        )
+                    }
+                />
+            )}
         </div>
     );
+}
+
+function createObjectUrl(file: File, urls: Set<string>): string {
+    const url = URL.createObjectURL(file);
+    urls.add(url);
+
+    return url;
 }

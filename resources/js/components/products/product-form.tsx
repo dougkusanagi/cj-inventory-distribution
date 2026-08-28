@@ -339,8 +339,9 @@ export function ProductForm({ product }: ProductFormProps) {
                             Fotos do produto
                         </CardTitle>
                         <CardDescription className="text-xs sm:text-sm">
-                            Adicione até 5 imagens por arquivo ou pela câmera do
-                            celular. Edite cada imagem antes de salvar.
+                            Adicione até 5 imagens, uma por vez, pelo arquivo ou
+                            pela câmera do celular. Edite cada imagem antes de
+                            salvar.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="p-5 pt-0 sm:p-6 sm:pt-0">
