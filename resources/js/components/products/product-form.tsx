@@ -578,15 +578,15 @@ export function ProductForm({ product }: ProductFormProps) {
                                     >
                                         <Card
                                             className={cn(
-                                                'gap-0 rounded-2xl border p-0 shadow-none transition-all',
+                                                'h-12 gap-0 rounded-xl border p-0 shadow-none transition-colors',
                                                 variant.is_active
-                                                    ? 'border-primary/60 bg-primary/5 ring-2 ring-primary/15'
-                                                    : 'border-border/80 bg-card hover:border-primary/40',
+                                                    ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/15'
+                                                    : 'border-border/80 bg-muted/20 hover:border-primary/40',
                                             )}
                                         >
                                             <label
                                                 htmlFor={activeId}
-                                                className="flex min-h-16 cursor-pointer items-center justify-between gap-3 p-3.5 select-none"
+                                                className="flex h-full cursor-pointer items-center justify-between gap-3 px-3 py-2.5 select-none"
                                             >
                                                 <span className="font-mono text-base font-bold text-foreground">
                                                     {variant.size}
@@ -631,7 +631,7 @@ export function ProductForm({ product }: ProductFormProps) {
                                                         )
                                                     }
                                                     placeholder="Ex.: 5"
-                                                    className="h-[4.125rem] text-center font-mono text-sm"
+                                                    className="h-12 rounded-xl px-2 text-center font-mono text-sm"
                                                     aria-invalid={
                                                         error(
                                                             `variants.${index}.quantity`,
