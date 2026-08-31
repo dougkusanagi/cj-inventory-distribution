@@ -68,6 +68,18 @@ class Product extends Model implements HasMedia
     }
 
     /**
+     * Get the latest stock offer that is available in the shared catalog.
+     *
+     * @return HasOne<StockOffer, $this>
+     */
+    public function latestAvailableOffer(): HasOne
+    {
+        return $this->hasOne(StockOffer::class)
+            ->availableForCatalog()
+            ->latestOfMany();
+    }
+
+    /**
      * Register the product image collection.
      */
     public function registerMediaCollections(): void

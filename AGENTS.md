@@ -25,7 +25,7 @@ Depois, inspecione o código e os componentes relacionados antes de propor ou im
 - O campo `model` do produto é opcional.
 - O código interno do produto é obrigatório e gerado pelo sistema.
 - `Reposição`, `Grade Nova` e `Grade Furada` classificam uma oferta de estoque, não o produto.
-- O estoque total é obrigatório.
+- O estoque total é obrigatório quando houver uma oferta de estoque ativa.
 - Quantidades por tamanho são opcionais.
 - Não assuma que a soma por tamanho sempre estará disponível.
 
@@ -44,6 +44,10 @@ Use transações quando uma operação alterar múltiplos registros que precisam
 Priorize uso simples em celular, poucos passos, estados visuais claros, feedback imediato e uma experiência de compartilhamento fácil para as vendedoras.
 
 No frontend, prefira componentes shadcn existentes ou bibliotecas React maduras e leves a implementações próprias. Crie uma solução customizada somente quando as opções existentes não atenderem ao requisito ou adicionarem complexidade desnecessária.
+
+- Para estados booleanos, reutilize `@/components/ui/switch`, baseado no
+  componente Switch do shadcn/Radix. Não reimplemente um switch usando
+  `TogglePrimitive` ou markup visual próprio.
 
 Ao implementar a captura de foto, aceite:
 

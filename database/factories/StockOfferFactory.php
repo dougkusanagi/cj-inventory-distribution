@@ -23,6 +23,7 @@ class StockOfferFactory extends Factory
             'product_id' => Product::factory(),
             'type' => StockOfferType::NewGrade,
             'total_quantity' => 0,
+            'volumes' => null,
             'is_active' => true,
             'notes' => null,
         ];

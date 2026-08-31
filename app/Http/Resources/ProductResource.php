@@ -46,7 +46,10 @@ class ProductResource extends JsonResource
                 ->values()
                 ->all()),
             'notes' => $this->notes,
+            'has_stock_offer' => $offer !== null,
+            'stock_offer_type' => $offer?->type?->value,
             'total_quantity' => $offer?->total_quantity,
+            'volumes' => $offer?->volumes,
             'variants' => $this->whenLoaded('variants', fn () => $this->variants
                 ->map(function (ProductVariant $variant) use ($itemsByVariant): array {
                     $stockItem = $itemsByVariant->get($variant->id);

@@ -4,6 +4,7 @@ import {
     ChevronUp,
     GripVertical,
     ImagePlus,
+    Pencil,
     Star,
     Trash2,
     Undo2,
@@ -11,7 +12,10 @@ import {
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import InputError from '@/components/input-error';
-import { PhotoEditor } from '@/components/products/product-photo-modals';
+import {
+    canvasToImageFile,
+    PhotoEditor,
+} from '@/components/products/product-photo-modals';
 import type { PhotoEditorSource } from '@/components/products/product-photo-modals';
 import { Button } from '@/components/ui/button';
 import {
@@ -335,6 +339,8 @@ export function ProductPhotoManager({
     const [organizerOpen, setOrganizerOpen] = useState(false);
     const [editor, setEditor] = useState<{
         source: PhotoEditorSource;
+        targetKey?: string;
+        targetMediaId?: number;
     } | null>(null);
     const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
     const [processing, setProcessing] = useState(false);
@@ -447,13 +453,15 @@ export function ProductPhotoManager({
                 const preparedFile = preparedFiles[0];
                 const previewUrl = createObjectUrl(preparedFile, objectUrls);
 
-                setEditor({
+                setEditor((currentEditor) => ({
+                    targetKey: currentEditor?.targetKey,
+                    targetMediaId: currentEditor?.targetMediaId,
                     source: {
                         url: previewUrl,
                         name: preparedFile.name,
                         origin,
                     },
-                });
+                }));
                 dispatch({ type: 'setError', message: null });
 
                 return;
@@ -500,24 +508,28 @@ export function ProductPhotoManager({
         setProcessing(true);
 
         try {
-            dispatch({
-                type: 'add',
-                items: [
-                    {
-                        key: newPhotoKey(),
-                        kind: 'new',
-                        id: crypto.randomUUID(),
-                        file: editedFile,
-                        previewUrl: createObjectUrl(editedFile, objectUrls),
-                        name: editedFile.name,
-                        origin:
-                            editor.source.origin === 'camera'
-                                ? 'camera'
-                                : 'gallery',
-                        removed: false,
-                    },
-                ],
-            });
+            const editedItem: NewPhotoItem = {
+                key: editor.targetKey ?? newPhotoKey(),
+                kind: 'new',
+                id: crypto.randomUUID(),
+                file: editedFile,
+                previewUrl: createObjectUrl(editedFile, objectUrls),
+                name: editedFile.name,
+                origin:
+                    editor.source.origin === 'camera' ? 'camera' : 'gallery',
+                replacesMediaId: editor.targetMediaId,
+                removed: false,
+            };
+
+            if (editor.targetKey) {
+                dispatch({
+                    type: 'replace',
+                    key: editor.targetKey,
+                    item: editedItem,
+                });
+            } else {
+                dispatch({ type: 'add', items: [editedItem] });
+            }
 
             const [nextPhoto, ...remainingPhotos] = pendingPhotos;
 
@@ -541,10 +553,30 @@ export function ProductPhotoManager({
         }
     };
 
+    const handleEdit = (item: PhotoItem) => {
+        const source: PhotoEditorSource = {
+            url: item.kind === 'existing' ? item.url : item.previewUrl,
+            name: item.name,
+            origin: item.kind === 'existing' ? 'existing' : item.origin,
+        };
+
+        setEditor({
+            source,
+            targetKey: item.key,
+            targetMediaId:
+                item.kind === 'existing' ? item.id : item.replacesMediaId,
+        });
+        setAnnouncement('Ajuste a foto selecionada.');
+    };
+
     const handleCancelEditor = () => {
         setEditor(null);
         setPendingPhotos([]);
-        setAnnouncement('Adição de fotos cancelada.');
+        setAnnouncement(
+            editor?.targetKey
+                ? 'Ajuste cancelado. A foto original foi mantida.'
+                : 'Adição de fotos cancelada.',
+        );
     };
 
     const handleSetCover = (item: PhotoItem) => {
@@ -603,7 +635,12 @@ export function ProductPhotoManager({
     const inputError = state.error ?? error;
 
     return (
-        <section className="grid gap-4" aria-labelledby="product-photos-title">
+        <section
+            className="grid gap-4"
+            aria-labelledby="product-photos-title"
+            aria-invalid={inputError ? true : undefined}
+            tabIndex={inputError ? -1 : undefined}
+        >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="grid gap-1">
                     <div className="flex items-center gap-2">
@@ -700,6 +737,7 @@ export function ProductPhotoManager({
                                     serverImageErrors.get(item.key)
                                 }
                                 processing={processing}
+                                onEdit={() => handleEdit(item)}
                                 onSetCover={() => handleSetCover(item)}
                                 onRemove={() => handleRemove(item)}
                             />
@@ -794,6 +832,7 @@ function PhotoRow({
     index,
     error,
     processing,
+    onEdit,
     onSetCover,
     onRemove,
 }: {
@@ -801,6 +840,7 @@ function PhotoRow({
     index: number;
     error?: string;
     processing: boolean;
+    onEdit: () => void;
     onSetCover: () => void;
     onRemove: () => void;
 }) {
@@ -865,6 +905,17 @@ function PhotoRow({
                         Definir como capa
                     </Button>
                 )}
+
+                <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onEdit}
+                    disabled={processing}
+                    className="h-12 w-full justify-start px-3"
+                >
+                    <Pencil />
+                    Ajustar
+                </Button>
 
                 <Button
                     type="button"
@@ -1139,20 +1190,14 @@ async function resizeImageForUpload(file: File): Promise<File> {
     context.drawImage(image.source, 0, 0, canvas.width, canvas.height);
     image.close?.();
 
-    const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, 'image/jpeg', 0.9),
-    );
+    const baseName = file.name.replace(/\.[^.]+$/, '') || 'produto';
+    const optimizedFile = await canvasToImageFile(canvas, baseName, 0.9);
 
-    if (!blob) {
+    if (!optimizedFile) {
         return file;
     }
 
-    const baseName = file.name.replace(/\.[^.]+$/, '') || 'produto';
-
-    return new File([blob], baseName + '.jpg', {
-        type: 'image/jpeg',
-        lastModified: Date.now(),
-    });
+    return optimizedFile;
 }
 
 async function loadImage(file: File): Promise<{

@@ -13,6 +13,8 @@ export type ProductImage = {
     name: string;
 };
 
+export type StockOfferType = 'replenishment' | 'new_grade' | 'broken_grade';
+
 export type Product = {
     id: number;
     code: string;
@@ -20,7 +22,10 @@ export type Product = {
     name: string;
     images: ProductImage[];
     notes: string | null;
+    has_stock_offer?: boolean;
+    stock_offer_type?: StockOfferType | null;
     total_quantity?: number | null;
+    volumes?: number | null;
     variants: ProductVariant[];
     created_at: string | null;
     updated_at: string | null;

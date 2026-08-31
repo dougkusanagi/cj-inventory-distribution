@@ -23,6 +23,10 @@ também envia image_order[] para preservar a posição de imagens existentes e
 novas. A imagem original permanece disponível para o formulário e a conversão
 é usada quando a velocidade de carregamento for prioritária.
 
+O editor do formulário é obrigatório e normaliza o arquivo final para a
+proporção 4:5. O navegador exporta esse arquivo em WebP quando houver suporte,
+com JPEG como fallback; o servidor aceita ambos os formatos.
+
 ## Consequências
 
 Vantagens:

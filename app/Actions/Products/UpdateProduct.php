@@ -28,10 +28,10 @@ class UpdateProduct
     public function handle(Product $product, array $data): Product
     {
         $addedMedia = [];
-        $removedMedia = [];
+        $mediaBackups = [];
 
         try {
-            $updatedProduct = DB::transaction(function () use ($product, $data, &$addedMedia, &$removedMedia): Product {
+            $updatedProduct = DB::transaction(function () use ($product, $data, &$addedMedia, &$mediaBackups): Product {
                 $lockedProduct = Product::query()
                     ->whereKey($product->getKey())
                     ->lockForUpdate()
@@ -54,6 +54,12 @@ class UpdateProduct
                     ->whereKey($removeMediaIds)
                     ->get();
                 $removedMedia = $mediaToRemove->all();
+                foreach ($removedMedia as $media) {
+                    $mediaBackups = [
+                        ...$mediaBackups,
+                        ...$this->backupMediaFiles($media),
+                    ];
+                }
                 $remainingMediaCount = $lockedProduct->media()
                     ->where('collection_name', Product::MEDIA_COLLECTION)
                     ->whereNotIn('id', $removeMediaIds)
@@ -78,6 +84,12 @@ class UpdateProduct
                     $removeMediaIds->all(),
                 );
 
+                Media::withoutEvents(function () use ($removedMedia): void {
+                    foreach ($removedMedia as $media) {
+                        $media->delete();
+                    }
+                });
+
                 return $lockedProduct;
             });
         } catch (Throwable $exception) {
@@ -89,10 +101,18 @@ class UpdateProduct
                 }
             }
 
+            $this->restoreMediaFiles($mediaBackups);
+
             throw $exception;
         }
 
-        $this->removeMediaWithCompensation($removedMedia);
+        foreach ($mediaBackups as $backup) {
+            try {
+                Storage::disk($backup['disk'])->delete($backup['backup']);
+            } catch (Throwable $cleanupException) {
+                report($cleanupException);
+            }
+        }
 
         return $updatedProduct->fresh()->load(['variants', 'latestOffer.items', 'media']);
     }
@@ -211,53 +231,6 @@ class UpdateProduct
     }
 
     /**
-     * Remove selected media without leaving a partial deletion behind.
-     *
-     * The media rows are deleted in a transaction while their files are held
-     * in a temporary backup. If the database operation fails, the files are
-     * moved back so the product remains usable.
-     *
-     * @param  array<int, Media>  $removedMedia
-     */
-    private function removeMediaWithCompensation(array $removedMedia): void
-    {
-        if ($removedMedia === []) {
-            return;
-        }
-
-        $backups = [];
-
-        try {
-            foreach ($removedMedia as $media) {
-                $backups = [
-                    ...$backups,
-                    ...$this->backupMediaFiles($media),
-                ];
-            }
-
-            DB::transaction(function () use ($removedMedia): void {
-                Media::withoutEvents(function () use ($removedMedia): void {
-                    foreach ($removedMedia as $media) {
-                        $media->delete();
-                    }
-                });
-            });
-        } catch (Throwable $exception) {
-            $this->restoreMediaFiles($backups);
-
-            throw $exception;
-        }
-
-        foreach ($backups as $backup) {
-            try {
-                Storage::disk($backup['disk'])->delete($backup['backup']);
-            } catch (Throwable $cleanupException) {
-                report($cleanupException);
-            }
-        }
-    }
-
-    /**
      * Move all files belonging to a media item to a temporary backup.
      *
      * @return array<int, array{disk: string, original: string, backup: string}>
@@ -280,24 +253,30 @@ class UpdateProduct
 
         $backups = [];
 
-        foreach ($files as $file) {
-            $disk = Storage::disk($file['disk']);
+        try {
+            foreach ($files as $file) {
+                $disk = Storage::disk($file['disk']);
 
-            if (! $disk->exists($file['path'])) {
-                continue;
+                if (! $disk->exists($file['path'])) {
+                    continue;
+                }
+
+                $backupPath = 'product-media-cleanup/'.Str::uuid().'/'.basename($file['path']);
+
+                if (! $disk->move($file['path'], $backupPath)) {
+                    throw new RuntimeException('Não foi possível preparar a exclusão da imagem.');
+                }
+
+                $backups[] = [
+                    'disk' => $file['disk'],
+                    'original' => $file['path'],
+                    'backup' => $backupPath,
+                ];
             }
+        } catch (Throwable $exception) {
+            $this->restoreMediaFiles($backups);
 
-            $backupPath = 'product-media-cleanup/'.Str::uuid().'/'.basename($file['path']);
-
-            if (! $disk->move($file['path'], $backupPath)) {
-                throw new RuntimeException('Não foi possível preparar a exclusão da imagem.');
-            }
-
-            $backups[] = [
-                'disk' => $file['disk'],
-                'original' => $file['path'],
-                'backup' => $backupPath,
-            ];
+            throw $exception;
         }
 
         return $backups;

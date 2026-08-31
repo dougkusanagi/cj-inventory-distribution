@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Products;
 
+use App\Enums\StockOfferType;
 use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 abstract class ProductRequest extends FormRequest
@@ -24,9 +26,25 @@ abstract class ProductRequest extends FormRequest
     {
         $name = $this->input('name');
         $model = $this->input('model');
+        $hasStockOffer = $this->input('has_stock_offer');
+        $stockOfferType = $this->input('stock_offer_type');
         $totalQuantity = $this->input('total_quantity');
+        $volumes = $this->input('volumes');
         $inputVariants = $this->input('variants', []);
         $variants = $inputVariants;
+
+        // Keep accepting the original payload while the form migrates to the
+        // explicit optional-offer contract.
+        if ($hasStockOffer === null) {
+            $hasStockOffer = true;
+        }
+
+        if (
+            $stockOfferType === null
+            && filter_var($hasStockOffer, FILTER_VALIDATE_BOOLEAN)
+        ) {
+            $stockOfferType = StockOfferType::NewGrade->value;
+        }
 
         if (is_array($inputVariants)) {
             $variants = [];
@@ -52,7 +70,10 @@ abstract class ProductRequest extends FormRequest
         $this->merge([
             'name' => is_string($name) ? Str::squish($name) : $name,
             'model' => is_string($model) ? Str::squish($model) ?: null : $model,
+            'has_stock_offer' => $hasStockOffer,
+            'stock_offer_type' => $stockOfferType,
             'total_quantity' => $totalQuantity === '' || $totalQuantity === null ? null : $totalQuantity,
+            'volumes' => $volumes === '' || $volumes === null ? null : $volumes,
             'variants' => $variants,
         ]);
     }
@@ -68,7 +89,24 @@ abstract class ProductRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:5000'],
-            'total_quantity' => ['required', 'integer', 'min:0'],
+            'has_stock_offer' => ['required', 'boolean'],
+            'stock_offer_type' => [
+                'nullable',
+                Rule::requiredIf(fn (): bool => $this->boolean('has_stock_offer')),
+                Rule::enum(StockOfferType::class),
+            ],
+            'total_quantity' => [
+                'nullable',
+                Rule::requiredIf(fn (): bool => $this->boolean('has_stock_offer')),
+                'integer',
+                'min:0',
+            ],
+            'volumes' => [
+                'nullable',
+                Rule::requiredIf(fn (): bool => $this->stockOfferRequiresVolumes()),
+                'integer',
+                'min:1',
+            ],
             'variants' => ['nullable', 'array', 'max:50'],
             'variants.*' => ['array:size,quantity,is_active'],
             'variants.*.size' => ['required', 'string', 'max:30', 'distinct'],
@@ -100,9 +138,15 @@ abstract class ProductRequest extends FormRequest
             'name.max' => 'O nome do produto deve ter no máximo 255 caracteres.',
             'model.max' => 'O modelo deve ter no máximo 100 caracteres.',
             'notes.max' => 'A observação deve ter no máximo 5.000 caracteres.',
+            'has_stock_offer.boolean' => 'Informe se o produto possui uma oferta de estoque.',
+            'stock_offer_type.required' => 'Informe o tipo da oferta de estoque.',
+            'stock_offer_type.enum' => 'Selecione um tipo de oferta válido.',
             'total_quantity.required' => 'Informe o estoque total.',
             'total_quantity.integer' => 'O estoque total deve ser um número.',
             'total_quantity.min' => 'O estoque total não pode ser negativo.',
+            'volumes.required' => 'Informe a quantidade de sacos.',
+            'volumes.integer' => 'A quantidade de sacos deve ser um número inteiro.',
+            'volumes.min' => 'A quantidade de sacos deve ser maior que zero.',
             'variants.array' => 'Envie os tamanhos em uma lista válida.',
             'variants.max' => 'Cadastre no máximo 50 tamanhos.',
             'variants.*.array' => 'Envie cada tamanho em um formato válido.',
@@ -127,6 +171,17 @@ abstract class ProductRequest extends FormRequest
             'remove_media_ids.*.distinct' => 'Cada foto deve ser removida uma única vez.',
             'remove_media_ids.*.exists' => 'A foto selecionada para remoção não existe.',
         ];
+    }
+
+    /**
+     * Determine whether the selected active offer requires a volume count.
+     */
+    private function stockOfferRequiresVolumes(): bool
+    {
+        $type = StockOfferType::tryFrom((string) $this->input('stock_offer_type'));
+
+        return $this->boolean('has_stock_offer')
+            && $type?->requiresVolumes() === true;
     }
 
     /**

@@ -85,14 +85,27 @@ variants: zero ou mais
 
 Um produto pode existir sem grade definida inicialmente.
 
+Um produto pode ser salvo sem oferta de estoque. Quando a oferta for ativada,
+o tipo deve ser informado explicitamente e o estoque total passa a ser
+obrigatório.
+
 ## Validação de oferta
 
 ```text
 product: obrigatório
 type: obrigatório
 total_quantity: inteiro >= 0
+volumes: inteiro >= 1 quando o tipo for `replenishment` ou `broken_grade`
 variant quantities: inteiro >= 0 ou null
 ```
+
+O tipo não deve ser deduzido das quantidades por tamanho. A ausência de oferta
+é representada separadamente e não cria uma `StockOffer` ativa.
+
+O campo `volumes` representa a quantidade de sacos disponíveis para
+`Reposição` e `Grade Furada`. Ao chegar a zero, a oferta não deve ser retornada
+pela consulta do catálogo compartilhado. O switch do formulário controla a
+oferta de estoque; desativá-lo não desativa nem remove o produto.
 
 Se todas as quantidades por tamanho estiverem preenchidas, a aplicação deve evitar inconsistência evidente entre soma e total.
 
@@ -118,7 +131,7 @@ Cobrir primeiro regras que podem causar inconsistência:
 - geração de código único;
 - modelo opcional;
 - tamanhos numéricos e alfabéticos;
-- estoque total obrigatório;
+- estoque total obrigatório quando houver oferta;
 - quantidade por tamanho nullable;
 - criação de pedido;
 - pedido sem itens deve falhar;

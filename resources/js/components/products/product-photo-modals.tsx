@@ -39,6 +39,8 @@ export type FlipState = {
 const PHOTO_ASPECT_RATIO = 4 / 5;
 const MAX_OUTPUT_WIDTH = 1600;
 const MAX_OUTPUT_HEIGHT = 2000;
+const WEBP_QUALITY = 0.84;
+const JPEG_QUALITY = 0.86;
 
 const getRadianAngle = (degree: number): number => (degree * Math.PI) / 180;
 
@@ -86,10 +88,44 @@ const getMinimumCropZoom = (
     );
 };
 
-function editedPhotoName(originalName: string): string {
+function editedPhotoBaseName(originalName: string): string {
     const baseName = originalName.replace(/\.[^.]+$/, '').trim() || 'produto';
 
-    return `${baseName}-ajustada.jpg`;
+    return `${baseName}-ajustada`;
+}
+
+export async function canvasToImageFile(
+    canvas: HTMLCanvasElement,
+    baseName: string,
+    quality = WEBP_QUALITY,
+): Promise<File | null> {
+    const webpBlob = await canvasToBlob(canvas, 'image/webp', quality);
+
+    if (webpBlob?.type === 'image/webp') {
+        return new File([webpBlob], `${baseName}.webp`, {
+            type: 'image/webp',
+            lastModified: Date.now(),
+        });
+    }
+
+    const jpegBlob = await canvasToBlob(canvas, 'image/jpeg', JPEG_QUALITY);
+
+    if (!jpegBlob) {
+        return null;
+    }
+
+    return new File([jpegBlob], `${baseName}.jpg`, {
+        type: 'image/jpeg',
+        lastModified: Date.now(),
+    });
+}
+
+function canvasToBlob(
+    canvas: HTMLCanvasElement,
+    type: string,
+    quality: number,
+): Promise<Blob | null> {
+    return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
 }
 
 export const createCroppedPhoto = (
@@ -163,9 +199,12 @@ export const createCroppedPhoto = (
                 outputWidth,
                 outputHeight,
             );
-            croppedCanvas.toBlob(
-                (blob) => {
-                    if (!blob) {
+            void canvasToImageFile(
+                croppedCanvas,
+                editedPhotoBaseName(originalName),
+            )
+                .then((file) => {
+                    if (!file) {
                         reject(
                             new Error('Não foi possível exportar a imagem.'),
                         );
@@ -173,15 +212,9 @@ export const createCroppedPhoto = (
                         return;
                     }
 
-                    resolve(
-                        new File([blob], editedPhotoName(originalName), {
-                            type: 'image/jpeg',
-                        }),
-                    );
-                },
-                'image/jpeg',
-                0.86,
-            );
+                    resolve(file);
+                })
+                .catch(reject);
         };
         image.onerror = () =>
             reject(new Error('Não foi possível carregar a imagem.'));
@@ -220,6 +253,8 @@ export function PhotoEditor({
 
     const mediaSizeRef = useRef<MediaSize | null>(null);
     const cropSizeRef = useRef<Size | null>(null);
+    const zoomInitializedRef = useRef(false);
+    const minimumZoomRef = useRef(1);
 
     const minimumZoom = useMemo(
         () => getMinimumCropZoom(mediaSize, cropSize, rotation),
@@ -235,17 +270,55 @@ export function PhotoEditor({
             nextRotation,
         );
 
+        minimumZoomRef.current = nextMinimumZoom;
         setRotation(nextRotation);
         setZoom((currentZoom) => Math.max(currentZoom, nextMinimumZoom));
+    };
+
+    const updateZoomForLayout = (
+        nextMediaSize: MediaSize | null,
+        nextCropSize: Size | null,
+        nextRotation: number,
+    ) => {
+        if (!nextMediaSize || !nextCropSize) {
+            return;
+        }
+
+        const nextMinimumZoom = getMinimumCropZoom(
+            nextMediaSize,
+            nextCropSize,
+            nextRotation,
+        );
+        const previousMinimumZoom = minimumZoomRef.current;
+
+        minimumZoomRef.current = nextMinimumZoom;
+
+        setZoom((currentZoom) => {
+            const isFollowingMinimumZoom =
+                !zoomInitializedRef.current ||
+                Math.abs(currentZoom - previousMinimumZoom) < 0.005;
+
+            if (isFollowingMinimumZoom) {
+                zoomInitializedRef.current = true;
+
+                return nextMinimumZoom;
+            }
+
+            return Math.max(currentZoom, nextMinimumZoom);
+        });
     };
 
     const reset = () => {
         setCrop({ x: 0, y: 0 });
         setRotation(0);
         setFlip({ horizontal: false, vertical: false });
-        setZoom(
-            getMinimumCropZoom(mediaSizeRef.current, cropSizeRef.current, 0),
+        const nextMinimumZoom = getMinimumCropZoom(
+            mediaSizeRef.current,
+            cropSizeRef.current,
+            0,
         );
+        minimumZoomRef.current = nextMinimumZoom;
+        setZoom(nextMinimumZoom);
         setError(null);
     };
 
@@ -275,8 +348,11 @@ export function PhotoEditor({
     };
 
     const content = (
-        <div className="flex min-h-0 flex-1 flex-col">
-            <div className="relative mx-4 h-[min(46dvh,28rem)] min-h-64 shrink-0 overflow-hidden rounded-2xl bg-foreground sm:mx-0 sm:h-[min(60vh,32rem)]">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pt-2 sm:pt-0">
+            <div
+                data-vaul-no-drag
+                className="relative mx-auto aspect-[4/5] w-full max-w-[min(calc(100%_-_2rem),25.6rem)] shrink-0 overflow-hidden rounded-2xl bg-foreground"
+            >
                 <Cropper
                     image={source.url}
                     crop={crop}
@@ -285,39 +361,42 @@ export function PhotoEditor({
                     aspect={PHOTO_ASPECT_RATIO}
                     minZoom={minimumZoom}
                     maxZoom={maximumZoom}
-                    objectFit="contain"
-                    zoomWithScroll={false}
+                    objectFit={isMobile ? 'contain' : 'cover'}
+                    zoomWithScroll
+                    zoomSpeed={0.25}
                     showGrid
                     roundCropAreaPixels
                     onCropChange={setCrop}
                     onCropComplete={(_, pixels) => setCroppedAreaPixels(pixels)}
+                    onCropAreaChange={(_, pixels) =>
+                        setCroppedAreaPixels(pixels)
+                    }
                     onZoomChange={setZoom}
-                    onMediaLoaded={(nextMediaSize) => {
+                    setMediaSize={(nextMediaSize) => {
                         mediaSizeRef.current = nextMediaSize;
-                        setMediaSize(nextMediaSize);
-                        setZoom((currentZoom) =>
-                            Math.max(
-                                currentZoom,
-                                getMinimumCropZoom(
-                                    nextMediaSize,
-                                    cropSizeRef.current,
-                                    rotation,
-                                ),
-                            ),
+                        setMediaSize((currentMediaSize) =>
+                            currentMediaSize?.width === nextMediaSize.width &&
+                            currentMediaSize.height === nextMediaSize.height &&
+                            currentMediaSize.naturalWidth ===
+                                nextMediaSize.naturalWidth &&
+                            currentMediaSize.naturalHeight ===
+                                nextMediaSize.naturalHeight
+                                ? currentMediaSize
+                                : nextMediaSize,
                         );
                     }}
-                    onCropSizeChange={(nextCropSize) => {
+                    setCropSize={(nextCropSize) => {
                         cropSizeRef.current = nextCropSize;
-                        setCropSize(nextCropSize);
-                        setZoom((currentZoom) =>
-                            Math.max(
-                                currentZoom,
-                                getMinimumCropZoom(
-                                    mediaSizeRef.current,
-                                    nextCropSize,
-                                    rotation,
-                                ),
-                            ),
+                        setCropSize((currentCropSize) =>
+                            currentCropSize?.width === nextCropSize.width &&
+                            currentCropSize.height === nextCropSize.height
+                                ? currentCropSize
+                                : nextCropSize,
+                        );
+                        updateZoomForLayout(
+                            mediaSizeRef.current,
+                            nextCropSize,
+                            rotation,
                         );
                     }}
                     transform={`translate(${crop.x}px, ${crop.y}px) rotate(${rotation}deg) scale(${zoom}) scaleX(${flip.horizontal ? -1 : 1}) scaleY(${flip.vertical ? -1 : 1})`}
@@ -330,7 +409,23 @@ export function PhotoEditor({
                 />
             </div>
 
-            <div className="grid gap-4 overflow-y-auto px-4 py-5 sm:px-0 sm:pb-0">
+            {isMobile ? (
+                <DrawerHeader className="shrink-0 px-4 py-4">
+                    <DrawerTitle>Ajustar foto</DrawerTitle>
+                    <DrawerDescription>
+                        Defina o enquadramento que será usado no catálogo.
+                    </DrawerDescription>
+                </DrawerHeader>
+            ) : (
+                <DialogHeader className="shrink-0 pt-4 text-left">
+                    <DialogTitle>Ajustar foto</DialogTitle>
+                    <DialogDescription>
+                        Defina o enquadramento que será usado no catálogo.
+                    </DialogDescription>
+                </DialogHeader>
+            )}
+
+            <div className="grid shrink-0 gap-4 px-4 py-5 sm:px-0 sm:pb-6">
                 <div className="grid gap-2">
                     <label
                         htmlFor="product-photo-zoom"
@@ -455,7 +550,7 @@ export function PhotoEditor({
                         disabled={isApplying || !croppedAreaPixels}
                         className="h-12"
                     >
-                        {isApplying ? 'Preparando...' : 'Usar foto'}
+                        {isApplying ? 'Cortando...' : 'Cortar e usar foto'}
                     </Button>
                 </div>
             </div>
@@ -465,13 +560,7 @@ export function PhotoEditor({
     if (isMobile) {
         return (
             <Drawer open onOpenChange={(open) => !open && onCancel()}>
-                <DrawerContent className="h-[96dvh] max-h-[96dvh]">
-                    <DrawerHeader className="pb-4">
-                        <DrawerTitle>Ajustar foto</DrawerTitle>
-                        <DrawerDescription>
-                            Defina o enquadramento que será usado no catálogo.
-                        </DrawerDescription>
-                    </DrawerHeader>
+                <DrawerContent className="h-[96dvh] max-h-[96dvh] overflow-hidden">
                     {content}
                 </DrawerContent>
             </Drawer>
@@ -480,13 +569,7 @@ export function PhotoEditor({
 
     return (
         <Dialog open onOpenChange={(open) => !open && onCancel()}>
-            <DialogContent className="flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col overflow-hidden">
-                <DialogHeader>
-                    <DialogTitle>Ajustar foto</DialogTitle>
-                    <DialogDescription>
-                        Defina o enquadramento que será usado no catálogo.
-                    </DialogDescription>
-                </DialogHeader>
+            <DialogContent className="flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col overflow-hidden data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-100">
                 {content}
             </DialogContent>
         </Dialog>
