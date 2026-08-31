@@ -121,7 +121,7 @@ function ProductCard({
 
     return (
         <article className="group flex min-h-full flex-col overflow-hidden rounded-[1.75rem] border border-border/80 bg-card shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
-            <div className="relative aspect-[4/3] overflow-hidden bg-featured-card">
+            <div className="relative aspect-[4/5] overflow-hidden bg-featured-card">
                 {coverImage ? (
                     <ProductImage
                         product={product}

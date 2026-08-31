@@ -7,6 +7,9 @@ use App\Models\ProductVariant;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use RuntimeException;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Throwable;
 
@@ -29,7 +32,12 @@ class UpdateProduct
 
         try {
             $updatedProduct = DB::transaction(function () use ($product, $data, &$addedMedia, &$removedMedia): Product {
-                $product->update([
+                $lockedProduct = Product::query()
+                    ->whereKey($product->getKey())
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $lockedProduct->update([
                     'name' => $data['name'],
                     'model' => ($data['model'] ?? null) ?: null,
                     'notes' => ($data['notes'] ?? null) ?: null,
@@ -41,46 +49,52 @@ class UpdateProduct
                     ->filter(fn ($id): bool => is_numeric($id))
                     ->map(fn ($id): int => (int) $id)
                     ->values();
-                $mediaToRemove = $product->media()
+                $mediaToRemove = $lockedProduct->media()
                     ->where('collection_name', Product::MEDIA_COLLECTION)
                     ->whereKey($removeMediaIds)
                     ->get();
                 $removedMedia = $mediaToRemove->all();
-                $remainingMediaCount = $product->media()
+                $remainingMediaCount = $lockedProduct->media()
                     ->where('collection_name', Product::MEDIA_COLLECTION)
                     ->whereNotIn('id', $removeMediaIds)
                     ->count();
 
-                $product->variants()->delete();
+                $lockedProduct->variants()->delete();
 
                 $rawVariants = $data['variants'] ?? [];
                 $rawVariants = is_array($rawVariants) ? $rawVariants : [];
-                $createdVariants = $this->syncVariants($product, $rawVariants);
+                $createdVariants = $this->syncVariants($lockedProduct, $rawVariants);
 
-                $this->syncProductStockOffer->handle($product, $createdVariants, $data);
-                $addedMedia = $this->storeImages($product, $data['images'] ?? [], $remainingMediaCount);
+                $this->syncProductStockOffer->handle($lockedProduct, $createdVariants, $data);
+                $addedMedia = $this->storeImages(
+                    $lockedProduct,
+                    $data['images'] ?? [],
+                    $remainingMediaCount,
+                );
                 $this->reorderImages(
-                    $product,
+                    $lockedProduct,
                     $data['image_order'] ?? null,
                     $addedMedia,
                     $removeMediaIds->all(),
                 );
 
-                return $product->load(['variants', 'latestOffer.items', 'media']);
+                return $lockedProduct;
             });
-
-            foreach ($removedMedia as $media) {
-                $media->delete();
-            }
-
-            return $updatedProduct;
         } catch (Throwable $exception) {
             foreach ($addedMedia as $media) {
-                $media->delete();
+                try {
+                    $media->delete();
+                } catch (Throwable $cleanupException) {
+                    report($cleanupException);
+                }
             }
 
             throw $exception;
         }
+
+        $this->removeMediaWithCompensation($removedMedia);
+
+        return $updatedProduct->fresh()->load(['variants', 'latestOffer.items', 'media']);
     }
 
     /**
@@ -88,22 +102,37 @@ class UpdateProduct
      *
      * @return array<int, Media>
      */
-    private function storeImages(Product $product, mixed $images, int $startingOrder): array
-    {
+    private function storeImages(
+        Product $product,
+        mixed $images,
+        int $startingOrder,
+    ): array {
         if (! is_array($images)) {
             return [];
         }
 
         $addedMedia = [];
 
-        foreach ($images as $index => $image) {
-            if ($image instanceof UploadedFile) {
-                $addedMedia[$index] = $this->storeProductImage->handle(
-                    $product,
-                    $image,
-                    $startingOrder + $index,
-                );
+        try {
+            foreach ($images as $index => $image) {
+                if ($image instanceof UploadedFile) {
+                    $addedMedia[$index] = $this->storeProductImage->handle(
+                        $product,
+                        $image,
+                        $startingOrder + $index,
+                    );
+                }
             }
+        } catch (Throwable $exception) {
+            foreach ($addedMedia as $media) {
+                try {
+                    $media->delete();
+                } catch (Throwable $cleanupException) {
+                    report($cleanupException);
+                }
+            }
+
+            throw $exception;
         }
 
         return $addedMedia;
@@ -121,10 +150,6 @@ class UpdateProduct
         array $addedMedia,
         array $removeMediaIds,
     ): void {
-        if (! is_array($imageOrder)) {
-            return;
-        }
-
         $mediaIdsByUploadIndex = collect($addedMedia)
             ->mapWithKeys(fn (Media $media, int|string $index): array => [
                 (int) $index => (int) $media->getKey(),
@@ -135,11 +160,18 @@ class UpdateProduct
             ->pluck('id')
             ->map(fn (mixed $id): int => (int) $id)
             ->all();
+
+        if (! is_array($imageOrder)) {
+            Media::setNewOrder($ownedMediaIds);
+
+            return;
+        }
+
         $orderedMediaIds = [];
 
         foreach ($imageOrder as $token) {
             if (! is_string($token)) {
-                return;
+                throw new RuntimeException('The product image order is invalid.');
             }
 
             if (str_starts_with($token, 'media:')) {
@@ -152,7 +184,7 @@ class UpdateProduct
                 $uploadIndex = (int) substr($token, strlen('new:'));
 
                 if (! $mediaIdsByUploadIndex->has($uploadIndex)) {
-                    return;
+                    throw new RuntimeException('The product image order references an unknown upload.');
                 }
 
                 $orderedMediaIds[] = $mediaIdsByUploadIndex->get($uploadIndex);
@@ -160,7 +192,7 @@ class UpdateProduct
                 continue;
             }
 
-            return;
+            throw new RuntimeException('The product image order contains an invalid token.');
         }
 
         $expectedMediaIds = $ownedMediaIds;
@@ -172,10 +204,123 @@ class UpdateProduct
             $expectedMediaIds !== $actualMediaIds
             || count($orderedMediaIds) !== count($ownedMediaIds)
         ) {
-            return;
+            throw new RuntimeException('The product image order changed during the update.');
         }
 
         Media::setNewOrder($orderedMediaIds);
+    }
+
+    /**
+     * Remove selected media without leaving a partial deletion behind.
+     *
+     * The media rows are deleted in a transaction while their files are held
+     * in a temporary backup. If the database operation fails, the files are
+     * moved back so the product remains usable.
+     *
+     * @param  array<int, Media>  $removedMedia
+     */
+    private function removeMediaWithCompensation(array $removedMedia): void
+    {
+        if ($removedMedia === []) {
+            return;
+        }
+
+        $backups = [];
+
+        try {
+            foreach ($removedMedia as $media) {
+                $backups = [
+                    ...$backups,
+                    ...$this->backupMediaFiles($media),
+                ];
+            }
+
+            DB::transaction(function () use ($removedMedia): void {
+                Media::withoutEvents(function () use ($removedMedia): void {
+                    foreach ($removedMedia as $media) {
+                        $media->delete();
+                    }
+                });
+            });
+        } catch (Throwable $exception) {
+            $this->restoreMediaFiles($backups);
+
+            throw $exception;
+        }
+
+        foreach ($backups as $backup) {
+            try {
+                Storage::disk($backup['disk'])->delete($backup['backup']);
+            } catch (Throwable $cleanupException) {
+                report($cleanupException);
+            }
+        }
+    }
+
+    /**
+     * Move all files belonging to a media item to a temporary backup.
+     *
+     * @return array<int, array{disk: string, original: string, backup: string}>
+     */
+    private function backupMediaFiles(Media $media): array
+    {
+        $files = [
+            [
+                'disk' => $media->disk,
+                'path' => $media->getPathRelativeToRoot(),
+            ],
+        ];
+
+        foreach ($media->getGeneratedConversions()->filter()->keys() as $conversion) {
+            $files[] = [
+                'disk' => $media->conversions_disk ?: $media->disk,
+                'path' => $media->getPathRelativeToRoot($conversion),
+            ];
+        }
+
+        $backups = [];
+
+        foreach ($files as $file) {
+            $disk = Storage::disk($file['disk']);
+
+            if (! $disk->exists($file['path'])) {
+                continue;
+            }
+
+            $backupPath = 'product-media-cleanup/'.Str::uuid().'/'.basename($file['path']);
+
+            if (! $disk->move($file['path'], $backupPath)) {
+                throw new RuntimeException('Não foi possível preparar a exclusão da imagem.');
+            }
+
+            $backups[] = [
+                'disk' => $file['disk'],
+                'original' => $file['path'],
+                'backup' => $backupPath,
+            ];
+        }
+
+        return $backups;
+    }
+
+    /**
+     * Restore files that were moved before a failed media deletion.
+     *
+     * @param  array<int, array{disk: string, original: string, backup: string}>  $backups
+     */
+    private function restoreMediaFiles(array $backups): void
+    {
+        foreach (array_reverse($backups) as $backup) {
+            try {
+                $disk = Storage::disk($backup['disk']);
+
+                if ($disk->exists($backup['backup'])) {
+                    $disk->move($backup['backup'], $backup['original']);
+                }
+            } catch (Throwable $restoreException) {
+                report($restoreException);
+            }
+        }
     }
 
     /**

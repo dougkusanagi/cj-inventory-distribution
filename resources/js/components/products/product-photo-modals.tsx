@@ -5,20 +5,40 @@ import {
     RotateCw,
     Undo2,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Cropper from 'react-easy-crop';
 import type { Area, MediaSize, Point, Size } from 'react-easy-crop';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    Drawer,
+    DrawerContent,
+    DrawerDescription,
+    DrawerHeader,
+    DrawerTitle,
+} from '@/components/ui/drawer';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-export type PendingPhoto = {
-    file: File;
+export type PhotoEditorSource = {
     url: string;
+    name: string;
+    origin: 'camera' | 'gallery' | 'existing';
 };
 
 export type FlipState = {
     horizontal: boolean;
     vertical: boolean;
 };
+
+const PHOTO_ASPECT_RATIO = 4 / 5;
+const MAX_OUTPUT_WIDTH = 1600;
+const MAX_OUTPUT_HEIGHT = 2000;
 
 const getRadianAngle = (degree: number): number => (degree * Math.PI) / 180;
 
@@ -66,8 +86,15 @@ const getMinimumCropZoom = (
     );
 };
 
+function editedPhotoName(originalName: string): string {
+    const baseName = originalName.replace(/\.[^.]+$/, '').trim() || 'produto';
+
+    return `${baseName}-ajustada.jpg`;
+}
+
 export const createCroppedPhoto = (
     imageSource: string,
+    originalName: string,
     pixelCrop: Area,
     rotation: number,
     flip: FlipState,
@@ -101,9 +128,22 @@ export const createCroppedPhoto = (
             );
             context.drawImage(image, 0, 0);
 
+            const outputScale = Math.min(
+                1,
+                MAX_OUTPUT_WIDTH / pixelCrop.width,
+                MAX_OUTPUT_HEIGHT / pixelCrop.height,
+            );
+            const outputWidth = Math.max(
+                1,
+                Math.round(pixelCrop.width * outputScale),
+            );
+            const outputHeight = Math.max(
+                1,
+                Math.round(pixelCrop.height * outputScale),
+            );
             const croppedCanvas = document.createElement('canvas');
-            croppedCanvas.width = Math.round(pixelCrop.width);
-            croppedCanvas.height = Math.round(pixelCrop.height);
+            croppedCanvas.width = outputWidth;
+            croppedCanvas.height = outputHeight;
             const croppedContext = croppedCanvas.getContext('2d');
 
             if (!croppedContext) {
@@ -116,12 +156,12 @@ export const createCroppedPhoto = (
                 canvas,
                 Math.round(pixelCrop.x),
                 Math.round(pixelCrop.y),
-                croppedCanvas.width,
-                croppedCanvas.height,
+                Math.round(pixelCrop.width),
+                Math.round(pixelCrop.height),
                 0,
                 0,
-                croppedCanvas.width,
-                croppedCanvas.height,
+                outputWidth,
+                outputHeight,
             );
             croppedCanvas.toBlob(
                 (blob) => {
@@ -134,329 +174,321 @@ export const createCroppedPhoto = (
                     }
 
                     resolve(
-                        new File([blob], 'produto.jpg', {
+                        new File([blob], editedPhotoName(originalName), {
                             type: 'image/jpeg',
                         }),
                     );
                 },
                 'image/jpeg',
-                0.9,
+                0.86,
             );
         };
         image.onerror = () =>
             reject(new Error('Não foi possível carregar a imagem.'));
+        image.crossOrigin = 'anonymous';
         image.src = imageSource;
     });
 
-export function PhotoCropModal({
-    pendingPhoto,
+type PhotoEditorProps = {
+    source: PhotoEditorSource;
+    onCancel: () => void;
+    onApply: (editedFile: File) => Promise<void>;
+    onRetake?: () => void;
+};
+
+export function PhotoEditor({
+    source,
     onCancel,
     onApply,
     onRetake,
-    onError,
-}: {
-    pendingPhoto: PendingPhoto;
-    onCancel: () => void;
-    onApply: (croppedFile: File) => Promise<void>;
-    onRetake: () => void;
-    onError?: (error: Error) => void;
-}) {
+}: PhotoEditorProps) {
+    const isMobile = useIsMobile();
     const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
-    const [cropZoom, setCropZoom] = useState(1);
-    const [cropRotation, setCropRotation] = useState(0);
-    const [cropMediaSize, setCropMediaSize] = useState<MediaSize | null>(null);
-    const [cropContainerSize, setCropContainerSize] = useState<Size | null>(
-        null,
-    );
+    const [zoom, setZoom] = useState(1);
+    const [rotation, setRotation] = useState(0);
+    const [mediaSize, setMediaSize] = useState<MediaSize | null>(null);
     const [cropSize, setCropSize] = useState<Size | null>(null);
-    const [cropFlip, setCropFlip] = useState<FlipState>({
+    const [flip, setFlip] = useState<FlipState>({
         horizontal: false,
         vertical: false,
     });
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(
         null,
     );
-    const [isApplyingCrop, setIsApplyingCrop] = useState(false);
+    const [isApplying, setIsApplying] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const cropContainerRef = useRef<HTMLDivElement | null>(null);
-    const cropMediaSizeRef = useRef<MediaSize | null>(null);
+    const mediaSizeRef = useRef<MediaSize | null>(null);
     const cropSizeRef = useRef<Size | null>(null);
 
-    const minimumCropZoom = useMemo(
-        () => getMinimumCropZoom(cropMediaSize, cropSize, cropRotation),
-        [cropMediaSize, cropRotation, cropSize],
+    const minimumZoom = useMemo(
+        () => getMinimumCropZoom(mediaSize, cropSize, rotation),
+        [cropSize, mediaSize, rotation],
     );
+    const maximumZoom = Math.max(minimumZoom + 3, 4);
 
-    useEffect(() => {
-        const container = cropContainerRef.current;
-
-        if (!container) {
-            return;
-        }
-
-        const updateContainerSize = () => {
-            setCropContainerSize({
-                width: container.clientWidth,
-                height: container.clientHeight,
-            });
-        };
-
-        updateContainerSize();
-        const resizeObserver = new ResizeObserver(updateContainerSize);
-        resizeObserver.observe(container);
-
-        return () => resizeObserver.disconnect();
-    }, []);
-
-    const handleCropMediaLoaded = (mediaSize: MediaSize) => {
-        cropMediaSizeRef.current = mediaSize;
-        setCropMediaSize(mediaSize);
-        setCropZoom((currentZoom) =>
-            Math.max(
-                currentZoom,
-                getMinimumCropZoom(
-                    mediaSize,
-                    cropSizeRef.current,
-                    cropRotation,
-                ),
-            ),
+    const rotate = (degrees: number) => {
+        const nextRotation = rotation + degrees;
+        const nextMinimumZoom = getMinimumCropZoom(
+            mediaSizeRef.current,
+            cropSizeRef.current,
+            nextRotation,
         );
+
+        setRotation(nextRotation);
+        setZoom((currentZoom) => Math.max(currentZoom, nextMinimumZoom));
     };
 
-    const handleCropSizeChange = (size: Size) => {
-        cropSizeRef.current = size;
-        setCropSize(size);
-        setCropZoom((currentZoom) =>
-            Math.max(
-                currentZoom,
-                getMinimumCropZoom(
-                    cropMediaSizeRef.current,
-                    size,
-                    cropRotation,
-                ),
-            ),
-        );
-    };
-
-    const rotateCrop = (degrees: number) => {
-        const nextRotation = cropRotation + degrees;
-        setCropRotation(nextRotation);
-        setCropZoom((currentZoom) =>
-            Math.max(
-                currentZoom,
-                getMinimumCropZoom(
-                    cropMediaSizeRef.current,
-                    cropSizeRef.current,
-                    nextRotation,
-                ),
-            ),
-        );
-    };
-
-    const resetCrop = () => {
+    const reset = () => {
         setCrop({ x: 0, y: 0 });
-        setCropRotation(0);
-        setCropZoom(
-            getMinimumCropZoom(
-                cropMediaSizeRef.current,
-                cropSizeRef.current,
-                0,
-            ),
+        setRotation(0);
+        setFlip({ horizontal: false, vertical: false });
+        setZoom(
+            getMinimumCropZoom(mediaSizeRef.current, cropSizeRef.current, 0),
         );
-        setCropFlip({ horizontal: false, vertical: false });
-        setCroppedAreaPixels(null);
+        setError(null);
     };
 
-    const applyCrop = async () => {
+    const apply = async () => {
         if (!croppedAreaPixels) {
             return;
         }
 
         try {
-            setIsApplyingCrop(true);
-            const croppedFile = await createCroppedPhoto(
-                pendingPhoto.url,
+            setIsApplying(true);
+            setError(null);
+            const editedFile = await createCroppedPhoto(
+                source.url,
+                source.name,
                 croppedAreaPixels,
-                cropRotation,
-                cropFlip,
+                rotation,
+                flip,
             );
-            await onApply(croppedFile);
-        } catch (error) {
-            onError?.(
-                error instanceof Error
-                    ? error
-                    : new Error('Não foi possível preparar a imagem.'),
+            await onApply(editedFile);
+        } catch {
+            setError(
+                'Não foi possível ajustar esta foto. Tente usar outra imagem.',
             );
         } finally {
-            setIsApplyingCrop(false);
+            setIsApplying(false);
         }
     };
 
-    return (
-        <div
-            className="fixed inset-0 z-50 flex items-start justify-center overflow-hidden bg-foreground/80 p-4 backdrop-blur-sm sm:items-center sm:p-5"
-            role="presentation"
-        >
-            <div
-                className="flex max-h-[calc(100dvh-2rem)] min-h-0 w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-card p-5 text-card-foreground shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-7"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="product-photo-crop-title"
-            >
-                <div className="flex shrink-0 items-start justify-between gap-4">
-                    <div>
-                        <div className="text-xs font-bold tracking-[0.18em] text-primary uppercase">
-                            Ajustar foto
-                        </div>
-                        <h2
-                            id="product-photo-crop-title"
-                            className="mt-1 text-2xl font-semibold tracking-tight"
-                        >
-                            Ajuste a imagem
-                        </h2>
-                    </div>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={onCancel}
-                        disabled={isApplyingCrop}
-                    >
-                        Cancelar
-                    </Button>
-                </div>
+    const content = (
+        <div className="flex min-h-0 flex-1 flex-col">
+            <div className="relative mx-4 h-[min(46dvh,28rem)] min-h-64 shrink-0 overflow-hidden rounded-2xl bg-foreground sm:mx-0 sm:h-[min(60vh,32rem)]">
+                <Cropper
+                    image={source.url}
+                    crop={crop}
+                    zoom={zoom}
+                    rotation={rotation}
+                    aspect={PHOTO_ASPECT_RATIO}
+                    minZoom={minimumZoom}
+                    maxZoom={maximumZoom}
+                    objectFit="contain"
+                    zoomWithScroll={false}
+                    showGrid
+                    roundCropAreaPixels
+                    onCropChange={setCrop}
+                    onCropComplete={(_, pixels) => setCroppedAreaPixels(pixels)}
+                    onZoomChange={setZoom}
+                    onMediaLoaded={(nextMediaSize) => {
+                        mediaSizeRef.current = nextMediaSize;
+                        setMediaSize(nextMediaSize);
+                        setZoom((currentZoom) =>
+                            Math.max(
+                                currentZoom,
+                                getMinimumCropZoom(
+                                    nextMediaSize,
+                                    cropSizeRef.current,
+                                    rotation,
+                                ),
+                            ),
+                        );
+                    }}
+                    onCropSizeChange={(nextCropSize) => {
+                        cropSizeRef.current = nextCropSize;
+                        setCropSize(nextCropSize);
+                        setZoom((currentZoom) =>
+                            Math.max(
+                                currentZoom,
+                                getMinimumCropZoom(
+                                    mediaSizeRef.current,
+                                    nextCropSize,
+                                    rotation,
+                                ),
+                            ),
+                        );
+                    }}
+                    transform={`translate(${crop.x}px, ${crop.y}px) rotate(${rotation}deg) scale(${zoom}) scaleX(${flip.horizontal ? -1 : 1}) scaleY(${flip.vertical ? -1 : 1})`}
+                    classes={{
+                        cropAreaClassName: 'rounded-xl border-2 border-primary',
+                    }}
+                    cropperProps={{
+                        'aria-label': 'Enquadramento da foto do produto',
+                    }}
+                />
+            </div>
 
-                <div
-                    ref={cropContainerRef}
-                    className="relative mx-auto mt-5 aspect-square w-full max-w-sm shrink-0 overflow-hidden rounded-2xl bg-foreground"
-                >
-                    <Cropper
-                        image={pendingPhoto.url}
-                        crop={crop}
-                        zoom={cropZoom}
-                        rotation={cropRotation}
-                        aspect={1}
-                        cropSize={cropContainerSize ?? undefined}
-                        minZoom={minimumCropZoom}
-                        maxZoom={Number.POSITIVE_INFINITY}
-                        objectFit="contain"
-                        zoomWithScroll={false}
-                        showGrid
-                        roundCropAreaPixels
-                        onCropChange={setCrop}
-                        onCropComplete={(_, nextPixels) =>
-                            setCroppedAreaPixels(nextPixels)
+            <div className="grid gap-4 overflow-y-auto px-4 py-5 sm:px-0 sm:pb-0">
+                <div className="grid gap-2">
+                    <label
+                        htmlFor="product-photo-zoom"
+                        className="text-sm font-medium"
+                    >
+                        Aproximar foto
+                    </label>
+                    <input
+                        id="product-photo-zoom"
+                        type="range"
+                        min={minimumZoom}
+                        max={maximumZoom}
+                        step={0.01}
+                        value={zoom}
+                        onChange={(event) =>
+                            setZoom(Number(event.target.value))
                         }
-                        onZoomChange={setCropZoom}
-                        onMediaLoaded={handleCropMediaLoaded}
-                        onCropSizeChange={handleCropSizeChange}
-                        transform={`translate(${crop.x}px, ${crop.y}px) rotate(${cropRotation}deg) scale(${cropZoom}) scaleX(${cropFlip.horizontal ? -1 : 1}) scaleY(${cropFlip.vertical ? -1 : 1})`}
-                        classes={{
-                            cropAreaClassName:
-                                'rounded-2xl border-2 border-primary',
-                        }}
-                        cropperProps={{
-                            'aria-label': 'Área de recorte da foto',
-                        }}
+                        className="h-12 w-full accent-primary"
                     />
                 </div>
 
-                <div className="min-h-0 flex-1 overflow-y-auto pt-5">
-                    <div className="grid gap-4">
-                        <p className="text-center text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
-                            Use dois dedos para aproximar ou afastar
-                        </p>
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => rotateCrop(-90)}
-                                disabled={isApplyingCrop}
-                                title="Girar para a esquerda"
-                            >
-                                <RotateCcw className="size-4" />
-                                Esquerda
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => rotateCrop(90)}
-                                disabled={isApplyingCrop}
-                                title="Girar para a direita"
-                            >
-                                <RotateCw className="size-4" />
-                                Direita
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                    setCropFlip((currentFlip) => ({
-                                        ...currentFlip,
-                                        horizontal: !currentFlip.horizontal,
-                                    }))
-                                }
-                                disabled={isApplyingCrop}
-                                title="Inverter horizontalmente"
-                            >
-                                <FlipHorizontal2 className="size-4" />
-                                Horizontal
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                    setCropFlip((currentFlip) => ({
-                                        ...currentFlip,
-                                        vertical: !currentFlip.vertical,
-                                    }))
-                                }
-                                disabled={isApplyingCrop}
-                                title="Inverter verticalmente"
-                            >
-                                <FlipVertical2 className="size-4" />
-                                Vertical
-                            </Button>
-                        </div>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={resetCrop}
-                            disabled={isApplyingCrop}
-                            className="w-full"
-                        >
-                            <Undo2 className="size-4" />
-                            Restaurar
-                        </Button>
-                    </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => rotate(-90)}
+                        disabled={isApplying}
+                        className="h-12"
+                    >
+                        <RotateCcw />
+                        Esquerda
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => rotate(90)}
+                        disabled={isApplying}
+                        className="h-12"
+                    >
+                        <RotateCw />
+                        Direita
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() =>
+                            setFlip((current) => ({
+                                ...current,
+                                horizontal: !current.horizontal,
+                            }))
+                        }
+                        disabled={isApplying}
+                        aria-pressed={flip.horizontal}
+                        className="h-12"
+                    >
+                        <FlipHorizontal2 />
+                        Espelhar
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() =>
+                            setFlip((current) => ({
+                                ...current,
+                                vertical: !current.vertical,
+                            }))
+                        }
+                        disabled={isApplying}
+                        aria-pressed={flip.vertical}
+                        className="h-12"
+                    >
+                        <FlipVertical2 />
+                        Inverter
+                    </Button>
+                </div>
 
-                    <div className="mt-5 grid gap-2 pb-1 sm:grid-cols-2">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={reset}
+                    disabled={isApplying}
+                    className="h-12"
+                >
+                    <Undo2 />
+                    Restaurar enquadramento
+                </Button>
+
+                {error && (
+                    <p
+                        role="alert"
+                        className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+                    >
+                        {error}
+                    </p>
+                )}
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                    {source.origin === 'camera' && onRetake ? (
                         <Button
                             type="button"
                             variant="outline"
                             onClick={onRetake}
-                            disabled={isApplyingCrop}
+                            disabled={isApplying}
+                            className="h-12"
                         >
-                            Tirar outra foto
+                            Tirar novamente
                         </Button>
+                    ) : (
                         <Button
                             type="button"
-                            variant="default"
-                            onClick={applyCrop}
-                            disabled={isApplyingCrop || !croppedAreaPixels}
+                            variant="ghost"
+                            onClick={onCancel}
+                            disabled={isApplying}
+                            className="h-12"
                         >
-                            {isApplyingCrop
-                                ? 'Processando...'
-                                : 'Cortar e salvar'}
+                            Cancelar
                         </Button>
-                    </div>
+                    )}
+                    <Button
+                        type="button"
+                        onClick={apply}
+                        disabled={isApplying || !croppedAreaPixels}
+                        className="h-12"
+                    >
+                        {isApplying ? 'Preparando...' : 'Usar foto'}
+                    </Button>
                 </div>
             </div>
         </div>
+    );
+
+    if (isMobile) {
+        return (
+            <Drawer open onOpenChange={(open) => !open && onCancel()}>
+                <DrawerContent className="h-[96dvh] max-h-[96dvh]">
+                    <DrawerHeader className="pb-4">
+                        <DrawerTitle>Ajustar foto</DrawerTitle>
+                        <DrawerDescription>
+                            Defina o enquadramento que será usado no catálogo.
+                        </DrawerDescription>
+                    </DrawerHeader>
+                    {content}
+                </DrawerContent>
+            </Drawer>
+        );
+    }
+
+    return (
+        <Dialog open onOpenChange={(open) => !open && onCancel()}>
+            <DialogContent className="flex max-h-[calc(100dvh-2rem)] max-w-2xl flex-col overflow-hidden">
+                <DialogHeader>
+                    <DialogTitle>Ajustar foto</DialogTitle>
+                    <DialogDescription>
+                        Defina o enquadramento que será usado no catálogo.
+                    </DialogDescription>
+                </DialogHeader>
+                {content}
+            </DialogContent>
+        </Dialog>
     );
 }

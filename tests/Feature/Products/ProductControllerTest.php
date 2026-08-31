@@ -329,6 +329,143 @@ test('product images can be replaced and removed from the media collection', fun
     Storage::disk('public')->assertMissing($newMedia->getPathRelativeToRoot('thumb'));
 });
 
+test('replacing one image in a full gallery removes only the selected image', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $media = collect(range(1, Product::MAX_IMAGES))
+        ->map(fn (int $number) => $product
+            ->addMedia(UploadedFile::fake()->image('photo-'.$number.'.jpg'))
+            ->toMediaCollection(Product::MEDIA_COLLECTION));
+    $removedMedia = $media->get(2);
+    $retainedMedia = $media->reject(fn ($item) => $item->is($removedMedia))->values();
+    $retainedPaths = $retainedMedia
+        ->map(fn ($item): string => $item->getPathRelativeToRoot())
+        ->all();
+
+    $response = $this->actingAs($user)->post(route('products.update', $product), [
+        '_method' => 'PUT',
+        'name' => $product->name,
+        'total_quantity' => 0,
+        'remove_media_ids' => [$removedMedia->id],
+        'images' => [UploadedFile::fake()->image('replacement.jpg')],
+        'image_order' => [
+            'media:'.$retainedMedia->get(0)->id,
+            'new:0',
+            'media:'.$retainedMedia->get(1)->id,
+            'media:'.$retainedMedia->get(2)->id,
+            'media:'.$retainedMedia->get(3)->id,
+        ],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $orderedMedia = $product->refresh()->getMedia(Product::MEDIA_COLLECTION);
+    expect($orderedMedia)->toHaveCount(Product::MAX_IMAGES);
+    expect($orderedMedia->first()->id)->toBe($retainedMedia->get(0)->id);
+    expect($orderedMedia->pluck('id')->all())->not->toContain($removedMedia->id);
+    expect($media->pluck('id')->all())->not->toContain($orderedMedia->get(1)->id);
+    Storage::disk('public')->assertMissing($removedMedia->getPathRelativeToRoot());
+
+    foreach ($retainedPaths as $path) {
+        Storage::disk('public')->assertExists($path);
+    }
+});
+
+test('replacing any position in a full gallery preserves every other image', function (int $removedIndex) {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $media = collect(range(1, Product::MAX_IMAGES))
+        ->map(fn (int $number) => $product
+            ->addMedia(UploadedFile::fake()->image('photo-'.$number.'.jpg'))
+            ->toMediaCollection(Product::MEDIA_COLLECTION));
+    $removedMedia = $media->get($removedIndex);
+    $expectedOrder = $media
+        ->map(fn ($item, int $index): string => $index === $removedIndex
+            ? 'new:0'
+            : 'media:'.$item->id)
+        ->all();
+    $retainedMediaIds = $media
+        ->reject(fn ($item): bool => $item->is($removedMedia))
+        ->pluck('id')
+        ->values()
+        ->all();
+    $retainedPaths = $media
+        ->reject(fn ($item): bool => $item->is($removedMedia))
+        ->map(fn ($item): string => $item->getPathRelativeToRoot())
+        ->all();
+
+    $response = $this->actingAs($user)->post(route('products.update', $product), [
+        '_method' => 'PUT',
+        'name' => $product->name,
+        'total_quantity' => 0,
+        'remove_media_ids' => [$removedMedia->id],
+        'images' => [UploadedFile::fake()->image('replacement.jpg')],
+        'image_order' => $expectedOrder,
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $orderedMedia = $product->refresh()->getMedia(Product::MEDIA_COLLECTION);
+    $newMedia = $orderedMedia->first(
+        fn ($item): bool => ! in_array($item->id, $media->pluck('id')->all(), true),
+    );
+    $expectedMediaIds = collect($expectedOrder)
+        ->map(fn (string $token): int => str_starts_with($token, 'new:')
+            ? $newMedia->id
+            : (int) substr($token, strlen('media:')))
+        ->all();
+
+    expect($orderedMedia)->toHaveCount(Product::MAX_IMAGES);
+    expect($orderedMedia->pluck('id')->all())->toBe($expectedMediaIds);
+    expect($orderedMedia->pluck('id')->all())->not->toContain($removedMedia->id);
+    expect($orderedMedia->filter(fn ($item): bool => $item->id !== $newMedia->id)->pluck('id')->values()->all())
+        ->toBe($retainedMediaIds);
+    expect($orderedMedia->pluck('order_column')->all())->toBe(range(1, Product::MAX_IMAGES));
+
+    Storage::disk('public')->assertMissing($removedMedia->getPathRelativeToRoot());
+
+    foreach ($retainedPaths as $path) {
+        Storage::disk('public')->assertExists($path);
+    }
+    Storage::disk('public')->assertExists($newMedia->getPathRelativeToRoot());
+})->with([
+    'cover' => 0,
+    'second photo' => 1,
+    'middle photo' => 2,
+    'fourth photo' => 3,
+    'last photo' => 4,
+]);
+
+test('invalid variants payload cannot erase existing product sizes', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $variant = $product->variants()->create(['size' => 'M', 'sort_order' => 0]);
+
+    $response = $this->actingAs($user)
+        ->from(route('products.edit', $product))
+        ->post(route('products.update', $product), [
+            '_method' => 'PUT',
+            'name' => $product->name,
+            'total_quantity' => 0,
+            'variants' => 'invalid-payload',
+        ]);
+
+    $response
+        ->assertSessionHasErrors('variants')
+        ->assertRedirect(route('products.edit', $product));
+
+    $this->assertModelExists($variant);
+    expect($product->refresh()->variants()->pluck('size')->all())->toBe(['M']);
+});
+
 test('product images can be reordered with a new image as the principal photo', function () {
     Storage::fake('public');
 

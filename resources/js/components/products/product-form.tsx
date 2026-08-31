@@ -7,7 +7,7 @@ import {
     store,
 } from '@/actions/App/Http/Controllers/ProductController';
 import InputError from '@/components/input-error';
-import { ProductImageUploader } from '@/components/products/product-image-uploader';
+import { ProductPhotoManager } from '@/components/products/product-photo-manager';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -260,7 +260,6 @@ export function ProductForm({ product }: ProductFormProps) {
                                 aria-invalid={error('name') ? true : undefined}
                                 placeholder="Ex.: Calça Wide Leg"
                                 className="h-11 text-base sm:h-10 sm:text-sm"
-                                autoFocus
                                 required
                             />
                             <InputError message={error('name')} />
@@ -280,7 +279,6 @@ export function ProductForm({ product }: ProductFormProps) {
                                 <Input
                                     id="product-model"
                                     name="model"
-                                    inputMode="numeric"
                                     value={form.data.model}
                                     onChange={(event) =>
                                         form.setData(
@@ -292,16 +290,6 @@ export function ProductForm({ product }: ProductFormProps) {
                                     className="h-11 text-base sm:h-10 sm:text-sm"
                                 />
                                 <InputError message={error('model')} />
-                            </div>
-
-                            <div className="flex flex-col justify-center rounded-xl border border-dashed border-border bg-muted/30 px-3.5 py-2.5 text-xs text-muted-foreground sm:text-sm">
-                                <span className="font-medium text-foreground">
-                                    Modelo opcional
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                    O código CJ identifica a peça mesmo sem
-                                    modelo.
-                                </span>
                             </div>
                         </div>
 
@@ -341,37 +329,25 @@ export function ProductForm({ product }: ProductFormProps) {
                             Fotos do produto
                         </CardTitle>
                         <CardDescription className="text-xs sm:text-sm">
-                            Adicione até 5 imagens, uma por vez, pelo arquivo ou
-                            pela câmera do celular. Edite cada imagem antes de
-                            salvar.
+                            Adicione até 5 fotos pela câmera ou pela galeria. O
+                            enquadramento é definido antes de salvar cada foto.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="p-5 pt-0 sm:p-6 sm:pt-0">
-                        <ProductImageUploader
+                        <ProductPhotoManager
                             value={form.data.images}
-                            existingImages={
-                                product?.images.filter(
-                                    (image) =>
-                                        !form.data.remove_media_ids.includes(
-                                            image.id,
-                                        ),
-                                ) ?? []
-                            }
+                            existingImages={product?.images ?? []}
                             error={error('images') ?? error('image_order')}
-                            onChange={(files, imageOrder) => {
+                            errors={form.errors as Record<string, string>}
+                            onChange={(change) => {
                                 form.setData((previousData) => ({
                                     ...previousData,
-                                    images: files,
-                                    image_order: imageOrder,
+                                    images: change.files,
+                                    image_order: change.imageOrder,
+                                    remove_media_ids: change.removeMediaIds,
                                 }));
                             }}
                             onProcessingChange={setProcessingImages}
-                            onRemoveExisting={(id) =>
-                                form.setData('remove_media_ids', [
-                                    ...form.data.remove_media_ids,
-                                    id,
-                                ])
-                            }
                         />
                     </CardContent>
                 </Card>

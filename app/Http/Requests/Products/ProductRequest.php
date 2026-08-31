@@ -26,19 +26,27 @@ abstract class ProductRequest extends FormRequest
         $model = $this->input('model');
         $totalQuantity = $this->input('total_quantity');
         $inputVariants = $this->input('variants', []);
-        $inputVariants = is_array($inputVariants) ? $inputVariants : [];
-        $variants = [];
+        $variants = $inputVariants;
 
-        foreach ($inputVariants as $variant) {
-            $size = is_array($variant) ? ($variant['size'] ?? '') : '';
-            $quantity = is_array($variant) ? ($variant['quantity'] ?? null) : null;
-            $isActive = is_array($variant) ? ($variant['is_active'] ?? true) : true;
+        if (is_array($inputVariants)) {
+            $variants = [];
 
-            $variants[] = [
-                'size' => is_string($size) ? Str::squish($size) : '',
-                'quantity' => $quantity === '' || $quantity === null ? null : $quantity,
-                'is_active' => $isActive,
-            ];
+            foreach ($inputVariants as $variant) {
+                if (! is_array($variant)) {
+                    $variants[] = $variant;
+
+                    continue;
+                }
+
+                $size = $variant['size'] ?? '';
+                $quantity = $variant['quantity'] ?? null;
+
+                $variants[] = [
+                    'size' => is_string($size) ? Str::squish($size) : $size,
+                    'quantity' => $quantity === '' || $quantity === null ? null : $quantity,
+                    'is_active' => $variant['is_active'] ?? true,
+                ];
+            }
         }
 
         $this->merge([
@@ -95,7 +103,9 @@ abstract class ProductRequest extends FormRequest
             'total_quantity.required' => 'Informe o estoque total.',
             'total_quantity.integer' => 'O estoque total deve ser um número.',
             'total_quantity.min' => 'O estoque total não pode ser negativo.',
+            'variants.array' => 'Envie os tamanhos em uma lista válida.',
             'variants.max' => 'Cadastre no máximo 50 tamanhos.',
+            'variants.*.array' => 'Envie cada tamanho em um formato válido.',
             'variants.*.size.required' => 'Informe o tamanho ou remova esta linha.',
             'variants.*.size.max' => 'O tamanho deve ter no máximo 30 caracteres.',
             'variants.*.size.distinct' => 'Os tamanhos precisam ser diferentes.',
@@ -109,7 +119,13 @@ abstract class ProductRequest extends FormRequest
             'images.*.max' => 'Cada foto deve ter no máximo 5 MB.',
             'image_order.array' => 'Envie a ordem das fotos em uma lista válida.',
             'image_order.max' => 'Ordene no máximo 5 fotos por produto.',
+            'image_order.*.required' => 'A ordem das fotos está incompleta.',
+            'image_order.*.distinct' => 'Cada foto deve aparecer uma única vez na ordem.',
             'image_order.*.regex' => 'A ordem das fotos enviada é inválida.',
+            'remove_media_ids.array' => 'Envie as fotos removidas em uma lista válida.',
+            'remove_media_ids.*.integer' => 'A foto selecionada para remoção é inválida.',
+            'remove_media_ids.*.distinct' => 'Cada foto deve ser removida uma única vez.',
+            'remove_media_ids.*.exists' => 'A foto selecionada para remoção não existe.',
         ];
     }
 
@@ -159,14 +175,18 @@ abstract class ProductRequest extends FormRequest
 
                 $imageOrder = $this->input('image_order');
 
-                if ($product instanceof Product && is_array($imageOrder)) {
-                    $this->validateImageOrder(
-                        $validator,
-                        $product,
-                        $removeMediaIds,
-                        $uploadedImages,
-                        $imageOrder,
-                    );
+                if (is_array($imageOrder)) {
+                    if ($product instanceof Product) {
+                        $this->validateImageOrder(
+                            $validator,
+                            $product,
+                            $removeMediaIds,
+                            $uploadedImages,
+                            $imageOrder,
+                        );
+                    } else {
+                        $this->validateNewImageOrder($validator, $uploadedImages, $imageOrder);
+                    }
                 }
             },
         ];
@@ -236,6 +256,40 @@ abstract class ProductRequest extends FormRequest
             $validator->errors()->add(
                 'image_order',
                 'A ordem das fotos deve conter somente imagens válidas deste produto.',
+            );
+        }
+    }
+
+    /**
+     * Ensure a new product orders every uploaded image exactly once.
+     *
+     * @param  array<int|string, mixed>  $uploadedImages
+     * @param  array<int, mixed>  $imageOrder
+     */
+    private function validateNewImageOrder(
+        Validator $validator,
+        array $uploadedImages,
+        array $imageOrder,
+    ): void {
+        $orderedUploadIndexes = collect($imageOrder)
+            ->filter(fn (mixed $token): bool => is_string($token) && str_starts_with($token, 'new:'))
+            ->map(fn (string $token): int => (int) Str::after($token, 'new:'))
+            ->sort()
+            ->values()
+            ->all();
+        $expectedUploadIndexes = collect(array_keys($uploadedImages))
+            ->map(fn (int|string $index): int => (int) $index)
+            ->sort()
+            ->values()
+            ->all();
+
+        if (
+            $orderedUploadIndexes !== $expectedUploadIndexes
+            || count($imageOrder) !== count($expectedUploadIndexes)
+        ) {
+            $validator->errors()->add(
+                'image_order',
+                'A ordem das fotos deve conter todas as imagens enviadas.',
             );
         }
     }

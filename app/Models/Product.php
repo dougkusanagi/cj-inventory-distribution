@@ -74,7 +74,6 @@ class Product extends Model implements HasMedia
     {
         $this->addMediaCollection(self::MEDIA_COLLECTION)
             ->useDisk('public')
-            ->onlyKeepLatest(self::MAX_IMAGES)
             ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp']);
     }
 
