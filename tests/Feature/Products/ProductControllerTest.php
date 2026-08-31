@@ -329,6 +329,80 @@ test('product images can be replaced and removed from the media collection', fun
     Storage::disk('public')->assertMissing($newMedia->getPathRelativeToRoot('thumb'));
 });
 
+test('product images can be reordered with a new image as the principal photo', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $firstMedia = $product->addMedia(UploadedFile::fake()->image('first.jpg'))
+        ->toMediaCollection(Product::MEDIA_COLLECTION);
+    $secondMedia = $product->addMedia(UploadedFile::fake()->image('second.jpg'))
+        ->toMediaCollection(Product::MEDIA_COLLECTION);
+
+    $response = $this->actingAs($user)->post(route('products.update', $product), [
+        '_method' => 'PUT',
+        'name' => $product->name,
+        'total_quantity' => 0,
+        'images' => [UploadedFile::fake()->image('principal.jpg')],
+        'image_order' => [
+            'new:0',
+            'media:'.$secondMedia->id,
+            'media:'.$firstMedia->id,
+        ],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $orderedMedia = $product->refresh()->getMedia(Product::MEDIA_COLLECTION);
+    $orderedIds = $orderedMedia->pluck('id')->all();
+
+    expect($orderedMedia)->toHaveCount(3);
+    expect($orderedIds[1])->toBe($secondMedia->id);
+    expect($orderedIds[2])->toBe($firstMedia->id);
+    expect(in_array($orderedIds[0], [$firstMedia->id, $secondMedia->id], true))->toBeFalse();
+
+    $this->actingAs($user)
+        ->get(route('products.edit', $product))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('product.images.0.id', $orderedIds[0])
+            ->where('product.images.1.id', $secondMedia->id)
+            ->where('product.images.2.id', $firstMedia->id),
+        );
+});
+
+test('product image order cannot reference media from another product', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $otherProduct = Product::factory()->create();
+    $productMedia = $product->addMedia(UploadedFile::fake()->image('product.jpg'))
+        ->toMediaCollection(Product::MEDIA_COLLECTION);
+    $otherMedia = $otherProduct->addMedia(UploadedFile::fake()->image('other.jpg'))
+        ->toMediaCollection(Product::MEDIA_COLLECTION);
+
+    $response = $this->actingAs($user)
+        ->from(route('products.edit', $product))
+        ->post(route('products.update', $product), [
+            '_method' => 'PUT',
+            'name' => $product->name,
+            'total_quantity' => 0,
+            'image_order' => [
+                'media:'.$otherMedia->id,
+                'media:'.$productMedia->id,
+            ],
+        ]);
+
+    $response
+        ->assertSessionHasErrors('image_order')
+        ->assertRedirect(route('products.edit', $product));
+
+    expect($product->refresh()->getMedia(Product::MEDIA_COLLECTION)->pluck('id')->all())
+        ->toBe([$productMedia->id]);
+});
+
 test('authenticated users can delete a product with its variants, stock offer and media', function () {
     Storage::fake('public');
 

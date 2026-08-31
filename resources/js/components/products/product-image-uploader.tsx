@@ -1,191 +1,54 @@
 import {
     Camera,
-    Crop,
-    FlipHorizontal2,
+    ChevronLeft,
+    ChevronRight,
+    ChevronsLeft,
     ImagePlus,
-    RotateCcw,
-    RotateCw,
+    Pencil,
     Trash2,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import InputError from '@/components/input-error';
+import { PhotoCropModal } from '@/components/products/product-photo-modals';
+import type { PendingPhoto } from '@/components/products/product-photo-modals';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { ProductImage } from '@/types';
 
 const MAX_IMAGES = 5;
-const MAX_IMAGE_DIMENSION = 1600;
-const MAX_UPLOAD_BYTES = 1024 * 1024;
-const INITIAL_JPEG_QUALITY = 0.82;
-const MIN_JPEG_QUALITY = 0.5;
-const IMAGE_PROCESSING_ERROR =
-    'Não foi possível preparar uma das imagens. Tente usar uma foto JPG, PNG ou WebP.';
+const EXISTING_IMAGE_PREFIX = 'existing:';
+const NEW_IMAGE_PREFIX = 'new:';
 
 type ProductImageUploaderProps = {
     value: File[];
     existingImages?: ProductImage[];
     error?: string;
-    onChange: (files: File[]) => void;
+    onChange: (files: File[], imageOrder: string[]) => void;
     onRemoveExisting: (id: number) => void;
     onProcessingChange?: (processing: boolean) => void;
-};
-
-type ImageTransform = {
-    rotation: number;
-    mirrored: boolean;
-    cropped: boolean;
 };
 
 type NewImageItem = {
     id: string;
     file: File;
     sourceFile: File;
-    sourceUrl: string;
-    transform: ImageTransform;
+    previewUrl: string;
 };
 
-const emptyTransform = (): ImageTransform => ({
-    rotation: 0,
-    mirrored: false,
-    cropped: false,
-});
+type ExistingGalleryItem = {
+    key: string;
+    kind: 'existing';
+    image: ProductImage;
+};
 
-function loadImage(sourceUrl: string): Promise<HTMLImageElement> {
-    return new Promise((resolve, reject) => {
-        const image = new Image();
-        image.onload = () => resolve(image);
-        image.onerror = reject;
-        image.src = sourceUrl;
-    });
-}
+type NewGalleryItem = {
+    key: string;
+    kind: 'new';
+    image: NewImageItem;
+};
 
-function renderImage(
-    image: HTMLImageElement,
-    transform: ImageTransform,
-    scale: number,
-    quality: number,
-): Promise<Blob> {
-    const cropWidth = transform.cropped
-        ? Math.min(image.naturalWidth, image.naturalHeight)
-        : image.naturalWidth;
-    const cropHeight = transform.cropped
-        ? Math.min(image.naturalWidth, image.naturalHeight)
-        : image.naturalHeight;
-    const canvas = document.createElement('canvas');
-    const isSideways = transform.rotation === 90 || transform.rotation === 270;
-    const scaledWidth = Math.max(1, Math.round(cropWidth * scale));
-    const scaledHeight = Math.max(1, Math.round(cropHeight * scale));
-
-    canvas.width = isSideways ? scaledHeight : scaledWidth;
-    canvas.height = isSideways ? scaledWidth : scaledHeight;
-
-    const context = canvas.getContext('2d');
-
-    if (!context) {
-        return Promise.reject(new Error('Não foi possível criar o canvas.'));
-    }
-
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = 'high';
-    context.translate(canvas.width / 2, canvas.height / 2);
-    context.rotate((transform.rotation * Math.PI) / 180);
-    context.scale(transform.mirrored ? -1 : 1, 1);
-    context.drawImage(
-        image,
-        (transform.cropped
-            ? (cropWidth - image.naturalWidth) / 2
-            : -image.naturalWidth / 2) * scale,
-        (transform.cropped
-            ? (cropHeight - image.naturalHeight) / 2
-            : -image.naturalHeight / 2) * scale,
-        image.naturalWidth * scale,
-        image.naturalHeight * scale,
-    );
-
-    return new Promise((resolve, reject) => {
-        canvas.toBlob(
-            (blob) => {
-                if (blob) {
-                    resolve(blob);
-                } else {
-                    reject(new Error('Não foi possível exportar a imagem.'));
-                }
-            },
-            'image/jpeg',
-            quality,
-        );
-    });
-}
-
-async function transformImage(
-    sourceUrl: string,
-    transform: ImageTransform,
-): Promise<File> {
-    const image = await loadImage(sourceUrl);
-    const longestSide = Math.max(image.naturalWidth, image.naturalHeight);
-
-    if (longestSide === 0) {
-        throw new Error('A imagem não possui dimensões válidas.');
-    }
-
-    let scale = Math.min(1, MAX_IMAGE_DIMENSION / longestSide);
-    let quality = INITIAL_JPEG_QUALITY;
-
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-        const blob = await renderImage(image, transform, scale, quality);
-
-        if (blob.size <= MAX_UPLOAD_BYTES) {
-            return new File([blob], 'product-photo.jpg', {
-                type: 'image/jpeg',
-            });
-        }
-
-        if (quality > MIN_JPEG_QUALITY) {
-            quality = Math.max(MIN_JPEG_QUALITY, quality - 0.1);
-        } else {
-            scale *= 0.8;
-            quality = INITIAL_JPEG_QUALITY;
-        }
-    }
-
-    throw new Error('A imagem não pôde ser reduzida ao tamanho permitido.');
-}
-
-function createNewImageItem(file: File): NewImageItem {
-    return {
-        id: crypto.randomUUID(),
-        file,
-        sourceFile: file,
-        sourceUrl: URL.createObjectURL(file),
-        transform: emptyTransform(),
-    };
-}
-
-async function prepareNewImageItem(
-    file: File,
-    objectUrls: Set<string>,
-): Promise<NewImageItem> {
-    const sourceUrl = URL.createObjectURL(file);
-    objectUrls.add(sourceUrl);
-
-    try {
-        const uploadFile = await transformImage(sourceUrl, emptyTransform());
-
-        return {
-            id: crypto.randomUUID(),
-            file: uploadFile,
-            sourceFile: file,
-            sourceUrl,
-            transform: emptyTransform(),
-        };
-    } catch (error) {
-        URL.revokeObjectURL(sourceUrl);
-        objectUrls.delete(sourceUrl);
-
-        throw error;
-    }
-}
+type GalleryItem = ExistingGalleryItem | NewGalleryItem;
 
 export function ProductImageUploader({
     value,
@@ -195,18 +58,49 @@ export function ProductImageUploader({
     onRemoveExisting,
     onProcessingChange,
 }: ProductImageUploaderProps) {
+    const objectUrls = useRef<Set<string>>(new Set());
+    const cameraInputRef = useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [items, setItems] = useState<NewImageItem[]>(() =>
-        value.map(createNewImageItem),
+        value.map((file) => ({
+            id: crypto.randomUUID(),
+            file,
+            sourceFile: file,
+            previewUrl: '',
+        })),
     );
-    const [selectedIndex, setSelectedIndex] = useState(0);
+    const [galleryOrder, setGalleryOrder] = useState<string[]>(() =>
+        existingImages.map((image) => existingImageKey(image.id)),
+    );
+    const [selectedKey, setSelectedKey] = useState<string | null>(null);
+    const [pendingPhoto, setPendingPhoto] = useState<PendingPhoto | null>(null);
+    const [editingItemId, setEditingItemId] = useState<string | null>(null);
     const [processing, setProcessing] = useState(false);
     const [clientError, setClientError] = useState<string | null>(null);
-    const objectUrls = useRef<Set<string>>(new Set());
-    const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        items.forEach((item) => objectUrls.current.add(item.sourceUrl));
+        if (!items.some((item) => item.previewUrl === '')) {
+            return;
+        }
+
+        setItems((currentItems) =>
+            currentItems.map((item) =>
+                item.previewUrl
+                    ? item
+                    : {
+                          ...item,
+                          previewUrl: createObjectUrl(
+                              item.file,
+                              objectUrls.current,
+                          ),
+                      },
+            ),
+        );
     }, [items]);
+
+    useEffect(() => {
+        onProcessingChange?.(processing);
+    }, [onProcessingChange, processing]);
 
     useEffect(() => {
         const urls = objectUrls.current;
@@ -216,273 +110,393 @@ export function ProductImageUploader({
         };
     }, []);
 
-    useEffect(() => {
-        onProcessingChange?.(processing);
-    }, [onProcessingChange, processing]);
-
-    const selectedItem = items[selectedIndex] ?? null;
-    const imageCount = existingImages.length + items.length;
+    const availableKeys = [
+        ...existingImages.map((image) => existingImageKey(image.id)),
+        ...items.map((item) => newImageKey(item.id)),
+    ];
+    const currentGalleryOrder = reconcileGalleryOrder(
+        galleryOrder,
+        availableKeys,
+    );
+    const galleryItems = getGalleryItems(
+        currentGalleryOrder,
+        existingImages,
+        items,
+    );
+    const imageCount = galleryItems.length;
     const hasRoom = imageCount < MAX_IMAGES;
+    const selectedIndex = selectedKey
+        ? galleryItems.findIndex((item) => item.key === selectedKey)
+        : -1;
+    const activeIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    const selectedGalleryItem = galleryItems[activeIndex] ?? null;
+    const primaryPreviewUrl = selectedGalleryItem
+        ? getGalleryImageUrl(selectedGalleryItem)
+        : null;
 
-    const updateItems = (nextItems: NewImageItem[]) => {
-        setItems(nextItems);
-        onChange(nextItems.map((item) => item.file));
+    const createPreviewUrl = (file: File): string =>
+        createObjectUrl(file, objectUrls.current);
 
-        if (nextItems.length === 0) {
-            setSelectedIndex(0);
-        } else if (selectedIndex >= nextItems.length) {
-            setSelectedIndex(nextItems.length - 1);
-        }
+    const revokeObjectUrl = (url: string) => {
+        URL.revokeObjectURL(url);
+        objectUrls.current.delete(url);
     };
 
-    const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(event.target.files ?? []);
-        const nextFiles = files.slice(0, MAX_IMAGES - imageCount);
+    const notifyChange = (nextOrder: string[], nextItems: NewImageItem[]) => {
+        const { files, imageOrder } = serializeGallery(
+            nextOrder,
+            existingImages,
+            nextItems,
+        );
+
+        onChange(files, imageOrder);
+    };
+
+    const closePendingPhoto = () => {
+        if (pendingPhoto) {
+            revokeObjectUrl(pendingPhoto.url);
+        }
+
+        setPendingPhoto(null);
+        setEditingItemId(null);
+    };
+
+    const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
 
         event.target.value = '';
 
-        if (nextFiles.length === 0) {
+        if (!file || !hasRoom || processing) {
             return;
         }
 
+        if (pendingPhoto) {
+            revokeObjectUrl(pendingPhoto.url);
+        }
+
         setClientError(null);
+        setPendingPhoto({ file, url: createPreviewUrl(file) });
+    };
+
+    const handleApplyPhoto = async (croppedFile: File) => {
         setProcessing(true);
 
-        const preparedItems: NewImageItem[] = [];
-        let hasProcessingError = false;
+        const previewUrl = createPreviewUrl(croppedFile);
+        const editingItem = editingItemId
+            ? items.find((item) => item.id === editingItemId)
+            : null;
 
-        for (const file of nextFiles) {
-            try {
-                preparedItems.push(
-                    await prepareNewImageItem(file, objectUrls.current),
-                );
-            } catch {
-                hasProcessingError = true;
-                break;
-            }
+        if (editingItem) {
+            revokeObjectUrl(editingItem.previewUrl);
         }
 
-        if (preparedItems.length > 0) {
-            const nextItems = [...items, ...preparedItems];
+        const nextItems = editingItem
+            ? items.map((item) =>
+                  item.id === editingItem.id
+                      ? { ...item, file: croppedFile, previewUrl }
+                      : item,
+              )
+            : [
+                  ...items,
+                  {
+                      id: crypto.randomUUID(),
+                      file: croppedFile,
+                      sourceFile: pendingPhoto?.file ?? croppedFile,
+                      previewUrl,
+                  },
+              ];
+        const nextOrder = editingItem
+            ? currentGalleryOrder
+            : [
+                  ...currentGalleryOrder,
+                  newImageKey(nextItems[nextItems.length - 1].id),
+              ];
 
-            setItems(nextItems);
-            onChange(nextItems.map((item) => item.file));
-            setSelectedIndex(items.length);
-        }
-
-        if (hasProcessingError) {
-            setClientError(IMAGE_PROCESSING_ERROR);
-        }
-
+        setItems(nextItems);
+        setGalleryOrder(nextOrder);
+        setSelectedKey(
+            editingItem
+                ? newImageKey(editingItem.id)
+                : newImageKey(nextItems[nextItems.length - 1].id),
+        );
+        notifyChange(nextOrder, nextItems);
+        closePendingPhoto();
         setProcessing(false);
     };
 
-    const handleRemoveNewImage = (index: number) => {
-        const item = items[index];
-
-        if (item) {
-            URL.revokeObjectURL(item.sourceUrl);
-            objectUrls.current.delete(item.sourceUrl);
+    const handleEditNewImage = (item: NewImageItem) => {
+        if (processing) {
+            return;
         }
 
-        updateItems(items.filter((_, itemIndex) => itemIndex !== index));
-    };
+        if (pendingPhoto) {
+            revokeObjectUrl(pendingPhoto.url);
+        }
 
-    const applyTransform = async (
-        item: NewImageItem,
-        nextTransform: ImageTransform,
-    ) => {
+        setSelectedKey(newImageKey(item.id));
+        setEditingItemId(item.id);
         setClientError(null);
-        setProcessing(true);
-
-        try {
-            const nextFile = await transformImage(
-                item.sourceUrl,
-                nextTransform,
-            );
-            const nextItems = items.map((currentItem) =>
-                currentItem.id === item.id
-                    ? {
-                          ...currentItem,
-                          file: nextFile,
-                          transform: nextTransform,
-                      }
-                    : currentItem,
-            );
-
-            updateItems(nextItems);
-        } catch {
-            setClientError(IMAGE_PROCESSING_ERROR);
-        } finally {
-            setProcessing(false);
-        }
-    };
-
-    const handleRotate = (direction: 'left' | 'right') => {
-        if (!selectedItem) {
-            return;
-        }
-
-        const rotation =
-            (selectedItem.transform.rotation +
-                (direction === 'right' ? 90 : 270)) %
-            360;
-
-        void applyTransform(selectedItem, {
-            ...selectedItem.transform,
-            rotation,
+        setPendingPhoto({
+            file: item.sourceFile,
+            url: createPreviewUrl(item.sourceFile),
         });
     };
 
-    const handleMirror = () => {
-        if (!selectedItem) {
+    const moveGalleryItem = (offset: -1 | 1) => {
+        if (!selectedGalleryItem) {
             return;
         }
 
-        void applyTransform(selectedItem, {
-            ...selectedItem.transform,
-            mirrored: !selectedItem.transform.mirrored,
-        });
-    };
+        const targetIndex = activeIndex + offset;
 
-    const handleCrop = () => {
-        if (!selectedItem || selectedItem.transform.cropped) {
+        if (targetIndex < 0 || targetIndex >= currentGalleryOrder.length) {
             return;
         }
 
-        void applyTransform(selectedItem, {
-            ...selectedItem.transform,
-            cropped: true,
-        });
+        const nextOrder = [...currentGalleryOrder];
+        [nextOrder[activeIndex], nextOrder[targetIndex]] = [
+            nextOrder[targetIndex],
+            nextOrder[activeIndex],
+        ];
+        setGalleryOrder(nextOrder);
+        notifyChange(nextOrder, items);
     };
 
-    const handleReset = () => {
-        if (!selectedItem) {
+    const makeSelectedImagePrincipal = () => {
+        if (!selectedGalleryItem || activeIndex === 0) {
             return;
         }
 
-        void applyTransform(selectedItem, emptyTransform());
+        const nextOrder = [
+            selectedGalleryItem.key,
+            ...currentGalleryOrder.filter(
+                (key) => key !== selectedGalleryItem.key,
+            ),
+        ];
+        setGalleryOrder(nextOrder);
+        setSelectedKey(selectedGalleryItem.key);
+        notifyChange(nextOrder, items);
     };
 
-    const primaryPreviewUrl =
-        selectedItem?.sourceUrl ?? existingImages[0]?.url ?? null;
-    const primaryTransform = selectedItem?.transform;
+    const removeSelectedImage = () => {
+        if (!selectedGalleryItem) {
+            return;
+        }
+
+        const imageName = getGalleryImageName(selectedGalleryItem);
+
+        if (
+            !window.confirm(
+                `Remover ${activeIndex === 0 ? 'a foto principal' : 'esta foto'}${imageName ? ` (${imageName})` : ''}?`,
+            )
+        ) {
+            return;
+        }
+
+        const nextOrder = currentGalleryOrder.filter(
+            (key) => key !== selectedGalleryItem.key,
+        );
+        const nextSelectedKey =
+            nextOrder[Math.min(activeIndex, nextOrder.length - 1)] ?? null;
+
+        setGalleryOrder(nextOrder);
+        setSelectedKey(nextSelectedKey);
+
+        if (selectedGalleryItem.kind === 'existing') {
+            onRemoveExisting(selectedGalleryItem.image.id);
+            notifyChange(nextOrder, items);
+
+            return;
+        }
+
+        revokeObjectUrl(selectedGalleryItem.image.previewUrl);
+        const nextItems = items.filter(
+            (item) => item.id !== selectedGalleryItem.image.id,
+        );
+        setItems(nextItems);
+        notifyChange(nextOrder, nextItems);
+    };
+
+    const openCamera = () => cameraInputRef.current?.click();
+    const openFilePicker = () => fileInputRef.current?.click();
 
     return (
         <div className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem]">
                 <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-dashed border-border bg-muted">
                     {primaryPreviewUrl ? (
-                        <img
-                            src={primaryPreviewUrl}
-                            alt="Pré-visualização da foto do produto"
-                            className="size-full object-cover transition-transform duration-300"
-                            style={
-                                primaryTransform
-                                    ? {
-                                          transform:
-                                              'rotate(' +
-                                              primaryTransform.rotation +
-                                              'deg) scaleX(' +
-                                              (primaryTransform.mirrored
-                                                  ? -1
-                                                  : 1) +
-                                              ')',
-                                      }
-                                    : undefined
-                            }
-                            decoding="async"
-                        />
+                        <>
+                            <img
+                                src={primaryPreviewUrl}
+                                alt="Pré-visualização da foto do produto"
+                                className="size-full object-cover"
+                                decoding="async"
+                            />
+                            {activeIndex === 0 && (
+                                <span className="absolute top-3 left-3 rounded-full bg-background/90 px-2.5 py-1 text-[10px] font-semibold tracking-[0.12em] text-foreground uppercase shadow-sm">
+                                    Foto principal
+                                </span>
+                            )}
+                        </>
                     ) : (
                         <button
                             type="button"
-                            onClick={() => inputRef.current?.click()}
+                            onClick={openFilePicker}
                             className="flex size-full flex-col items-center justify-center gap-3 p-6 text-center transition-colors hover:bg-accent"
                         >
-                            <span className="flex size-14 items-center justify-center rounded-full bg-background text-highlight shadow-sm">
+                            <span className="flex size-14 items-center justify-center rounded-full bg-background text-primary shadow-sm">
                                 <ImagePlus className="size-6" />
                             </span>
                             <span className="text-sm font-medium text-foreground">
                                 Adicione fotos da peça
                             </span>
-                            <span className="max-w-48 text-xs leading-5 text-muted-foreground">
-                                JPG, PNG ou WebP · até 5 MB por foto
+                            <span className="max-w-52 text-xs leading-5 text-muted-foreground">
+                                Uma foto por vez · JPG, PNG ou WebP · até 5 MB
                             </span>
                         </button>
                     )}
                 </div>
 
-                <div className="grid grid-cols-5 gap-2 sm:grid-cols-1">
-                    {existingImages.map((image) => (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-1">
+                    {galleryItems.map((item, index) => (
                         <div
-                            key={image.id}
-                            className="relative aspect-square overflow-hidden rounded-xl border border-border bg-muted"
-                        >
-                            <img
-                                src={image.thumb_url ?? image.url}
-                                alt=""
-                                className="size-full object-cover"
-                                loading="lazy"
-                                decoding="async"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => onRemoveExisting(image.id)}
-                                className="absolute top-1 right-1 flex size-6 items-center justify-center rounded-full bg-background/90 text-muted-foreground shadow-sm transition-colors hover:bg-destructive hover:text-destructive-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                                aria-label={'Remover imagem ' + image.name}
-                            >
-                                <Trash2 className="size-4" />
-                            </button>
-                        </div>
-                    ))}
-                    {items.map((item, index) => (
-                        <div
-                            key={item.id}
+                            key={item.key}
                             className={cn(
-                                'relative aspect-square overflow-hidden rounded-xl border bg-muted transition',
-                                selectedIndex === index
+                                'relative overflow-hidden rounded-xl border bg-muted transition',
+                                activeIndex === index
                                     ? 'border-primary ring-2 ring-primary/30'
                                     : 'border-border hover:border-primary/60',
                             )}
                         >
                             <button
                                 type="button"
-                                onClick={() => setSelectedIndex(index)}
-                                className="size-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                onClick={() => setSelectedKey(item.key)}
+                                className="block aspect-square w-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                aria-current={index === 0 ? 'true' : undefined}
                                 aria-label={
-                                    'Selecionar nova imagem ' + (index + 1)
+                                    index === 0
+                                        ? 'Selecionar foto principal'
+                                        : 'Selecionar foto ' + (index + 1)
                                 }
                             >
                                 <img
-                                    src={item.sourceUrl}
+                                    src={getGalleryImageUrl(item, true)}
                                     alt=""
                                     className="size-full object-cover"
                                     loading="lazy"
                                     decoding="async"
                                 />
                             </button>
-                            <button
-                                type="button"
-                                className="absolute top-1 right-1 flex size-6 items-center justify-center rounded-full bg-background/90 text-muted-foreground shadow-sm transition-colors hover:bg-destructive hover:text-destructive-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                                onClick={() => handleRemoveNewImage(index)}
-                                aria-label={
-                                    'Remover nova imagem ' + (index + 1)
-                                }
-                            >
-                                <Trash2 className="size-3.5" />
-                            </button>
+                            {index === 0 && (
+                                <span className="pointer-events-none absolute right-1 bottom-1 left-1 rounded-md bg-background/90 px-1 py-0.5 text-center text-[9px] font-semibold text-foreground shadow-sm">
+                                    Principal
+                                </span>
+                            )}
                         </div>
                     ))}
                 </div>
             </div>
 
+            {selectedGalleryItem && (
+                <div className="grid gap-3 rounded-xl border border-border/80 bg-muted/30 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="grid gap-1">
+                            <p className="text-sm font-semibold text-foreground">
+                                Foto {activeIndex + 1} de {imageCount}
+                            </p>
+                            <p className="text-xs leading-5 text-muted-foreground">
+                                {activeIndex === 0
+                                    ? 'Esta é a foto usada como principal no catálogo.'
+                                    : 'Escolha uma ação para ajustar a posição desta foto.'}
+                            </p>
+                        </div>
+                        {activeIndex === 0 && (
+                            <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">
+                                Principal
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                        {activeIndex > 0 && (
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={makeSelectedImagePrincipal}
+                                disabled={processing}
+                            >
+                                <ChevronsLeft />
+                                Tornar principal
+                            </Button>
+                        )}
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => moveGalleryItem(-1)}
+                            disabled={processing || activeIndex === 0}
+                        >
+                            <ChevronLeft />
+                            Mover antes
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => moveGalleryItem(1)}
+                            disabled={
+                                processing || activeIndex === imageCount - 1
+                            }
+                        >
+                            Mover depois
+                            <ChevronRight />
+                        </Button>
+                        {selectedGalleryItem.kind === 'new' && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                    handleEditNewImage(
+                                        selectedGalleryItem.image,
+                                    )
+                                }
+                                disabled={processing}
+                            >
+                                <Pencil />
+                                Editar foto
+                            </Button>
+                        )}
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={removeSelectedImage}
+                            disabled={processing}
+                        >
+                            <Trash2 />
+                            Remover foto
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             <input
-                ref={inputRef}
-                id="product-images"
+                ref={cameraInputRef}
+                id="product-images-camera"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 capture="environment"
-                multiple
+                className="sr-only"
+                onChange={handleFileChange}
+                disabled={!hasRoom || processing}
+            />
+            <input
+                ref={fileInputRef}
+                id="product-images-file"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
                 className="sr-only"
                 onChange={handleFileChange}
                 disabled={!hasRoom || processing}
@@ -493,88 +507,147 @@ export function ProductImageUploader({
                     type="button"
                     variant="secondary"
                     size="sm"
-                    onClick={() => inputRef.current?.click()}
+                    onClick={openCamera}
                     disabled={!hasRoom || processing}
                 >
                     <Camera />
-                    {imageCount > 0 ? 'Adicionar imagens' : 'Escolher imagens'}
+                    Tirar foto
                 </Button>
-
-                {selectedItem && (
-                    <>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleRotate('left')}
-                            disabled={processing}
-                            aria-label="Girar para a esquerda"
-                        >
-                            <RotateCcw />
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleRotate('right')}
-                            disabled={processing}
-                            aria-label="Girar para a direita"
-                        >
-                            <RotateCw />
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={handleMirror}
-                            disabled={processing}
-                            aria-label="Espelhar foto"
-                        >
-                            <FlipHorizontal2 />
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleCrop}
-                            disabled={
-                                processing || selectedItem.transform.cropped
-                            }
-                        >
-                            <Crop />
-                            Cortar
-                        </Button>
-                        {(selectedItem.transform.rotation !== 0 ||
-                            selectedItem.transform.mirrored ||
-                            selectedItem.transform.cropped) && (
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleReset}
-                                disabled={processing}
-                            >
-                                Desfazer edição
-                            </Button>
-                        )}
-                    </>
-                )}
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={openFilePicker}
+                    disabled={!hasRoom || processing}
+                >
+                    <ImagePlus />
+                    Escolher arquivo
+                </Button>
             </div>
 
             <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
                 <span>
-                    {imageCount} de {MAX_IMAGES} imagens
+                    {imageCount} de {MAX_IMAGES}{' '}
+                    {imageCount === 1 ? 'foto' : 'fotos'}
                 </span>
                 <span>
                     {processing
-                        ? 'Preparando fotos...'
+                        ? 'Processando foto...'
                         : hasRoom
-                          ? 'Você pode adicionar mais fotos.'
+                          ? 'Você pode adicionar outra foto.'
                           : 'Limite de fotos atingido.'}
                 </span>
             </div>
 
             <InputError message={clientError ?? error} />
+
+            {pendingPhoto && (
+                <PhotoCropModal
+                    key={pendingPhoto.url}
+                    pendingPhoto={pendingPhoto}
+                    onCancel={closePendingPhoto}
+                    onApply={handleApplyPhoto}
+                    onRetake={openCamera}
+                    onError={() =>
+                        setClientError(
+                            'Não foi possível preparar a foto. Tente usar uma imagem JPG, PNG ou WebP.',
+                        )
+                    }
+                />
+            )}
         </div>
     );
+}
+
+function createObjectUrl(file: File, urls: Set<string>): string {
+    const url = URL.createObjectURL(file);
+    urls.add(url);
+
+    return url;
+}
+
+function existingImageKey(id: number): string {
+    return EXISTING_IMAGE_PREFIX + id;
+}
+
+function newImageKey(id: string): string {
+    return NEW_IMAGE_PREFIX + id;
+}
+
+function getGalleryItems(
+    order: string[],
+    existingImages: ProductImage[],
+    items: NewImageItem[],
+): GalleryItem[] {
+    const existingByKey = new Map(
+        existingImages.map((image) => [existingImageKey(image.id), image]),
+    );
+    const newItemsByKey = new Map(
+        items.map((item) => [newImageKey(item.id), item]),
+    );
+
+    return order.flatMap((key): GalleryItem[] => {
+        const existingImage = existingByKey.get(key);
+
+        if (existingImage) {
+            return [{ key, kind: 'existing' as const, image: existingImage }];
+        }
+
+        const newImage = newItemsByKey.get(key);
+
+        return newImage ? [{ key, kind: 'new' as const, image: newImage }] : [];
+    });
+}
+
+function getGalleryImageUrl(item: GalleryItem, thumbnail = false): string {
+    if (item.kind === 'new') {
+        return item.image.previewUrl;
+    }
+
+    return thumbnail
+        ? (item.image.thumb_url ?? item.image.url)
+        : item.image.url;
+}
+
+function getGalleryImageName(item: GalleryItem): string {
+    return item.kind === 'existing' ? item.image.name : item.image.file.name;
+}
+
+function serializeGallery(
+    order: string[],
+    existingImages: ProductImage[],
+    items: NewImageItem[],
+): { files: File[]; imageOrder: string[] } {
+    const galleryItems = getGalleryItems(order, existingImages, items);
+    const newItems = galleryItems
+        .filter((item): item is NewGalleryItem => item.kind === 'new')
+        .map((item) => item.image);
+    const newIndexByKey = new Map(
+        galleryItems
+            .filter((item): item is NewGalleryItem => item.kind === 'new')
+            .map((item, index) => [item.key, index]),
+    );
+
+    return {
+        files: newItems.map((item) => item.file),
+        imageOrder: galleryItems.map((item) =>
+            item.kind === 'existing'
+                ? 'media:' + item.image.id
+                : 'new:' + newIndexByKey.get(item.key),
+        ),
+    };
+}
+
+function reconcileGalleryOrder(
+    currentOrder: string[],
+    availableKeys: string[],
+): string[] {
+    const availableKeySet = new Set(availableKeys);
+    const retainedKeys = currentOrder.filter((key) => availableKeySet.has(key));
+    const retainedKeySet = new Set(retainedKeys);
+
+    return [
+        ...retainedKeys,
+        ...availableKeys.filter((key) => !retainedKeySet.has(key)),
+    ];
 }

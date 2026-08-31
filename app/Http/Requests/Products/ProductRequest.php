@@ -68,6 +68,13 @@ abstract class ProductRequest extends FormRequest
             'variants.*.is_active' => ['required', 'boolean'],
             'images' => ['nullable', 'array', 'max:5'],
             'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'image_order' => ['nullable', 'array', 'max:5'],
+            'image_order.*' => [
+                'required',
+                'string',
+                'distinct',
+                'regex:/^(media:[1-9][0-9]*|new:[0-9]+)$/',
+            ],
             'remove_media_ids' => ['nullable', 'array', 'max:5'],
             'remove_media_ids.*' => ['integer', 'distinct', 'exists:media,id'],
         ];
@@ -100,6 +107,9 @@ abstract class ProductRequest extends FormRequest
             'images.*.image' => 'Envie imagens válidas.',
             'images.*.mimes' => 'As fotos devem estar em JPG, PNG ou WebP.',
             'images.*.max' => 'Cada foto deve ter no máximo 5 MB.',
+            'image_order.array' => 'Envie a ordem das fotos em uma lista válida.',
+            'image_order.max' => 'Ordene no máximo 5 fotos por produto.',
+            'image_order.*.regex' => 'A ordem das fotos enviada é inválida.',
         ];
     }
 
@@ -146,7 +156,87 @@ abstract class ProductRequest extends FormRequest
                         'Um produto pode ter no máximo 5 fotos.',
                     );
                 }
+
+                $imageOrder = $this->input('image_order');
+
+                if ($product instanceof Product && is_array($imageOrder)) {
+                    $this->validateImageOrder(
+                        $validator,
+                        $product,
+                        $removeMediaIds,
+                        $uploadedImages,
+                        $imageOrder,
+                    );
+                }
             },
         ];
+    }
+
+    /**
+     * Ensure an image order references exactly this product's retained media and uploads.
+     *
+     * @param  array<int, mixed>  $removeMediaIds
+     * @param  array<int|string, mixed>  $uploadedImages
+     * @param  array<int, mixed>  $imageOrder
+     */
+    private function validateImageOrder(
+        Validator $validator,
+        Product $product,
+        array $removeMediaIds,
+        array $uploadedImages,
+        array $imageOrder,
+    ): void {
+        $hasValidTokens = collect($imageOrder)->every(
+            fn (mixed $token): bool => is_string($token)
+                && preg_match('/^(media:[1-9][0-9]*|new:[0-9]+)$/', $token) === 1,
+        );
+
+        if (! $hasValidTokens) {
+            return;
+        }
+
+        $normalizedRemoveMediaIds = collect($removeMediaIds)
+            ->filter(fn (mixed $id): bool => is_numeric($id))
+            ->map(fn (mixed $id): int => (int) $id)
+            ->values()
+            ->all();
+        $expectedMediaIds = $product->media()
+            ->where('collection_name', Product::MEDIA_COLLECTION)
+            ->whereNotIn('id', $normalizedRemoveMediaIds)
+            ->pluck('id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->all();
+        $orderedMediaIds = [];
+        $orderedUploadIndexes = [];
+
+        foreach ($imageOrder as $token) {
+            if (str_starts_with($token, 'media:')) {
+                $orderedMediaIds[] = (int) substr($token, strlen('media:'));
+
+                continue;
+            }
+
+            $orderedUploadIndexes[] = (int) substr($token, strlen('new:'));
+        }
+
+        $expectedUploadIndexes = array_map(
+            fn (int|string $index): int => (int) $index,
+            array_keys($uploadedImages),
+        );
+        sort($expectedMediaIds);
+        sort($orderedMediaIds);
+        sort($expectedUploadIndexes);
+        sort($orderedUploadIndexes);
+
+        if (
+            $expectedMediaIds !== $orderedMediaIds
+            || $expectedUploadIndexes !== $orderedUploadIndexes
+            || count($imageOrder) !== count($expectedMediaIds) + count($expectedUploadIndexes)
+        ) {
+            $validator->errors()->add(
+                'image_order',
+                'A ordem das fotos deve conter somente imagens válidas deste produto.',
+            );
+        }
     }
 }

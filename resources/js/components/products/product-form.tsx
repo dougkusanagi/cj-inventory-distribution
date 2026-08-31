@@ -39,6 +39,7 @@ type ProductFormData = {
     total_quantity: number | string | null;
     variants: VariantFormItem[];
     images: File[];
+    image_order: string[];
     remove_media_ids: number[];
     _method?: 'PUT';
 };
@@ -119,6 +120,7 @@ export function ProductForm({ product }: ProductFormProps) {
         total_quantity: product?.total_quantity ?? null,
         variants: initialVariants,
         images: [],
+        image_order: product?.images.map((image) => 'media:' + image.id) ?? [],
         remove_media_ids: [],
         ...(isEditing ? { _method: 'PUT' as const } : {}),
     });
@@ -339,8 +341,9 @@ export function ProductForm({ product }: ProductFormProps) {
                             Fotos do produto
                         </CardTitle>
                         <CardDescription className="text-xs sm:text-sm">
-                            Adicione até 5 imagens por arquivo ou pela câmera do
-                            celular. Edite cada imagem antes de salvar.
+                            Adicione até 5 imagens, uma por vez, pelo arquivo ou
+                            pela câmera do celular. Edite cada imagem antes de
+                            salvar.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="p-5 pt-0 sm:p-6 sm:pt-0">
@@ -354,9 +357,13 @@ export function ProductForm({ product }: ProductFormProps) {
                                         ),
                                 ) ?? []
                             }
-                            error={error('images')}
-                            onChange={(files) => {
-                                form.setData('images', files);
+                            error={error('images') ?? error('image_order')}
+                            onChange={(files, imageOrder) => {
+                                form.setData((previousData) => ({
+                                    ...previousData,
+                                    images: files,
+                                    image_order: imageOrder,
+                                }));
                             }}
                             onProcessingChange={setProcessingImages}
                             onRemoveExisting={(id) =>
@@ -571,15 +578,15 @@ export function ProductForm({ product }: ProductFormProps) {
                                     >
                                         <Card
                                             className={cn(
-                                                'gap-0 rounded-2xl border p-0 shadow-none transition-all',
+                                                'h-12 gap-0 rounded-xl border p-0 shadow-none transition-colors',
                                                 variant.is_active
-                                                    ? 'border-primary/60 bg-primary/5 ring-2 ring-primary/15'
-                                                    : 'border-border/80 bg-card hover:border-primary/40',
+                                                    ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/15'
+                                                    : 'border-border/80 bg-muted/20 hover:border-primary/40',
                                             )}
                                         >
                                             <label
                                                 htmlFor={activeId}
-                                                className="flex min-h-16 cursor-pointer items-center justify-between gap-3 p-3.5 select-none"
+                                                className="flex h-full cursor-pointer items-center justify-between gap-3 px-3 py-2.5 select-none"
                                             >
                                                 <span className="font-mono text-base font-bold text-foreground">
                                                     {variant.size}
@@ -624,7 +631,7 @@ export function ProductForm({ product }: ProductFormProps) {
                                                         )
                                                     }
                                                     placeholder="Ex.: 5"
-                                                    className="h-[4.125rem] text-center font-mono text-sm"
+                                                    className="h-12 rounded-xl px-2 text-center font-mono text-sm"
                                                     aria-invalid={
                                                         error(
                                                             `variants.${index}.quantity`,
