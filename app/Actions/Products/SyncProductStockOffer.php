@@ -121,7 +121,7 @@ class SyncProductStockOffer
 
         $offer->update([
             'total_quantity' => 0,
-            'volumes' => $offer->type?->requiresVolumes() === true ? 0 : null,
+            'volumes' => $offer->type->requiresVolumes() ? 0 : null,
             'is_active' => false,
         ]);
         $offer->items()->delete();

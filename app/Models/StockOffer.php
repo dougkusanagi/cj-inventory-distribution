@@ -51,6 +51,9 @@ class StockOffer extends Model
 
     /**
      * Limit offers to the stock that can be shown in the shared catalog.
+     *
+     * @param  Builder<StockOffer>  $query
+     * @return Builder<StockOffer>
      */
     public function scopeAvailableForCatalog(Builder $query): Builder
     {

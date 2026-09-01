@@ -15,6 +15,8 @@ class VerifyCsrfToken extends PreventRequestForgery
      * The application is also available through an IP address shared by other
      * Laravel applications. Cookie names are shared across ports, so the
      * default XSRF-TOKEN cookie can be overwritten by another application.
+     *
+     * @param  array<string, mixed>  $config
      */
     protected function newCookie($request, $config)
     {
