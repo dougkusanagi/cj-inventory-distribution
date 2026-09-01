@@ -672,10 +672,6 @@ export function ProductPhotoManager({
                         <ImagePlus />
                         Adicionar fotos
                     </Button>
-                    <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground sm:justify-end">
-                        <Info className="size-3.5" />
-                        Toque em uma foto para ampliar ou ajustar.
-                    </p>
                 </div>
             </div>
 
@@ -697,86 +693,95 @@ export function ProductPhotoManager({
                     </span>
                 </button>
             ) : (
-                <div className="grid grid-cols-2 gap-0 sm:grid-cols-1 sm:gap-3">
-                    {state.items.map((item) => {
-                        if (item.removed) {
-                            return (
-                                <div
-                                    key={item.key}
-                                    className="col-span-full flex min-h-20 items-center justify-between gap-3 rounded-2xl border border-dashed border-border bg-muted/30 p-3"
-                                >
-                                    <div className="flex min-w-0 items-center gap-3">
-                                        <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                                            <Undo2 className="size-5" />
-                                        </div>
-                                        <div className="grid min-w-0 gap-0.5">
-                                            <p className="text-sm font-semibold text-foreground">
-                                                Foto removida
-                                            </p>
-                                            <p className="truncate text-xs text-muted-foreground">
-                                                A remoção só será aplicada ao
-                                                salvar.
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => handleUndoRemove(item)}
-                                        disabled={processing}
-                                        className="h-12 shrink-0 px-3"
-                                    >
-                                        <Undo2 />
-                                        Desfazer
-                                    </Button>
-                                </div>
-                            );
-                        }
-
-                        const index = currentItems.findIndex(
-                            (currentItem) => currentItem.key === item.key,
-                        );
-
-                        return (
-                            <PhotoRow
-                                key={item.key}
-                                item={item}
-                                index={index}
-                                error={
-                                    item.error ??
-                                    serverImageErrors.get(item.key)
-                                }
-                                processing={processing}
-                                onPreview={() => setPreviewItem(item)}
-                                onEdit={() => handleEdit(item)}
-                                onSetCover={() => handleSetCover(item)}
-                                onRemove={() => handleRemove(item)}
-                            />
-                        );
-                    })}
-                    {currentItems.length % 2 === 1 && (
-                        <div
-                            aria-hidden="true"
-                            className={cn(
-                                'border-l border-border sm:hidden',
-                                currentItems.length > 2 && 'border-t',
-                            )}
-                        />
+                <div className="grid gap-3">
+                    {currentItems.length >= 2 && (
+                        <div className="flex justify-center sm:justify-end">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setOrganizerOpen(true)}
+                                disabled={processing}
+                                className="h-10 w-full rounded-xl px-3 text-xs sm:w-auto"
+                            >
+                                <GripVertical />
+                                Organizar fotos
+                            </Button>
+                        </div>
                     )}
-                </div>
-            )}
+                    <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground sm:justify-start">
+                        <Info className="size-3.5" />
+                        Toque em uma foto para ampliar ou ajustar.
+                    </p>
+                    <div className="grid grid-cols-2 gap-0 sm:grid-cols-1 sm:gap-3">
+                        {state.items.map((item) => {
+                            if (item.removed) {
+                                return (
+                                    <div
+                                        key={item.key}
+                                        className="col-span-full flex min-h-20 items-center justify-between gap-3 rounded-2xl border border-dashed border-border bg-muted/30 p-3"
+                                    >
+                                        <div className="flex min-w-0 items-center gap-3">
+                                            <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                                                <Undo2 className="size-5" />
+                                            </div>
+                                            <div className="grid min-w-0 gap-0.5">
+                                                <p className="text-sm font-semibold text-foreground">
+                                                    Foto removida
+                                                </p>
+                                                <p className="truncate text-xs text-muted-foreground">
+                                                    A remoção só será aplicada
+                                                    ao salvar.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() =>
+                                                handleUndoRemove(item)
+                                            }
+                                            disabled={processing}
+                                            className="h-12 shrink-0 px-3"
+                                        >
+                                            <Undo2 />
+                                            Desfazer
+                                        </Button>
+                                    </div>
+                                );
+                            }
 
-            {currentItems.length >= 2 && (
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setOrganizerOpen(true)}
-                    disabled={processing}
-                    className="h-12 w-full"
-                >
-                    <GripVertical />
-                    Organizar fotos
-                </Button>
+                            const index = currentItems.findIndex(
+                                (currentItem) => currentItem.key === item.key,
+                            );
+
+                            return (
+                                <PhotoRow
+                                    key={item.key}
+                                    item={item}
+                                    index={index}
+                                    error={
+                                        item.error ??
+                                        serverImageErrors.get(item.key)
+                                    }
+                                    processing={processing}
+                                    onPreview={() => setPreviewItem(item)}
+                                    onEdit={() => handleEdit(item)}
+                                    onSetCover={() => handleSetCover(item)}
+                                    onRemove={() => handleRemove(item)}
+                                />
+                            );
+                        })}
+                        {currentItems.length % 2 === 1 && (
+                            <div
+                                aria-hidden="true"
+                                className={cn(
+                                    'border-l border-border sm:hidden',
+                                    currentItems.length > 2 && 'border-t',
+                                )}
+                            />
+                        )}
+                    </div>
+                </div>
             )}
 
             <InputError
