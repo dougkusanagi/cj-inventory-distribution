@@ -1,7 +1,6 @@
-import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft, PackagePlus } from 'lucide-react';
+import { Head } from '@inertiajs/react';
+import { PackagePlus } from 'lucide-react';
 import { ProductForm } from '@/components/products/product-form';
-import { Button } from '@/components/ui/button';
 import { index as productsIndex } from '@/routes/products';
 
 export default function CreateProduct() {
@@ -9,8 +8,8 @@ export default function CreateProduct() {
         <>
             <Head title="Novo produto" />
 
-            <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
-                <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+                <header className="flex flex-col gap-5 sm:flex-row sm:items-end">
                     <div className="flex items-start gap-4">
                         <span className="mt-1 flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
                             <PackagePlus className="size-5" />
@@ -28,17 +27,10 @@ export default function CreateProduct() {
                             </p>
                         </div>
                     </div>
-
-                    <Button variant="ghost" asChild className="w-fit">
-                        <Link href={productsIndex()}>
-                            <ArrowLeft />
-                            Voltar para produtos
-                        </Link>
-                    </Button>
                 </header>
 
                 <ProductForm />
-            </main>
+            </div>
         </>
     );
 }

@@ -7,11 +7,11 @@ Sistema Laravel interno da Crônicas Jeans para organizar estoque disponível pa
 Entregar um fluxo simples:
 
 1. Cadastrar produtos.
-2. Informar estoque total e, opcionalmente, estoque por tamanho.
+2. Quando houver uma oferta, informar estoque total e, opcionalmente, estoque por tamanho.
 3. Classificar a disponibilidade como:
-   - `Reposição`
-   - `Grade Nova`
-   - `Grade Furada`
+    - `Reposição`
+    - `Grade Nova`
+    - `Grade Furada`
 4. Compartilhar uma tela de produtos disponíveis com as vendedoras.
 5. Permitir que elas montem uma sacola e enviem um pedido.
 6. Gerar um texto do pedido pronto para WhatsApp.
@@ -62,12 +62,15 @@ Representa uma disponibilidade atual de um produto.
 Ela guarda:
 
 - tipo: `Reposição`, `Grade Nova` ou `Grade Furada`
-- estoque total obrigatório
+- estoque total obrigatório quando houver oferta ativa
+- quantidade de volumes (sacos) obrigatória para `Reposição` e `Grade Furada`
 - tamanhos presentes naquele lote, quando informados
 - quantidades opcionais por tamanho
 - status ativo/inativo
 
 O tipo pertence à oferta de estoque, e não ao produto.
+Nas ofertas com volumes, quando a quantidade de sacos chega a zero, a oferta
+deixa de aparecer no catálogo das vendedoras.
 
 ### Pedido
 

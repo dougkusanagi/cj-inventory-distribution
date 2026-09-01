@@ -4,9 +4,11 @@ import {
     ChevronLeft,
     ChevronRight,
     ImageOff,
+    LayoutGrid,
     Package,
     Pencil,
     Plus,
+    Table2,
     Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -28,6 +30,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { cn } from '@/lib/utils';
 import {
     index as productsIndex,
     edit as productEdit,
@@ -38,6 +42,8 @@ import type { Paginated, Product } from '@/types';
 type ProductsIndexProps = {
     products: Paginated<Product>;
 };
+
+type ProductView = 'table' | 'cards';
 
 function paginationLabel(label: string): string {
     if (label.includes('Previous') || label.includes('laquo')) {
@@ -51,6 +57,59 @@ function paginationLabel(label: string): string {
     return label;
 }
 
+function ProductImage({
+    product,
+    className,
+}: {
+    product: Product;
+    className?: string;
+}) {
+    const coverImage = product.images[0];
+
+    if (coverImage) {
+        return (
+            <img
+                src={coverImage.thumb_url ?? coverImage.url}
+                alt={product.name}
+                className={cn('size-full object-cover', className)}
+                loading="lazy"
+                decoding="async"
+            />
+        );
+    }
+
+    return (
+        <div
+            className={cn(
+                'flex size-full items-center justify-center text-featured-card-muted',
+                className,
+            )}
+            aria-label="Produto sem foto"
+        >
+            <ImageOff className="size-5" strokeWidth={1.25} />
+        </div>
+    );
+}
+
+function ProductVariants({ product }: { product: Product }) {
+    if (product.variants.length === 0) {
+        return (
+            <span className="text-xs text-muted-foreground">
+                Sem grade cadastrada
+            </span>
+        );
+    }
+
+    return product.variants.map((variant) => (
+        <span
+            key={variant.id}
+            className="rounded-md bg-muted px-2 py-1 font-mono text-xs font-medium break-words text-foreground"
+        >
+            {variant.size}
+        </span>
+    ));
+}
+
 function ProductCard({
     product,
     onDelete,
@@ -62,14 +121,11 @@ function ProductCard({
 
     return (
         <article className="group flex min-h-full flex-col overflow-hidden rounded-[1.75rem] border border-border/80 bg-card shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
-            <div className="relative aspect-[4/3] overflow-hidden bg-featured-card">
+            <div className="relative aspect-[4/5] overflow-hidden bg-featured-card">
                 {coverImage ? (
-                    <img
-                        src={coverImage.thumb_url ?? coverImage.url}
-                        alt={product.name}
-                        className="size-full object-cover transition duration-500 group-hover:scale-105"
-                        loading="lazy"
-                        decoding="async"
+                    <ProductImage
+                        product={product}
+                        className="transition duration-500 group-hover:scale-105"
                     />
                 ) : (
                     <div className="flex size-full flex-col items-center justify-center gap-2 text-featured-card-muted">
@@ -110,20 +166,7 @@ function ProductCard({
                 </div>
 
                 <div className="flex min-h-7 flex-wrap gap-1.5">
-                    {product.variants.length > 0 ? (
-                        product.variants.map((variant) => (
-                            <span
-                                key={variant.id}
-                                className="rounded-md bg-muted px-2 py-1 font-mono text-xs font-medium text-foreground"
-                            >
-                                {variant.size}
-                            </span>
-                        ))
-                    ) : (
-                        <span className="text-xs text-muted-foreground">
-                            Sem grade cadastrada
-                        </span>
-                    )}
+                    <ProductVariants product={product} />
                 </div>
 
                 <div className="mt-auto grid gap-4 border-t border-border pt-4">
@@ -158,7 +201,161 @@ function ProductCard({
     );
 }
 
+function ProductTable({
+    products,
+    onDelete,
+}: {
+    products: Product[];
+    onDelete: (product: Product) => void;
+}) {
+    return (
+        <div className="overflow-hidden rounded-[1.75rem] border border-border/80 bg-card shadow-sm">
+            <table
+                className="block w-full border-collapse text-sm lg:table"
+                aria-label="Produtos cadastrados"
+            >
+                <caption className="sr-only">
+                    Catálogo de produtos cadastrados
+                </caption>
+                <thead className="hidden bg-muted/45 lg:table-header-group">
+                    <tr className="border-b border-border">
+                        <th
+                            scope="col"
+                            className="h-12 px-5 text-left text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase"
+                        >
+                            Produto
+                        </th>
+                        <th
+                            scope="col"
+                            className="h-12 px-5 text-left text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase"
+                        >
+                            Tamanhos
+                        </th>
+                        <th
+                            scope="col"
+                            className="h-12 px-5 text-left text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase"
+                        >
+                            Estoque total
+                        </th>
+                        <th
+                            scope="col"
+                            className="h-12 px-5 text-left text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase"
+                        >
+                            Observação
+                        </th>
+                        <th scope="col" className="h-12 px-5">
+                            <span className="sr-only">Ações</span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody className="block divide-y divide-border lg:table-row-group">
+                    {products.map((product) => (
+                        <tr
+                            key={product.id}
+                            className="grid gap-4 p-4 transition-colors hover:bg-muted/30 lg:table-row lg:p-0"
+                        >
+                            <td className="block p-0 lg:table-cell lg:px-5 lg:py-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="size-14 shrink-0 overflow-hidden rounded-xl border border-border bg-featured-card">
+                                        <ProductImage product={product} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="line-clamp-2 font-semibold break-words text-card-foreground">
+                                            {product.name}
+                                        </p>
+                                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                            <span className="font-mono tracking-[0.08em]">
+                                                {product.code}
+                                            </span>
+                                            <span
+                                                className="size-1 rounded-full bg-primary"
+                                                aria-hidden="true"
+                                            />
+                                            <span className="min-w-0 break-words">
+                                                {product.model
+                                                    ? `Modelo ${product.model}`
+                                                    : 'Modelo não informado'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td className="block p-0 lg:table-cell lg:px-5 lg:py-4 lg:align-middle">
+                                <span className="mb-2 block text-[10px] font-semibold tracking-[0.16em] text-muted-foreground uppercase lg:hidden">
+                                    Tamanhos
+                                </span>
+                                <div className="flex max-w-full flex-wrap gap-1.5">
+                                    <ProductVariants product={product} />
+                                </div>
+                            </td>
+                            <td className="block p-0 lg:table-cell lg:px-5 lg:py-4 lg:align-middle">
+                                <span className="mb-1 block text-[10px] font-semibold tracking-[0.16em] text-muted-foreground uppercase lg:hidden">
+                                    Estoque total
+                                </span>
+                                {product.total_quantity !== null &&
+                                product.total_quantity !== undefined ? (
+                                    <>
+                                        <p className="font-semibold text-card-foreground">
+                                            {product.total_quantity}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            unidades
+                                        </p>
+                                    </>
+                                ) : (
+                                    <span className="text-muted-foreground">
+                                        Sem oferta
+                                    </span>
+                                )}
+                            </td>
+                            <td className="block p-0 lg:table-cell lg:px-5 lg:py-4 lg:align-middle">
+                                <span className="mb-1 block text-[10px] font-semibold tracking-[0.16em] text-muted-foreground uppercase lg:hidden">
+                                    Observação
+                                </span>
+                                <p
+                                    className="line-clamp-2 max-w-full leading-5 text-muted-foreground lg:max-w-[15rem]"
+                                    title={product.notes ?? undefined}
+                                >
+                                    {product.notes ?? 'Nenhuma observação'}
+                                </p>
+                            </td>
+                            <td className="block p-0 lg:table-cell lg:px-5 lg:py-4 lg:align-middle">
+                                <span className="mb-2 block text-[10px] font-semibold tracking-[0.16em] text-muted-foreground uppercase lg:hidden">
+                                    Ações
+                                </span>
+                                <div className="flex w-full items-center gap-2 lg:w-auto lg:justify-end">
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        asChild
+                                        className="flex-1 lg:flex-none"
+                                    >
+                                        <Link href={productEdit(product.id)}>
+                                            <Pencil />
+                                            Editar
+                                        </Link>
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                        onClick={() => onDelete(product)}
+                                        aria-label={`Excluir ${product.name}`}
+                                    >
+                                        <Trash2 />
+                                    </Button>
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
 export default function ProductsIndex({ products }: ProductsIndexProps) {
+    const [view, setView] = useState<ProductView>('table');
     const [productToDelete, setProductToDelete] = useState<Product | null>(
         null,
     );
@@ -183,7 +380,7 @@ export default function ProductsIndex({ products }: ProductsIndexProps) {
         <>
             <Head title="Produtos" />
 
-            <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+            <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
                 <header className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
                     <div className="grid gap-3">
                         <p className="text-xs font-semibold tracking-[0.22em] text-highlight uppercase">
@@ -214,18 +411,63 @@ export default function ProductsIndex({ products }: ProductsIndexProps) {
                 </header>
 
                 {products.data.length > 0 ? (
-                    <section
-                        className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
-                        aria-label="Produtos cadastrados"
-                    >
-                        {products.data.map((product) => (
-                            <ProductCard
-                                key={product.id}
-                                product={product}
+                    <>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-sm text-muted-foreground">
+                                Escolha como visualizar seu catálogo.
+                            </p>
+                            <ToggleGroup
+                                type="single"
+                                value={view}
+                                onValueChange={(value) => {
+                                    if (value) {
+                                        setView(value as ProductView);
+                                    }
+                                }}
+                                variant="outline"
+                                size="sm"
+                                aria-label="Escolher visualização dos produtos"
+                                className="w-full sm:w-fit"
+                            >
+                                <ToggleGroupItem
+                                    value="table"
+                                    aria-label="Visualização em tabela"
+                                    className="flex-1 px-3 data-[state=on]:bg-secondary sm:flex-none"
+                                >
+                                    <Table2 />
+                                    Tabela
+                                </ToggleGroupItem>
+                                <ToggleGroupItem
+                                    value="cards"
+                                    aria-label="Visualização em cards"
+                                    className="flex-1 px-3 data-[state=on]:bg-secondary sm:flex-none"
+                                >
+                                    <LayoutGrid />
+                                    Cards
+                                </ToggleGroupItem>
+                            </ToggleGroup>
+                        </div>
+
+                        {view === 'table' ? (
+                            <ProductTable
+                                products={products.data}
                                 onDelete={setProductToDelete}
                             />
-                        ))}
-                    </section>
+                        ) : (
+                            <section
+                                className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
+                                aria-label="Produtos cadastrados"
+                            >
+                                {products.data.map((product) => (
+                                    <ProductCard
+                                        key={product.id}
+                                        product={product}
+                                        onDelete={setProductToDelete}
+                                    />
+                                ))}
+                            </section>
+                        )}
+                    </>
                 ) : (
                     <Card className="rounded-[2rem] border-dashed shadow-sm">
                         <CardHeader className="items-center pt-12 text-center">
@@ -303,7 +545,7 @@ export default function ProductsIndex({ products }: ProductsIndexProps) {
                         })}
                     </nav>
                 )}
-            </main>
+            </div>
 
             <Dialog
                 open={productToDelete !== null}

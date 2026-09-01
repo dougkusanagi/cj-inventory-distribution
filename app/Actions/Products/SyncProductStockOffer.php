@@ -18,6 +18,18 @@ class SyncProductStockOffer
      */
     public function handle(Product $product, Collection $variants, array $data): ?StockOffer
     {
+        $hasStockOffer = filter_var(
+            $data['has_stock_offer'] ?? true,
+            FILTER_VALIDATE_BOOLEAN,
+        );
+
+        if (! $hasStockOffer) {
+            return $this->deactivateLatestOffer($product);
+        }
+
+        $type = StockOfferType::tryFrom(
+            (string) ($data['stock_offer_type'] ?? StockOfferType::NewGrade->value),
+        ) ?? StockOfferType::NewGrade;
         $rawVariants = collect($this->normalizeVariants($data['variants'] ?? []));
         $totalQuantityInput = $data['total_quantity'] ?? null;
         $activeVariants = $rawVariants->filter(
@@ -37,25 +49,23 @@ class SyncProductStockOffer
 
         $sumOfVariants = $activeVariants->sum(fn (array $variant): int => (int) ($variant['quantity'] ?? 0));
         $totalQuantity = $totalQuantityInput !== null ? (int) $totalQuantityInput : $sumOfVariants;
-
-        $type = StockOfferType::NewGrade;
-        if ($activeVariants->isNotEmpty() && $hasVariantQuantities) {
-            $allFilled = $activeVariants->every(
-                fn (array $variant): bool => is_numeric($variant['quantity'] ?? null),
-            );
-            $type = $allFilled ? StockOfferType::NewGrade : StockOfferType::BrokenGrade;
-        }
+        $volumesInput = $data['volumes'] ?? null;
+        $volumes = $type->requiresVolumes() && $volumesInput !== null
+            ? max(0, (int) $volumesInput)
+            : null;
 
         /** @var StockOffer $offer */
         $offer = $product->latestOffer ?? $product->offers()->create([
             'type' => $type,
             'total_quantity' => max(0, $totalQuantity),
+            'volumes' => $volumes,
             'is_active' => true,
         ]);
 
         $offer->update([
             'type' => $type,
             'total_quantity' => max(0, $totalQuantity),
+            'volumes' => $volumes,
             'is_active' => true,
         ]);
 
@@ -111,6 +121,7 @@ class SyncProductStockOffer
 
         $offer->update([
             'total_quantity' => 0,
+            'volumes' => $offer->type->requiresVolumes() ? 0 : null,
             'is_active' => false,
         ]);
         $offer->items()->delete();

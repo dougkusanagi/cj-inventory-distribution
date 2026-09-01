@@ -10,6 +10,13 @@ test('login screen can be rendered', function () {
     $response->assertOk();
 });
 
+test('login screen issues an application-specific csrf cookie', function () {
+    $response = $this->get(route('login'));
+
+    $response->assertCookie('distribuicao-de-inventario-XSRF-TOKEN');
+    $response->assertCookieMissing('XSRF-TOKEN');
+});
+
 test('users can authenticate using the login screen', function () {
     $user = User::factory()->create();
 
