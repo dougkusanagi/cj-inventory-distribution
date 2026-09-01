@@ -35,6 +35,9 @@ createInertiaApp({
     progress: {
         color: '#4B5563',
     },
+    http: {
+        xsrfCookieName: 'distribuicao-de-inventario-XSRF-TOKEN',
+    },
 });
 
 // This will set light / dark mode on load...

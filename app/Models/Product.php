@@ -35,6 +35,21 @@ class Product extends Model implements HasMedia
 
     public const MAX_IMAGES = 5;
 
+    public const MAX_IMAGE_WIDTH = 1600;
+
+    public const MAX_IMAGE_HEIGHT = 2000;
+
+    public const IMAGE_WEBP_QUALITY = 84;
+
+    /**
+     * Protect the upload endpoint from files that are too large to process.
+     * The browser optimizes the image before upload and the server stores
+     * a normalized WebP version.
+     */
+    public const MAX_IMAGE_UPLOAD_SIZE_MB = 25;
+
+    public const MAX_IMAGE_UPLOAD_SIZE_KB = self::MAX_IMAGE_UPLOAD_SIZE_MB * 1024;
+
     /**
      * Get the size variants for the product.
      *
@@ -68,13 +83,24 @@ class Product extends Model implements HasMedia
     }
 
     /**
+     * Get the latest stock offer that is available in the shared catalog.
+     *
+     * @return HasOne<StockOffer, $this>
+     */
+    public function latestAvailableOffer(): HasOne
+    {
+        return $this->hasOne(StockOffer::class)
+            ->availableForCatalog()
+            ->latestOfMany();
+    }
+
+    /**
      * Register the product image collection.
      */
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection(self::MEDIA_COLLECTION)
             ->useDisk('public')
-            ->onlyKeepLatest(self::MAX_IMAGES)
             ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp']);
     }
 

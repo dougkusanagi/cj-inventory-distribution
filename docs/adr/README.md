@@ -33,3 +33,4 @@ ADRs iniciais:
 - [0003 — Classificação pertence à oferta de estoque](0003-stock-type-belongs-to-offer.md)
 - [0004 — Disponibilidade de tamanhos na oferta de estoque](0004-stock-offer-size-availability.md)
 - [0005 — Imagens de produto em coleção de mídia](0005-product-images-media-library.md)
+- [0006 — Volumes nas ofertas acondicionadas em sacos](0006-stock-offer-volumes.md)

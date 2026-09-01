@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Products;
 
+use App\Enums\StockOfferType;
 use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 abstract class ProductRequest extends FormRequest
@@ -24,27 +26,54 @@ abstract class ProductRequest extends FormRequest
     {
         $name = $this->input('name');
         $model = $this->input('model');
+        $hasStockOffer = $this->input('has_stock_offer');
+        $stockOfferType = $this->input('stock_offer_type');
         $totalQuantity = $this->input('total_quantity');
+        $volumes = $this->input('volumes');
         $inputVariants = $this->input('variants', []);
-        $inputVariants = is_array($inputVariants) ? $inputVariants : [];
-        $variants = [];
+        $variants = $inputVariants;
 
-        foreach ($inputVariants as $variant) {
-            $size = is_array($variant) ? ($variant['size'] ?? '') : '';
-            $quantity = is_array($variant) ? ($variant['quantity'] ?? null) : null;
-            $isActive = is_array($variant) ? ($variant['is_active'] ?? true) : true;
+        // Keep accepting the original payload while the form migrates to the
+        // explicit optional-offer contract.
+        if ($hasStockOffer === null) {
+            $hasStockOffer = true;
+        }
 
-            $variants[] = [
-                'size' => is_string($size) ? Str::squish($size) : '',
-                'quantity' => $quantity === '' || $quantity === null ? null : $quantity,
-                'is_active' => $isActive,
-            ];
+        if (
+            $stockOfferType === null
+            && filter_var($hasStockOffer, FILTER_VALIDATE_BOOLEAN)
+        ) {
+            $stockOfferType = StockOfferType::NewGrade->value;
+        }
+
+        if (is_array($inputVariants)) {
+            $variants = [];
+
+            foreach ($inputVariants as $variant) {
+                if (! is_array($variant)) {
+                    $variants[] = $variant;
+
+                    continue;
+                }
+
+                $size = $variant['size'] ?? '';
+                $quantity = $variant['quantity'] ?? null;
+
+                $variants[] = [
+                    'size' => is_string($size) ? Str::squish($size) : $size,
+                    'quantity' => $quantity === '' || $quantity === null ? null : $quantity,
+                    'is_active' => $variant['is_active'] ?? true,
+                ];
+            }
         }
 
         $this->merge([
             'name' => is_string($name) ? Str::squish($name) : $name,
             'model' => is_string($model) ? Str::squish($model) ?: null : $model,
+            'has_stock_offer' => $hasStockOffer,
+            'stock_offer_type' => $stockOfferType,
             'total_quantity' => $totalQuantity === '' || $totalQuantity === null ? null : $totalQuantity,
+            'volumes' => $volumes === '' || $volumes === null ? null : $volumes,
             'variants' => $variants,
         ]);
     }
@@ -60,14 +89,35 @@ abstract class ProductRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:5000'],
-            'total_quantity' => ['required', 'integer', 'min:0'],
+            'has_stock_offer' => ['required', 'boolean'],
+            'stock_offer_type' => [
+                'nullable',
+                Rule::requiredIf(fn (): bool => $this->boolean('has_stock_offer')),
+                Rule::enum(StockOfferType::class),
+            ],
+            'total_quantity' => [
+                'nullable',
+                Rule::requiredIf(fn (): bool => $this->boolean('has_stock_offer')),
+                'integer',
+                'min:0',
+            ],
+            'volumes' => [
+                'nullable',
+                Rule::requiredIf(fn (): bool => $this->stockOfferRequiresVolumes()),
+                'integer',
+                'min:1',
+            ],
             'variants' => ['nullable', 'array', 'max:50'],
             'variants.*' => ['array:size,quantity,is_active'],
             'variants.*.size' => ['required', 'string', 'max:30', 'distinct'],
             'variants.*.quantity' => ['nullable', 'integer', 'min:0'],
             'variants.*.is_active' => ['required', 'boolean'],
             'images' => ['nullable', 'array', 'max:5'],
-            'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'images.*' => [
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:'.Product::MAX_IMAGE_UPLOAD_SIZE_KB,
+            ],
             'image_order' => ['nullable', 'array', 'max:5'],
             'image_order.*' => [
                 'required',
@@ -92,10 +142,18 @@ abstract class ProductRequest extends FormRequest
             'name.max' => 'O nome do produto deve ter no máximo 255 caracteres.',
             'model.max' => 'O modelo deve ter no máximo 100 caracteres.',
             'notes.max' => 'A observação deve ter no máximo 5.000 caracteres.',
+            'has_stock_offer.boolean' => 'Informe se o produto possui uma oferta de estoque.',
+            'stock_offer_type.required' => 'Informe o tipo da oferta de estoque.',
+            'stock_offer_type.enum' => 'Selecione um tipo de oferta válido.',
             'total_quantity.required' => 'Informe o estoque total.',
             'total_quantity.integer' => 'O estoque total deve ser um número.',
             'total_quantity.min' => 'O estoque total não pode ser negativo.',
+            'volumes.required' => 'Informe a quantidade de sacos.',
+            'volumes.integer' => 'A quantidade de sacos deve ser um número inteiro.',
+            'volumes.min' => 'A quantidade de sacos deve ser maior que zero.',
+            'variants.array' => 'Envie os tamanhos em uma lista válida.',
             'variants.max' => 'Cadastre no máximo 50 tamanhos.',
+            'variants.*.array' => 'Envie cada tamanho em um formato válido.',
             'variants.*.size.required' => 'Informe o tamanho ou remova esta linha.',
             'variants.*.size.max' => 'O tamanho deve ter no máximo 30 caracteres.',
             'variants.*.size.distinct' => 'Os tamanhos precisam ser diferentes.',
@@ -106,11 +164,28 @@ abstract class ProductRequest extends FormRequest
             'images.max' => 'Adicione no máximo 5 fotos por produto.',
             'images.*.image' => 'Envie imagens válidas.',
             'images.*.mimes' => 'As fotos devem estar em JPG, PNG ou WebP.',
-            'images.*.max' => 'Cada foto deve ter no máximo 5 MB.',
+            'images.*.max' => 'Cada foto deve ter no máximo '.Product::MAX_IMAGE_UPLOAD_SIZE_MB.' MB.',
             'image_order.array' => 'Envie a ordem das fotos em uma lista válida.',
             'image_order.max' => 'Ordene no máximo 5 fotos por produto.',
+            'image_order.*.required' => 'A ordem das fotos está incompleta.',
+            'image_order.*.distinct' => 'Cada foto deve aparecer uma única vez na ordem.',
             'image_order.*.regex' => 'A ordem das fotos enviada é inválida.',
+            'remove_media_ids.array' => 'Envie as fotos removidas em uma lista válida.',
+            'remove_media_ids.*.integer' => 'A foto selecionada para remoção é inválida.',
+            'remove_media_ids.*.distinct' => 'Cada foto deve ser removida uma única vez.',
+            'remove_media_ids.*.exists' => 'A foto selecionada para remoção não existe.',
         ];
+    }
+
+    /**
+     * Determine whether the selected active offer requires a volume count.
+     */
+    private function stockOfferRequiresVolumes(): bool
+    {
+        $type = StockOfferType::tryFrom((string) $this->input('stock_offer_type'));
+
+        return $this->boolean('has_stock_offer')
+            && $type?->requiresVolumes() === true;
     }
 
     /**
@@ -159,14 +234,18 @@ abstract class ProductRequest extends FormRequest
 
                 $imageOrder = $this->input('image_order');
 
-                if ($product instanceof Product && is_array($imageOrder)) {
-                    $this->validateImageOrder(
-                        $validator,
-                        $product,
-                        $removeMediaIds,
-                        $uploadedImages,
-                        $imageOrder,
-                    );
+                if (is_array($imageOrder)) {
+                    if ($product instanceof Product) {
+                        $this->validateImageOrder(
+                            $validator,
+                            $product,
+                            $removeMediaIds,
+                            $uploadedImages,
+                            $imageOrder,
+                        );
+                    } else {
+                        $this->validateNewImageOrder($validator, $uploadedImages, $imageOrder);
+                    }
                 }
             },
         ];
@@ -236,6 +315,40 @@ abstract class ProductRequest extends FormRequest
             $validator->errors()->add(
                 'image_order',
                 'A ordem das fotos deve conter somente imagens válidas deste produto.',
+            );
+        }
+    }
+
+    /**
+     * Ensure a new product orders every uploaded image exactly once.
+     *
+     * @param  array<int|string, mixed>  $uploadedImages
+     * @param  array<int, mixed>  $imageOrder
+     */
+    private function validateNewImageOrder(
+        Validator $validator,
+        array $uploadedImages,
+        array $imageOrder,
+    ): void {
+        $orderedUploadIndexes = collect($imageOrder)
+            ->filter(fn (mixed $token): bool => is_string($token) && str_starts_with($token, 'new:'))
+            ->map(fn (string $token): int => (int) Str::after($token, 'new:'))
+            ->sort()
+            ->values()
+            ->all();
+        $expectedUploadIndexes = collect(array_keys($uploadedImages))
+            ->map(fn (int|string $index): int => (int) $index)
+            ->sort()
+            ->values()
+            ->all();
+
+        if (
+            $orderedUploadIndexes !== $expectedUploadIndexes
+            || count($imageOrder) !== count($expectedUploadIndexes)
+        ) {
+            $validator->errors()->add(
+                'image_order',
+                'A ordem das fotos deve conter todas as imagens enviadas.',
             );
         }
     }

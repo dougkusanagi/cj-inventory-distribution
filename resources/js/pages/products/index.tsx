@@ -121,7 +121,7 @@ function ProductCard({
 
     return (
         <article className="group flex min-h-full flex-col overflow-hidden rounded-[1.75rem] border border-border/80 bg-card shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
-            <div className="relative aspect-[4/3] overflow-hidden bg-featured-card">
+            <div className="relative aspect-[4/5] overflow-hidden bg-featured-card">
                 {coverImage ? (
                     <ProductImage
                         product={product}
@@ -380,7 +380,7 @@ export default function ProductsIndex({ products }: ProductsIndexProps) {
         <>
             <Head title="Produtos" />
 
-            <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+            <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
                 <header className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
                     <div className="grid gap-3">
                         <p className="text-xs font-semibold tracking-[0.22em] text-highlight uppercase">
@@ -545,7 +545,7 @@ export default function ProductsIndex({ products }: ProductsIndexProps) {
                         })}
                     </nav>
                 )}
-            </main>
+            </div>
 
             <Dialog
                 open={productToDelete !== null}

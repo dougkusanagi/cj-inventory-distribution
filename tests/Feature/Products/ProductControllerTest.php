@@ -34,6 +34,26 @@ test('authenticated users can view the product catalog', function () {
         );
 });
 
+test('product catalog keeps image URLs on the application origin', function () {
+    Storage::fake('public');
+    config(['filesystems.disks.public.url' => 'http://192.168.10.77:8089/storage']);
+
+    $user = User::factory()->create();
+    $product = Product::factory()->create(['name' => 'Produto com foto']);
+    $media = $product->addMedia(UploadedFile::fake()->image('product.jpg'))
+        ->toMediaCollection(Product::MEDIA_COLLECTION);
+
+    $this->actingAs($user)
+        ->get(route('products.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('products.data.0.images.0.url', '/storage/'.$media->getPathRelativeToRoot())
+            ->where(
+                'products.data.0.images.0.thumb_url',
+                '/storage/'.$media->getPathRelativeToRoot('thumb'),
+            ),
+        );
+});
+
 test('authenticated users can open the product forms', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
@@ -99,6 +119,115 @@ test('authenticated users can create a product with optional model, ordered size
     expect($product->latestOffer->items->pluck('quantity')->all())->toBe([5, 5, 5]);
 });
 
+test('authenticated users can save a product without creating a stock offer', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->post(route('products.store'), [
+        'name' => 'Produto sem estoque inicial',
+        'has_stock_offer' => false,
+        'variants' => [
+            ['size' => 'U', 'quantity' => null, 'is_active' => false],
+        ],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $product = Product::query()->with('latestOffer')->sole();
+
+    expect($product->latestOffer)->toBeNull();
+    expect(StockOffer::query()->where('product_id', $product->id)->count())->toBe(0);
+});
+
+test('stock offer type is persisted from the explicit request value', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->post(route('products.store'), [
+        'name' => 'Reposição de referência',
+        'has_stock_offer' => true,
+        'stock_offer_type' => StockOfferType::Replenishment->value,
+        'total_quantity' => 12,
+        'volumes' => 3,
+        'variants' => [
+            ['size' => 'M', 'quantity' => 12, 'is_active' => true],
+        ],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $product = Product::query()->with('latestOffer')->sole();
+
+    expect($product->latestOffer->type)->toBe(StockOfferType::Replenishment);
+    expect($product->latestOffer->volumes)->toBe(3);
+});
+
+test('volume-based stock offer types require volumes', function (string $type) {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)
+        ->from(route('products.create'))
+        ->post(route('products.store'), [
+            'name' => 'Oferta em sacos',
+            'has_stock_offer' => true,
+            'stock_offer_type' => $type,
+            'total_quantity' => 12,
+        ]);
+
+    $response
+        ->assertSessionHasErrors([
+            'volumes' => 'Informe a quantidade de sacos.',
+        ])
+        ->assertRedirect(route('products.create'));
+
+    expect(Product::query()->count())->toBe(0);
+})->with([
+    'replenishment' => StockOfferType::Replenishment->value,
+    'broken grade' => StockOfferType::BrokenGrade->value,
+]);
+
+test('the shared catalog excludes exhausted volume-based stock offers', function () {
+    $product = Product::factory()->create();
+    $availableOffer = $product->offers()->create([
+        'type' => StockOfferType::Replenishment,
+        'total_quantity' => 12,
+        'volumes' => 1,
+        'is_active' => true,
+    ]);
+    $exhaustedOffer = $product->offers()->create([
+        'type' => StockOfferType::Replenishment,
+        'total_quantity' => 12,
+        'volumes' => 0,
+        'is_active' => true,
+    ]);
+    $inactiveOffer = $product->offers()->create([
+        'type' => StockOfferType::BrokenGrade,
+        'total_quantity' => 12,
+        'volumes' => 2,
+        'is_active' => false,
+    ]);
+    $newGradeOffer = $product->offers()->create([
+        'type' => StockOfferType::NewGrade,
+        'total_quantity' => 12,
+        'volumes' => null,
+        'is_active' => true,
+    ]);
+
+    $availableOfferIds = StockOffer::query()
+        ->whereBelongsTo($product)
+        ->availableForCatalog()
+        ->orderBy('id')
+        ->pluck('id')
+        ->all();
+
+    expect($availableOfferIds)->toBe([$availableOffer->id, $newGradeOffer->id]);
+    expect($availableOfferIds)->not->toContain($exhaustedOffer->id);
+    expect($availableOfferIds)->not->toContain($inactiveOffer->id);
+    expect($product->fresh()->latestAvailableOffer->is($newGradeOffer))->toBeTrue();
+});
+
 test('product creation stores up to five images with thumbnails', function () {
     Storage::fake('public');
 
@@ -125,6 +254,73 @@ test('product creation stores up to five images with thumbnails', function () {
         expect($image->hasGeneratedConversion('thumb'))->toBeTrue();
         Storage::disk('public')->assertExists($image->getPathRelativeToRoot('thumb'));
     });
+});
+
+test('product creation normalizes the saved image to a bounded WebP', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $image = UploadedFile::fake()->image('product.jpg', 1700, 2125);
+
+    $response = $this->actingAs($user)->post(route('products.store'), [
+        'name' => 'Produto com foto normalizada',
+        'total_quantity' => 10,
+        'images' => [$image],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $media = Product::query()->sole()->getFirstMedia(Product::MEDIA_COLLECTION);
+    $contents = Storage::disk('public')->get($media->getPathRelativeToRoot());
+    $dimensions = getimagesizefromstring($contents);
+
+    expect($media->file_name)->toEndWith('.webp');
+    expect($media->mime_type)->toBe('image/webp');
+    expect($dimensions[0])->toBe(Product::MAX_IMAGE_WIDTH);
+    expect($dimensions[1])->toBe(Product::MAX_IMAGE_HEIGHT);
+});
+
+test('product creation accepts source images above five megabytes', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $image = UploadedFile::fake()->image('large-product.jpg')->size(6 * 1024);
+
+    $response = $this->actingAs($user)->post(route('products.store'), [
+        'name' => 'Produto com foto grande',
+        'total_quantity' => 10,
+        'images' => [$image],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    expect(Product::query()->sole()->getMedia(Product::MEDIA_COLLECTION))
+        ->toHaveCount(1);
+});
+
+test('product creation rejects source images above the technical limit', function () {
+    $user = User::factory()->create();
+    $image = UploadedFile::fake()->image('too-large-product.jpg')->size(26 * 1024);
+
+    $response = $this->actingAs($user)
+        ->from(route('products.create'))
+        ->post(route('products.store'), [
+            'name' => 'Produto com foto muito grande',
+            'total_quantity' => 10,
+            'images' => [$image],
+        ]);
+
+    $response
+        ->assertSessionHasErrors([
+            'images.0' => 'Cada foto deve ter no máximo 25 MB.',
+        ])
+        ->assertRedirect(route('products.create'));
+
+    expect(Product::query()->count())->toBe(0);
 });
 
 test('product creation requires the total stock quantity', function () {
@@ -250,6 +446,38 @@ test('authenticated users can update product details, sizes and stock without ch
     expect($product->latestOffer->items->pluck('quantity')->all())->toBe([10, null]);
 });
 
+test('updating a product without a stock offer deactivates its active offer', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $variant = $product->variants()->create(['size' => 'M', 'sort_order' => 0]);
+    $offer = $product->offers()->create([
+        'type' => StockOfferType::Replenishment,
+        'total_quantity' => 10,
+    ]);
+    $offer->items()->create([
+        'product_variant_id' => $variant->id,
+        'quantity' => 10,
+        'is_active' => true,
+    ]);
+
+    $response = $this->actingAs($user)->put(route('products.update', $product), [
+        'name' => $product->name,
+        'has_stock_offer' => false,
+        'variants' => [
+            ['size' => 'M', 'quantity' => null, 'is_active' => false],
+        ],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $offer->refresh();
+    expect($offer->is_active)->toBeFalse();
+    expect($offer->total_quantity)->toBe(0);
+    expect($offer->items()->count())->toBe(0);
+});
+
 test('updating a product with zero stock deactivates its previous offer', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
@@ -327,6 +555,143 @@ test('product images can be replaced and removed from the media collection', fun
     expect($product->refresh()->getMedia(Product::MEDIA_COLLECTION))->toHaveCount(0);
     Storage::disk('public')->assertMissing($newMedia->getPathRelativeToRoot());
     Storage::disk('public')->assertMissing($newMedia->getPathRelativeToRoot('thumb'));
+});
+
+test('replacing one image in a full gallery removes only the selected image', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $media = collect(range(1, Product::MAX_IMAGES))
+        ->map(fn (int $number) => $product
+            ->addMedia(UploadedFile::fake()->image('photo-'.$number.'.jpg'))
+            ->toMediaCollection(Product::MEDIA_COLLECTION));
+    $removedMedia = $media->get(2);
+    $retainedMedia = $media->reject(fn ($item) => $item->is($removedMedia))->values();
+    $retainedPaths = $retainedMedia
+        ->map(fn ($item): string => $item->getPathRelativeToRoot())
+        ->all();
+
+    $response = $this->actingAs($user)->post(route('products.update', $product), [
+        '_method' => 'PUT',
+        'name' => $product->name,
+        'total_quantity' => 0,
+        'remove_media_ids' => [$removedMedia->id],
+        'images' => [UploadedFile::fake()->image('replacement.jpg')],
+        'image_order' => [
+            'media:'.$retainedMedia->get(0)->id,
+            'new:0',
+            'media:'.$retainedMedia->get(1)->id,
+            'media:'.$retainedMedia->get(2)->id,
+            'media:'.$retainedMedia->get(3)->id,
+        ],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $orderedMedia = $product->refresh()->getMedia(Product::MEDIA_COLLECTION);
+    expect($orderedMedia)->toHaveCount(Product::MAX_IMAGES);
+    expect($orderedMedia->first()->id)->toBe($retainedMedia->get(0)->id);
+    expect($orderedMedia->pluck('id')->all())->not->toContain($removedMedia->id);
+    expect($media->pluck('id')->all())->not->toContain($orderedMedia->get(1)->id);
+    Storage::disk('public')->assertMissing($removedMedia->getPathRelativeToRoot());
+
+    foreach ($retainedPaths as $path) {
+        Storage::disk('public')->assertExists($path);
+    }
+});
+
+test('replacing any position in a full gallery preserves every other image', function (int $removedIndex) {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $media = collect(range(1, Product::MAX_IMAGES))
+        ->map(fn (int $number) => $product
+            ->addMedia(UploadedFile::fake()->image('photo-'.$number.'.jpg'))
+            ->toMediaCollection(Product::MEDIA_COLLECTION));
+    $removedMedia = $media->get($removedIndex);
+    $expectedOrder = $media
+        ->map(fn ($item, int $index): string => $index === $removedIndex
+            ? 'new:0'
+            : 'media:'.$item->id)
+        ->all();
+    $retainedMediaIds = $media
+        ->reject(fn ($item): bool => $item->is($removedMedia))
+        ->pluck('id')
+        ->values()
+        ->all();
+    $retainedPaths = $media
+        ->reject(fn ($item): bool => $item->is($removedMedia))
+        ->map(fn ($item): string => $item->getPathRelativeToRoot())
+        ->all();
+
+    $response = $this->actingAs($user)->post(route('products.update', $product), [
+        '_method' => 'PUT',
+        'name' => $product->name,
+        'total_quantity' => 0,
+        'remove_media_ids' => [$removedMedia->id],
+        'images' => [UploadedFile::fake()->image('replacement.jpg')],
+        'image_order' => $expectedOrder,
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $orderedMedia = $product->refresh()->getMedia(Product::MEDIA_COLLECTION);
+    $newMedia = $orderedMedia->first(
+        fn ($item): bool => ! in_array($item->id, $media->pluck('id')->all(), true),
+    );
+    $expectedMediaIds = collect($expectedOrder)
+        ->map(fn (string $token): int => str_starts_with($token, 'new:')
+            ? $newMedia->id
+            : (int) substr($token, strlen('media:')))
+        ->all();
+
+    expect($orderedMedia)->toHaveCount(Product::MAX_IMAGES);
+    expect($orderedMedia->pluck('id')->all())->toBe($expectedMediaIds);
+    expect($orderedMedia->pluck('id')->all())->not->toContain($removedMedia->id);
+    expect($orderedMedia->filter(fn ($item): bool => $item->id !== $newMedia->id)->pluck('id')->values()->all())
+        ->toBe($retainedMediaIds);
+    expect($orderedMedia->pluck('order_column')->all())->toBe(range(1, Product::MAX_IMAGES));
+
+    Storage::disk('public')->assertMissing($removedMedia->getPathRelativeToRoot());
+
+    foreach ($retainedPaths as $path) {
+        Storage::disk('public')->assertExists($path);
+    }
+    Storage::disk('public')->assertExists($newMedia->getPathRelativeToRoot());
+})->with([
+    'cover' => 0,
+    'second photo' => 1,
+    'middle photo' => 2,
+    'fourth photo' => 3,
+    'last photo' => 4,
+]);
+
+test('invalid variants payload cannot erase existing product sizes', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $variant = $product->variants()->create(['size' => 'M', 'sort_order' => 0]);
+
+    $response = $this->actingAs($user)
+        ->from(route('products.edit', $product))
+        ->post(route('products.update', $product), [
+            '_method' => 'PUT',
+            'name' => $product->name,
+            'total_quantity' => 0,
+            'variants' => 'invalid-payload',
+        ]);
+
+    $response
+        ->assertSessionHasErrors('variants')
+        ->assertRedirect(route('products.edit', $product));
+
+    $this->assertModelExists($variant);
+    expect($product->refresh()->variants()->pluck('size')->all())->toBe(['M']);
 });
 
 test('product images can be reordered with a new image as the principal photo', function () {

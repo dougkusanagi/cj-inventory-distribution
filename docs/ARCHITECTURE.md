@@ -62,6 +62,10 @@ Exemplo:
 
 Um produto sem modelo continua plenamente utilizável.
 
+Um produto também pode ser salvo sem uma oferta de estoque ativa. A oferta é
+criada ou atualizada somente quando o cadastro informar explicitamente que há
+disponibilidade; nesse caso, seu tipo e estoque total são obrigatórios.
+
 ## ProductVariant
 
 Representa uma variação do produto.
@@ -120,6 +124,7 @@ id
 product_id
 type
 total_quantity
+volumes nullable
 is_active
 notes nullable
 created_at
@@ -147,6 +152,14 @@ Grade Furada
 O tipo pertence à disponibilidade atual e não ao produto.
 
 O mesmo produto pode aparecer em contextos diferentes ao longo do tempo.
+
+O cadastro de produto não infere o tipo a partir das quantidades por tamanho.
+Quando houver oferta, o tipo escolhido pelo operador é persistido.
+
+Para `Reposição` e `Grade Furada`, `volumes` registra quantos sacos ainda estão
+disponíveis para distribuição e é obrigatório quando a oferta está ativa.
+`Grade Nova` não usa esse controle. Uma oferta ativa desses dois tipos só é
+disponível no catálogo enquanto `volumes` for maior que zero.
 
 ## StockOfferItem
 
@@ -297,6 +310,12 @@ Tratamentos necessários:
 - rotação;
 - espelhamento.
 
+O editor é obrigatório para cada foto adicionada ou ajustada. O recorte 4:5 é
+canônico para o arquivo final, a miniatura e a exibição no catálogo. Depois do
+recorte, o navegador exporta a imagem final em WebP para reduzir o espaço
+ocupado; quando o navegador não oferece essa conversão, usa JPEG como fallback.
+Imagens muito grandes também são reduzidas antes da abertura do editor.
+
 Preferir realizar manipulações interativas no cliente e enviar ao servidor a imagem final.
 
 No servidor:
@@ -313,6 +332,7 @@ Para o MVP, a tela deve priorizar simplicidade e uso mobile.
 Requisitos:
 
 - listar somente ofertas ativas;
+- não listar ofertas de `Reposição` ou `Grade Furada` sem volumes disponíveis;
 - mostrar a foto de capa, nome, modelo quando houver, tipo e estoque disponível;
 - permitir selecionar quantidades;
 - manter uma sacola;
