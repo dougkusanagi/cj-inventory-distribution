@@ -109,6 +109,12 @@ const sizePresets: SizePreset[] = [
     },
 ];
 
+const hiddenSizePresetIds: SizePresetId[] = ['none', 'single', 'numeric-male'];
+
+const visibleSizePresets = sizePresets.filter(
+    (preset) => !hiddenSizePresetIds.includes(preset.id),
+);
+
 const stockOfferTypes: Array<{
     id: StockOfferType;
     label: string;
@@ -587,7 +593,7 @@ export function ProductForm({ product }: ProductFormProps) {
                         aria-labelledby={radioGroupId}
                         aria-invalid={error('variants') ? true : undefined}
                     >
-                        {sizePresets.map((preset) => {
+                        {visibleSizePresets.map((preset) => {
                             const isChecked = selectedPreset === preset.id;
                             const optionId = `preset-option-${preset.id}`;
 
@@ -1084,7 +1090,7 @@ export function ProductForm({ product }: ProductFormProps) {
             <div
                 onFocusCapture={showFooter}
                 className={cn(
-                    'fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 shadow-[0_-6px_24px_rgba(0,0,0,0.08)] backdrop-blur transition-transform duration-200 ease-out will-change-transform sm:p-4',
+                    'fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 shadow-[0_-6px_24px_rgba(0,0,0,0.08)] backdrop-blur transition-transform duration-200 ease-out will-change-transform sm:p-4 md:right-0 md:left-(--sidebar-width) md:peer-data-[state=collapsed]:left-[calc(var(--sidebar-width-icon)+1rem)]',
                     isFooterVisible ? 'translate-y-0' : 'translate-y-full',
                 )}
             >
