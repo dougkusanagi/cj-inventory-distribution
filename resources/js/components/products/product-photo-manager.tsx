@@ -3,6 +3,7 @@ import {
     ChevronDown,
     ChevronUp,
     GripVertical,
+    Info,
     ImagePlus,
     Pencil,
     Star,
@@ -37,7 +38,7 @@ import { cn } from '@/lib/utils';
 import type { ProductImage } from '@/types';
 
 const MAX_IMAGES = 5;
-const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_SOURCE_IMAGE_SIZE_BYTES = 25 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 2400;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -337,6 +338,7 @@ export function ProductPhotoManager({
     );
     const [pickerOpen, setPickerOpen] = useState(false);
     const [organizerOpen, setOrganizerOpen] = useState(false);
+    const [previewItem, setPreviewItem] = useState<PhotoItem | null>(null);
     const [editor, setEditor] = useState<{
         source: PhotoEditorSource;
         targetKey?: string;
@@ -658,15 +660,23 @@ export function ProductPhotoManager({
                         A primeira foto é a capa e aparece no catálogo.
                     </p>
                 </div>
-                <Button
-                    type="button"
-                    onClick={() => setPickerOpen(true)}
-                    disabled={currentItems.length >= MAX_IMAGES || processing}
-                    className="h-12 w-full sm:w-auto"
-                >
-                    <ImagePlus />
-                    Adicionar fotos
-                </Button>
+                <div className="grid w-full gap-2 sm:w-auto">
+                    <Button
+                        type="button"
+                        onClick={() => setPickerOpen(true)}
+                        disabled={
+                            currentItems.length >= MAX_IMAGES || processing
+                        }
+                        className="h-12 w-full"
+                    >
+                        <ImagePlus />
+                        Adicionar fotos
+                    </Button>
+                    <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground sm:justify-end">
+                        <Info className="size-3.5" />
+                        Toque em uma foto para ampliar ou ajustar.
+                    </p>
+                </div>
             </div>
 
             {state.items.length === 0 ? (
@@ -683,17 +693,17 @@ export function ProductPhotoManager({
                         Adicione fotos da peça
                     </span>
                     <span className="text-xs text-muted-foreground">
-                        JPG, PNG ou WebP · até 5 MB por foto
+                        JPG, PNG ou WebP · a foto será otimizada antes de salvar
                     </span>
                 </button>
             ) : (
-                <div className="grid gap-3">
+                <div className="grid grid-cols-2 gap-0 sm:grid-cols-1 sm:gap-3">
                     {state.items.map((item) => {
                         if (item.removed) {
                             return (
                                 <div
                                     key={item.key}
-                                    className="flex min-h-20 items-center justify-between gap-3 rounded-2xl border border-dashed border-border bg-muted/30 p-3"
+                                    className="col-span-full flex min-h-20 items-center justify-between gap-3 rounded-2xl border border-dashed border-border bg-muted/30 p-3"
                                 >
                                     <div className="flex min-w-0 items-center gap-3">
                                         <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
@@ -737,12 +747,22 @@ export function ProductPhotoManager({
                                     serverImageErrors.get(item.key)
                                 }
                                 processing={processing}
+                                onPreview={() => setPreviewItem(item)}
                                 onEdit={() => handleEdit(item)}
                                 onSetCover={() => handleSetCover(item)}
                                 onRemove={() => handleRemove(item)}
                             />
                         );
                     })}
+                    {currentItems.length % 2 === 1 && (
+                        <div
+                            aria-hidden="true"
+                            className={cn(
+                                'border-l border-border sm:hidden',
+                                currentItems.length > 2 && 'border-t',
+                            )}
+                        />
+                    )}
                 </div>
             )}
 
@@ -823,6 +843,13 @@ export function ProductPhotoManager({
                     }
                 />
             )}
+
+            {previewItem && (
+                <PhotoPreview
+                    item={previewItem}
+                    onOpenChange={(open) => !open && setPreviewItem(null)}
+                />
+            )}
         </section>
     );
 }
@@ -832,6 +859,7 @@ function PhotoRow({
     index,
     error,
     processing,
+    onPreview,
     onEdit,
     onSetCover,
     onRemove,
@@ -840,6 +868,7 @@ function PhotoRow({
     index: number;
     error?: string;
     processing: boolean;
+    onPreview: () => void;
     onEdit: () => void;
     onSetCover: () => void;
     onRemove: () => void;
@@ -849,69 +878,72 @@ function PhotoRow({
     return (
         <article
             className={cn(
-                'grid gap-3 rounded-2xl border bg-background p-3 sm:grid-cols-[5rem_minmax(0,1fr)] sm:items-center',
+                'grid min-w-0 content-start gap-2 bg-transparent p-2 sm:grid-cols-[5rem_minmax(0,1fr)] sm:items-center sm:gap-3 sm:rounded-2xl sm:border sm:p-3',
+                index % 2 === 1 && 'border-l border-border',
+                index >= 2 && 'border-t border-border',
                 index === 0
-                    ? 'border-primary/50 bg-primary/[0.03]'
-                    : 'border-border',
+                    ? 'sm:border-primary/50 sm:bg-primary/[0.03]'
+                    : 'sm:border-border sm:bg-background',
             )}
         >
-            <div className="relative aspect-[4/5] w-20 overflow-hidden rounded-xl bg-muted sm:w-20">
-                {imageUrl ? (
-                    <img
-                        src={imageUrl}
-                        alt=""
-                        className="size-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                    />
-                ) : (
-                    <div className="flex size-full items-center justify-center text-muted-foreground">
-                        <ImagePlus className="size-5" />
-                    </div>
+            <div className="relative w-full sm:w-20">
+                <button
+                    type="button"
+                    onClick={onPreview}
+                    className={cn(
+                        'group relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-muted text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none',
+                        index === 0 && 'ring-1 ring-primary/70 sm:ring-0',
+                    )}
+                    aria-label={`Ampliar ${index === 0 ? 'a capa' : 'a foto ' + (index + 1)}`}
+                >
+                    {imageUrl ? (
+                        <img
+                            src={imageUrl}
+                            alt=""
+                            className="size-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                        />
+                    ) : (
+                        <div className="flex size-full items-center justify-center text-muted-foreground">
+                            <ImagePlus className="size-5" />
+                        </div>
+                    )}
+                    <span className="absolute inset-0 bg-foreground/0 transition-colors group-hover:bg-foreground/15" />
+                    {index === 0 && (
+                        <span className="absolute inset-x-1 bottom-1 flex items-center justify-center gap-1 rounded-md bg-background/65 px-1 py-1 text-[9px] font-bold tracking-[0.08em] text-foreground uppercase backdrop-blur-sm">
+                            <Star className="size-3 text-primary" />
+                            Capa
+                        </span>
+                    )}
+                </button>
+                {index > 0 && (
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        size="icon"
+                        onClick={onSetCover}
+                        disabled={processing}
+                        className="absolute top-2 right-2 size-8 rounded-full bg-background/90 shadow-sm backdrop-blur"
+                        aria-label={`Definir a foto ${index + 1} como capa`}
+                    >
+                        <Star />
+                    </Button>
                 )}
-                {index === 0 && (
-                    <span className="absolute inset-x-1 bottom-1 rounded-md bg-background/90 px-1 py-0.5 text-center text-[9px] font-bold tracking-[0.08em] text-foreground uppercase">
-                        Capa
+                {item.kind === 'new' && (
+                    <span className="absolute top-2 left-2 rounded-full bg-primary/90 px-2 py-1 text-[10px] font-semibold text-primary-foreground">
+                        Nova
                     </span>
                 )}
             </div>
 
             <div className="grid min-w-0 gap-2">
-                <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                        <p className="text-sm font-semibold text-foreground">
-                            {index === 0 ? 'CAPA' : 'Foto ' + (index + 1)}
-                        </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                            {item.name || 'Imagem do produto'}
-                        </p>
-                    </div>
-                    {item.kind === 'new' && (
-                        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">
-                            Nova
-                        </span>
-                    )}
-                </div>
-
-                {index > 0 && (
-                    <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={onSetCover}
-                        disabled={processing}
-                        className="h-12 w-full justify-start px-3"
-                    >
-                        <Star />
-                        Definir como capa
-                    </Button>
-                )}
-
                 <Button
                     type="button"
                     variant="outline"
                     onClick={onEdit}
                     disabled={processing}
-                    className="h-12 w-full justify-start px-3"
+                    className="h-10 w-full min-w-0 justify-start px-2 text-[11px] sm:h-12 sm:px-3 sm:text-sm"
                 >
                     <Pencil />
                     Ajustar
@@ -922,7 +954,7 @@ function PhotoRow({
                     variant="destructive"
                     onClick={onRemove}
                     disabled={processing}
-                    className="h-12 w-full"
+                    className="h-9 w-full min-w-0 justify-start px-2 text-[11px] sm:h-10 sm:px-3 sm:text-sm"
                 >
                     <Trash2 className="size-4" />
                     Remover
@@ -935,6 +967,73 @@ function PhotoRow({
                 )}
             </div>
         </article>
+    );
+}
+
+function PhotoPreview({
+    item,
+    onOpenChange,
+}: {
+    item: PhotoItem;
+    onOpenChange: (open: boolean) => void;
+}) {
+    const imageUrl = item.kind === 'existing' ? item.url : item.previewUrl;
+    const [zoom, setZoom] = useState(1);
+
+    return (
+        <Dialog open onOpenChange={onOpenChange}>
+            <DialogContent className="w-[calc(100%-1rem)] max-w-3xl gap-3 overflow-hidden p-3 sm:w-[calc(100%-2rem)] sm:p-4">
+                <DialogHeader className="sr-only">
+                    <DialogTitle>Visualizar foto do produto</DialogTitle>
+                    <DialogDescription>
+                        Foto ampliada do produto.
+                    </DialogDescription>
+                </DialogHeader>
+                <div
+                    className="flex max-h-[72dvh] min-h-0 items-center justify-center overflow-hidden rounded-md bg-foreground/5"
+                    onWheel={(event) => {
+                        event.preventDefault();
+                        setZoom((currentZoom) =>
+                            Math.min(
+                                4,
+                                Math.max(
+                                    1,
+                                    currentZoom +
+                                        (event.deltaY < 0 ? 0.1 : -0.1),
+                                ),
+                            ),
+                        );
+                    }}
+                >
+                    <img
+                        src={imageUrl}
+                        alt={item.name || 'Foto do produto'}
+                        className="mx-auto block max-h-[72dvh] w-full object-contain transition-transform duration-150"
+                        style={{ transform: `scale(${zoom})` }}
+                    />
+                </div>
+                <div className="grid gap-2">
+                    <label
+                        htmlFor="product-photo-preview-zoom"
+                        className="text-sm font-medium"
+                    >
+                        Aproximar foto
+                    </label>
+                    <input
+                        id="product-photo-preview-zoom"
+                        type="range"
+                        min="1"
+                        max="4"
+                        step="0.01"
+                        value={zoom}
+                        onChange={(event) =>
+                            setZoom(Number(event.target.value))
+                        }
+                        className="h-12 w-full accent-primary"
+                    />
+                </div>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -1137,7 +1236,7 @@ function validateSelectedFiles(files: File[], truncated: boolean): boolean {
         files.every(
             (file) =>
                 ACCEPTED_IMAGE_TYPES.includes(file.type) &&
-                file.size <= MAX_IMAGE_SIZE_BYTES,
+                file.size <= MAX_SOURCE_IMAGE_SIZE_BYTES,
         )
     );
 }
@@ -1151,10 +1250,12 @@ function getSelectedFilesError(files: File[], truncated: boolean): string {
         return invalidType.name + ': use JPG, PNG ou WebP.';
     }
 
-    const tooLarge = files.find((file) => file.size > MAX_IMAGE_SIZE_BYTES);
+    const tooLarge = files.find(
+        (file) => file.size > MAX_SOURCE_IMAGE_SIZE_BYTES,
+    );
 
     if (tooLarge) {
-        return tooLarge.name + ': cada foto deve ter no máximo 5 MB.';
+        return tooLarge.name + ': cada foto deve ter no máximo 25 MB.';
     }
 
     return truncated
@@ -1169,12 +1270,6 @@ async function resizeImageForUpload(file: File): Promise<File> {
         MAX_IMAGE_DIMENSION / image.width,
         MAX_IMAGE_DIMENSION / image.height,
     );
-
-    if (scale === 1) {
-        image.close?.();
-
-        return file;
-    }
 
     const canvas = document.createElement('canvas');
     canvas.width = Math.max(1, Math.round(image.width * scale));

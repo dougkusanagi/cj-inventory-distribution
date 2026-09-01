@@ -113,7 +113,11 @@ abstract class ProductRequest extends FormRequest
             'variants.*.quantity' => ['nullable', 'integer', 'min:0'],
             'variants.*.is_active' => ['required', 'boolean'],
             'images' => ['nullable', 'array', 'max:5'],
-            'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'images.*' => [
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:'.Product::MAX_IMAGE_UPLOAD_SIZE_KB,
+            ],
             'image_order' => ['nullable', 'array', 'max:5'],
             'image_order.*' => [
                 'required',
@@ -160,7 +164,7 @@ abstract class ProductRequest extends FormRequest
             'images.max' => 'Adicione no máximo 5 fotos por produto.',
             'images.*.image' => 'Envie imagens válidas.',
             'images.*.mimes' => 'As fotos devem estar em JPG, PNG ou WebP.',
-            'images.*.max' => 'Cada foto deve ter no máximo 5 MB.',
+            'images.*.max' => 'Cada foto deve ter no máximo '.Product::MAX_IMAGE_UPLOAD_SIZE_MB.' MB.',
             'image_order.array' => 'Envie a ordem das fotos em uma lista válida.',
             'image_order.max' => 'Ordene no máximo 5 fotos por produto.',
             'image_order.*.required' => 'A ordem das fotos está incompleta.',

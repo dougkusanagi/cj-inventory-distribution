@@ -35,6 +35,21 @@ class Product extends Model implements HasMedia
 
     public const MAX_IMAGES = 5;
 
+    public const MAX_IMAGE_WIDTH = 1600;
+
+    public const MAX_IMAGE_HEIGHT = 2000;
+
+    public const IMAGE_WEBP_QUALITY = 84;
+
+    /**
+     * Protect the upload endpoint from files that are too large to process.
+     * The browser optimizes the image before upload and the server stores
+     * a normalized WebP version.
+     */
+    public const MAX_IMAGE_UPLOAD_SIZE_MB = 25;
+
+    public const MAX_IMAGE_UPLOAD_SIZE_KB = self::MAX_IMAGE_UPLOAD_SIZE_MB * 1024;
+
     /**
      * Get the size variants for the product.
      *

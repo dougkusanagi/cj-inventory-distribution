@@ -34,6 +34,26 @@ test('authenticated users can view the product catalog', function () {
         );
 });
 
+test('product catalog keeps image URLs on the application origin', function () {
+    Storage::fake('public');
+    config(['filesystems.disks.public.url' => 'http://192.168.10.77:8089/storage']);
+
+    $user = User::factory()->create();
+    $product = Product::factory()->create(['name' => 'Produto com foto']);
+    $media = $product->addMedia(UploadedFile::fake()->image('product.jpg'))
+        ->toMediaCollection(Product::MEDIA_COLLECTION);
+
+    $this->actingAs($user)
+        ->get(route('products.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('products.data.0.images.0.url', '/storage/'.$media->getPathRelativeToRoot())
+            ->where(
+                'products.data.0.images.0.thumb_url',
+                '/storage/'.$media->getPathRelativeToRoot('thumb'),
+            ),
+        );
+});
+
 test('authenticated users can open the product forms', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
@@ -234,6 +254,73 @@ test('product creation stores up to five images with thumbnails', function () {
         expect($image->hasGeneratedConversion('thumb'))->toBeTrue();
         Storage::disk('public')->assertExists($image->getPathRelativeToRoot('thumb'));
     });
+});
+
+test('product creation normalizes the saved image to a bounded WebP', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $image = UploadedFile::fake()->image('product.jpg', 1700, 2125);
+
+    $response = $this->actingAs($user)->post(route('products.store'), [
+        'name' => 'Produto com foto normalizada',
+        'total_quantity' => 10,
+        'images' => [$image],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $media = Product::query()->sole()->getFirstMedia(Product::MEDIA_COLLECTION);
+    $contents = Storage::disk('public')->get($media->getPathRelativeToRoot());
+    $dimensions = getimagesizefromstring($contents);
+
+    expect($media->file_name)->toEndWith('.webp');
+    expect($media->mime_type)->toBe('image/webp');
+    expect($dimensions[0])->toBe(Product::MAX_IMAGE_WIDTH);
+    expect($dimensions[1])->toBe(Product::MAX_IMAGE_HEIGHT);
+});
+
+test('product creation accepts source images above five megabytes', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $image = UploadedFile::fake()->image('large-product.jpg')->size(6 * 1024);
+
+    $response = $this->actingAs($user)->post(route('products.store'), [
+        'name' => 'Produto com foto grande',
+        'total_quantity' => 10,
+        'images' => [$image],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    expect(Product::query()->sole()->getMedia(Product::MEDIA_COLLECTION))
+        ->toHaveCount(1);
+});
+
+test('product creation rejects source images above the technical limit', function () {
+    $user = User::factory()->create();
+    $image = UploadedFile::fake()->image('too-large-product.jpg')->size(26 * 1024);
+
+    $response = $this->actingAs($user)
+        ->from(route('products.create'))
+        ->post(route('products.store'), [
+            'name' => 'Produto com foto muito grande',
+            'total_quantity' => 10,
+            'images' => [$image],
+        ]);
+
+    $response
+        ->assertSessionHasErrors([
+            'images.0' => 'Cada foto deve ter no máximo 25 MB.',
+        ])
+        ->assertRedirect(route('products.create'));
+
+    expect(Product::query()->count())->toBe(0);
 });
 
 test('product creation requires the total stock quantity', function () {
