@@ -46,7 +46,7 @@ class ProductResource extends JsonResource
                 ->values()
                 ->all()),
             'notes' => $this->notes,
-            'has_stock_offer' => $offer !== null,
+            'has_stock_offer' => $offer?->is_active === true,
             'stock_offer_type' => $offer?->type?->value,
             'total_quantity' => $offer?->total_quantity,
             'volumes' => $offer?->volumes,

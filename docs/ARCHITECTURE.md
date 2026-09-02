@@ -156,10 +156,15 @@ O mesmo produto pode aparecer em contextos diferentes ao longo do tempo.
 O cadastro de produto não infere o tipo a partir das quantidades por tamanho.
 Quando houver oferta, o tipo escolhido pelo operador é persistido.
 
+O estado ativo controla a exibição no catálogo. Desativar uma oferta não deve
+zerar seu estoque, seus volumes nem a disponibilidade por tamanho. O
+encerramento do estoque atual é uma ação explícita e separada.
+
 Para `Reposição` e `Grade Furada`, `volumes` registra quantos sacos ainda estão
 disponíveis para distribuição e é obrigatório quando a oferta está ativa.
 `Grade Nova` não usa esse controle. Uma oferta ativa desses dois tipos só é
-disponível no catálogo enquanto `volumes` for maior que zero.
+disponível no catálogo enquanto `volumes` for maior que zero. Todos os tipos
+exigem estoque total maior que zero para aparecer no catálogo.
 
 ## StockOfferItem
 
