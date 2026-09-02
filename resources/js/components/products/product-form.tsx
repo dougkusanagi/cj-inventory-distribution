@@ -127,7 +127,9 @@ function detectPreset(variants: Array<{ size: string }>): SizePresetId {
 
 export function ProductForm({ product }: ProductFormProps) {
     const isEditing = product !== undefined;
-    const initialPreset = detectPreset(product?.variants ?? []);
+    const initialPreset = product
+        ? detectPreset(product.variants)
+        : 'numeric-female';
     const [selectedPreset, setSelectedPreset] =
         useState<SizePresetId>(initialPreset);
     const [processingImages, setProcessingImages] = useState(false);
@@ -145,7 +147,13 @@ export function ProductForm({ product }: ProductFormProps) {
                   is_active: is_active ?? false,
                   quantity: is_active ? (quantity ?? null) : null,
               }))
-            : [];
+            : (sizePresets
+                  .find((preset) => preset.id === initialPreset)
+                  ?.sizes.map((size) => ({
+                      size,
+                      is_active: false,
+                      quantity: null,
+                  })) ?? []);
 
     const form = useForm<ProductFormData>({
         name: product?.name ?? '',
