@@ -125,7 +125,13 @@ function canvasToBlob(
     type: string,
     quality: number,
 ): Promise<Blob | null> {
-    return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+    return new Promise((resolve) => {
+        try {
+            canvas.toBlob(resolve, type, quality);
+        } catch {
+            resolve(null);
+        }
+    });
 }
 
 export const createCroppedPhoto = (
@@ -139,6 +145,12 @@ export const createCroppedPhoto = (
         const image = new Image();
 
         image.onload = () => {
+            if (image.naturalWidth <= 0 || image.naturalHeight <= 0) {
+                reject(new Error('A imagem não possui dimensões válidas.'));
+
+                return;
+            }
+
             const rotatedSize = rotatedCanvasSize(
                 image.naturalWidth,
                 image.naturalHeight,
@@ -188,12 +200,41 @@ export const createCroppedPhoto = (
                 return;
             }
 
+            const cropX = Math.max(
+                0,
+                Math.min(
+                    Math.round(pixelCrop.x),
+                    canvas.width - Math.round(pixelCrop.width),
+                ),
+            );
+            const cropY = Math.max(
+                0,
+                Math.min(
+                    Math.round(pixelCrop.y),
+                    canvas.height - Math.round(pixelCrop.height),
+                ),
+            );
+            const cropWidth = Math.min(
+                Math.round(pixelCrop.width),
+                canvas.width - cropX,
+            );
+            const cropHeight = Math.min(
+                Math.round(pixelCrop.height),
+                canvas.height - cropY,
+            );
+
+            if (cropWidth <= 0 || cropHeight <= 0) {
+                reject(new Error('O enquadramento da imagem é inválido.'));
+
+                return;
+            }
+
             croppedContext.drawImage(
                 canvas,
-                Math.round(pixelCrop.x),
-                Math.round(pixelCrop.y),
-                Math.round(pixelCrop.width),
-                Math.round(pixelCrop.height),
+                cropX,
+                cropY,
+                cropWidth,
+                cropHeight,
                 0,
                 0,
                 outputWidth,
@@ -218,7 +259,16 @@ export const createCroppedPhoto = (
         };
         image.onerror = () =>
             reject(new Error('Não foi possível carregar a imagem.'));
-        image.crossOrigin = 'anonymous';
+
+        // Upload previews use local URLs. Setting crossOrigin on them can
+        // make valid mobile images fail to load in the editor.
+        if (
+            !imageSource.startsWith('blob:') &&
+            !imageSource.startsWith('data:')
+        ) {
+            image.crossOrigin = 'anonymous';
+        }
+
         image.src = imageSource;
     });
 
