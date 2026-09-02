@@ -57,8 +57,21 @@ class StockOffer extends Model
      */
     public function scopeAvailableForCatalog(Builder $query): Builder
     {
-        return $query
+        self::applyAvailableForCatalog($query);
+
+        return $query;
+    }
+
+    /**
+     * Apply the catalog availability constraints to a stock offer query.
+     *
+     * @param  Builder<StockOffer>  $query
+     */
+    public static function applyAvailableForCatalog(Builder $query): void
+    {
+        $query
             ->where('is_active', true)
+            ->where('total_quantity', '>', 0)
             ->where(function (Builder $query): void {
                 $query
                     ->where('type', StockOfferType::NewGrade->value)

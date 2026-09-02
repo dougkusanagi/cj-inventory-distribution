@@ -69,6 +69,8 @@ Ela guarda:
 - status ativo/inativo
 
 O tipo pertence à oferta de estoque, e não ao produto.
+Desativar a exibição no catálogo preserva os dados da oferta para edição ou
+reativação posterior.
 Nas ofertas com volumes, quando a quantidade de sacos chega a zero, a oferta
 deixa de aparecer no catálogo das vendedoras.
 

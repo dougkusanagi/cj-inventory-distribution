@@ -1,5 +1,5 @@
 import { router, useForm } from '@inertiajs/react';
-import { Layers, Package, Plus, Sparkles, X } from 'lucide-react';
+import { Layers, Package, PackageX, Plus, Sparkles, X } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
@@ -168,8 +168,8 @@ export function ProductForm({ product }: ProductFormProps) {
         name: product?.name ?? '',
         model: product?.model ?? '',
         notes: product?.notes ?? '',
-        has_stock_offer: product?.has_stock_offer ?? false,
-        stock_offer_type: product?.stock_offer_type ?? '',
+        has_stock_offer: product?.has_stock_offer ?? !isEditing,
+        stock_offer_type: product?.stock_offer_type ?? 'new_grade',
         total_quantity: product?.total_quantity ?? null,
         volumes: product?.volumes ?? null,
         variants: initialVariants,
@@ -317,11 +317,7 @@ export function ProductForm({ product }: ProductFormProps) {
         form.setData((previousData) => ({
             ...previousData,
             has_stock_offer: hasStockOffer,
-            stock_offer_type: hasStockOffer
-                ? previousData.stock_offer_type || 'new_grade'
-                : '',
-            total_quantity: hasStockOffer ? previousData.total_quantity : null,
-            volumes: hasStockOffer ? previousData.volumes : null,
+            stock_offer_type: previousData.stock_offer_type || 'new_grade',
         }));
     };
 
@@ -375,6 +371,39 @@ export function ProductForm({ product }: ProductFormProps) {
             variant.quantity !== '',
     );
 
+    const hasCurrentStockData =
+        Number(form.data.total_quantity) > 0 ||
+        Number(form.data.volumes) > 0 ||
+        form.data.variants.some(
+            (variant) =>
+                variant.is_active ||
+                (variant.quantity !== null && variant.quantity !== ''),
+        );
+
+    const clearCurrentStock = () => {
+        const confirmed = window.confirm(
+            'Isso retirará o produto do catálogo, zerará o estoque e os sacos disponíveis e limpará as quantidades deste lote. Deseja continuar?',
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        form.setData((previousData) => ({
+            ...previousData,
+            has_stock_offer: false,
+            total_quantity: 0,
+            volumes: stockOfferRequiresVolumes(previousData.stock_offer_type)
+                ? 0
+                : null,
+            variants: previousData.variants.map((variant) => ({
+                ...variant,
+                is_active: false,
+                quantity: null,
+            })),
+        }));
+    };
+
     const applySumAsTotal = () => {
         form.setData('total_quantity', sumOfVariantQuantities);
     };
@@ -425,9 +454,37 @@ export function ProductForm({ product }: ProductFormProps) {
                 </div>
             )}
 
+            <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
+                <label
+                    htmlFor="has-stock-offer"
+                    className="flex min-h-12 cursor-pointer items-center justify-between gap-4 p-5 select-none sm:p-6"
+                >
+                    <div className="grid gap-1">
+                        <p className="text-sm font-semibold text-foreground">
+                            Exibir no catálogo
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            {form.data.has_stock_offer
+                                ? 'O produto aparecerá no catálogo enquanto houver estoque.'
+                                : 'O produto ficará oculto, sem apagar os dados de estoque.'}
+                        </p>
+                    </div>
+                    <Switch
+                        id="has-stock-offer"
+                        checked={form.data.has_stock_offer}
+                        onCheckedChange={toggleStockOffer}
+                        aria-label={
+                            form.data.has_stock_offer
+                                ? 'Ocultar produto do catálogo'
+                                : 'Exibir produto no catálogo'
+                        }
+                    />
+                </label>
+            </Card>
+
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
                 {/* 1. Identidade da peça */}
-                <Card className="rounded-[1.75rem] border-border/80 shadow-sm">
+                <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
                     <CardHeader className="p-5 sm:p-6">
                         <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
                             Identidade da peça
@@ -510,7 +567,7 @@ export function ProductForm({ product }: ProductFormProps) {
                                 htmlFor="product-notes"
                                 className="text-sm font-medium"
                             >
-                                Mais detalhes{' '}
+                                Observações{' '}
                                 <span className="text-xs font-normal text-muted-foreground">
                                     (opcional)
                                 </span>
@@ -523,7 +580,7 @@ export function ProductForm({ product }: ProductFormProps) {
                                     form.setData('notes', event.target.value)
                                 }
                                 aria-invalid={error('notes') ? true : undefined}
-                                placeholder="Detalhes úteis para reconhecer a peça..."
+                                placeholder="Cor, lavagem ou algum detalhe importante..."
                                 rows={3}
                                 className="text-base sm:text-sm"
                             />
@@ -533,7 +590,7 @@ export function ProductForm({ product }: ProductFormProps) {
                 </Card>
 
                 {/* 2. Referência visual */}
-                <Card className="rounded-[1.75rem] border-border/80 shadow-sm">
+                <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
                     <CardHeader className="p-5 sm:p-6">
                         <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
                             Referência visual
@@ -567,7 +624,7 @@ export function ProductForm({ product }: ProductFormProps) {
             </div>
 
             {/* 3. Tamanhos do produto */}
-            <Card className="rounded-[1.75rem] border-border/80 shadow-sm">
+            <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
                 <CardHeader className="p-5 sm:p-6">
                     <div className="flex items-center gap-2">
                         <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -724,7 +781,7 @@ export function ProductForm({ product }: ProductFormProps) {
             </Card>
 
             {/* 4. Disponibilidade do lote */}
-            <Card className="rounded-[1.75rem] border-border/80 shadow-sm">
+            <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
                 <CardHeader className="p-5 sm:p-6">
                     <div className="flex items-center gap-2">
                         <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -735,356 +792,321 @@ export function ProductForm({ product }: ProductFormProps) {
                         </p>
                     </div>
                     <h2 className="text-xl tracking-tight sm:text-2xl">
-                        Oferta de estoque (opcional)
+                        Estoque disponível
                     </h2>
                     <CardDescription className="text-xs sm:text-sm">
-                        {isEditing
-                            ? 'Atualize a disponibilidade ou desative somente a oferta, mantendo o produto cadastrado.'
-                            : 'Cadastre uma disponibilidade agora ou salve somente os dados do produto para criar a oferta depois.'}
+                        Informe o tipo e as quantidades do estoque atual.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-7 p-5 pt-0 sm:p-6 sm:pt-0">
-                    <label
-                        htmlFor="has-stock-offer"
-                        className="flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-2xl border border-border bg-muted/20 p-4 select-none"
-                    >
-                        <div className="grid gap-1">
-                            <p className="text-sm font-semibold text-foreground">
-                                Há uma oferta de estoque ativa agora?
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                {form.data.has_stock_offer
-                                    ? 'Ela ficará disponível no catálogo enquanto houver estoque.'
-                                    : isEditing
-                                      ? 'A oferta será desativada, mas o produto continuará cadastrado.'
-                                      : 'O produto será salvo sem uma oferta de estoque ativa.'}
-                            </p>
-                        </div>
-                        <Switch
-                            id="has-stock-offer"
-                            checked={form.data.has_stock_offer}
-                            onCheckedChange={toggleStockOffer}
-                            aria-label={
-                                form.data.has_stock_offer
-                                    ? 'Desativar oferta de estoque'
-                                    : 'Ativar oferta de estoque'
+                    <fieldset className="grid gap-3">
+                        <legend className="text-sm font-semibold text-foreground">
+                            Tipo do estoque
+                        </legend>
+                        <p className="text-xs text-muted-foreground">
+                            Escolha como este lote será oferecido.
+                        </p>
+                        <RadioGroup
+                            value={form.data.stock_offer_type}
+                            onValueChange={selectStockOfferType}
+                            className="grid grid-cols-1 gap-2 sm:grid-cols-3"
+                            aria-invalid={
+                                error('stock_offer_type') ? true : undefined
                             }
-                        />
-                    </label>
+                        >
+                            {stockOfferTypes.map((offerType) => {
+                                const optionId = `stock-offer-type-${offerType.id}`;
 
-                    {form.data.has_stock_offer ? (
-                        <>
-                            <fieldset className="grid gap-3">
-                                <legend className="text-sm font-semibold text-foreground">
-                                    Tipo da oferta
-                                </legend>
-                                <RadioGroup
-                                    value={form.data.stock_offer_type}
-                                    onValueChange={selectStockOfferType}
-                                    className="grid grid-cols-1 gap-2 sm:grid-cols-3"
+                                return (
+                                    <label
+                                        key={offerType.id}
+                                        htmlFor={optionId}
+                                        className={cn(
+                                            'flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors select-none',
+                                            form.data.stock_offer_type ===
+                                                offerType.id
+                                                ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                                                : 'border-border hover:bg-muted/30',
+                                        )}
+                                    >
+                                        <RadioGroupItem
+                                            id={optionId}
+                                            value={offerType.id}
+                                        />
+                                        {offerType.label}
+                                    </label>
+                                );
+                            })}
+                        </RadioGroup>
+                        <InputError message={error('stock_offer_type')} />
+                    </fieldset>
+
+                    <div className="grid gap-4">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="grid max-w-xs gap-2">
+                                <Label
+                                    htmlFor="total-quantity"
+                                    className="text-sm font-semibold text-foreground"
+                                >
+                                    Estoque total{' '}
+                                    {form.data.has_stock_offer && (
+                                        <span className="text-destructive">
+                                            *
+                                        </span>
+                                    )}
+                                </Label>
+                                <p className="text-xs text-muted-foreground">
+                                    Quantidade total de peças disponíveis neste
+                                    lote.
+                                </p>
+                                <Input
+                                    id="total-quantity"
+                                    name="total_quantity"
+                                    type="number"
+                                    min="0"
+                                    inputMode="numeric"
+                                    value={form.data.total_quantity ?? ''}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'total_quantity',
+                                            event.target.value === ''
+                                                ? null
+                                                : Math.max(
+                                                      0,
+                                                      parseInt(
+                                                          event.target.value,
+                                                          10,
+                                                      ) || 0,
+                                                  ),
+                                        )
+                                    }
+                                    placeholder="Ex.: 30"
+                                    className="h-11 text-base sm:h-10 sm:text-sm"
+                                    required={form.data.has_stock_offer}
                                     aria-invalid={
-                                        error('stock_offer_type')
+                                        error('total_quantity')
                                             ? true
                                             : undefined
                                     }
-                                >
-                                    {stockOfferTypes.map((offerType) => {
-                                        const optionId = `stock-offer-type-${offerType.id}`;
-
-                                        return (
-                                            <label
-                                                key={offerType.id}
-                                                htmlFor={optionId}
-                                                className={cn(
-                                                    'flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors select-none',
-                                                    form.data
-                                                        .stock_offer_type ===
-                                                        offerType.id
-                                                        ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                                                        : 'border-border hover:bg-muted/30',
-                                                )}
-                                            >
-                                                <RadioGroupItem
-                                                    id={optionId}
-                                                    value={offerType.id}
-                                                />
-                                                {offerType.label}
-                                            </label>
-                                        );
-                                    })}
-                                </RadioGroup>
-                                <InputError
-                                    message={error('stock_offer_type')}
                                 />
-                            </fieldset>
+                                <InputError message={error('total_quantity')} />
+                            </div>
 
-                            <div className="grid gap-4">
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <div className="grid max-w-xs gap-2">
-                                        <Label
-                                            htmlFor="total-quantity"
-                                            className="text-sm font-semibold text-foreground"
-                                        >
-                                            Estoque total{' '}
+                            {stockOfferRequiresVolumes(
+                                form.data.stock_offer_type,
+                            ) ? (
+                                <div className="grid max-w-xs gap-2">
+                                    <Label
+                                        htmlFor="volumes"
+                                        className="text-sm font-semibold text-foreground"
+                                    >
+                                        Sacos disponíveis{' '}
+                                        {form.data.has_stock_offer && (
                                             <span className="text-destructive">
                                                 *
                                             </span>
-                                        </Label>
-                                        <p className="text-xs text-muted-foreground">
-                                            Quantidade total de peças prontas ou
-                                            disponíveis desta referência.
-                                        </p>
-                                        <Input
-                                            id="total-quantity"
-                                            name="total_quantity"
-                                            type="number"
-                                            min="0"
-                                            inputMode="numeric"
-                                            value={
-                                                form.data.total_quantity ?? ''
-                                            }
-                                            onChange={(event) =>
-                                                form.setData(
-                                                    'total_quantity',
-                                                    event.target.value === ''
-                                                        ? null
-                                                        : Math.max(
-                                                              0,
-                                                              parseInt(
-                                                                  event.target
-                                                                      .value,
-                                                                  10,
-                                                              ) || 0,
-                                                          ),
-                                                )
-                                            }
-                                            placeholder="Ex.: 30"
-                                            className="h-11 text-base sm:h-10 sm:text-sm"
-                                            required
-                                            aria-invalid={
-                                                error('total_quantity')
-                                                    ? true
-                                                    : undefined
-                                            }
-                                        />
-                                        <InputError
-                                            message={error('total_quantity')}
-                                        />
-                                    </div>
-
-                                    {stockOfferRequiresVolumes(
-                                        form.data.stock_offer_type,
-                                    ) ? (
-                                        <div className="grid max-w-xs gap-2">
-                                            <Label
-                                                htmlFor="volumes"
-                                                className="text-sm font-semibold text-foreground"
-                                            >
-                                                Sacos disponíveis{' '}
-                                                <span className="text-destructive">
-                                                    *
-                                                </span>
-                                            </Label>
-                                            <p className="text-xs text-muted-foreground">
-                                                Quantidade de sacos que ainda
-                                                podem ser solicitados. Ao chegar
-                                                a zero, a oferta sai do
-                                                catálogo.
-                                            </p>
-                                            <Input
-                                                id="volumes"
-                                                name="volumes"
-                                                type="number"
-                                                min="1"
-                                                step="1"
-                                                inputMode="numeric"
-                                                value={form.data.volumes ?? ''}
-                                                onChange={(event) =>
-                                                    form.setData(
-                                                        'volumes',
-                                                        event.target.value ===
-                                                            ''
-                                                            ? null
-                                                            : Math.max(
-                                                                  1,
-                                                                  parseInt(
-                                                                      event
-                                                                          .target
-                                                                          .value,
-                                                                      10,
-                                                                  ) || 1,
-                                                              ),
-                                                    )
-                                                }
-                                                placeholder="Ex.: 12"
-                                                className="h-11 text-base sm:h-10 sm:text-sm"
-                                                required
-                                                aria-invalid={
-                                                    error('volumes')
-                                                        ? true
-                                                        : undefined
-                                                }
-                                            />
-                                            <InputError
-                                                message={error('volumes')}
-                                            />
-                                        </div>
-                                    ) : null}
-                                </div>
-
-                                {hasFilledVariantQuantities ? (
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold text-foreground">
-                                            <Sparkles className="size-3 text-primary" />
-                                            Soma dos tamanhos:{' '}
-                                            {sumOfVariantQuantities}
-                                        </span>
-                                        {String(
-                                            form.data.total_quantity ?? '',
-                                        ) !==
-                                            String(sumOfVariantQuantities) && (
-                                            <button
-                                                type="button"
-                                                onClick={applySumAsTotal}
-                                                className="text-xs font-medium text-highlight underline underline-offset-2 hover:opacity-80 active:opacity-60"
-                                            >
-                                                Usar soma (
-                                                {sumOfVariantQuantities})
-                                            </button>
                                         )}
-                                    </div>
-                                ) : null}
-                            </div>
-
-                            <Separator className="bg-border/70" />
-
-                            <div className="grid gap-3">
-                                <div>
-                                    <p className="text-sm font-semibold text-foreground">
-                                        Tamanhos presentes no lote{' '}
-                                        <span className="text-xs font-normal text-muted-foreground">
-                                            (opcional)
-                                        </span>
-                                    </p>
+                                    </Label>
                                     <p className="text-xs text-muted-foreground">
-                                        Ative um tamanho para informar que ele
-                                        existe neste lote. A quantidade pode
-                                        ficar em branco.
+                                        Quantidade de sacos que ainda podem ser
+                                        solicitados. Ao chegar a zero, o produto
+                                        sai do catálogo.
                                     </p>
+                                    <Input
+                                        id="volumes"
+                                        name="volumes"
+                                        type="number"
+                                        min={form.data.has_stock_offer ? 1 : 0}
+                                        step="1"
+                                        inputMode="numeric"
+                                        value={form.data.volumes ?? ''}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'volumes',
+                                                event.target.value === ''
+                                                    ? null
+                                                    : Math.max(
+                                                          form.data
+                                                              .has_stock_offer
+                                                              ? 1
+                                                              : 0,
+                                                          parseInt(
+                                                              event.target
+                                                                  .value,
+                                                              10,
+                                                          ) ||
+                                                              (form.data
+                                                                  .has_stock_offer
+                                                                  ? 1
+                                                                  : 0),
+                                                      ),
+                                            )
+                                        }
+                                        placeholder="Ex.: 12"
+                                        className="h-11 text-base sm:h-10 sm:text-sm"
+                                        required={form.data.has_stock_offer}
+                                        aria-invalid={
+                                            error('volumes') ? true : undefined
+                                        }
+                                    />
+                                    <InputError message={error('volumes')} />
                                 </div>
-
-                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-7">
-                                    {form.data.variants.map(
-                                        (variant, index) => {
-                                            const activeId = `variant-active-${index}`;
-                                            const quantityId = `variant-qty-${index}`;
-
-                                            return (
-                                                <div
-                                                    key={variant.size}
-                                                    className={cn(
-                                                        'grid items-center gap-2 sm:grid-cols-1 sm:items-stretch',
-                                                        variant.is_active
-                                                            ? 'grid-cols-[minmax(0,1fr)_7rem]'
-                                                            : 'grid-cols-1',
-                                                    )}
-                                                >
-                                                    <Card
-                                                        className={cn(
-                                                            'h-12 gap-0 rounded-xl border p-0 shadow-none transition-colors',
-                                                            variant.is_active
-                                                                ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/15'
-                                                                : 'border-border/80 bg-muted/20 hover:border-primary/40',
-                                                        )}
-                                                    >
-                                                        <label
-                                                            htmlFor={activeId}
-                                                            className="flex h-full cursor-pointer items-center justify-between gap-3 px-3 py-2.5 select-none"
-                                                        >
-                                                            <span className="font-mono text-base font-bold text-foreground">
-                                                                {variant.size}
-                                                            </span>
-                                                            <Switch
-                                                                id={activeId}
-                                                                checked={
-                                                                    variant.is_active
-                                                                }
-                                                                onCheckedChange={(
-                                                                    isActive,
-                                                                ) =>
-                                                                    updateVariantActive(
-                                                                        index,
-                                                                        isActive,
-                                                                    )
-                                                                }
-                                                                aria-label={`${variant.is_active ? 'Desativar' : 'Ativar'} tamanho ${variant.size}`}
-                                                            />
-                                                        </label>
-                                                    </Card>
-
-                                                    {variant.is_active ? (
-                                                        <div className="grid gap-1.5">
-                                                            <Label
-                                                                htmlFor={
-                                                                    quantityId
-                                                                }
-                                                                className="sr-only"
-                                                            >
-                                                                Quantidade do
-                                                                tamanho{' '}
-                                                                {variant.size}
-                                                            </Label>
-                                                            <Input
-                                                                id={quantityId}
-                                                                type="number"
-                                                                min="0"
-                                                                inputMode="numeric"
-                                                                value={
-                                                                    variant.quantity ??
-                                                                    ''
-                                                                }
-                                                                onChange={(
-                                                                    event,
-                                                                ) =>
-                                                                    updateVariantQuantity(
-                                                                        index,
-                                                                        event
-                                                                            .target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                                placeholder="Ex.: 5"
-                                                                className="h-12 rounded-xl px-2 text-center font-mono text-sm"
-                                                                aria-invalid={
-                                                                    error(
-                                                                        `variants.${index}.quantity`,
-                                                                    )
-                                                                        ? true
-                                                                        : undefined
-                                                                }
-                                                            />
-                                                            <InputError
-                                                                message={error(
-                                                                    `variants.${index}.quantity`,
-                                                                )}
-                                                            />
-                                                        </div>
-                                                    ) : null}
-                                                </div>
-                                            );
-                                        },
-                                    )}
-                                </div>
-                                <InputError message={error('variants')} />
-                            </div>
-                        </>
-                    ) : (
-                        <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground">
-                            {isEditing
-                                ? 'A oferta de estoque será desativada ao salvar. O produto continuará cadastrado.'
-                                : 'Nenhuma oferta de estoque será criada ao salvar este produto.'}
+                            ) : null}
                         </div>
-                    )}
+
+                        {hasFilledVariantQuantities ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold text-foreground">
+                                    <Sparkles className="size-3 text-primary" />
+                                    Soma dos tamanhos: {sumOfVariantQuantities}
+                                </span>
+                                {String(form.data.total_quantity ?? '') !==
+                                    String(sumOfVariantQuantities) && (
+                                    <button
+                                        type="button"
+                                        onClick={applySumAsTotal}
+                                        className="text-xs font-medium text-highlight underline underline-offset-2 hover:opacity-80 active:opacity-60"
+                                    >
+                                        Usar soma ({sumOfVariantQuantities})
+                                    </button>
+                                )}
+                            </div>
+                        ) : null}
+                    </div>
+
+                    <Separator className="bg-border/70" />
+
+                    <div className="grid gap-3">
+                        <div>
+                            <p className="text-sm font-semibold text-foreground">
+                                Tamanhos presentes no lote{' '}
+                                <span className="text-xs font-normal text-muted-foreground">
+                                    (opcional)
+                                </span>
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                Ative um tamanho para informar que ele existe
+                                neste lote. A quantidade pode ficar em branco.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-7">
+                            {form.data.variants.map((variant, index) => {
+                                const activeId = `variant-active-${index}`;
+                                const quantityId = `variant-qty-${index}`;
+
+                                return (
+                                    <div
+                                        key={variant.size}
+                                        className={cn(
+                                            'grid items-center gap-2 sm:grid-cols-1 sm:items-stretch',
+                                            variant.is_active
+                                                ? 'grid-cols-[minmax(0,1fr)_7rem]'
+                                                : 'grid-cols-1',
+                                        )}
+                                    >
+                                        <Card
+                                            className={cn(
+                                                'h-12 gap-0 rounded-xl border p-0 shadow-none transition-colors',
+                                                variant.is_active
+                                                    ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/15'
+                                                    : 'border-border/80 bg-muted/20 hover:border-primary/40',
+                                            )}
+                                        >
+                                            <label
+                                                htmlFor={activeId}
+                                                className="flex h-full cursor-pointer items-center justify-between gap-3 px-3 py-2.5 select-none"
+                                            >
+                                                <span className="font-mono text-base font-bold text-foreground">
+                                                    {variant.size}
+                                                </span>
+                                                <Switch
+                                                    id={activeId}
+                                                    checked={variant.is_active}
+                                                    onCheckedChange={(
+                                                        isActive,
+                                                    ) =>
+                                                        updateVariantActive(
+                                                            index,
+                                                            isActive,
+                                                        )
+                                                    }
+                                                    aria-label={`${variant.is_active ? 'Desativar' : 'Ativar'} tamanho ${variant.size}`}
+                                                />
+                                            </label>
+                                        </Card>
+
+                                        {variant.is_active ? (
+                                            <div className="grid gap-1.5">
+                                                <Label
+                                                    htmlFor={quantityId}
+                                                    className="sr-only"
+                                                >
+                                                    Quantidade do tamanho{' '}
+                                                    {variant.size}
+                                                </Label>
+                                                <Input
+                                                    id={quantityId}
+                                                    type="number"
+                                                    min="0"
+                                                    inputMode="numeric"
+                                                    value={
+                                                        variant.quantity ?? ''
+                                                    }
+                                                    onChange={(event) =>
+                                                        updateVariantQuantity(
+                                                            index,
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="Ex.: 5"
+                                                    className="h-12 rounded-xl px-2 text-center font-mono text-sm"
+                                                    aria-invalid={
+                                                        error(
+                                                            `variants.${index}.quantity`,
+                                                        )
+                                                            ? true
+                                                            : undefined
+                                                    }
+                                                />
+                                                <InputError
+                                                    message={error(
+                                                        `variants.${index}.quantity`,
+                                                    )}
+                                                />
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <InputError message={error('variants')} />
+                    </div>
+
+                    <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="grid gap-1">
+                            <p className="text-sm font-semibold text-foreground">
+                                Encerrar estoque atual
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                Retira o produto do catálogo e limpa as
+                                quantidades deste lote ao salvar.
+                            </p>
+                        </div>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={clearCurrentStock}
+                            disabled={
+                                !hasCurrentStockData &&
+                                !form.data.has_stock_offer
+                            }
+                            className="h-11 shrink-0"
+                        >
+                            <PackageX />
+                            Encerrar estoque
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
 

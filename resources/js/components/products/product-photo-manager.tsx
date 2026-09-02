@@ -946,10 +946,10 @@ function PhotoRow({
                         size="icon"
                         onClick={onSetCover}
                         disabled={processing}
-                        className="absolute top-2 right-2 size-8 rounded-full bg-background/90 shadow-sm backdrop-blur"
+                        className="absolute right-2 bottom-2 size-8 rounded-full border-primary text-primary shadow-sm backdrop-blur hover:bg-primary/10"
                         aria-label={`Definir a foto ${index + 1} como capa`}
                     >
-                        <Star />
+                        <Star className="size-4" />
                     </Button>
                 )}
                 {item.kind === 'new' && (

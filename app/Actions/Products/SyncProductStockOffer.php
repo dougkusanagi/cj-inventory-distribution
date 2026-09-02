@@ -18,18 +18,15 @@ class SyncProductStockOffer
      */
     public function handle(Product $product, Collection $variants, array $data): ?StockOffer
     {
-        $hasStockOffer = filter_var(
+        $isVisibleInCatalog = filter_var(
             $data['has_stock_offer'] ?? true,
             FILTER_VALIDATE_BOOLEAN,
         );
-
-        if (! $hasStockOffer) {
-            return $this->deactivateLatestOffer($product);
-        }
-
-        $type = StockOfferType::tryFrom(
-            (string) ($data['stock_offer_type'] ?? StockOfferType::NewGrade->value),
-        ) ?? StockOfferType::NewGrade;
+        $offer = $product->latestOffer;
+        $typeInput = $data['stock_offer_type']
+            ?? $offer?->type->value
+            ?? StockOfferType::NewGrade->value;
+        $type = StockOfferType::tryFrom((string) $typeInput) ?? StockOfferType::NewGrade;
         $rawVariants = collect($this->normalizeVariants($data['variants'] ?? []));
         $totalQuantityInput = $data['total_quantity'] ?? null;
         $activeVariants = $rawVariants->filter(
@@ -38,35 +35,40 @@ class SyncProductStockOffer
         $hasVariantQuantities = $activeVariants->contains(
             fn (array $variant): bool => is_numeric($variant['quantity'] ?? null),
         );
+        $volumesInput = $data['volumes'] ?? null;
+        $hasStockData = $totalQuantityInput !== null
+            || $volumesInput !== null
+            || $activeVariants->isNotEmpty()
+            || $hasVariantQuantities;
 
-        if (
-            ($totalQuantityInput === null || (int) $totalQuantityInput === 0)
-            && $activeVariants->isEmpty()
-            && ! $hasVariantQuantities
-        ) {
-            return $this->deactivateLatestOffer($product);
+        if ($offer === null && ! $isVisibleInCatalog && ! $hasStockData) {
+            return null;
         }
 
         $sumOfVariants = $activeVariants->sum(fn (array $variant): int => (int) ($variant['quantity'] ?? 0));
-        $totalQuantity = $totalQuantityInput !== null ? (int) $totalQuantityInput : $sumOfVariants;
-        $volumesInput = $data['volumes'] ?? null;
-        $volumes = $type->requiresVolumes() && $volumesInput !== null
-            ? max(0, (int) $volumesInput)
+        $totalQuantity = $totalQuantityInput !== null
+            ? (int) $totalQuantityInput
+            : $offer->total_quantity ?? $sumOfVariants;
+        $volumes = $type->requiresVolumes()
+            ? ($volumesInput !== null
+                ? max(0, (int) $volumesInput)
+                : $offer?->volumes)
             : null;
 
-        /** @var StockOffer $offer */
-        $offer = $product->latestOffer ?? $product->offers()->create([
-            'type' => $type,
-            'total_quantity' => max(0, $totalQuantity),
-            'volumes' => $volumes,
-            'is_active' => true,
-        ]);
+        if ($offer === null) {
+            $offer = $product->offers()->create([
+                'type' => $type,
+                'total_quantity' => max(0, $totalQuantity),
+                'volumes' => $volumes,
+                'is_active' => $isVisibleInCatalog,
+            ]);
+        }
 
         $offer->update([
             'type' => $type,
             'total_quantity' => max(0, $totalQuantity),
             'volumes' => $volumes,
-            'is_active' => true,
+            'is_active' => $isVisibleInCatalog,
         ]);
 
         $offer->items()->delete();
@@ -106,27 +108,6 @@ class SyncProductStockOffer
         }
 
         return $normalized;
-    }
-
-    /**
-     * Mark an existing offer unavailable when no stock information remains.
-     */
-    private function deactivateLatestOffer(Product $product): ?StockOffer
-    {
-        $offer = $product->latestOffer;
-
-        if ($offer === null) {
-            return null;
-        }
-
-        $offer->update([
-            'total_quantity' => 0,
-            'volumes' => $offer->type->requiresVolumes() ? 0 : null,
-            'is_active' => false,
-        ]);
-        $offer->items()->delete();
-
-        return $offer;
     }
 
     /**

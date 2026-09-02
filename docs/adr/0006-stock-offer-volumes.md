@@ -19,9 +19,12 @@ Adicionar `volumes` como inteiro opcional em `StockOffer`:
 - o campo é obrigatório quando a oferta ativa é `Reposição` ou `Grade Furada`;
 - o campo permanece nulo para `Grade Nova`;
 - a consulta do catálogo compartilhado considera disponíveis somente ofertas
-  ativas e, nesses dois tipos, com `volumes` maior que zero;
-- o switch do cadastro controla a oferta de estoque, não a existência do
-  produto.
+  ativas, com estoque total maior que zero e, nesses dois tipos, com `volumes`
+  maior que zero;
+- o switch do cadastro controla a exibição da oferta no catálogo, sem apagar
+  estoque, volumes ou disponibilidade por tamanho;
+- encerrar o estoque atual é uma ação explícita e separada, que oculta a oferta
+  e limpa as quantidades do lote.
 
 O fluxo de pedidos futuro será responsável por reduzir `volumes` ao dar baixa
 nos sacos. Quando chegar a zero, a oferta continuará preservada para histórico,
