@@ -101,7 +101,7 @@ function MetricCard({
 export default function Dashboard({ stats }: DashboardProps) {
     return (
         <>
-            <Head title="Dashboard" />
+            <Head title="Painel" />
 
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
                 <header className="relative overflow-hidden rounded-[2rem] bg-featured-card px-6 py-8 text-featured-card-foreground shadow-sm sm:px-8 sm:py-10">
@@ -225,7 +225,7 @@ export default function Dashboard({ stats }: DashboardProps) {
 Dashboard.layout = {
     breadcrumbs: [
         {
-            title: 'Dashboard',
+            title: 'Painel',
             href: dashboard(),
         },
     ],
