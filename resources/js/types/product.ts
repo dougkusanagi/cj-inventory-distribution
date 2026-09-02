@@ -20,6 +20,7 @@ export type Product = {
     code: string;
     model: string | null;
     name: string;
+    is_active: boolean;
     images: ProductImage[];
     notes: string | null;
     has_stock_offer?: boolean;

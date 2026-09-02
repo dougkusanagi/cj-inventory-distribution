@@ -153,8 +153,9 @@ test('authenticated users can save a product without creating a stock offer', fu
     $response = $this->actingAs($user)->post(route('products.store'), [
         'name' => 'Produto sem estoque inicial',
         'has_stock_offer' => false,
+        'total_quantity' => 0,
         'variants' => [
-            ['size' => 'U', 'quantity' => null, 'is_active' => false],
+            ['size' => 'P', 'quantity' => null, 'is_active' => false],
         ],
     ]);
 
@@ -164,8 +165,43 @@ test('authenticated users can save a product without creating a stock offer', fu
 
     $product = Product::query()->with('latestOffer')->sole();
 
+    expect($product->is_active)->toBeTrue();
     expect($product->latestOffer)->toBeNull();
     expect(StockOffer::query()->where('product_id', $product->id)->count())->toBe(0);
+});
+
+test('product activation is independent from its stock offer', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $variant = $product->variants()->create(['size' => 'M', 'sort_order' => 0]);
+    $offer = $product->offers()->create([
+        'type' => StockOfferType::NewGrade,
+        'total_quantity' => 10,
+        'is_active' => true,
+    ]);
+    $offer->items()->create([
+        'product_variant_id' => $variant->id,
+        'quantity' => 10,
+        'is_active' => true,
+    ]);
+
+    $response = $this->actingAs($user)->put(route('products.update', $product), [
+        'name' => $product->name,
+        'is_active' => false,
+        'has_stock_offer' => true,
+        'stock_offer_type' => StockOfferType::NewGrade->value,
+        'total_quantity' => 10,
+        'variants' => [
+            ['size' => 'M', 'quantity' => 10, 'is_active' => true],
+        ],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    expect($product->fresh()->is_active)->toBeFalse();
+    expect($offer->fresh()->is_active)->toBeTrue();
 });
 
 test('stock offer type is persisted from the explicit request value', function () {
@@ -248,6 +284,12 @@ test('the shared catalog excludes exhausted volume-based stock offers', function
         'volumes' => null,
         'is_active' => true,
     ]);
+    $inactiveProduct = Product::factory()->create(['is_active' => false]);
+    $inactiveProductOffer = $inactiveProduct->offers()->create([
+        'type' => StockOfferType::NewGrade,
+        'total_quantity' => 12,
+        'is_active' => true,
+    ]);
 
     $availableOfferIds = StockOffer::query()
         ->whereBelongsTo($product)
@@ -260,6 +302,12 @@ test('the shared catalog excludes exhausted volume-based stock offers', function
     expect($availableOfferIds)->not->toContain($exhaustedOffer->id);
     expect($availableOfferIds)->not->toContain($inactiveOffer->id);
     expect($availableOfferIds)->not->toContain($zeroStockOffer->id);
+    expect(
+        StockOffer::query()
+            ->availableForCatalog()
+            ->whereKey($inactiveProductOffer->getKey())
+            ->exists(),
+    )->toBeFalse();
     expect($product->fresh()->latestAvailableOffer->is($newGradeOffer))->toBeTrue();
 });
 
@@ -453,7 +501,7 @@ test('authenticated users can update product details, sizes and stock without ch
         'name' => 'Nome anterior',
         'model' => '2451',
     ]);
-    $product->variants()->create(['size' => 'U', 'sort_order' => 0]);
+    $product->variants()->create(['size' => 'P', 'sort_order' => 0]);
     $originalCode = $product->code;
 
     $response = $this->actingAs($user)->put(route('products.update', $product), [

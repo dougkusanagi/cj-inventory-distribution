@@ -7,6 +7,7 @@ O roadmap descreve direção, não compromisso de implementação imediata.
 - [x] CRUD de produtos
 - [x] código interno automático
 - [x] modelo opcional
+- [x] ativar/desativar produto
 - [x] observação
 - [x] upload de até cinco fotos com thumbnails
 - [x] captura pela câmera

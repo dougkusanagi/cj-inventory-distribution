@@ -35,6 +35,7 @@ class CreateProduct
                     'name' => $data['name'],
                     'model' => ($data['model'] ?? null) ?: null,
                     'notes' => ($data['notes'] ?? null) ?: null,
+                    'is_active' => $data['is_active'] ?? true,
                 ]);
 
                 $product->updateQuietly([

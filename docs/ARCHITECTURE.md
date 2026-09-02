@@ -32,6 +32,7 @@ code
 model nullable
 name
 notes nullable
+is_active
 created_at
 updated_at
 ```
@@ -61,6 +62,8 @@ Exemplo:
 ```
 
 Um produto sem modelo continua plenamente utilizável.
+O produto inicia ativo, mas pode ser desativado independentemente das ofertas
+de estoque. Produtos inativos não aparecem no catálogo compartilhado.
 
 Um produto também pode ser salvo sem uma oferta de estoque ativa. A oferta é
 criada ou atualizada somente quando o cadastro informar explicitamente que há
@@ -94,7 +97,6 @@ P
 M
 G
 GG
-U
 ```
 
 `size` deve ser string.
@@ -106,12 +108,12 @@ Não assumir grade fixa nem tamanho numérico.
 A interface pode oferecer presets para acelerar cadastro:
 
 - Numérica feminina
-- Numérica masculina
 - Letras
-- Único
 - Personalizada
 
 Esses presets são conveniência de interface. O domínio deve continuar aceitando qualquer tamanho válido.
+Presets masculino e de tamanho único não fazem parte da operação atual e não
+devem ser reintroduzidos sem um requisito explícito.
 
 ## StockOffer
 
@@ -156,9 +158,10 @@ O mesmo produto pode aparecer em contextos diferentes ao longo do tempo.
 O cadastro de produto não infere o tipo a partir das quantidades por tamanho.
 Quando houver oferta, o tipo escolhido pelo operador é persistido.
 
-O estado ativo controla a exibição no catálogo. Desativar uma oferta não deve
-zerar seu estoque, seus volumes nem a disponibilidade por tamanho. O
-encerramento do estoque atual é uma ação explícita e separada.
+O estado ativo da oferta controla sua exibição no catálogo, desde que o produto
+também esteja ativo. Desativar uma oferta não deve zerar seu estoque, seus
+volumes nem a disponibilidade por tamanho. O encerramento do estoque atual é
+uma ação explícita e separada.
 
 Para `Reposição` e `Grade Furada`, `volumes` registra quantos sacos ainda estão
 disponíveis para distribuição e é obrigatório quando a oferta está ativa.

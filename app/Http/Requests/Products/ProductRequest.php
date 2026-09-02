@@ -26,12 +26,17 @@ abstract class ProductRequest extends FormRequest
     {
         $name = $this->input('name');
         $model = $this->input('model');
+        $isActive = $this->input('is_active');
         $hasStockOffer = $this->input('has_stock_offer');
         $stockOfferType = $this->input('stock_offer_type');
         $totalQuantity = $this->input('total_quantity');
         $volumes = $this->input('volumes');
         $inputVariants = $this->input('variants', []);
         $variants = $inputVariants;
+
+        if ($isActive === null) {
+            $isActive = true;
+        }
 
         // Keep accepting the original payload while the form migrates to the
         // explicit optional-offer contract.
@@ -70,6 +75,7 @@ abstract class ProductRequest extends FormRequest
         $this->merge([
             'name' => is_string($name) ? Str::squish($name) : $name,
             'model' => is_string($model) ? Str::squish($model) ?: null : $model,
+            'is_active' => $isActive,
             'has_stock_offer' => $hasStockOffer,
             'stock_offer_type' => $stockOfferType,
             'total_quantity' => $totalQuantity === '' || $totalQuantity === null ? null : $totalQuantity,
@@ -89,6 +95,7 @@ abstract class ProductRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'is_active' => ['required', 'boolean'],
             'has_stock_offer' => ['required', 'boolean'],
             'stock_offer_type' => [
                 'nullable',
@@ -146,6 +153,7 @@ abstract class ProductRequest extends FormRequest
             'name.max' => 'O nome do produto deve ter no máximo 255 caracteres.',
             'model.max' => 'O modelo deve ter no máximo 100 caracteres.',
             'notes.max' => 'A observação deve ter no máximo 5.000 caracteres.',
+            'is_active.boolean' => 'Informe se o produto está ativo.',
             'has_stock_offer.boolean' => 'Informe se o produto deve aparecer no catálogo.',
             'stock_offer_type.required' => 'Informe o tipo do estoque.',
             'stock_offer_type.enum' => 'Selecione um tipo de estoque válido.',
