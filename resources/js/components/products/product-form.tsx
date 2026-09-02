@@ -328,6 +328,17 @@ export function ProductForm({ product }: ProductFormProps) {
         );
     };
 
+    const setAllVariantsActive = (isActive: boolean) => {
+        form.setData(
+            'variants',
+            form.data.variants.map((variant) => ({
+                ...variant,
+                is_active: isActive,
+                quantity: isActive ? variant.quantity : null,
+            })),
+        );
+    };
+
     const updateVariantQuantity = (index: number, rawValue: string) => {
         const sanitized =
             rawValue === '' ? null : Math.max(0, parseInt(rawValue, 10) || 0);
@@ -997,105 +1008,152 @@ export function ProductForm({ product }: ProductFormProps) {
                     <Separator className="bg-border/70" />
 
                     <div className="grid gap-3">
-                        <div>
-                            <p className="text-sm font-semibold text-foreground">
-                                Tamanhos presentes no lote{' '}
-                                <span className="text-xs font-normal text-muted-foreground">
-                                    (opcional)
-                                </span>
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                Ative um tamanho para informar que ele existe
-                                neste lote. A quantidade pode ficar em branco.
-                            </p>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-sm font-semibold text-foreground">
+                                    Tamanhos presentes no lote{' '}
+                                    <span className="text-xs font-normal text-muted-foreground">
+                                        (opcional)
+                                    </span>
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    Ative um tamanho para informar que ele
+                                    existe neste lote. A quantidade pode ficar
+                                    em branco.
+                                </p>
+                            </div>
+
+                            {form.data.variants.length > 1 && (
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setAllVariantsActive(true)
+                                        }
+                                        className="text-xs font-medium text-highlight hover:underline"
+                                    >
+                                        Ativar todos
+                                    </button>
+                                    <span className="text-xs text-muted-foreground/60">
+                                        ·
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setAllVariantsActive(false)
+                                        }
+                                        className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
+                                    >
+                                        Desmarcar todos
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-7">
+                        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
                             {form.data.variants.map((variant, index) => {
                                 const activeId = `variant-active-${index}`;
                                 const quantityId = `variant-qty-${index}`;
+                                const quantityError = error(
+                                    `variants.${index}.quantity`,
+                                );
 
                                 return (
                                     <div
                                         key={variant.size}
                                         className={cn(
-                                            'grid items-center gap-2 sm:grid-cols-1 sm:items-stretch',
+                                            'group relative flex flex-row items-center justify-between rounded-2xl border p-3 transition-all duration-200 select-none sm:h-28 sm:flex-col sm:items-stretch sm:justify-between sm:p-3',
                                             variant.is_active
-                                                ? 'grid-cols-[minmax(0,1fr)_7rem]'
-                                                : 'grid-cols-1',
+                                                ? 'border-primary/60 bg-primary/5 shadow-xs ring-1 ring-primary/15'
+                                                : 'border-border/70 bg-card hover:border-border',
+                                            quantityError &&
+                                                'border-destructive ring-1 ring-destructive/30',
                                         )}
                                     >
-                                        <Card
-                                            className={cn(
-                                                'h-12 gap-0 rounded-xl border p-0 shadow-none transition-colors',
-                                                variant.is_active
-                                                    ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/15'
-                                                    : 'border-border/80 bg-muted/20 hover:border-primary/40',
-                                            )}
-                                        >
+                                        <div className="flex items-center gap-3 sm:justify-between">
                                             <label
                                                 htmlFor={activeId}
-                                                className="flex h-full cursor-pointer items-center justify-between gap-3 px-3 py-2.5 select-none"
+                                                className="cursor-pointer font-mono text-base font-bold text-foreground"
                                             >
-                                                <span className="font-mono text-base font-bold text-foreground">
-                                                    {variant.size}
-                                                </span>
-                                                <Switch
-                                                    id={activeId}
-                                                    checked={variant.is_active}
-                                                    onCheckedChange={(
-                                                        isActive,
-                                                    ) =>
-                                                        updateVariantActive(
-                                                            index,
-                                                            isActive,
-                                                        )
-                                                    }
-                                                    aria-label={`${variant.is_active ? 'Desativar' : 'Ativar'} tamanho ${variant.size}`}
-                                                />
+                                                {variant.size}
                                             </label>
-                                        </Card>
+                                            <Switch
+                                                id={activeId}
+                                                checked={variant.is_active}
+                                                onCheckedChange={(isActive) => {
+                                                    updateVariantActive(
+                                                        index,
+                                                        isActive,
+                                                    );
 
-                                        {variant.is_active ? (
-                                            <div className="grid gap-1.5">
-                                                <Label
-                                                    htmlFor={quantityId}
-                                                    className="sr-only"
-                                                >
-                                                    Quantidade do tamanho{' '}
-                                                    {variant.size}
-                                                </Label>
-                                                <Input
-                                                    id={quantityId}
-                                                    type="number"
-                                                    min="0"
-                                                    inputMode="numeric"
-                                                    value={
-                                                        variant.quantity ?? ''
+                                                    if (isActive) {
+                                                        window.requestAnimationFrame(
+                                                            () => {
+                                                                document
+                                                                    .getElementById(
+                                                                        quantityId,
+                                                                    )
+                                                                    ?.focus();
+                                                            },
+                                                        );
                                                     }
-                                                    onChange={(event) =>
-                                                        updateVariantQuantity(
-                                                            index,
-                                                            event.target.value,
-                                                        )
-                                                    }
-                                                    placeholder="Ex.: 5"
-                                                    className="h-12 rounded-xl px-2 text-center font-mono text-sm"
-                                                    aria-invalid={
-                                                        error(
-                                                            `variants.${index}.quantity`,
-                                                        )
-                                                            ? true
-                                                            : undefined
-                                                    }
-                                                />
+                                                }}
+                                                aria-label={`${variant.is_active ? 'Desativar' : 'Ativar'} tamanho ${variant.size}`}
+                                            />
+                                        </div>
+
+                                        <div className="relative flex items-center justify-end sm:w-full">
+                                            <Label
+                                                htmlFor={quantityId}
+                                                className="sr-only"
+                                            >
+                                                Quantidade do tamanho{' '}
+                                                {variant.size}
+                                            </Label>
+                                            <Input
+                                                id={quantityId}
+                                                type="number"
+                                                min="0"
+                                                inputMode="numeric"
+                                                disabled={!variant.is_active}
+                                                value={
+                                                    variant.is_active
+                                                        ? (variant.quantity ??
+                                                          '')
+                                                        : ''
+                                                }
+                                                onChange={(event) =>
+                                                    updateVariantQuantity(
+                                                        index,
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                placeholder={
+                                                    variant.is_active
+                                                        ? 'Qtd'
+                                                        : '—'
+                                                }
+                                                aria-invalid={
+                                                    quantityError
+                                                        ? true
+                                                        : undefined
+                                                }
+                                                className={cn(
+                                                    'h-10 w-24 text-center font-mono text-sm transition-all duration-200 sm:h-9 sm:w-full',
+                                                    variant.is_active
+                                                        ? 'border-input bg-background text-foreground shadow-xs'
+                                                        : 'pointer-events-none cursor-not-allowed border-transparent bg-muted/40 text-muted-foreground/30 shadow-none',
+                                                )}
+                                            />
+                                        </div>
+
+                                        {quantityError && (
+                                            <div className="mt-1 sm:mt-0">
                                                 <InputError
-                                                    message={error(
-                                                        `variants.${index}.quantity`,
-                                                    )}
+                                                    message={quantityError}
                                                 />
                                             </div>
-                                        ) : null}
+                                        )}
                                     </div>
                                 );
                             })}
