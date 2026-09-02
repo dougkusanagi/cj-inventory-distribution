@@ -36,6 +36,7 @@ type ProductFormData = {
     name: string;
     model: string;
     notes: string;
+    is_active: boolean;
     has_stock_offer: boolean;
     stock_offer_type: StockOfferType | '';
     total_quantity: number | string | null;
@@ -56,13 +57,7 @@ type ProductErrorField =
     | `variants.${number}.size`
     | `variants.${number}.quantity`;
 
-type SizePresetId =
-    | 'none'
-    | 'single'
-    | 'numeric-female'
-    | 'numeric-male'
-    | 'letters'
-    | 'custom';
+type SizePresetId = 'none' | 'numeric-female' | 'letters' | 'custom';
 
 type SizePreset = {
     id: SizePresetId;
@@ -79,22 +74,10 @@ const sizePresets: SizePreset[] = [
         sizes: [],
     },
     {
-        id: 'single',
-        label: 'Único',
-        subtitle: 'Tamanho único (U)',
-        sizes: ['U'],
-    },
-    {
         id: 'numeric-female',
         label: 'Numérica feminina',
         subtitle: 'Feminino (34 ao 46)',
         sizes: ['34', '36', '38', '40', '42', '44', '46'],
-    },
-    {
-        id: 'numeric-male',
-        label: 'Numérica masculina',
-        subtitle: 'Masculino (36 ao 48)',
-        sizes: ['36', '38', '40', '42', '44', '46', '48'],
     },
     {
         id: 'letters',
@@ -110,7 +93,7 @@ const sizePresets: SizePreset[] = [
     },
 ];
 
-const hiddenSizePresetIds: SizePresetId[] = ['none', 'single', 'numeric-male'];
+const hiddenSizePresetIds: SizePresetId[] = ['none'];
 
 const visibleSizePresets = sizePresets.filter(
     (preset) => !hiddenSizePresetIds.includes(preset.id),
@@ -153,7 +136,7 @@ export function ProductForm({ product }: ProductFormProps) {
     const submittingRef = useRef(false);
     const { isMobile, state: sidebarState } = useSidebar();
     const { isVisible: isFooterVisible, show: showFooter } =
-        useScrollVisibility();
+        useScrollVisibility({ showAtDocumentEnd: true });
 
     const initialVariants: VariantFormItem[] =
         product && product.variants.length > 0
@@ -168,7 +151,8 @@ export function ProductForm({ product }: ProductFormProps) {
         name: product?.name ?? '',
         model: product?.model ?? '',
         notes: product?.notes ?? '',
-        has_stock_offer: product?.has_stock_offer ?? !isEditing,
+        is_active: product?.is_active ?? true,
+        has_stock_offer: product?.has_stock_offer ?? false,
         stock_offer_type: product?.stock_offer_type ?? 'new_grade',
         total_quantity: product?.total_quantity ?? null,
         volumes: product?.volumes ?? null,
@@ -204,7 +188,11 @@ export function ProductForm({ product }: ProductFormProps) {
     }, [form.isDirty]);
 
     useEffect(() => {
-        const removeBeforeVisitListener = router.on('before', () => {
+        const removeBeforeVisitListener = router.on('before', (event) => {
+            if (event.detail.visit.prefetch) {
+                return;
+            }
+
             if (!form.isDirty || form.processing || submittingRef.current) {
                 return;
             }
@@ -319,6 +307,10 @@ export function ProductForm({ product }: ProductFormProps) {
             has_stock_offer: hasStockOffer,
             stock_offer_type: previousData.stock_offer_type || 'new_grade',
         }));
+    };
+
+    const toggleProductActive = (isActive: boolean) => {
+        form.setData('is_active', isActive);
     };
 
     const updateVariantActive = (index: number, isActive: boolean) => {
@@ -456,17 +448,45 @@ export function ProductForm({ product }: ProductFormProps) {
 
             <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
                 <label
+                    htmlFor="is-active"
+                    className="flex min-h-12 cursor-pointer items-center justify-between gap-4 p-5 select-none sm:p-6"
+                >
+                    <div className="grid gap-1">
+                        <p className="text-sm font-semibold text-foreground">
+                            Produto ativo
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            {form.data.is_active
+                                ? 'O produto poderá aparecer no catálogo quando houver uma oferta disponível.'
+                                : 'O produto ficará oculto do catálogo, sem alterar o estoque.'}
+                        </p>
+                    </div>
+                    <Switch
+                        id="is-active"
+                        checked={form.data.is_active}
+                        onCheckedChange={toggleProductActive}
+                        aria-label={
+                            form.data.is_active
+                                ? 'Desativar produto'
+                                : 'Ativar produto'
+                        }
+                    />
+                </label>
+            </Card>
+
+            <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
+                <label
                     htmlFor="has-stock-offer"
                     className="flex min-h-12 cursor-pointer items-center justify-between gap-4 p-5 select-none sm:p-6"
                 >
                     <div className="grid gap-1">
                         <p className="text-sm font-semibold text-foreground">
-                            Exibir no catálogo
+                            Exibir oferta no catálogo
                         </p>
                         <p className="text-xs text-muted-foreground">
                             {form.data.has_stock_offer
-                                ? 'O produto aparecerá no catálogo enquanto houver estoque.'
-                                : 'O produto ficará oculto, sem apagar os dados de estoque.'}
+                                ? 'A oferta aparecerá quando o produto estiver ativo e houver estoque.'
+                                : 'A oferta ficará oculta, sem apagar os dados de estoque.'}
                         </p>
                     </div>
                     <Switch
@@ -475,8 +495,8 @@ export function ProductForm({ product }: ProductFormProps) {
                         onCheckedChange={toggleStockOffer}
                         aria-label={
                             form.data.has_stock_offer
-                                ? 'Ocultar produto do catálogo'
-                                : 'Exibir produto no catálogo'
+                                ? 'Ocultar oferta do catálogo'
+                                : 'Exibir oferta no catálogo'
                         }
                     />
                 </label>
@@ -1097,10 +1117,7 @@ export function ProductForm({ product }: ProductFormProps) {
                             type="button"
                             variant="destructive"
                             onClick={clearCurrentStock}
-                            disabled={
-                                !hasCurrentStockData &&
-                                !form.data.has_stock_offer
-                            }
+                            disabled={!hasCurrentStockData}
                             className="h-11 shrink-0"
                         >
                             <PackageX />

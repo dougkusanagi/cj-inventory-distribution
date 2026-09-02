@@ -21,11 +21,12 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property string|null $model
  * @property string $name
  * @property string|null $notes
+ * @property bool $is_active
  * @property-read StockOffer|null $latestOffer
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['code', 'model', 'name', 'notes'])]
+#[Fillable(['code', 'model', 'name', 'notes', 'is_active'])]
 class Product extends Model implements HasMedia
 {
     /** @use HasFactory<ProductFactory> */
@@ -51,6 +52,15 @@ class Product extends Model implements HasMedia
     public const MAX_IMAGE_UPLOAD_SIZE_MB = 25;
 
     public const MAX_IMAGE_UPLOAD_SIZE_KB = self::MAX_IMAGE_UPLOAD_SIZE_MB * 1024;
+
+    /**
+     * The model's default attribute values.
+     *
+     * @var array<string, bool>
+     */
+    protected $attributes = [
+        'is_active' => true,
+    ];
 
     /**
      * Get the size variants for the product.
@@ -94,6 +104,18 @@ class Product extends Model implements HasMedia
             ->ofMany(['id' => 'MAX'], function (Builder $query): void {
                 StockOffer::applyAvailableForCatalog($query);
             });
+    }
+
+    /**
+     * Get the model's attribute casts.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+        ];
     }
 
     /**

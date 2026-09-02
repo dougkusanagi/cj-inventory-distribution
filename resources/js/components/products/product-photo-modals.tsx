@@ -274,6 +274,10 @@ export const createCroppedPhoto = (
 
 type PhotoEditorProps = {
     source: PhotoEditorSource;
+    queueProgress?: {
+        current: number;
+        total: number;
+    };
     onCancel: () => void;
     onApply: (editedFile: File) => Promise<void>;
     onRetake?: () => void;
@@ -281,6 +285,7 @@ type PhotoEditorProps = {
 
 export function PhotoEditor({
     source,
+    queueProgress,
     onCancel,
     onApply,
     onRetake,
@@ -401,7 +406,7 @@ export function PhotoEditor({
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pt-2 sm:pt-0">
             <div
                 data-vaul-no-drag
-                className="relative mx-auto aspect-[4/5] w-full max-w-[min(calc(100%_-_2rem),25.6rem)] shrink-0 overflow-hidden rounded-2xl bg-foreground"
+                className="relative mx-auto aspect-[4/5] w-full max-w-[min(calc(100%_-_2rem),25.6rem)] shrink-0 overflow-hidden rounded-2xl bg-muted"
             >
                 <Cropper
                     image={source.url}
@@ -461,14 +466,22 @@ export function PhotoEditor({
 
             {isMobile ? (
                 <DrawerHeader className="shrink-0 px-4 py-4">
-                    <DrawerTitle>Ajustar foto</DrawerTitle>
+                    <DrawerTitle>
+                        {queueProgress
+                            ? `Ajustando foto ${queueProgress.current} de ${queueProgress.total}`
+                            : 'Ajustar foto'}
+                    </DrawerTitle>
                     <DrawerDescription>
                         Defina o enquadramento que será usado no catálogo.
                     </DrawerDescription>
                 </DrawerHeader>
             ) : (
                 <DialogHeader className="shrink-0 pt-4 text-left">
-                    <DialogTitle>Ajustar foto</DialogTitle>
+                    <DialogTitle>
+                        {queueProgress
+                            ? `Ajustando foto ${queueProgress.current} de ${queueProgress.total}`
+                            : 'Ajustar foto'}
+                    </DialogTitle>
                     <DialogDescription>
                         Defina o enquadramento que será usado no catálogo.
                     </DialogDescription>
@@ -600,7 +613,14 @@ export function PhotoEditor({
                         disabled={isApplying || !croppedAreaPixels}
                         className="h-12"
                     >
-                        {isApplying ? 'Cortando...' : 'Cortar e usar foto'}
+                        {isApplying
+                            ? 'Cortando...'
+                            : queueProgress &&
+                                queueProgress.current < queueProgress.total
+                              ? 'Usar e ajustar próxima'
+                              : queueProgress
+                                ? 'Concluir fotos'
+                                : 'Cortar e usar foto'}
                     </Button>
                 </div>
             </div>

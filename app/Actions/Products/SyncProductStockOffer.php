@@ -36,12 +36,12 @@ class SyncProductStockOffer
             fn (array $variant): bool => is_numeric($variant['quantity'] ?? null),
         );
         $volumesInput = $data['volumes'] ?? null;
-        $hasStockData = $totalQuantityInput !== null
-            || $volumesInput !== null
+        $hasStockData = (int) $totalQuantityInput > 0
+            || (int) $volumesInput > 0
             || $activeVariants->isNotEmpty()
             || $hasVariantQuantities;
 
-        if ($offer === null && ! $isVisibleInCatalog && ! $hasStockData) {
+        if ($offer === null && ! $hasStockData) {
             return null;
         }
 

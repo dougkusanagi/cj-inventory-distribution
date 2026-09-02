@@ -358,6 +358,10 @@ export function ProductPhotoManager({
     const [previewItem, setPreviewItem] = useState<PhotoItem | null>(null);
     const [editor, setEditor] = useState<{
         source: PhotoEditorSource;
+        queueProgress?: {
+            current: number;
+            total: number;
+        };
         targetKey?: string;
         targetMediaId?: number;
     } | null>(null);
@@ -475,6 +479,7 @@ export function ProductPhotoManager({
                 setEditor((currentEditor) => ({
                     targetKey: currentEditor?.targetKey,
                     targetMediaId: currentEditor?.targetMediaId,
+                    queueProgress: currentEditor?.queueProgress,
                     source: {
                         url: previewUrl,
                         name: preparedFile.name,
@@ -490,6 +495,10 @@ export function ProductPhotoManager({
 
             setPendingPhotos(remainingFiles.map((file) => ({ file, origin })));
             setEditor({
+                queueProgress:
+                    preparedFiles.length > 1
+                        ? { current: 1, total: preparedFiles.length }
+                        : undefined,
                 source: {
                     url: createObjectUrl(firstFile, objectUrls),
                     name: firstFile.name,
@@ -556,6 +565,12 @@ export function ProductPhotoManager({
 
             if (nextPhoto) {
                 setEditor({
+                    queueProgress: editor.queueProgress
+                        ? {
+                              current: editor.queueProgress.current + 1,
+                              total: editor.queueProgress.total,
+                          }
+                        : undefined,
                     source: {
                         url: createObjectUrl(nextPhoto.file, objectUrls),
                         name: nextPhoto.file.name,
@@ -856,6 +871,7 @@ export function ProductPhotoManager({
                 <PhotoEditor
                     key={editor.source.url}
                     source={editor.source}
+                    queueProgress={editor.queueProgress}
                     onCancel={handleCancelEditor}
                     onApply={handleApplyEditedPhoto}
                     onRetake={
