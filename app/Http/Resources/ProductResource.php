@@ -30,6 +30,7 @@ class ProductResource extends JsonResource
             'code' => $this->code,
             'model' => $this->model,
             'name' => $this->name,
+            'is_active' => $this->is_active,
             'images' => $this->whenLoaded('media', fn () => $this->media
                 ->where('collection_name', Product::MEDIA_COLLECTION)
                 ->sortBy('order_column')

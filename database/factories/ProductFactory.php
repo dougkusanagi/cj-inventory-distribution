@@ -22,6 +22,7 @@ class ProductFactory extends Factory
             'model' => fake()->optional()->numerify('####'),
             'name' => fake()->words(3, true),
             'notes' => fake()->optional()->sentence(),
+            'is_active' => true,
         ];
     }
 }

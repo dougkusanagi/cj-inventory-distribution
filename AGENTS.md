@@ -22,6 +22,9 @@ Depois, inspecione o código e os componentes relacionados antes de propor ou im
 ## Regras de domínio
 
 - Preserve compatibilidade com tamanhos numéricos e alfabéticos.
+- Não introduza presets de tamanho masculino nem tamanho único sem um requisito
+  explícito do usuário. As grades disponíveis atualmente são numérica feminina,
+  por letras e personalizada.
 - O campo `model` do produto é opcional.
 - O código interno do produto é obrigatório e gerado pelo sistema.
 - `Reposição`, `Grade Nova` e `Grade Furada` classificam uma oferta de estoque, não o produto.

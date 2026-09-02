@@ -37,6 +37,7 @@ Campos principais:
 - modelo opcional
 - código interno automático
 - observação
+- status ativo/inativo independente do estoque
 
 ### Variação
 
@@ -51,7 +52,6 @@ Exemplos:
 - `M`
 - `G`
 - `GG`
-- `U`
 
 O sistema não deve assumir que tamanho é numérico.
 
@@ -69,8 +69,9 @@ Ela guarda:
 - status ativo/inativo
 
 O tipo pertence à oferta de estoque, e não ao produto.
-Desativar a exibição no catálogo preserva os dados da oferta para edição ou
-reativação posterior.
+Ativar ou desativar o produto não altera os dados da oferta de estoque.
+Desativar a exibição de uma oferta no catálogo também preserva seus dados para
+edição ou reativação posterior.
 Nas ofertas com volumes, quando a quantidade de sacos chega a zero, a oferta
 deixa de aparecer no catálogo das vendedoras.
 
