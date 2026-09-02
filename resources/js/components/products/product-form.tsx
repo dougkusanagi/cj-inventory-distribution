@@ -112,6 +112,20 @@ function stockOfferRequiresVolumes(type: StockOfferType | ''): boolean {
     return type === 'replenishment' || type === 'broken_grade';
 }
 
+function hasStockOfferData(
+    data: Pick<ProductFormData, 'total_quantity' | 'volumes' | 'variants'>,
+): boolean {
+    return (
+        Number(data.total_quantity) > 0 ||
+        Number(data.volumes) > 0 ||
+        data.variants.some(
+            (variant) =>
+                variant.is_active ||
+                (variant.quantity !== null && variant.quantity !== ''),
+        )
+    );
+}
+
 function detectPreset(variants: Array<{ size: string }>): SizePresetId {
     const sizes = variants.map((variant) => variant.size.toUpperCase().trim());
 
@@ -229,6 +243,19 @@ export function ProductForm({ product }: ProductFormProps) {
         });
     }, [form.errors, form.processing, hasErrors]);
 
+    const updateStockData = (
+        updater: (previousData: ProductFormData) => ProductFormData,
+    ) => {
+        form.setData((previousData) => {
+            const nextData = updater(previousData);
+
+            return {
+                ...nextData,
+                has_stock_offer: hasStockOfferData(nextData),
+            };
+        });
+    };
+
     const handlePresetChange = (presetId: string) => {
         const nextPreset = sizePresets.find((p) => p.id === presetId);
 
@@ -261,14 +288,14 @@ export function ProductForm({ product }: ProductFormProps) {
             return;
         }
 
-        form.setData(
-            'variants',
-            nextPreset.sizes.map((size) => ({
+        updateStockData((previousData) => ({
+            ...previousData,
+            variants: nextPreset.sizes.map((size) => ({
                 size,
                 is_active: currentVariants.get(size)?.is_active ?? false,
                 quantity: currentVariants.get(size)?.quantity ?? null,
             })),
-        );
+        }));
     };
 
     const updateVariantSize = (index: number, size: string) => {
@@ -289,18 +316,18 @@ export function ProductForm({ product }: ProductFormProps) {
     };
 
     const removeCustomSize = (index: number) => {
-        form.setData(
-            'variants',
-            form.data.variants.filter(
+        updateStockData((previousData) => ({
+            ...previousData,
+            variants: previousData.variants.filter(
                 (_, variantIndex) => variantIndex !== index,
             ),
-        );
+        }));
     };
 
     const selectStockOfferType = (value: string) => {
         const type = value as StockOfferType;
 
-        form.setData((previousData) => ({
+        updateStockData((previousData) => ({
             ...previousData,
             stock_offer_type: type,
             volumes: stockOfferRequiresVolumes(type)
@@ -309,22 +336,14 @@ export function ProductForm({ product }: ProductFormProps) {
         }));
     };
 
-    const toggleStockOffer = (hasStockOffer: boolean) => {
-        form.setData((previousData) => ({
-            ...previousData,
-            has_stock_offer: hasStockOffer,
-            stock_offer_type: previousData.stock_offer_type || 'new_grade',
-        }));
-    };
-
     const toggleProductActive = (isActive: boolean) => {
         form.setData('is_active', isActive);
     };
 
     const updateVariantActive = (index: number, isActive: boolean) => {
-        form.setData(
-            'variants',
-            form.data.variants.map((variant, variantIndex) =>
+        updateStockData((previousData) => ({
+            ...previousData,
+            variants: previousData.variants.map((variant, variantIndex) =>
                 variantIndex === index
                     ? {
                           ...variant,
@@ -333,32 +352,32 @@ export function ProductForm({ product }: ProductFormProps) {
                       }
                     : variant,
             ),
-        );
+        }));
     };
 
     const setAllVariantsActive = (isActive: boolean) => {
-        form.setData(
-            'variants',
-            form.data.variants.map((variant) => ({
+        updateStockData((previousData) => ({
+            ...previousData,
+            variants: previousData.variants.map((variant) => ({
                 ...variant,
                 is_active: isActive,
                 quantity: isActive ? variant.quantity : null,
             })),
-        );
+        }));
     };
 
     const updateVariantQuantity = (index: number, rawValue: string) => {
         const sanitized =
             rawValue === '' ? null : Math.max(0, parseInt(rawValue, 10) || 0);
 
-        form.setData(
-            'variants',
-            form.data.variants.map((variant, variantIndex) =>
+        updateStockData((previousData) => ({
+            ...previousData,
+            variants: previousData.variants.map((variant, variantIndex) =>
                 variantIndex === index
                     ? { ...variant, quantity: sanitized }
                     : variant,
             ),
-        );
+        }));
     };
 
     const sumOfVariantQuantities = form.data.variants.reduce((acc, variant) => {
@@ -382,18 +401,11 @@ export function ProductForm({ product }: ProductFormProps) {
             variant.quantity !== '',
     );
 
-    const hasCurrentStockData =
-        Number(form.data.total_quantity) > 0 ||
-        Number(form.data.volumes) > 0 ||
-        form.data.variants.some(
-            (variant) =>
-                variant.is_active ||
-                (variant.quantity !== null && variant.quantity !== ''),
-        );
+    const hasCurrentStockData = hasStockOfferData(form.data);
 
     const clearCurrentStock = () => {
         const confirmed = window.confirm(
-            'Isso retirará o produto do catálogo, zerará o estoque e os sacos disponíveis e limpará as quantidades deste lote. Deseja continuar?',
+            'Isso retirará a oferta de estoque do catálogo, zerará o estoque e os sacos disponíveis e limpará as quantidades deste lote. Deseja continuar?',
         );
 
         if (!confirmed) {
@@ -416,7 +428,10 @@ export function ProductForm({ product }: ProductFormProps) {
     };
 
     const applySumAsTotal = () => {
-        form.setData('total_quantity', sumOfVariantQuantities);
+        updateStockData((previousData) => ({
+            ...previousData,
+            total_quantity: sumOfVariantQuantities,
+        }));
     };
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -465,6 +480,34 @@ export function ProductForm({ product }: ProductFormProps) {
                 </div>
             )}
 
+            <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
+                <label
+                    htmlFor="is-active"
+                    className="flex min-h-12 cursor-pointer items-center justify-between gap-4 p-5 select-none sm:p-6"
+                >
+                    <div className="grid gap-1">
+                        <p className="text-sm font-semibold text-foreground">
+                            Produto ativo
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            {form.data.is_active
+                                ? 'O produto poderá aparecer no catálogo quando houver estoque disponível.'
+                                : 'O produto ficará oculto do catálogo, sem alterar o estoque.'}
+                        </p>
+                    </div>
+                    <Switch
+                        id="is-active"
+                        checked={form.data.is_active}
+                        onCheckedChange={toggleProductActive}
+                        aria-label={
+                            form.data.is_active
+                                ? 'Desativar produto'
+                                : 'Ativar produto'
+                        }
+                    />
+                </label>
+            </Card>
+
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
                 {/* 1. Identidade da peça */}
                 <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
@@ -481,42 +524,14 @@ export function ProductForm({ product }: ProductFormProps) {
                     </CardHeader>
                     <CardContent className="grid gap-5 p-5 pt-0 sm:p-6 sm:pt-0">
                         {isEditing && (
-                            <>
-                                <div className="flex items-center justify-between rounded-xl bg-muted px-4 py-3">
-                                    <span className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
-                                        Código interno
-                                    </span>
-                                    <span className="font-mono text-sm font-semibold text-foreground">
-                                        {product.code}
-                                    </span>
-                                </div>
-
-                                <label
-                                    htmlFor="is-active"
-                                    className="flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-xl border border-border/70 px-4 py-3 select-none"
-                                >
-                                    <div className="grid gap-1">
-                                        <p className="text-sm font-semibold text-foreground">
-                                            Produto ativo
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {form.data.is_active
-                                                ? 'Pode aparecer no catálogo quando houver uma oferta disponível.'
-                                                : 'Fica oculto sem alterar os dados de estoque.'}
-                                        </p>
-                                    </div>
-                                    <Switch
-                                        id="is-active"
-                                        checked={form.data.is_active}
-                                        onCheckedChange={toggleProductActive}
-                                        aria-label={
-                                            form.data.is_active
-                                                ? 'Desativar produto'
-                                                : 'Ativar produto'
-                                        }
-                                    />
-                                </label>
-                            </>
+                            <div className="flex items-center justify-between rounded-xl bg-muted px-4 py-3">
+                                <span className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                                    Código interno
+                                </span>
+                                <span className="font-mono text-sm font-semibold text-foreground">
+                                    {product.code}
+                                </span>
+                            </div>
                         )}
 
                         <div className="grid gap-2">
@@ -794,65 +809,25 @@ export function ProductForm({ product }: ProductFormProps) {
             {/* 4. Disponibilidade do lote */}
             <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
                 <CardHeader className="p-5 sm:p-6">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="grid gap-1.5">
-                            <div className="flex items-center gap-2">
-                                <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                    <Package className="size-4" />
-                                </span>
-                                <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
-                                    Disponibilidade em estoque
-                                </p>
-                            </div>
-                            <h2 className="text-xl tracking-tight sm:text-2xl">
-                                Estoque disponível
-                            </h2>
-                            <CardDescription className="text-xs sm:text-sm">
-                                {form.data.has_stock_offer
-                                    ? 'Informe o tipo e as quantidades do estoque atual.'
-                                    : 'O produto pode ser salvo sem uma oferta de estoque.'}
-                            </CardDescription>
+                    <div className="grid gap-1.5">
+                        <div className="flex items-center gap-2">
+                            <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <Package className="size-4" />
+                            </span>
+                            <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
+                                Disponibilidade em estoque
+                            </p>
                         </div>
-
-                        <label
-                            htmlFor="has-stock-offer"
-                            className="flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-xl border border-border/70 px-4 py-3 select-none sm:w-80"
-                        >
-                            <div className="grid gap-1">
-                                <p className="text-sm font-semibold text-foreground">
-                                    {isEditing
-                                        ? 'Oferta ativa no catálogo'
-                                        : 'Cadastrar estoque agora'}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                    {form.data.has_stock_offer
-                                        ? 'A oferta será exibida quando houver quantidade disponível.'
-                                        : isEditing
-                                          ? 'Os dados do lote ficam preservados.'
-                                          : 'Ative para informar o lote inicial.'}
-                                </p>
-                            </div>
-                            <Switch
-                                id="has-stock-offer"
-                                checked={form.data.has_stock_offer}
-                                onCheckedChange={toggleStockOffer}
-                                aria-label={
-                                    form.data.has_stock_offer
-                                        ? 'Ocultar oferta do catálogo'
-                                        : isEditing
-                                          ? 'Exibir oferta no catálogo'
-                                          : 'Cadastrar estoque agora'
-                                }
-                            />
-                        </label>
+                        <h2 className="text-xl tracking-tight sm:text-2xl">
+                            Estoque disponível
+                        </h2>
+                        <CardDescription className="text-xs sm:text-sm">
+                            Informe o tipo e as quantidades do estoque atual.
+                            Deixe os campos vazios se ainda não houver estoque.
+                        </CardDescription>
                     </div>
                 </CardHeader>
-                <CardContent
-                    className={cn(
-                        'grid gap-7 p-5 pt-0 sm:p-6 sm:pt-0',
-                        !isEditing && !form.data.has_stock_offer && 'hidden',
-                    )}
-                >
+                <CardContent className="grid gap-7 p-5 pt-0 sm:p-6 sm:pt-0">
                     <fieldset className="grid gap-3">
                         <legend className="text-sm font-semibold text-foreground">
                             Tipo do estoque
@@ -921,18 +896,20 @@ export function ProductForm({ product }: ProductFormProps) {
                                     inputMode="numeric"
                                     value={form.data.total_quantity ?? ''}
                                     onChange={(event) =>
-                                        form.setData(
-                                            'total_quantity',
-                                            event.target.value === ''
-                                                ? null
-                                                : Math.max(
-                                                      0,
-                                                      parseInt(
-                                                          event.target.value,
-                                                          10,
-                                                      ) || 0,
-                                                  ),
-                                        )
+                                        updateStockData((previousData) => ({
+                                            ...previousData,
+                                            total_quantity:
+                                                event.target.value === ''
+                                                    ? null
+                                                    : Math.max(
+                                                          0,
+                                                          parseInt(
+                                                              event.target
+                                                                  .value,
+                                                              10,
+                                                          ) || 0,
+                                                      ),
+                                        }))
                                     }
                                     placeholder="Ex.: 30"
                                     className="h-11 text-base sm:h-10 sm:text-sm"
@@ -975,26 +952,20 @@ export function ProductForm({ product }: ProductFormProps) {
                                         inputMode="numeric"
                                         value={form.data.volumes ?? ''}
                                         onChange={(event) =>
-                                            form.setData(
-                                                'volumes',
-                                                event.target.value === ''
-                                                    ? null
-                                                    : Math.max(
-                                                          form.data
-                                                              .has_stock_offer
-                                                              ? 1
-                                                              : 0,
-                                                          parseInt(
-                                                              event.target
-                                                                  .value,
-                                                              10,
-                                                          ) ||
-                                                              (form.data
-                                                                  .has_stock_offer
-                                                                  ? 1
-                                                                  : 0),
-                                                      ),
-                                            )
+                                            updateStockData((previousData) => ({
+                                                ...previousData,
+                                                volumes:
+                                                    event.target.value === ''
+                                                        ? null
+                                                        : Math.max(
+                                                              0,
+                                                              parseInt(
+                                                                  event.target
+                                                                      .value,
+                                                                  10,
+                                                              ) || 0,
+                                                          ),
+                                            }))
                                         }
                                         placeholder="Ex.: 12"
                                         className="h-11 text-base sm:h-10 sm:text-sm"
@@ -1190,8 +1161,8 @@ export function ProductForm({ product }: ProductFormProps) {
                                 Encerrar estoque atual
                             </p>
                             <p className="text-xs text-muted-foreground">
-                                Retira o produto do catálogo e limpa as
-                                quantidades deste lote ao salvar.
+                                Encerra a oferta atual e limpa as quantidades
+                                deste lote ao salvar.
                             </p>
                         </div>
                         <Button
