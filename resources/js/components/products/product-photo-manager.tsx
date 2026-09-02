@@ -191,7 +191,7 @@ function createInitialPhotoState({
         ...value.map((file): NewPhotoItem => ({
             key: newPhotoKey(),
             kind: 'new',
-            id: crypto.randomUUID(),
+            id: createPhotoId(),
             file,
             previewUrl: createObjectUrl(file, objectUrls),
             name: file.name,
@@ -297,7 +297,24 @@ function existingPhotoKey(id: number): string {
 }
 
 function newPhotoKey(): string {
-    return 'new:' + crypto.randomUUID();
+    return 'new:' + createPhotoId();
+}
+
+function createPhotoId(): string {
+    if (
+        typeof crypto !== 'undefined' &&
+        typeof crypto.randomUUID === 'function'
+    ) {
+        return crypto.randomUUID();
+    }
+
+    return (
+        Date.now().toString(36) +
+        '-' +
+        Math.random().toString(36).slice(2) +
+        '-' +
+        Math.random().toString(36).slice(2)
+    );
 }
 
 function createObjectUrl(file: File, objectUrls: Set<string>): string {
@@ -513,7 +530,7 @@ export function ProductPhotoManager({
             const editedItem: NewPhotoItem = {
                 key: editor.targetKey ?? newPhotoKey(),
                 kind: 'new',
-                id: crypto.randomUUID(),
+                id: createPhotoId(),
                 file: editedFile,
                 previewUrl: createObjectUrl(editedFile, objectUrls),
                 name: editedFile.name,
