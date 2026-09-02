@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
+import { useSidebar } from '@/components/ui/sidebar';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useScrollVisibility } from '@/hooks/use-scroll-visibility';
@@ -150,6 +151,7 @@ export function ProductForm({ product }: ProductFormProps) {
     const radioGroupId = useId();
     const formRef = useRef<HTMLFormElement>(null);
     const submittingRef = useRef(false);
+    const { isMobile, state: sidebarState } = useSidebar();
     const { isVisible: isFooterVisible, show: showFooter } =
         useScrollVisibility();
 
@@ -1090,7 +1092,11 @@ export function ProductForm({ product }: ProductFormProps) {
             <div
                 onFocusCapture={showFooter}
                 className={cn(
-                    'fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 shadow-[0_-6px_24px_rgba(0,0,0,0.08)] backdrop-blur transition-transform duration-200 ease-out will-change-transform sm:p-4 md:right-0 md:left-(--sidebar-width) md:peer-data-[state=collapsed]:left-[calc(var(--sidebar-width-icon)+1rem)]',
+                    'fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 shadow-[0_-6px_24px_rgba(0,0,0,0.08)] backdrop-blur transition-[left,transform] duration-200 ease-out will-change-transform sm:p-4',
+                    !isMobile &&
+                        (sidebarState === 'collapsed'
+                            ? 'md:left-[calc(var(--sidebar-width-icon)+1rem)]'
+                            : 'md:left-(--sidebar-width)'),
                     isFooterVisible ? 'translate-y-0' : 'translate-y-full',
                 )}
             >
