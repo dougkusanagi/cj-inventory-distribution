@@ -465,62 +465,6 @@ export function ProductForm({ product }: ProductFormProps) {
                 </div>
             )}
 
-            <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
-                <label
-                    htmlFor="is-active"
-                    className="flex min-h-12 cursor-pointer items-center justify-between gap-4 p-5 select-none sm:p-6"
-                >
-                    <div className="grid gap-1">
-                        <p className="text-sm font-semibold text-foreground">
-                            Produto ativo
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                            {form.data.is_active
-                                ? 'O produto poderá aparecer no catálogo quando houver uma oferta disponível.'
-                                : 'O produto ficará oculto do catálogo, sem alterar o estoque.'}
-                        </p>
-                    </div>
-                    <Switch
-                        id="is-active"
-                        checked={form.data.is_active}
-                        onCheckedChange={toggleProductActive}
-                        aria-label={
-                            form.data.is_active
-                                ? 'Desativar produto'
-                                : 'Ativar produto'
-                        }
-                    />
-                </label>
-            </Card>
-
-            <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
-                <label
-                    htmlFor="has-stock-offer"
-                    className="flex min-h-12 cursor-pointer items-center justify-between gap-4 p-5 select-none sm:p-6"
-                >
-                    <div className="grid gap-1">
-                        <p className="text-sm font-semibold text-foreground">
-                            Exibir oferta no catálogo
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                            {form.data.has_stock_offer
-                                ? 'A oferta aparecerá quando o produto estiver ativo e houver estoque.'
-                                : 'A oferta ficará oculta, sem apagar os dados de estoque.'}
-                        </p>
-                    </div>
-                    <Switch
-                        id="has-stock-offer"
-                        checked={form.data.has_stock_offer}
-                        onCheckedChange={toggleStockOffer}
-                        aria-label={
-                            form.data.has_stock_offer
-                                ? 'Ocultar oferta do catálogo'
-                                : 'Exibir oferta no catálogo'
-                        }
-                    />
-                </label>
-            </Card>
-
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
                 {/* 1. Identidade da peça */}
                 <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
@@ -537,14 +481,42 @@ export function ProductForm({ product }: ProductFormProps) {
                     </CardHeader>
                     <CardContent className="grid gap-5 p-5 pt-0 sm:p-6 sm:pt-0">
                         {isEditing && (
-                            <div className="flex items-center justify-between rounded-xl bg-muted px-4 py-3">
-                                <span className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
-                                    Código interno
-                                </span>
-                                <span className="font-mono text-sm font-semibold text-foreground">
-                                    {product.code}
-                                </span>
-                            </div>
+                            <>
+                                <div className="flex items-center justify-between rounded-xl bg-muted px-4 py-3">
+                                    <span className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                                        Código interno
+                                    </span>
+                                    <span className="font-mono text-sm font-semibold text-foreground">
+                                        {product.code}
+                                    </span>
+                                </div>
+
+                                <label
+                                    htmlFor="is-active"
+                                    className="flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-xl border border-border/70 px-4 py-3 select-none"
+                                >
+                                    <div className="grid gap-1">
+                                        <p className="text-sm font-semibold text-foreground">
+                                            Produto ativo
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {form.data.is_active
+                                                ? 'Pode aparecer no catálogo quando houver uma oferta disponível.'
+                                                : 'Fica oculto sem alterar os dados de estoque.'}
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        id="is-active"
+                                        checked={form.data.is_active}
+                                        onCheckedChange={toggleProductActive}
+                                        aria-label={
+                                            form.data.is_active
+                                                ? 'Desativar produto'
+                                                : 'Ativar produto'
+                                        }
+                                    />
+                                </label>
+                            </>
                         )}
 
                         <div className="grid gap-2">
@@ -822,22 +794,65 @@ export function ProductForm({ product }: ProductFormProps) {
             {/* 4. Disponibilidade do lote */}
             <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
                 <CardHeader className="p-5 sm:p-6">
-                    <div className="flex items-center gap-2">
-                        <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <Package className="size-4" />
-                        </span>
-                        <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
-                            Disponibilidade em estoque
-                        </p>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="grid gap-1.5">
+                            <div className="flex items-center gap-2">
+                                <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                    <Package className="size-4" />
+                                </span>
+                                <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
+                                    Disponibilidade em estoque
+                                </p>
+                            </div>
+                            <h2 className="text-xl tracking-tight sm:text-2xl">
+                                Estoque disponível
+                            </h2>
+                            <CardDescription className="text-xs sm:text-sm">
+                                {form.data.has_stock_offer
+                                    ? 'Informe o tipo e as quantidades do estoque atual.'
+                                    : 'O produto pode ser salvo sem uma oferta de estoque.'}
+                            </CardDescription>
+                        </div>
+
+                        <label
+                            htmlFor="has-stock-offer"
+                            className="flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-xl border border-border/70 px-4 py-3 select-none sm:w-80"
+                        >
+                            <div className="grid gap-1">
+                                <p className="text-sm font-semibold text-foreground">
+                                    {isEditing
+                                        ? 'Oferta ativa no catálogo'
+                                        : 'Cadastrar estoque agora'}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {form.data.has_stock_offer
+                                        ? 'A oferta será exibida quando houver quantidade disponível.'
+                                        : isEditing
+                                          ? 'Os dados do lote ficam preservados.'
+                                          : 'Ative para informar o lote inicial.'}
+                                </p>
+                            </div>
+                            <Switch
+                                id="has-stock-offer"
+                                checked={form.data.has_stock_offer}
+                                onCheckedChange={toggleStockOffer}
+                                aria-label={
+                                    form.data.has_stock_offer
+                                        ? 'Ocultar oferta do catálogo'
+                                        : isEditing
+                                          ? 'Exibir oferta no catálogo'
+                                          : 'Cadastrar estoque agora'
+                                }
+                            />
+                        </label>
                     </div>
-                    <h2 className="text-xl tracking-tight sm:text-2xl">
-                        Estoque disponível
-                    </h2>
-                    <CardDescription className="text-xs sm:text-sm">
-                        Informe o tipo e as quantidades do estoque atual.
-                    </CardDescription>
                 </CardHeader>
-                <CardContent className="grid gap-7 p-5 pt-0 sm:p-6 sm:pt-0">
+                <CardContent
+                    className={cn(
+                        'grid gap-7 p-5 pt-0 sm:p-6 sm:pt-0',
+                        !isEditing && !form.data.has_stock_offer && 'hidden',
+                    )}
+                >
                     <fieldset className="grid gap-3">
                         <legend className="text-sm font-semibold text-foreground">
                             Tipo do estoque
