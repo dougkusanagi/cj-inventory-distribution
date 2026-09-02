@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -20,6 +21,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property string|null $model
  * @property string $name
  * @property string|null $notes
+ * @property-read StockOffer|null $latestOffer
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -71,14 +73,13 @@ class Product extends Model implements HasMedia
     }
 
     /**
-     * Get the latest active stock offer for the product.
+     * Get the latest stock offer for the product, including hidden offers.
      *
      * @return HasOne<StockOffer, $this>
      */
     public function latestOffer(): HasOne
     {
         return $this->hasOne(StockOffer::class)
-            ->where('is_active', true)
             ->latestOfMany();
     }
 
@@ -90,8 +91,9 @@ class Product extends Model implements HasMedia
     public function latestAvailableOffer(): HasOne
     {
         return $this->hasOne(StockOffer::class)
-            ->availableForCatalog()
-            ->latestOfMany();
+            ->ofMany(['id' => 'MAX'], function (Builder $query): void {
+                StockOffer::applyAvailableForCatalog($query);
+            });
     }
 
     /**

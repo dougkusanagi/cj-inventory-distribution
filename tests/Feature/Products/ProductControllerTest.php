@@ -86,6 +86,34 @@ test('authenticated users can open the product forms', function () {
         );
 });
 
+test('editing a hidden product keeps its stock data available', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $variant = $product->variants()->create(['size' => 'M', 'sort_order' => 0]);
+    $offer = $product->offers()->create([
+        'type' => StockOfferType::Replenishment,
+        'total_quantity' => 10,
+        'volumes' => 2,
+        'is_active' => false,
+    ]);
+    $offer->items()->create([
+        'product_variant_id' => $variant->id,
+        'quantity' => 10,
+        'is_active' => true,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('products.edit', $product))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('product.has_stock_offer', false)
+            ->where('product.stock_offer_type', StockOfferType::Replenishment->value)
+            ->where('product.total_quantity', 10)
+            ->where('product.volumes', 2)
+            ->where('product.variants.0.is_active', true)
+            ->where('product.variants.0.quantity', 10),
+        );
+});
+
 test('authenticated users can create a product with optional model, ordered sizes and stock', function () {
     $user = User::factory()->create();
 
@@ -214,6 +242,12 @@ test('the shared catalog excludes exhausted volume-based stock offers', function
         'volumes' => null,
         'is_active' => true,
     ]);
+    $zeroStockOffer = $product->offers()->create([
+        'type' => StockOfferType::NewGrade,
+        'total_quantity' => 0,
+        'volumes' => null,
+        'is_active' => true,
+    ]);
 
     $availableOfferIds = StockOffer::query()
         ->whereBelongsTo($product)
@@ -225,6 +259,7 @@ test('the shared catalog excludes exhausted volume-based stock offers', function
     expect($availableOfferIds)->toBe([$availableOffer->id, $newGradeOffer->id]);
     expect($availableOfferIds)->not->toContain($exhaustedOffer->id);
     expect($availableOfferIds)->not->toContain($inactiveOffer->id);
+    expect($availableOfferIds)->not->toContain($zeroStockOffer->id);
     expect($product->fresh()->latestAvailableOffer->is($newGradeOffer))->toBeTrue();
 });
 
@@ -446,13 +481,14 @@ test('authenticated users can update product details, sizes and stock without ch
     expect($product->latestOffer->items->pluck('quantity')->all())->toBe([10, null]);
 });
 
-test('updating a product without a stock offer deactivates its active offer', function () {
+test('hiding a product from the catalog preserves its stock data', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
     $variant = $product->variants()->create(['size' => 'M', 'sort_order' => 0]);
     $offer = $product->offers()->create([
         'type' => StockOfferType::Replenishment,
         'total_quantity' => 10,
+        'volumes' => 2,
     ]);
     $offer->items()->create([
         'product_variant_id' => $variant->id,
@@ -463,6 +499,48 @@ test('updating a product without a stock offer deactivates its active offer', fu
     $response = $this->actingAs($user)->put(route('products.update', $product), [
         'name' => $product->name,
         'has_stock_offer' => false,
+        'stock_offer_type' => StockOfferType::Replenishment->value,
+        'total_quantity' => 10,
+        'volumes' => 2,
+        'variants' => [
+            ['size' => 'M', 'quantity' => 10, 'is_active' => true],
+        ],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $offer->refresh();
+    expect($offer->is_active)->toBeFalse();
+    expect($offer->total_quantity)->toBe(10);
+    expect($offer->volumes)->toBe(2);
+    expect($offer->items()->sole()->is_active)->toBeTrue();
+    expect($offer->items()->sole()->quantity)->toBe(10);
+});
+
+test('ending the current stock clears the lot and hides it from the catalog', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $variant = $product->variants()->create(['size' => 'M', 'sort_order' => 0]);
+    $offer = $product->offers()->create([
+        'type' => StockOfferType::Replenishment,
+        'total_quantity' => 10,
+        'volumes' => 2,
+        'is_active' => true,
+    ]);
+    $offer->items()->create([
+        'product_variant_id' => $variant->id,
+        'quantity' => 10,
+        'is_active' => true,
+    ]);
+
+    $response = $this->actingAs($user)->put(route('products.update', $product), [
+        'name' => $product->name,
+        'has_stock_offer' => false,
+        'stock_offer_type' => StockOfferType::Replenishment->value,
+        'total_quantity' => 0,
+        'volumes' => 0,
         'variants' => [
             ['size' => 'M', 'quantity' => null, 'is_active' => false],
         ],
@@ -475,10 +553,12 @@ test('updating a product without a stock offer deactivates its active offer', fu
     $offer->refresh();
     expect($offer->is_active)->toBeFalse();
     expect($offer->total_quantity)->toBe(0);
-    expect($offer->items()->count())->toBe(0);
+    expect($offer->volumes)->toBe(0);
+    expect($offer->items()->sole()->is_active)->toBeFalse();
+    expect($offer->items()->sole()->quantity)->toBeNull();
 });
 
-test('updating a product with zero stock deactivates its previous offer', function () {
+test('zero stock remains editable but is excluded from the shared catalog', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
     $variant = $product->variants()->create(['size' => 'M', 'sort_order' => 0]);
@@ -505,9 +585,16 @@ test('updating a product with zero stock deactivates its previous offer', functi
         ->assertRedirect(route('products.index'));
 
     $offer->refresh();
-    expect($offer->is_active)->toBeFalse();
+    expect($offer->is_active)->toBeTrue();
     expect($offer->total_quantity)->toBe(0);
-    expect($offer->items()->count())->toBe(0);
+    expect($offer->items()->sole()->is_active)->toBeFalse();
+    expect($offer->items()->sole()->quantity)->toBeNull();
+    expect(
+        StockOffer::query()
+            ->availableForCatalog()
+            ->whereKey($offer->getKey())
+            ->exists(),
+    )->toBeFalse();
 });
 
 test('product images can be replaced and removed from the media collection', function () {
