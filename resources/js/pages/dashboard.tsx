@@ -168,7 +168,8 @@ export default function Dashboard({ stats }: DashboardProps) {
                         label="produtos com estoque"
                         value={stats.activeOffers.toString().padStart(2, '0')}
                         description={
-                            stats.stockUnits + ' peças disponíveis para distribuição.'
+                            stats.stockUnits +
+                            ' peças disponíveis para distribuição.'
                         }
                         icon={Warehouse}
                     />

@@ -13,8 +13,8 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { destroy } from '@/actions/App/Http/Controllers/ProductController';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
@@ -92,8 +92,20 @@ function ProductImage({
     );
 }
 
-function ProductVariants({ product }: { product: Product }) {
-    if (product.variants.length === 0) {
+function productSizes(product: Product): string[] {
+    return Array.from(
+        new Set(
+            product.stock_volumes.flatMap((volume) =>
+                volume.items.map((item) => item.size),
+            ),
+        ),
+    );
+}
+
+function ProductSizes({ product }: { product: Product }) {
+    const sizes = productSizes(product);
+
+    if (sizes.length === 0) {
         return (
             <span className="text-xs text-muted-foreground">
                 Sem grade cadastrada
@@ -101,12 +113,12 @@ function ProductVariants({ product }: { product: Product }) {
         );
     }
 
-    return product.variants.map((variant) => (
+    return sizes.map((size) => (
         <span
-            key={variant.id}
+            key={size}
             className="rounded-md bg-muted px-2 py-1 font-mono text-xs font-medium break-words text-foreground"
         >
-            {variant.size}
+            {size}
         </span>
     ));
 }
@@ -178,7 +190,7 @@ function ProductCard({
                 </div>
 
                 <div className="flex min-h-7 flex-wrap gap-1.5">
-                    <ProductVariants product={product} />
+                    <ProductSizes product={product} />
                 </div>
 
                 <div className="mt-auto grid gap-4 border-t border-border pt-4">
@@ -189,6 +201,15 @@ function ProductCard({
                         <span className="text-sm font-semibold text-card-foreground">
                             {product.total_quantity ?? 0} peças
                         </span>
+                        {product.stock_volume_count !== undefined &&
+                        product.stock_volume_count > 0 ? (
+                            <span className="text-xs text-muted-foreground">
+                                · {product.stock_volume_count}{' '}
+                                {product.stock_volume_count === 1
+                                    ? 'saco'
+                                    : 'sacos'}
+                            </span>
+                        ) : null}
                         <Button
                             variant="secondary"
                             size="sm"
@@ -293,7 +314,9 @@ function ProductTable({
                                             </span>
                                         </div>
                                         <div className="mt-2">
-                                            <DistributionStatus product={product} />
+                                            <DistributionStatus
+                                                product={product}
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -303,7 +326,7 @@ function ProductTable({
                                     Tamanhos
                                 </span>
                                 <div className="flex max-w-full flex-wrap gap-1.5">
-                                    <ProductVariants product={product} />
+                                    <ProductSizes product={product} />
                                 </div>
                             </td>
                             <td className="block p-0 lg:table-cell lg:px-5 lg:py-4 lg:align-middle">
@@ -317,7 +340,11 @@ function ProductTable({
                                             {product.total_quantity}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            unidades
+                                            {product.stock_volume_count !==
+                                                undefined &&
+                                            product.stock_volume_count > 0
+                                                ? `${product.stock_volume_count} ${product.stock_volume_count === 1 ? 'saco' : 'sacos'}`
+                                                : 'unidades'}
                                         </p>
                                     </>
                                 ) : (

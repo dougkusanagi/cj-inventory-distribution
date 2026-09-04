@@ -61,6 +61,5 @@ export default function ConfirmPassword() {
 
 ConfirmPassword.layout = {
     title: 'Confirmar senha',
-    description:
-        'Esta é uma área segura. Confirme sua senha para continuar.',
+    description: 'Esta é uma área segura. Confirme sua senha para continuar.',
 };

@@ -2,6 +2,19 @@
 
 O roadmap descreve direção, não compromisso de implementação imediata.
 
+## Refatoração de estoque por saco
+
+A mudança da grade e do estoque para sacos individuais possui especificação e
+andamento próprios:
+
+- [Visão geral da refatoração](refactors/stock-by-volume/README.md)
+- [Tasklist e registro de execução](refactors/stock-by-volume/TASKLIST.md)
+
+A refatoração foi concluída no ambiente de desenvolvimento: cadastro, catálogo,
+dashboard e editor mobile usam `StockOfferVolume` como fonte canônica. Como o
+sistema ainda não foi lançado, não houve backfill nem reconciliação de dados
+legados; as migrations atuais já criam somente o modelo de sacos.
+
 ## Fase 1 — Cadastro de produtos
 
 - [x] CRUD de produtos
