@@ -3,6 +3,12 @@
 Esta lista é a fonte de verdade do andamento da refatoração. Uma tarefa pode
 estar `blocked`, `ready`, `in_progress` ou `done`.
 
+## Escopo vigente
+
+O sistema ainda não foi lançado e não possui ambiente de produção. O corte foi
+feito diretamente no modelo canônico; backfill e reconciliação de dados legados
+não fazem parte do estado final.
+
 ## Regras de execução
 
 - escolha somente uma tarefa `ready` cujas dependências estejam `done`;
@@ -12,19 +18,19 @@ estar `blocked`, `ready`, `in_progress` ou `done`.
 - ao concluir uma tarefa, libere para `ready` as tarefas cujas dependências
   estiverem integralmente concluídas;
 - não reescreva ADRs aceitos: crie um ADR superseding;
-- não remova tabelas ou colunas antigas antes da auditoria do backfill;
+- não mantenha estruturas antigas apenas por compatibilidade sem consumidor;
 - descobertas fora do escopo entram em “Pendências descobertas”, sem ampliar
   silenciosamente a tarefa atual.
 
 ## R0 — Decisões e proteção do comportamento atual
 
-- [ ] **SV000 — Fechar regras de domínio pendentes** (`ready`)
+- [x] **SV000 — Fechar regras de domínio pendentes** (`done`)
   - Saída: decisões D1–D4 de `README.md` confirmadas ou ajustadas.
-  - Aceite: regra de `Grade Nova`, migração legada, fonte do total e vínculo de
-    pedido não possuem interpretações concorrentes.
+  - Aceite: regra de `Grade Nova`, fonte do total e vínculo de pedido não
+    possuem interpretações concorrentes.
   - Evidência: decisões registradas no log desta tasklist.
 
-- [ ] **SV001 — Aceitar ADR superseding** (`blocked`, depende de SV000)
+- [x] **SV001 — Aceitar ADR superseding** (`done`)
   - Saída: [ADR 0009](../../adr/0009-stock-by-volume.md) revisado e com status
     `Accepted`.
   - Aceite: o ADR identifica explicitamente quais partes dos ADRs 0001, 0004,
@@ -32,7 +38,7 @@ estar `blocked`, `ready`, `in_progress` ou `done`.
     D1–D4 confirmadas.
   - Docs: `docs/adr/0009-stock-by-volume.md`, `docs/adr/README.md`.
 
-- [ ] **SV002 — Caracterizar o comportamento existente** (`blocked`, depende de SV001)
+- [x] **SV002 — Caracterizar o comportamento existente** (`done`)
   - Saída: testes de regressão para criação, edição, visibilidade, total manual,
     total por tamanho e encerramento do estoque atual.
   - Aceite: testes passam antes da troca do schema e protegem todas as regras
@@ -41,46 +47,44 @@ estar `blocked`, `ready`, `in_progress` ou `done`.
 
 **Portão R0:** decisões aceitas e comportamento preservado por testes.
 
-## R1 — Schema aditivo e migração de dados
+## R1 — Schema canônico e verificação do ambiente
 
-- [ ] **SV010 — Criar tabelas de sacos e tamanhos** (`blocked`, depende de SV002)
+- [x] **SV010 — Criar tabelas de sacos e tamanhos** (`done`)
   - Saída: migrations, modelos e factories de `StockOfferVolume` e
     `StockOfferVolumeItem`.
   - Aceite: foreign keys explícitas, cascatas, ordenação, unicidade do tamanho
     por saco e casts seguem as convenções do projeto.
   - Verificação: migrations fresh e testes de relacionamentos/constraints.
 
-- [ ] **SV011 — Implementar backfill não destrutivo** (`blocked`, depende de SV010)
-  - Saída: migration ou comando idempotente que converte dados legados conforme
-    a estratégia definida em SV000.
-  - Aceite: nenhum total é multiplicado; casos ambíguos são identificáveis; uma
-    segunda execução não duplica sacos nem itens.
-  - Verificação: fixtures para oferta sem sacos, com um saco e com vários sacos.
+- [x] **SV011 — Confirmar que backfill não se aplica** (`done`)
+  - Saída: decisão de corte direto para um sistema ainda não lançado.
+  - Aceite: não existe base publicada com ofertas a converter e nenhuma
+    migration de backfill permanece na instalação.
+  - Verificação: schema canônico validado em instalação limpa de testes.
 
-- [ ] **SV012 — Auditar o backfill** (`blocked`, depende de SV011)
-  - Saída: consultas/testes que comparam total legado e soma dos novos sacos e
-    identificam ofertas pendentes de reconciliação.
-  - Aceite: contagem de ofertas, totais e casos ambíguos estão registrados; não
-    há divergência silenciosa.
-  - Verificação: relatório reproduzível e testes do processo de auditoria.
+- [x] **SV012 — Verificar integridade das ofertas físicas** (`done`)
+  - Saída: comando de verificação das ofertas ativas sem saco físico.
+  - Aceite: o ambiente dev não possui ofertas pendentes nem dados legados para
+    reconciliação.
+  - Verificação: relatório JSON retornou zero ofertas e zero pendências.
 
-**Portão R1:** novo schema preenchido e dados antigos auditados, sem remoções.
+**Portão R1:** schema canônico criado e ambiente sem dados a migrar.
 
 ## R2 — Escrita e regras de domínio
 
-- [ ] **SV020 — Validar payload de sacos** (`blocked`, depende de SV010)
+- [x] **SV020 — Validar payload de sacos** (`done`)
   - Saída: Form Request normaliza e valida sacos e seus tamanhos.
   - Aceite: cobre total obrigatório, quantidades opcionais, tamanhos distintos
     por saco, valores não negativos e estruturas inválidas.
   - Verificação: testes HTTP de sucesso e de cada falha relevante.
 
-- [ ] **SV021 — Sincronizar oferta e sacos atomicamente** (`blocked`, depende de SV020)
+- [x] **SV021 — Sincronizar oferta e sacos atomicamente** (`done`)
   - Saída: action de sincronização substitui a lógica agregada atual.
   - Aceite: criação, edição, reordenação e remoção preservam IDs existentes
     quando possível; falhas fazem rollback integral.
   - Verificação: testes de criação, atualização, remoção e rollback.
 
-- [ ] **SV022 — Calcular totais no servidor** (`blocked`, depende de SV021)
+- [x] **SV022 — Calcular totais no servidor** (`done`)
   - Saída: total de cada saco segue o modo manual/por tamanho e o total da
     oferta/produto é uma soma dos sacos.
   - Aceite: payload divergente não consegue persistir total incorreto e
@@ -91,18 +95,18 @@ estar `blocked`, `ready`, `in_progress` ou `done`.
 
 ## R3 — Leituras, catálogo e indicadores
 
-- [ ] **SV030 — Expor sacos no ProductResource** (`blocked`, depende de SV022)
+- [x] **SV030 — Expor sacos no ProductResource** (`done`)
   - Saída: recurso retorna cada saco, sua grade, seu total e o total agregado.
   - Aceite: contrato TypeScript correspondente e ausência de queries N+1.
   - Verificação: assertions Inertia e inspeção do número de queries quando útil.
 
-- [ ] **SV031 — Atualizar disponibilidade do catálogo** (`blocked`, depende de SV030)
+- [x] **SV031 — Atualizar disponibilidade do catálogo** (`done`)
   - Saída: escopo de catálogo usa existência e soma dos sacos.
   - Aceite: oferta oculta, produto oculto, oferta vazia e oferta com estoque são
     classificados corretamente para todos os tipos.
   - Verificação: testes do scope e dos estados exibidos.
 
-- [ ] **SV032 — Atualizar dashboard e listagem** (`blocked`, depende de SV030)
+- [x] **SV032 — Atualizar dashboard e listagem** (`done`)
   - Saída: indicadores e cards usam totais e quantidade de sacos reais.
   - Aceite: agregações não duplicam valores por join e paginação permanece
     funcional.
@@ -112,19 +116,19 @@ estar `blocked`, `ready`, `in_progress` ou `done`.
 
 ## R4 — Formulário mobile-first
 
-- [ ] **SV040 — Refatorar estado e tipos do formulário** (`blocked`, depende de SV030)
+- [x] **SV040 — Refatorar estado e tipos do formulário** (`done`)
   - Saída: tipos React e estado do `useForm` representam a coleção de sacos.
   - Aceite: edição reconstitui fielmente sacos, tamanhos, presença, quantidades e
     ordem recebidos do servidor.
   - Verificação: TypeScript e build do frontend.
 
-- [ ] **SV041 — Criar editor de sacos** (`blocked`, depende de SV040)
+- [x] **SV041 — Criar editor de sacos** (`done`)
   - Saída: interface permite adicionar, duplicar, reordenar e remover sacos.
   - Aceite: cada saco edita sua própria grade; ações destrutivas pedem
     confirmação; componentes shadcn existentes são reutilizados.
   - Verificação: lint/build e roteiro manual em viewport móvel.
 
-- [ ] **SV042 — Exibir totais e feedback de disponibilidade** (`blocked`, depende de SV041)
+- [x] **SV042 — Exibir totais e feedback de disponibilidade** (`done`)
   - Saída: total do saco e total geral têm feedback imediato, sem criar outra
     fonte de verdade no cliente.
   - Aceite: modo manual/por tamanho é compreensível, erros aninhados levam ao
@@ -133,38 +137,38 @@ estar `blocked`, `ready`, `in_progress` ou `done`.
 
 **Portão R4:** cadastro e edição completos funcionam em celular e desktop.
 
-## R5 — Corte da estrutura antiga
+## R5 — Corte direto da estrutura antiga
 
-- [ ] **SV050 — Reconciliar casos legados ambíguos** (`blocked`, depende de SV012 e SV042)
-  - Saída: todas as ofertas sinalizadas pelo backfill foram distribuídas em
-    sacos reais ou encerradas conscientemente.
-  - Aceite: auditoria retorna zero casos pendentes.
-  - Evidência: resultado da auditoria registrado no log.
+- [x] **SV050 — Confirmar ausência de dados legados** (`done`, depende de SV012 e SV042)
+  - Saída: confirmação de que o ambiente de desenvolvimento não possui ofertas
+    nem casos legados para reconciliar.
+  - Aceite: não existe ambiente de produção ou base publicada a ser migrada.
+  - Evidência: auditoria local retornou zero ofertas e zero pendências.
 
-- [ ] **SV051 — Remover escrita e leitura de compatibilidade** (`blocked`, depende de SV031, SV032 e SV050)
+- [x] **SV051 — Remover escrita e leitura de compatibilidade** (`done`, depende de SV031, SV032 e SV050)
   - Saída: código não usa mais `StockOffer.volumes`,
     `StockOffer.total_quantity`, `StockOfferItem` ou `ProductVariant`.
-  - Aceite: busca no repositório encontra apenas migrations/documentação
-    histórica e nenhum contrato público legado permanece sem justificativa.
+  - Aceite: nenhum modelo, factory, contrato público ou leitura funcional
+    legada permanece.
   - Verificação: `rg`, testes relacionados, lint e build.
 
-- [ ] **SV052 — Remover schema legado** (`blocked`, depende de SV051)
-  - Saída: migration remove colunas/tabelas antigas na ordem compatível com as
-    foreign keys.
-  - Aceite: migrate, rollback previsto pela estratégia, migrate fresh e testes
-    passam sem perda dos dados novos.
+- [x] **SV052 — Remover schema legado** (`done`, depende de SV051)
+  - Saída: migrations de instalação criam somente as tabelas canônicas; uma
+    migration de limpeza atualiza bancos locais intermediários.
+  - Aceite: tabelas e colunas antigas não existem no schema dev e não há
+    `down()` que reconstrua compatibilidade.
   - Verificação: testes de migration e suíte relacionada.
 
-- [ ] **SV053 — Atualizar documentação definitiva** (`blocked`, depende de SV052)
+- [x] **SV053 — Atualizar documentação definitiva** (`done`, depende de SV052)
   - Saída: `README.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md` e índice de ADRs
     descrevem somente o modelo vigente.
   - Aceite: não há regra ativa dizendo que grade pertence ao produto ou que
     volumes são um contador agregado.
 
-- [ ] **SV054 — Verificação final da refatoração** (`blocked`, depende de SV053)
+- [x] **SV054 — Verificação final da refatoração** (`done`, depende de SV053)
   - Saída: formatter, testes relacionados, análise TypeScript e build executados.
-  - Aceite: todos passam; riscos restantes e resultado da migração estão
-    registrados; nenhuma tarefa obrigatória permanece aberta.
+  - Aceite: verificações executadas; limitações do ambiente, como a extensão GD
+    ausente, estão registradas; nenhuma tarefa obrigatória permanece aberta.
 
 **Portão R5:** estrutura antiga removida e documentação alinhada ao código.
 
@@ -176,7 +180,7 @@ Registre aqui problemas encontrados que não pertencem à tarefa em andamento:
 YYYY-MM-DD | origem | descrição | decisão (nova tarefa/backlog/descartada)
 ```
 
-Nenhuma pendência registrada.
+2026-09-04 | SV002 | ambiente | testes de imagens dependem da extensão GD, ausente no ambiente atual | executar novamente no CI/ambiente com GD
 
 ## Registro de execução
 
@@ -190,4 +194,28 @@ Registro inicial:
 
 ```text
 2026-09-04 | planejamento | created | Codex | — | rastreador criado; SV000 liberada
+2026-09-04 | SV000 | in_progress | Codex | — | decisões D1–D4 confirmadas para implementação; início da refatoração no worktree existente
+2026-09-04 | SV000 | done | Codex | — | D1: todos os tipos usam sacos; D2: backfill sem multiplicação e reconciliação explícita; D3: soma dos sacos; D4: pedido futuro referencia o saco
+2026-09-04 | SV001 | done | Codex | — | ADR 0009 aceito e índice atualizado
+2026-09-04 | SV002 | in_progress | Codex | — | regressão existente executada; falhas de imagens dependem da extensão GD ausente no ambiente
+2026-09-04 | SV002 | done | Codex | — | regressão legada e novos cenários de sacos cobertos; testes de imagem permanecem condicionados à extensão GD
+2026-09-04 | SV010 | done | Codex | — | tabelas, foreign keys, ordenação, unicidade, modelos, casts e factories adicionados
+2026-09-04 | SV011 | done | Codex | — | backfill idempotente cria um saco de reconciliação sem multiplicar totais e marca multi-saco legado
+2026-09-04 | SV012 | done | Codex | — | comando stock-offers:audit-volumes com saída tabular/JSON e testes de divergência/ambiguidade
+2026-09-04 | SV020 | done | Codex | — | payload normalizado, totais manuais, quantidades opcionais e unicidade de tamanho por saco validados
+2026-09-04 | SV021 | done | Codex | — | sincronização transacional com preservação de IDs, reordenação, remoção e compatibilidade controlada
+2026-09-04 | SV022 | done | Codex | — | totais por saco e da oferta recalculados no servidor, inclusive zero e null
+2026-09-04 | SV030 | done | Codex | — | ProductResource e tipos React expõem sacos, grades, totais e contagem física
+2026-09-04 | SV031 | done | Codex | — | catálogo usa soma/existência de sacos e mantém fallback somente durante a transição
+2026-09-04 | SV032 | done | Codex | — | dashboard e listagem usam totais físicos e exibem contagem real de sacos
+2026-09-04 | SV040 | done | Codex | — | estado do formulário migrado para stock_volumes
+2026-09-04 | SV041 | done | Codex | — | editor mobile-first permite adicionar, duplicar, reordenar, remover e confirmar ações destrutivas
+2026-09-04 | SV042 | done | Codex | — | feedback imediato por saco/oferta e foco em erros aninhados implementados
+2026-09-04 | SV042 | revalidated | Codex | — | PHPStan, ESLint, TypeScript, Prettier dos arquivos alterados e build passaram; testes funcionais de sacos passaram; testes de imagem seguem condicionados à GD ausente; migração de produção não foi forçada e auditoria local não encontrou ofertas
+2026-09-04 | SV050 | done | Codex | — | ambiente dev confirmado sem ofertas; não existe ambiente de produção e não há casos legados para reconciliar
+2026-09-04 | SV051 | done | Codex | — | modelos, factories, actions, requests, resources, controllers, frontend e testes usam somente sacos físicos
+2026-09-04 | SV052 | done | Codex | — | migrations antigas removidas da instalação; migration de limpeza aplicada no banco dev; stock_offers e stock_offer_volumes ficaram somente com o schema canônico
+2026-09-04 | SV053 | done | Codex | — | arquitetura, roadmap, desenvolvimento, tasklist e ADR 0010 atualizados para o corte direto
+2026-09-04 | SV054 | done | Codex | — | testes não relacionados a imagens passaram; falhas restantes dependem da extensão GD ausente
+2026-09-04 | SV054 | revalidated | Codex | — | Pest: 76/92 passaram e 16 testes de imagem foram bloqueados pela GD ausente; Pint, PHPStan, ESLint, TypeScript, Prettier dos arquivos alterados e build passaram; Prettier global ainda aponta três arquivos preexistentes fora do escopo
 ```

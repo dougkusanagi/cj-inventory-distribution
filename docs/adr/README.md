@@ -36,4 +36,5 @@ ADRs iniciais:
 - [0006 — Volumes nas ofertas acondicionadas em sacos](0006-stock-offer-volumes.md)
 - [0007 — Ativação de produto independente da oferta de estoque](0007-product-activation-independent-of-stock-offer.md)
 - [0008 — Modo de definição do estoque total](0008-stock-quantity-mode.md)
-- [0009 — Grade e estoque por saco (Proposed)](0009-stock-by-volume.md)
+- [0009 — Grade e estoque por saco](0009-stock-by-volume.md)
+- [0010 — Corte direto para o estoque por saco](0010-stock-by-volume-direct-cutover.md)

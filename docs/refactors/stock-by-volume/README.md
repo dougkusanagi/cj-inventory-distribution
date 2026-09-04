@@ -5,9 +5,9 @@ o volume de uma oferta de estoque em um saco individual, com sua própria grade
 e suas próprias quantidades.
 
 O andamento executável, as dependências e as evidências ficam em
-[`TASKLIST.md`](TASKLIST.md). A decisão proposta está documentada no
-[ADR 0009](../../adr/0009-stock-by-volume.md), com status `Proposed`; ela só
-passa a valer depois de aceita.
+[`TASKLIST.md`](TASKLIST.md). A decisão está documentada no
+[ADR 0010](../../adr/0010-stock-by-volume-direct-cutover.md), que complementa
+o [ADR 0009](../../adr/0009-stock-by-volume.md).
 
 ## Objetivo
 
@@ -119,50 +119,39 @@ updated_at
 O tamanho é uma string e deve ser único apenas dentro do mesmo saco. O mesmo
 tamanho pode aparecer em sacos diferentes.
 
-## Decisões que precisam ser fechadas primeiro
+## Decisões confirmadas
 
-### D1 — `Grade Nova` também usa sacos?
+### D1 — Todos os tipos usam sacos
 
-Proposta: sim. Todas as ofertas passam a ter ao menos um saco, eliminando a
-exceção atual e oferecendo uma única regra para cadastro, catálogo e pedidos.
+`Grade Nova`, assim como `Reposição` e `Grade Furada`, usa
+pelo menos um saco. Isso mantém cadastro, catálogo e pedidos na mesma unidade.
 
-### D2 — Como migrar ofertas existentes com mais de um saco?
+### D2 — Corte direto no ambiente não lançado
 
-O banco atual possui somente o total agregado, a grade agregada e a quantidade
-de sacos. Não há informação suficiente para dividir corretamente os tamanhos e
-as peças entre sacos.
+Não existe fluxo de backfill ou reconciliação. O sistema ainda não foi lançado,
+portanto a estrutura canônica é criada diretamente e não precisa preservar
+dados de uma estrutura anterior.
 
-Proposta: migrar automaticamente apenas os casos inequivocamente representáveis
-e exigir reconciliação explícita para ofertas com `volumes > 1`. Nunca duplicar
-as quantidades agregadas em cada saco, pois isso aumentaria o estoque.
+### D3 — Soma dos sacos como fonte canônica
 
-### D3 — O total será armazenado no produto ou na oferta?
+O total público é a soma de `StockOfferVolume.total_quantity`, que é a única
+fonte persistida do estoque.
 
-Proposta: não persistir outra cópia. O total público do produto/oferta será uma
-agregação dos sacos (`SUM(stock_offer_volumes.total_quantity)`), evitando fontes
-de verdade divergentes.
+### D4 — Pedido referencia o saco
 
-### D4 — Como pedidos identificarão o estoque escolhido?
-
-Proposta: o futuro item de pedido deve referenciar o saco. A baixa poderá então
-consumir um saco específico, em vez de decrementar um contador abstrato.
+O futuro `OrderItem` referencia `StockOfferVolume`, permitindo escolher
+e baixar uma unidade física sem voltar ao contador agregado.
 
 ## Estratégia de entrega
 
-A mudança será feita em etapas verificáveis:
+A mudança foi feita em etapas verificáveis:
 
 1. fechar as decisões e registrar o ADR superseding;
 2. caracterizar o comportamento atual com testes;
-3. adicionar as novas tabelas sem remover as antigas;
-4. migrar e auditar os dados existentes;
-5. trocar escrita, leitura e agregações para o novo modelo;
-6. refatorar o formulário e as listagens;
-7. remover a estrutura antiga somente após validação;
-8. atualizar a arquitetura e encerrar o rastreador.
-
-Durante a transição, nenhuma etapa deve manter duas fontes de verdade graváveis
-por tempo indeterminado. Se for necessário compatibilizar leituras, a fonte
-canônica de escrita precisa estar indicada na tarefa correspondente.
+3. criar diretamente as tabelas canônicas;
+4. trocar escrita, leitura e agregações para o novo modelo;
+5. refatorar o formulário e as listagens;
+6. atualizar a arquitetura e encerrar o rastreador.
 
 ## Fora do escopo
 

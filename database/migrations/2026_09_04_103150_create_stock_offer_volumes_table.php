@@ -11,14 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('stock_offer_items', function (Blueprint $table): void {
+        Schema::create('stock_offer_volumes', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('stock_offer_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('product_variant_id')->constrained()->cascadeOnDelete();
-            $table->unsignedInteger('quantity')->nullable();
+            $table->unsignedInteger('sort_order')->default(0);
+            $table->unsignedInteger('total_quantity')->default(0);
             $table->timestamps();
 
-            $table->unique(['stock_offer_id', 'product_variant_id']);
+            $table->index(['stock_offer_id', 'sort_order']);
+            $table->index(['stock_offer_id', 'total_quantity']);
         });
     }
 
@@ -27,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('stock_offer_items');
+        Schema::dropIfExists('stock_offer_volumes');
     }
 };

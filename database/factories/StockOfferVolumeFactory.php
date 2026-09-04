@@ -2,15 +2,14 @@
 
 namespace Database\Factories;
 
-use App\Models\ProductVariant;
 use App\Models\StockOffer;
-use App\Models\StockOfferItem;
+use App\Models\StockOfferVolume;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<StockOfferItem>
+ * @extends Factory<StockOfferVolume>
  */
-class StockOfferItemFactory extends Factory
+class StockOfferVolumeFactory extends Factory
 {
     /**
      * Define the model's default state.
@@ -21,9 +20,8 @@ class StockOfferItemFactory extends Factory
     {
         return [
             'stock_offer_id' => StockOffer::factory(),
-            'product_variant_id' => ProductVariant::factory(),
-            'quantity' => null,
-            'is_active' => true,
+            'sort_order' => 0,
+            'total_quantity' => 0,
         ];
     }
 }

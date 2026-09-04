@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Contexto
 
@@ -18,7 +18,7 @@ As ofertas legadas informam somente o total agregado, a grade agregada e, em
 alguns casos, a quantidade de sacos. Elas não contêm informação suficiente para
 dividir automaticamente peças e tamanhos entre vários sacos.
 
-## Decisão proposta
+## Decisão
 
 Substituir o contador agregado de volumes por sacos persistidos:
 
@@ -47,6 +47,22 @@ Product
   `Grade Nova`, para que cadastro, catálogo e pedidos compartilhem a mesma
   unidade operacional.
 - O futuro item de pedido deverá referenciar o saco selecionado.
+
+## Decisões confirmadas
+
+As decisões D1–D4 do plano foram fechadas da seguinte forma:
+
+- **D1:** `Grade Nova` também usa sacos. Toda oferta ativa tem pelo menos um
+  `StockOfferVolume`, sem exceção por tipo.
+- **D2:** o backfill cria um saco de reconciliação com o total agregado e copia a
+  grade legada sem replicar peças. Ofertas legadas de `Reposição` e `Grade
+  Furada` com mais de um saco ficam marcadas para reconciliação explícita; a
+  aplicação não inventa a distribuição entre sacos.
+- **D3:** o total público é calculado pela soma dos totais dos sacos. Durante a
+  migração aditiva, as colunas legadas podem permanecer como projeções de
+  compatibilidade, mas nunca são a fonte de uma nova gravação.
+- **D4:** o futuro `OrderItem` referencia `StockOfferVolume`. Assim, a baixa
+  poderá escolher um saco concreto sem voltar ao contador agregado.
 
 ## Migração
 
@@ -97,9 +113,9 @@ Custos e riscos:
 - demanda uma migração em etapas para não perder dados nem manter duas fontes
   de verdade graváveis.
 
-## Condições para aceitar
+## Relação com o plano
 
-Antes de alterar o status para `Accepted`, confirmar as decisões D1–D4 em
-[`docs/refactors/stock-by-volume/README.md`](../refactors/stock-by-volume/README.md)
-e atualizar este ADR caso alguma proposta seja modificada.
-
+Esta decisão inicia a implementação aditiva descrita em
+[`docs/refactors/stock-by-volume/README.md`](../refactors/stock-by-volume/README.md).
+As colunas e tabelas legadas só serão removidas depois da auditoria e da
+reconciliação previstas no plano.

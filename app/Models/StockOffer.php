@@ -16,14 +16,12 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $product_id
  * @property StockOfferType $type
- * @property int $total_quantity
- * @property int|null $volumes
  * @property bool $is_active
  * @property string|null $notes
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['product_id', 'type', 'total_quantity', 'volumes', 'is_active', 'notes'])]
+#[Fillable(['product_id', 'type', 'is_active', 'notes'])]
 class StockOffer extends Model
 {
     /** @use HasFactory<StockOfferFactory> */
@@ -40,13 +38,15 @@ class StockOffer extends Model
     }
 
     /**
-     * Get the items detailing stock per variant.
+     * Get the physical sacks that make up this stock offer.
      *
-     * @return HasMany<StockOfferItem, $this>
+     * @return HasMany<StockOfferVolume, $this>
      */
-    public function items(): HasMany
+    public function stockVolumes(): HasMany
     {
-        return $this->hasMany(StockOfferItem::class);
+        return $this->hasMany(StockOfferVolume::class)
+            ->orderBy('sort_order')
+            ->orderBy('id');
     }
 
     /**
@@ -71,22 +71,36 @@ class StockOffer extends Model
     {
         $query
             ->where('is_active', true)
-            ->where('total_quantity', '>', 0)
             ->whereHas('product', function (Builder $query): void {
                 $query->where('is_active', true);
             })
-            ->where(function (Builder $query): void {
-                $query
-                    ->where('type', StockOfferType::NewGrade->value)
-                    ->orWhere(function (Builder $query): void {
-                        $query
-                            ->whereIn('type', [
-                                StockOfferType::Replenishment->value,
-                                StockOfferType::BrokenGrade->value,
-                            ])
-                            ->where('volumes', '>', 0);
-                    });
+            ->whereHas('stockVolumes', function (Builder $query): void {
+                $query->where('total_quantity', '>', 0);
             });
+    }
+
+    /**
+     * Return the aggregate quantity from physical sacks when available.
+     */
+    public function calculatedTotalQuantity(): int
+    {
+        if ($this->relationLoaded('stockVolumes')) {
+            return (int) $this->stockVolumes->sum('total_quantity');
+        }
+
+        return (int) $this->stockVolumes()->sum('total_quantity');
+    }
+
+    /**
+     * Determine the number of physical sacks represented by this offer.
+     */
+    public function calculatedVolumeCount(): int
+    {
+        if ($this->relationLoaded('stockVolumes')) {
+            return $this->stockVolumes->count();
+        }
+
+        return (int) $this->stockVolumes()->count();
     }
 
     /**
@@ -98,8 +112,6 @@ class StockOffer extends Model
     {
         return [
             'type' => StockOfferType::class,
-            'total_quantity' => 'integer',
-            'volumes' => 'integer',
             'is_active' => 'boolean',
         ];
     }

@@ -1,17 +1,5 @@
 import { router, useForm } from '@inertiajs/react';
-import {
-    Info,
-    Layers,
-    ListCheck,
-    ListX,
-    Package,
-    PackageX,
-    Plus,
-    Save,
-    Sparkles,
-    TriangleAlert,
-    X,
-} from 'lucide-react';
+import { Layers, PackageX, Save } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
@@ -20,7 +8,8 @@ import {
 } from '@/actions/App/Http/Controllers/ProductController';
 import InputError from '@/components/input-error';
 import { ProductPhotoManager } from '@/components/products/product-photo-manager';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { StockOfferVolumeEditor } from '@/components/products/stock-offer-volume-editor';
+import type { StockOfferVolumeFormItem } from '@/components/products/stock-offer-volume-editor';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -28,26 +17,9 @@ import {
     CardDescription,
     CardHeader,
 } from '@/components/ui/card';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import {
-    Drawer,
-    DrawerContent,
-    DrawerDescription,
-    DrawerFooter,
-    DrawerHeader,
-    DrawerTitle,
-} from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Separator } from '@/components/ui/separator';
 import { useSidebar } from '@/components/ui/sidebar';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
@@ -56,12 +28,6 @@ import { useScrollVisibility } from '@/hooks/use-scroll-visibility';
 import { cn } from '@/lib/utils';
 import type { Product, StockOfferType } from '@/types';
 
-type VariantFormItem = {
-    size: string;
-    is_active: boolean;
-    quantity: number | string | null;
-};
-
 type ProductFormData = {
     name: string;
     model: string;
@@ -69,9 +35,7 @@ type ProductFormData = {
     is_active: boolean;
     has_stock_offer: boolean;
     stock_offer_type: StockOfferType | '';
-    total_quantity: number | string | null;
-    volumes: number | string | null;
-    variants: VariantFormItem[];
+    stock_volumes: StockOfferVolumeFormItem[];
     images: File[];
     image_order: string[];
     remove_media_ids: number[];
@@ -84,50 +48,9 @@ type ProductFormProps = {
 
 type ProductErrorField =
     | keyof ProductFormData
-    | `variants.${number}.size`
-    | `variants.${number}.quantity`;
-
-type SizePresetId = 'none' | 'numeric-female' | 'letters' | 'custom';
-
-type SizePreset = {
-    id: SizePresetId;
-    label: string;
-    subtitle: string;
-    sizes: string[];
-};
-
-const sizePresets: SizePreset[] = [
-    {
-        id: 'none',
-        label: 'Sem tamanhos',
-        subtitle: 'Produto sem grade definida',
-        sizes: [],
-    },
-    {
-        id: 'numeric-female',
-        label: 'Numérica feminina',
-        subtitle: 'Feminino (34 ao 46)',
-        sizes: ['34', '36', '38', '40', '42', '44', '46'],
-    },
-    {
-        id: 'letters',
-        label: 'Tamanho por letras',
-        subtitle: 'PP ao GG',
-        sizes: ['PP', 'P', 'M', 'G', 'GG'],
-    },
-    {
-        id: 'custom',
-        label: 'Personalizada',
-        subtitle: 'Defina os tamanhos manualmente',
-        sizes: [],
-    },
-];
-
-const hiddenSizePresetIds: SizePresetId[] = ['none'];
-
-const visibleSizePresets = sizePresets.filter(
-    (preset) => !hiddenSizePresetIds.includes(preset.id),
-);
+    | `stock_volumes.${number}.total_quantity`
+    | `stock_volumes.${number}.items.${number}.size`
+    | `stock_volumes.${number}.items.${number}.quantity`;
 
 const stockOfferTypes: Array<{
     id: StockOfferType;
@@ -142,80 +65,71 @@ const stockOfferTypes: Array<{
     {
         id: 'new_grade',
         label: 'Grade Nova',
-        description: 'Grade completa, sem controle de sacos.',
+        description: 'Grade completa, organizada por sacos.',
     },
     {
         id: 'broken_grade',
         label: 'Grade Furada',
-        description: 'Grade incompleta, distribuída em sacos.',
+        description: 'Grade incompleta, organizada por sacos.',
     },
 ];
 
-function stockOfferRequiresVolumes(type: StockOfferType | ''): boolean {
-    return type === 'replenishment' || type === 'broken_grade';
+const defaultSizes = ['34', '36', '38', '40', '42', '44', '46'];
+
+function initialStockVolumes(product?: Product): StockOfferVolumeFormItem[] {
+    if (product?.stock_volumes?.length) {
+        return product.stock_volumes.map((volume) => ({
+            id: volume.id,
+            sort_order: volume.sort_order,
+            total_quantity: volume.total_quantity,
+            items: volume.items.map((item) => ({
+                id: item.id,
+                size: item.size,
+                sort_order: item.sort_order,
+                is_active: item.is_active,
+                quantity: item.is_active ? item.quantity : null,
+            })),
+        }));
+    }
+
+    return [
+        {
+            total_quantity: null,
+            items: defaultSizes.map((size) => ({
+                size,
+                is_active: false,
+                quantity: null,
+            })),
+        },
+    ];
 }
 
-function hasStockOfferData(
-    data: Pick<ProductFormData, 'total_quantity' | 'volumes' | 'variants'>,
-): boolean {
-    return (
-        Number(data.total_quantity) > 0 ||
-        Number(data.volumes) > 0 ||
-        data.variants.some(
-            (variant) =>
-                variant.is_active ||
-                (variant.quantity !== null && variant.quantity !== ''),
-        )
+function hasKnownVolumeQuantity(volume: StockOfferVolumeFormItem): boolean {
+    return volume.items.some(
+        (item) =>
+            item.is_active &&
+            item.quantity !== null &&
+            item.quantity !== '' &&
+            !Number.isNaN(Number(item.quantity)),
     );
 }
 
-function hasVariantQuantity(variant: VariantFormItem): boolean {
-    return (
-        variant.is_active &&
-        variant.quantity !== null &&
-        variant.quantity !== ''
-    );
-}
+function volumeTotal(volume: StockOfferVolumeFormItem): number {
+    if (hasKnownVolumeQuantity(volume)) {
+        return volume.items.reduce(
+            (total, item) =>
+                item.is_active && item.quantity !== null && item.quantity !== ''
+                    ? total + Number(item.quantity)
+                    : total,
+            0,
+        );
+    }
 
-function hasVariantQuantities(variants: VariantFormItem[]): boolean {
-    return variants.some(hasVariantQuantity);
-}
-
-function sumVariantQuantities(variants: VariantFormItem[]): number {
-    return variants.reduce((total, variant) => {
-        if (!hasVariantQuantity(variant)) {
-            return total;
-        }
-
-        const quantity = Number(variant.quantity);
-
-        return Number.isNaN(quantity) ? total : total + quantity;
-    }, 0);
-}
-
-function detectPreset(variants: Array<{ size: string }>): SizePresetId {
-    const sizes = variants.map((variant) => variant.size.toUpperCase().trim());
-
-    const matchingPreset = sizePresets.find(
-        (preset) =>
-            preset.id !== 'custom' &&
-            preset.sizes.length === sizes.length &&
-            preset.sizes.every((size, index) => size === sizes[index]),
-    );
-
-    return matchingPreset?.id ?? 'custom';
+    return Number(volume.total_quantity) || 0;
 }
 
 export function ProductForm({ product }: ProductFormProps) {
     const isEditing = product !== undefined;
-    const initialPreset = product
-        ? detectPreset(product.variants)
-        : 'numeric-female';
-    const [selectedPreset, setSelectedPreset] =
-        useState<SizePresetId>(initialPreset);
-    const [pendingPresetId, setPendingPresetId] = useState<SizePresetId | null>(
-        null,
-    );
     const [processingImages, setProcessingImages] = useState(false);
     const radioGroupId = useId();
     const formRef = useRef<HTMLFormElement>(null);
@@ -223,31 +137,6 @@ export function ProductForm({ product }: ProductFormProps) {
     const { isMobile, state: sidebarState } = useSidebar();
     const { isVisible: isFooterVisible, show: showFooter } =
         useScrollVisibility({ showAtDocumentEnd: true });
-    const pendingPreset = pendingPresetId
-        ? sizePresets.find((preset) => preset.id === pendingPresetId)
-        : undefined;
-    const pendingPresetDescription = pendingPreset
-        ? `Trocar para a grade "${pendingPreset.label}" substituirá a lista atual. Tamanhos fora da nova grade, com suas marcações e quantidades, serão descartados.`
-        : '';
-
-    const initialVariants: VariantFormItem[] =
-        product && product.variants.length > 0
-            ? product.variants.map(({ size, is_active, quantity }) => ({
-                  size,
-                  is_active: is_active ?? false,
-                  quantity: is_active ? (quantity ?? null) : null,
-              }))
-            : (sizePresets
-                  .find((preset) => preset.id === initialPreset)
-                  ?.sizes.map((size) => ({
-                      size,
-                      is_active: false,
-                      quantity: null,
-                  })) ?? []);
-
-    const initialTotalQuantity = hasVariantQuantities(initialVariants)
-        ? sumVariantQuantities(initialVariants)
-        : (product?.total_quantity ?? null);
 
     const form = useForm<ProductFormData>({
         name: product?.name ?? '',
@@ -256,9 +145,7 @@ export function ProductForm({ product }: ProductFormProps) {
         is_active: product?.is_active ?? true,
         has_stock_offer: product?.has_stock_offer ?? false,
         stock_offer_type: product?.stock_offer_type ?? 'new_grade',
-        total_quantity: initialTotalQuantity,
-        volumes: product?.volumes ?? null,
-        variants: initialVariants,
+        stock_volumes: initialStockVolumes(product),
         images: [],
         image_order: product?.images.map((image) => 'media:' + image.id) ?? [],
         remove_media_ids: [],
@@ -323,228 +210,23 @@ export function ProductForm({ product }: ProductFormProps) {
         });
     }, [form.errors, form.processing, hasErrors]);
 
-    const updateStockData = (
-        updater: (previousData: ProductFormData) => ProductFormData,
-    ) => {
-        form.setData((previousData) => {
-            const nextData = updater(previousData);
-            const nextHasVariantQuantities = hasVariantQuantities(
-                nextData.variants,
-            );
-
-            return {
-                ...nextData,
-                total_quantity: nextHasVariantQuantities
-                    ? sumVariantQuantities(nextData.variants)
-                    : nextData.total_quantity,
-                has_stock_offer: hasStockOfferData(nextData),
-            };
-        });
-    };
-
-    const applyPreset = (nextPreset: SizePreset) => {
-        const currentVariants = new Map(
-            form.data.variants.map((variant) => [variant.size, variant]),
-        );
-
-        setSelectedPreset(nextPreset.id);
-
-        updateStockData((previousData) => ({
-            ...previousData,
-            variants: nextPreset.sizes.map((size) => ({
-                size,
-                is_active: currentVariants.get(size)?.is_active ?? false,
-                quantity: currentVariants.get(size)?.quantity ?? null,
-            })),
-        }));
-    };
-
-    const handlePresetChange = (presetId: string) => {
-        const nextPreset = sizePresets.find((p) => p.id === presetId);
-
-        if (!nextPreset) {
-            return;
-        }
-
-        if (nextPreset.id === 'custom') {
-            setPendingPresetId(null);
-            setSelectedPreset(nextPreset.id);
-
-            return;
-        }
-
-        const wouldDiscardData = form.data.variants.some(
-            (variant) =>
-                !nextPreset.sizes.includes(variant.size) &&
-                (variant.is_active ||
-                    variant.quantity !== null ||
-                    (selectedPreset === 'custom' &&
-                        variant.size.trim() !== '')),
-        );
-
-        if (wouldDiscardData) {
-            setPendingPresetId(nextPreset.id);
-
-            return;
-        }
-
-        applyPreset(nextPreset);
-    };
-
-    const cancelPresetChange = () => {
-        setPendingPresetId(null);
-    };
-
-    const confirmPresetChange = () => {
-        if (!pendingPreset) {
-            return;
-        }
-
-        applyPreset(pendingPreset);
-        setPendingPresetId(null);
-    };
-
-    const updateVariantSize = (index: number, size: string) => {
-        form.setData(
-            'variants',
-            form.data.variants.map((variant, variantIndex) =>
-                variantIndex === index ? { ...variant, size } : variant,
-            ),
-        );
-    };
-
-    const addCustomSize = () => {
-        setSelectedPreset('custom');
-        form.setData('variants', [
-            ...form.data.variants,
-            { size: '', is_active: false, quantity: null },
-        ]);
-    };
-
-    const removeCustomSize = (index: number) => {
-        const variant = form.data.variants[index];
-
-        if (
-            variant &&
-            (variant.is_active ||
-                (variant.quantity !== null && variant.quantity !== '')) &&
-            !window.confirm(
-                `Remover o tamanho ${variant.size || 'informado'}? A presença e a quantidade serão apagadas.`,
-            )
-        ) {
-            return;
-        }
-
-        updateStockData((previousData) => ({
-            ...previousData,
-            variants: previousData.variants.filter(
-                (_, variantIndex) => variantIndex !== index,
-            ),
-        }));
-    };
-
     const selectStockOfferType = (value: string) => {
-        const type = value as StockOfferType;
-
-        if (
-            !stockOfferRequiresVolumes(type) &&
-            form.data.volumes !== null &&
-            form.data.volumes !== '' &&
-            !window.confirm(
-                'Este tipo de estoque não usa sacos. O número informado será apagado. Deseja continuar?',
-            )
-        ) {
-            return;
-        }
-
-        updateStockData((previousData) => ({
-            ...previousData,
-            stock_offer_type: type,
-            volumes: stockOfferRequiresVolumes(type)
-                ? previousData.volumes
-                : null,
-        }));
+        form.setData('stock_offer_type', value as StockOfferType);
     };
 
     const toggleProductActive = (isActive: boolean) => {
         form.setData('is_active', isActive);
     };
 
-    const updateVariantActive = (index: number, isActive: boolean) => {
-        const variant = form.data.variants[index];
-
-        if (
-            variant &&
-            !isActive &&
-            variant.quantity !== null &&
-            variant.quantity !== '' &&
-            !window.confirm(
-                `Desativar o tamanho ${variant.size}? A quantidade informada será apagada.`,
-            )
-        ) {
-            return;
-        }
-
-        updateStockData((previousData) => ({
-            ...previousData,
-            variants: previousData.variants.map((variant, variantIndex) =>
-                variantIndex === index
-                    ? {
-                          ...variant,
-                          is_active: isActive,
-                          quantity: isActive ? variant.quantity : null,
-                      }
-                    : variant,
-            ),
-        }));
-    };
-
-    const setAllVariantsActive = (isActive: boolean) => {
-        if (
-            !isActive &&
-            form.data.variants.some(
-                (variant) =>
-                    variant.quantity !== null && variant.quantity !== '',
-            ) &&
-            !window.confirm(
-                'Desmarcar todos os tamanhos apagará as quantidades informadas. Deseja continuar?',
-            )
-        ) {
-            return;
-        }
-
-        updateStockData((previousData) => ({
-            ...previousData,
-            variants: previousData.variants.map((variant) => ({
-                ...variant,
-                is_active: isActive,
-                quantity: isActive ? variant.quantity : null,
-            })),
-        }));
-    };
-
-    const updateVariantQuantity = (index: number, rawValue: string) => {
-        const sanitized =
-            rawValue === '' ? null : Math.max(0, parseInt(rawValue, 10) || 0);
-
-        updateStockData((previousData) => ({
-            ...previousData,
-            variants: previousData.variants.map((variant, variantIndex) =>
-                variantIndex === index
-                    ? { ...variant, quantity: sanitized }
-                    : variant,
-            ),
-        }));
-    };
-
-    const hasFilledVariantQuantities = hasVariantQuantities(form.data.variants);
-    const sumOfVariantQuantities = sumVariantQuantities(form.data.variants);
-
-    const hasCurrentStockData = hasStockOfferData(form.data);
-    const hasPositiveTotal = Number(form.data.total_quantity) > 0;
-    const hasAvailableVolumes =
-        !stockOfferRequiresVolumes(form.data.stock_offer_type) ||
-        Number(form.data.volumes) > 0;
+    const hasPositiveTotal = form.data.stock_volumes.some(
+        (volume) => volumeTotal(volume) > 0,
+    );
+    const hasAvailableVolumes = form.data.stock_volumes.length > 0;
+    const hasCurrentStockData = form.data.stock_volumes.some(
+        (volume) =>
+            volumeTotal(volume) > 0 ||
+            volume.items.some((item) => item.is_active),
+    );
     const distributionStatus = !form.data.is_active
         ? 'Não aparece para as vendedoras: produto oculto.'
         : !form.data.has_stock_offer
@@ -567,14 +249,14 @@ export function ProductForm({ product }: ProductFormProps) {
         form.setData((previousData) => ({
             ...previousData,
             has_stock_offer: false,
-            total_quantity: 0,
-            volumes: stockOfferRequiresVolumes(previousData.stock_offer_type)
-                ? 0
-                : null,
-            variants: previousData.variants.map((variant) => ({
-                ...variant,
-                is_active: false,
-                quantity: null,
+            stock_volumes: previousData.stock_volumes.map((volume) => ({
+                ...volume,
+                total_quantity: 0,
+                items: volume.items.map((item) => ({
+                    ...item,
+                    is_active: false,
+                    quantity: null,
+                })),
             })),
         }));
     };
@@ -584,7 +266,7 @@ export function ProductForm({ product }: ProductFormProps) {
         submittingRef.current = true;
 
         form.post(isEditing ? update.url(product.id) : store.url(), {
-            forceFormData: true,
+            forceFormData: form.data.images.length > 0,
             preserveState: true,
             preserveScroll: true,
             onFinish: () => {
@@ -793,207 +475,84 @@ export function ProductForm({ product }: ProductFormProps) {
                     </CardContent>
                 </Card>
             </div>
-
-            {/* 3. Tamanhos do produto */}
-            <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
-                <CardHeader className="p-5 sm:p-6">
-                    <div className="flex items-center gap-2">
-                        <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <Layers className="size-4" />
-                        </span>
-                        <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
-                            Grade de tamanhos
-                        </p>
-                    </div>
-                    <h2
-                        id={radioGroupId}
-                        className="text-xl tracking-tight sm:text-2xl"
-                    >
-                        Tamanhos
-                    </h2>
-                    <CardDescription className="text-xs sm:text-sm">
-                        Escolha uma grade pronta ou defina os tamanhos da peça.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="grid gap-5 p-5 pt-0 sm:p-6 sm:pt-0">
-                    <RadioGroup
-                        value={selectedPreset}
-                        onValueChange={handlePresetChange}
-                        className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
-                        aria-labelledby={radioGroupId}
-                        aria-invalid={error('variants') ? true : undefined}
-                    >
-                        {visibleSizePresets.map((preset) => {
-                            const isChecked = selectedPreset === preset.id;
-                            const optionId = `preset-option-${preset.id}`;
-
-                            return (
-                                <label
-                                    key={preset.id}
-                                    htmlFor={optionId}
-                                    className={cn(
-                                        'relative flex cursor-pointer flex-col justify-between rounded-2xl border p-4.5 transition-all select-none',
-                                        isChecked
-                                            ? 'border-primary bg-primary/5 shadow-xs ring-2 ring-primary/20'
-                                            : 'border-border bg-card hover:border-border/80 hover:bg-muted/30',
-                                    )}
-                                >
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="grid gap-1">
-                                            <span className="text-base font-semibold text-foreground">
-                                                {preset.label}
-                                            </span>
-                                            <span className="text-xs text-muted-foreground">
-                                                {preset.subtitle}
-                                            </span>
-                                        </div>
-                                        <RadioGroupItem
-                                            id={optionId}
-                                            value={preset.id}
-                                            className="mt-0.5"
-                                        />
-                                    </div>
-
-                                    {preset.sizes.length > 0 ? (
-                                        <div className="mt-4 flex flex-wrap gap-1.5 border-t border-border/40 pt-3">
-                                            {preset.sizes.map((size) => (
-                                                <span
-                                                    key={size}
-                                                    className={cn(
-                                                        'inline-flex min-w-7 items-center justify-center rounded-lg px-2 py-1 font-mono text-xs font-semibold transition-colors',
-                                                        isChecked
-                                                            ? 'border border-primary/20 bg-primary/15 text-foreground'
-                                                            : 'border border-border/50 bg-muted/60 text-muted-foreground',
-                                                    )}
-                                                >
-                                                    {size}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    ) : null}
-                                </label>
-                            );
-                        })}
-                    </RadioGroup>
-
-                    {selectedPreset === 'custom' && (
-                        <div className="grid gap-3 rounded-2xl border border-dashed border-border bg-muted/20 p-4">
-                            <div className="grid gap-1">
-                                <p className="text-sm font-semibold text-foreground">
-                                    Tamanhos personalizados
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                    Adicione os tamanhos na ordem em que devem
-                                    aparecer.
-                                </p>
-                            </div>
-
-                            {form.data.variants.map((variant, index) => (
-                                <div
-                                    key={`${index}-${variant.size}`}
-                                    className="flex items-start gap-2"
-                                >
-                                    <div className="grid min-w-0 flex-1 gap-1.5">
-                                        <Label
-                                            htmlFor={`custom-size-${index}`}
-                                            className="sr-only"
-                                        >
-                                            Tamanho {index + 1}
-                                        </Label>
-                                        <Input
-                                            id={`custom-size-${index}`}
-                                            value={variant.size}
-                                            onChange={(event) =>
-                                                updateVariantSize(
-                                                    index,
-                                                    event.target.value,
-                                                )
-                                            }
-                                            placeholder="Ex.: 3G ou 42"
-                                            className="h-12 text-base sm:text-sm"
-                                            aria-invalid={
-                                                error(`variants.${index}.size`)
-                                                    ? true
-                                                    : undefined
-                                            }
-                                        />
-                                        <InputError
-                                            message={error(
-                                                `variants.${index}.size`,
-                                            )}
-                                        />
-                                    </div>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        onClick={() => removeCustomSize(index)}
-                                        className="size-12 shrink-0 px-0 text-muted-foreground hover:text-destructive"
-                                        aria-label={`Remover tamanho ${index + 1}`}
-                                    >
-                                        <X />
-                                    </Button>
-                                </div>
-                            ))}
-
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={addCustomSize}
-                                className="h-12 w-full sm:w-fit"
-                            >
-                                <Plus />
-                                Adicionar tamanho
-                            </Button>
-                        </div>
-                    )}
-
-                    <InputError message={error('variants')} />
-                </CardContent>
-            </Card>
-
-            {/* 4. Disponibilidade do lote */}
+            {/* 3. Disponibilidade do lote */}
             <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
                 <CardHeader className="p-5 sm:p-6">
                     <div className="grid gap-1.5">
                         <div className="flex items-center gap-2">
                             <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                <Package className="size-4" />
+                                <Layers className="size-4" />
                             </span>
                             <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
                                 Disponibilidade em estoque
                             </p>
                         </div>
                         <h2 className="text-xl tracking-tight sm:text-2xl">
-                            Estoque disponível
+                            Estoque organizado por sacos
                         </h2>
                         <CardDescription className="text-xs sm:text-sm">
-                            Informe o tipo e as quantidades do estoque atual.
-                            O produto aparece para as vendedoras quando há
-                            estoque disponível.
+                            Cada saco tem sua própria grade e total. O total da
+                            oferta é a soma dos sacos e é recalculado no
+                            servidor.
                         </CardDescription>
                         <p className="text-sm font-medium text-foreground">
                             {distributionStatus}
                         </p>
                     </div>
                 </CardHeader>
-                <CardContent className="grid gap-7 p-5 pt-0 sm:p-6 sm:pt-0">
+                <CardContent className="grid gap-6 p-5 pt-0 sm:p-6 sm:pt-0">
+                    <label
+                        htmlFor="has-stock-offer"
+                        className="flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-2xl border border-border/80 bg-muted/20 p-4 select-none"
+                    >
+                        <div className="grid gap-1">
+                            <p className="text-sm font-semibold text-foreground">
+                                Mostrar oferta no catálogo
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                {form.data.has_stock_offer
+                                    ? 'A oferta poderá aparecer quando o produto estiver ativo e tiver estoque disponível.'
+                                    : 'A oferta ficará oculta, preservando os dados dos sacos para uma próxima ativação.'}
+                            </p>
+                        </div>
+                        <Switch
+                            id="has-stock-offer"
+                            checked={form.data.has_stock_offer}
+                            onCheckedChange={(checked) =>
+                                form.setData('has_stock_offer', checked)
+                            }
+                            aria-label={
+                                form.data.has_stock_offer
+                                    ? 'Ocultar oferta do catálogo'
+                                    : 'Mostrar oferta no catálogo'
+                            }
+                        />
+                    </label>
+                    <InputError message={error('has_stock_offer')} />
+
                     <fieldset className="grid gap-3">
-                        <legend className="text-sm font-semibold text-foreground">
+                        <legend
+                            id={radioGroupId}
+                            className="text-sm font-semibold text-foreground"
+                        >
                             Tipo do estoque
                         </legend>
                         <p className="text-xs text-muted-foreground">
-                            Escolha como este lote será oferecido.
+                            Todos os tipos usam pelo menos um saco; a diferença
+                            está na classificação da oferta.
                         </p>
                         <RadioGroup
                             value={form.data.stock_offer_type}
                             onValueChange={selectStockOfferType}
                             className="grid grid-cols-1 gap-2 sm:grid-cols-3"
+                            aria-labelledby={radioGroupId}
                             aria-invalid={
                                 error('stock_offer_type') ? true : undefined
                             }
                         >
                             {stockOfferTypes.map((offerType) => {
-                                const optionId = `stock-offer-type-${offerType.id}`;
+                                const optionId =
+                                    'stock-offer-type-' + offerType.id;
 
                                 return (
                                     <label
@@ -1024,314 +583,13 @@ export function ProductForm({ product }: ProductFormProps) {
                         <InputError message={error('stock_offer_type')} />
                     </fieldset>
 
-                    <div className="grid gap-4">
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <div className="grid max-w-xs gap-2">
-                                <Label
-                                    htmlFor="total-quantity"
-                                    className="text-sm font-semibold text-foreground"
-                                >
-                                    Estoque total{' '}
-                                    {form.data.has_stock_offer && (
-                                        <span className="text-destructive">
-                                            *
-                                        </span>
-                                    )}
-                                </Label>
-                                <p className="text-xs text-muted-foreground">
-                                    {hasFilledVariantQuantities
-                                        ? 'Calculado pela soma das quantidades informadas nos tamanhos.'
-                                        : 'Quantidade total de peças disponíveis neste lote.'}
-                                </p>
-                                <Input
-                                    id="total-quantity"
-                                    name="total_quantity"
-                                    type="number"
-                                    min="0"
-                                    inputMode="numeric"
-                                    readOnly={hasFilledVariantQuantities}
-                                    aria-readonly={
-                                        hasFilledVariantQuantities
-                                            ? true
-                                            : undefined
-                                    }
-                                    value={form.data.total_quantity ?? ''}
-                                    onChange={(event) =>
-                                        updateStockData((previousData) => ({
-                                            ...previousData,
-                                            total_quantity:
-                                                event.target.value === ''
-                                                    ? null
-                                                    : Math.max(
-                                                          0,
-                                                          parseInt(
-                                                              event.target
-                                                                  .value,
-                                                              10,
-                                                          ) || 0,
-                                                      ),
-                                        }))
-                                    }
-                                    placeholder="Ex.: 30"
-                                    className={cn(
-                                        'h-11 text-base sm:h-10 sm:text-sm',
-                                        hasFilledVariantQuantities &&
-                                            'cursor-not-allowed bg-muted/40 text-muted-foreground',
-                                    )}
-                                    required={
-                                        form.data.has_stock_offer &&
-                                        !hasFilledVariantQuantities
-                                    }
-                                    aria-invalid={
-                                        error('total_quantity')
-                                            ? true
-                                            : undefined
-                                    }
-                                />
-                                <InputError message={error('total_quantity')} />
-                                <Alert className="border-primary/25 bg-primary/5 p-3 [&>svg]:text-primary">
-                                    <Info />
-                                    <AlertTitle>
-                                        Regra do estoque total
-                                    </AlertTitle>
-                                    <AlertDescription className="text-xs">
-                                        <p>
-                                            Informe o total quando quiser controlar
-                                            apenas o estoque do lote. Ao preencher
-                                            uma quantidade por tamanho, o total
-                                            será somado automaticamente e não
-                                            poderá ser editado.
-                                        </p>
-                                    </AlertDescription>
-                                </Alert>
-                            </div>
-
-                            {stockOfferRequiresVolumes(
-                                form.data.stock_offer_type,
-                            ) ? (
-                                <div className="grid max-w-xs gap-2">
-                                    <Label
-                                        htmlFor="volumes"
-                                        className="text-sm font-semibold text-foreground"
-                                    >
-                                        Sacos disponíveis{' '}
-                                        {form.data.has_stock_offer && (
-                                            <span className="text-destructive">
-                                                *
-                                            </span>
-                                        )}
-                                    </Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        Quantidade de sacos que ainda podem ser
-                                        solicitados. Ao chegar a zero, o produto
-                                        sai do catálogo.
-                                    </p>
-                                    <Input
-                                        id="volumes"
-                                        name="volumes"
-                                        type="number"
-                                        min={form.data.has_stock_offer ? 1 : 0}
-                                        step="1"
-                                        inputMode="numeric"
-                                        value={form.data.volumes ?? ''}
-                                        onChange={(event) =>
-                                            updateStockData((previousData) => ({
-                                                ...previousData,
-                                                volumes:
-                                                    event.target.value === ''
-                                                        ? null
-                                                        : Math.max(
-                                                              0,
-                                                              parseInt(
-                                                                  event.target
-                                                                      .value,
-                                                                  10,
-                                                              ) || 0,
-                                                          ),
-                                            }))
-                                        }
-                                        placeholder="Ex.: 12"
-                                        className="h-11 text-base sm:h-10 sm:text-sm"
-                                        required={form.data.has_stock_offer}
-                                        aria-invalid={
-                                            error('volumes') ? true : undefined
-                                        }
-                                    />
-                                    <InputError message={error('volumes')} />
-                                </div>
-                            ) : null}
-                        </div>
-
-                        {hasFilledVariantQuantities ? (
-                            <div className="flex flex-wrap items-center gap-2">
-                                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold text-foreground">
-                                    <Sparkles className="size-3 text-primary" />
-                                    Estoque por tamanho · total calculado:{' '}
-                                    {sumOfVariantQuantities}
-                                </span>
-                            </div>
-                        ) : null}
-                    </div>
-
-                    <Separator className="bg-border/70" />
-
-                    <div className="grid gap-3">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                                <p className="text-sm font-semibold text-foreground">
-                                    Tamanhos presentes no lote{' '}
-                                    <span className="text-xs font-normal text-muted-foreground">
-                                        (opcional)
-                                    </span>
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                    Marque os tamanhos que existem neste lote.
-                                    Informe a quantidade somente quando quiser
-                                    controlar o estoque por tamanho; deixe em
-                                    branco se não souber.
-                                </p>
-                            </div>
-
-                            {form.data.variants.length > 1 && (
-                                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-                                    <Button
-                                        type="button"
-                                        onClick={() =>
-                                            setAllVariantsActive(true)
-                                        }
-                                        variant="secondary"
-                                        size="sm"
-                                        className="w-full sm:w-auto"
-                                    >
-                                        <ListCheck />
-                                        Marcar todos
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        onClick={() =>
-                                            setAllVariantsActive(false)
-                                        }
-                                        variant="outline"
-                                        size="sm"
-                                        className="w-full sm:w-auto"
-                                    >
-                                        <ListX />
-                                        Desmarcar todos
-                                    </Button>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
-                            {form.data.variants.map((variant, index) => {
-                                const activeId = `variant-active-${index}`;
-                                const quantityId = `variant-qty-${index}`;
-                                const quantityError = error(
-                                    `variants.${index}.quantity`,
-                                );
-
-                                return (
-                                    <div
-                                        key={variant.size}
-                                        className={cn(
-                                            'group relative flex flex-row items-center justify-between rounded-2xl border p-3 transition-all duration-200 select-none sm:h-28 sm:flex-col sm:items-stretch sm:justify-between sm:p-3',
-                                            variant.is_active
-                                                ? 'border-primary/60 bg-primary/5 shadow-xs ring-1 ring-primary/15'
-                                                : 'border-border/70 bg-card hover:border-border',
-                                            quantityError &&
-                                                'border-destructive ring-1 ring-destructive/30',
-                                        )}
-                                    >
-                                        <div className="flex items-center gap-3 sm:justify-between">
-                                            <label
-                                                htmlFor={activeId}
-                                                className="cursor-pointer font-mono text-base font-bold text-foreground"
-                                            >
-                                                {variant.size}
-                                            </label>
-                                            <Switch
-                                                id={activeId}
-                                                checked={variant.is_active}
-                                                onCheckedChange={(isActive) => {
-                                                    updateVariantActive(
-                                                        index,
-                                                        isActive,
-                                                    );
-
-                                                    if (isActive) {
-                                                        window.requestAnimationFrame(
-                                                            () => {
-                                                                document
-                                                                    .getElementById(
-                                                                        quantityId,
-                                                                    )
-                                                                    ?.focus();
-                                                            },
-                                                        );
-                                                    }
-                                                }}
-                                                aria-label={`${variant.is_active ? 'Desativar' : 'Ativar'} tamanho ${variant.size}`}
-                                            />
-                                        </div>
-
-                                        <div className="relative flex items-center justify-end sm:w-full">
-                                            <Label
-                                                htmlFor={quantityId}
-                                                className="sr-only"
-                                            >
-                                                Quantidade do tamanho{' '}
-                                                {variant.size}
-                                            </Label>
-                                            <Input
-                                                id={quantityId}
-                                                type="number"
-                                                min="0"
-                                                inputMode="numeric"
-                                                disabled={!variant.is_active}
-                                                value={
-                                                    variant.is_active
-                                                        ? (variant.quantity ??
-                                                          '')
-                                                        : ''
-                                                }
-                                                onChange={(event) =>
-                                                    updateVariantQuantity(
-                                                        index,
-                                                        event.target.value,
-                                                    )
-                                                }
-                                                placeholder={
-                                                    variant.is_active
-                                                        ? 'Qtd'
-                                                        : '—'
-                                                }
-                                                aria-invalid={
-                                                    quantityError
-                                                        ? true
-                                                        : undefined
-                                                }
-                                                className={cn(
-                                                    'h-10 w-24 text-center font-mono text-sm transition-all duration-200 sm:h-9 sm:w-full',
-                                                    variant.is_active
-                                                        ? 'border-input bg-background text-foreground shadow-xs'
-                                                        : 'pointer-events-none cursor-not-allowed border-transparent bg-muted/40 text-muted-foreground/30 shadow-none',
-                                                )}
-                                            />
-                                        </div>
-
-                                        {quantityError && (
-                                            <div className="mt-1 sm:mt-0">
-                                                <InputError
-                                                    message={quantityError}
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        <InputError message={error('variants')} />
-                    </div>
+                    <StockOfferVolumeEditor
+                        volumes={form.data.stock_volumes}
+                        errors={form.errors as Record<string, string>}
+                        onChange={(volumes) =>
+                            form.setData('stock_volumes', volumes)
+                        }
+                    />
 
                     <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
                         <div className="grid gap-1">
@@ -1339,8 +597,8 @@ export function ProductForm({ product }: ProductFormProps) {
                                 Encerrar estoque atual
                             </p>
                             <p className="text-xs text-muted-foreground">
-                                Encerra a oferta atual e limpa as quantidades
-                                deste lote ao salvar.
+                                Oculta a oferta, zera os sacos e desativa os
+                                tamanhos deste lote ao salvar.
                             </p>
                         </div>
                         <Button
@@ -1390,94 +648,6 @@ export function ProductForm({ product }: ProductFormProps) {
                     </Button>
                 </div>
             </div>
-
-            {pendingPreset && (
-                <>
-                    <Dialog
-                        open={!isMobile}
-                        onOpenChange={(open) => {
-                            if (!open) {
-                                cancelPresetChange();
-                            }
-                        }}
-                    >
-                        <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                                <div className="flex items-start gap-3 text-left">
-                                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                                        <TriangleAlert className="size-5" />
-                                    </span>
-                                    <div className="grid gap-1.5">
-                                        <DialogTitle>
-                                            Trocar grade de tamanhos?
-                                        </DialogTitle>
-                                        <DialogDescription>
-                                            {pendingPresetDescription}
-                                        </DialogDescription>
-                                    </div>
-                                </div>
-                            </DialogHeader>
-                            <DialogFooter>
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    onClick={cancelPresetChange}
-                                >
-                                    Manter grade atual
-                                </Button>
-                                <Button
-                                    type="button"
-                                    onClick={confirmPresetChange}
-                                >
-                                    Trocar grade
-                                </Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
-
-                    <Drawer
-                        open={isMobile}
-                        onOpenChange={(open) => {
-                            if (!open) {
-                                cancelPresetChange();
-                            }
-                        }}
-                    >
-                        <DrawerContent>
-                            <DrawerHeader>
-                                <div className="flex items-start gap-3 text-left">
-                                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                                        <TriangleAlert className="size-5" />
-                                    </span>
-                                    <div className="grid gap-1.5">
-                                        <DrawerTitle>
-                                            Trocar grade de tamanhos?
-                                        </DrawerTitle>
-                                        <DrawerDescription>
-                                            {pendingPresetDescription}
-                                        </DrawerDescription>
-                                    </div>
-                                </div>
-                            </DrawerHeader>
-                            <DrawerFooter>
-                                <Button
-                                    type="button"
-                                    onClick={confirmPresetChange}
-                                >
-                                    Trocar grade
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="secondary"
-                                    onClick={cancelPresetChange}
-                                >
-                                    Manter grade atual
-                                </Button>
-                            </DrawerFooter>
-                        </DrawerContent>
-                    </Drawer>
-                </>
-            )}
         </form>
     );
 }

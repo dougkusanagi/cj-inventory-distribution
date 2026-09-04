@@ -7,7 +7,7 @@ Sistema Laravel interno da Crônicas Jeans para organizar estoque disponível pa
 Entregar um fluxo simples:
 
 1. Cadastrar produtos.
-2. Quando houver uma oferta, informar estoque total e, opcionalmente, estoque por tamanho.
+2. Quando houver uma oferta, organizar um ou mais sacos, cada um com sua grade e seu total.
 3. Classificar a disponibilidade como:
     - `Reposição`
     - `Grade Nova`
@@ -39,9 +39,9 @@ Campos principais:
 - observação
 - status ativo/inativo independente do estoque
 
-### Variação
+### Tamanho
 
-Representa uma variação de tamanho do produto.
+Representa um tamanho presente em um saco de uma oferta.
 
 Exemplos:
 
@@ -53,7 +53,21 @@ Exemplos:
 - `G`
 - `GG`
 
-O sistema não deve assumir que tamanho é numérico.
+O sistema não deve assumir que tamanho é numérico. O mesmo tamanho pode existir
+em sacos diferentes e possui quantidade opcional em cada saco.
+
+### Saco de estoque
+
+Cada oferta ativa é composta por pelo menos um saco. Cada saco guarda:
+
+- sua ordem de exibição;
+- seu total de peças;
+- sua própria grade de tamanhos;
+- presença e quantidade opcional por tamanho.
+
+Quando alguma quantidade numérica de tamanho ativo é informada, o total do saco
+é recalculado no servidor pela soma dessas quantidades. Sem quantidades
+conhecidas, o total é manual. O total público da oferta é a soma dos sacos.
 
 ### Oferta de estoque
 
@@ -62,18 +76,17 @@ Representa uma disponibilidade atual de um produto.
 Ela guarda:
 
 - tipo: `Reposição`, `Grade Nova` ou `Grade Furada`
-- estoque total obrigatório quando houver oferta ativa
-- quantidade de volumes (sacos) obrigatória para `Reposição` e `Grade Furada`
-- tamanhos presentes naquele lote, quando informados
-- quantidades opcionais por tamanho
+- um ou mais sacos quando houver oferta ativa
+- total agregado calculado pela soma dos sacos
 - status ativo/inativo
 
 O tipo pertence à oferta de estoque, e não ao produto.
 Ativar ou desativar o produto não altera os dados da oferta de estoque.
 Desativar a exibição de uma oferta no catálogo também preserva seus dados para
 edição ou reativação posterior.
-Nas ofertas com volumes, quando a quantidade de sacos chega a zero, a oferta
-deixa de aparecer no catálogo das vendedoras.
+Todos os tipos usam a mesma regra física: a oferta só aparece no catálogo
+quando o produto e a oferta estão ativos, existe ao menos um saco e a soma dos
+totais dos sacos é maior que zero.
 
 ### Pedido
 
