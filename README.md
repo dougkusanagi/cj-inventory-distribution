@@ -89,6 +89,8 @@ Status iniciais:
 
 - [Arquitetura](docs/ARCHITECTURE.md)
 - [Roadmap](docs/ROADMAP.md)
+- [Refatoração de estoque por saco](docs/refactors/stock-by-volume/README.md)
+- [Tasklist da refatoração](docs/refactors/stock-by-volume/TASKLIST.md)
 - [Desenvolvimento](docs/DEVELOPMENT.md)
 - [ADRs](docs/adr/README.md)
 

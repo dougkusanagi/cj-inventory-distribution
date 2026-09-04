@@ -2,6 +2,17 @@
 
 O roadmap descreve direção, não compromisso de implementação imediata.
 
+## Refatoração ativa
+
+A mudança da grade e do estoque para sacos individuais possui especificação e
+andamento próprios:
+
+- [Visão geral da refatoração](refactors/stock-by-volume/README.md)
+- [Tasklist e registro de execução](refactors/stock-by-volume/TASKLIST.md)
+
+Enquanto a refatoração estiver aberta, sua tasklist é a fonte de verdade para
+a ordem das tarefas, dependências, critérios de aceite e evidências.
+
 ## Fase 1 — Cadastro de produtos
 
 - [x] CRUD de produtos
