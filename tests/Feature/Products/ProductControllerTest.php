@@ -34,6 +34,31 @@ test('authenticated users can view the product catalog', function () {
         );
 });
 
+test('product catalog explains when a product is available for distribution', function () {
+    $user = User::factory()->create();
+    $hiddenProduct = Product::factory()->create(['is_active' => false]);
+    $hiddenProduct->offers()->create([
+        'type' => StockOfferType::NewGrade,
+        'total_quantity' => 12,
+        'is_active' => true,
+    ]);
+    $availableProduct = Product::factory()->create();
+    $availableProduct->offers()->create([
+        'type' => StockOfferType::NewGrade,
+        'total_quantity' => 12,
+        'is_active' => true,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('products.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('products.data.0.available_for_distribution', false)
+            ->where('products.data.0.distribution_status', 'Produto oculto')
+            ->where('products.data.1.available_for_distribution', true)
+            ->where('products.data.1.distribution_status', 'Disponível para distribuição'),
+        );
+});
+
 test('product catalog keeps image URLs on the application origin', function () {
     Storage::fake('public');
     config(['filesystems.disks.public.url' => 'http://192.168.10.77:8089/storage']);

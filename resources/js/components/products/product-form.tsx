@@ -132,10 +132,23 @@ const visibleSizePresets = sizePresets.filter(
 const stockOfferTypes: Array<{
     id: StockOfferType;
     label: string;
+    description: string;
 }> = [
-    { id: 'replenishment', label: 'Reposição' },
-    { id: 'new_grade', label: 'Grade Nova' },
-    { id: 'broken_grade', label: 'Grade Furada' },
+    {
+        id: 'replenishment',
+        label: 'Reposição',
+        description: 'Distribuição em sacos.',
+    },
+    {
+        id: 'new_grade',
+        label: 'Grade Nova',
+        description: 'Grade completa, sem controle de sacos.',
+    },
+    {
+        id: 'broken_grade',
+        label: 'Grade Furada',
+        description: 'Grade incompleta, distribuída em sacos.',
+    },
 ];
 
 function stockOfferRequiresVolumes(type: StockOfferType | ''): boolean {
@@ -409,6 +422,19 @@ export function ProductForm({ product }: ProductFormProps) {
     };
 
     const removeCustomSize = (index: number) => {
+        const variant = form.data.variants[index];
+
+        if (
+            variant &&
+            (variant.is_active ||
+                (variant.quantity !== null && variant.quantity !== '')) &&
+            !window.confirm(
+                `Remover o tamanho ${variant.size || 'informado'}? A presença e a quantidade serão apagadas.`,
+            )
+        ) {
+            return;
+        }
+
         updateStockData((previousData) => ({
             ...previousData,
             variants: previousData.variants.filter(
@@ -419,6 +445,17 @@ export function ProductForm({ product }: ProductFormProps) {
 
     const selectStockOfferType = (value: string) => {
         const type = value as StockOfferType;
+
+        if (
+            !stockOfferRequiresVolumes(type) &&
+            form.data.volumes !== null &&
+            form.data.volumes !== '' &&
+            !window.confirm(
+                'Este tipo de estoque não usa sacos. O número informado será apagado. Deseja continuar?',
+            )
+        ) {
+            return;
+        }
 
         updateStockData((previousData) => ({
             ...previousData,
@@ -434,6 +471,20 @@ export function ProductForm({ product }: ProductFormProps) {
     };
 
     const updateVariantActive = (index: number, isActive: boolean) => {
+        const variant = form.data.variants[index];
+
+        if (
+            variant &&
+            !isActive &&
+            variant.quantity !== null &&
+            variant.quantity !== '' &&
+            !window.confirm(
+                `Desativar o tamanho ${variant.size}? A quantidade informada será apagada.`,
+            )
+        ) {
+            return;
+        }
+
         updateStockData((previousData) => ({
             ...previousData,
             variants: previousData.variants.map((variant, variantIndex) =>
@@ -449,6 +500,19 @@ export function ProductForm({ product }: ProductFormProps) {
     };
 
     const setAllVariantsActive = (isActive: boolean) => {
+        if (
+            !isActive &&
+            form.data.variants.some(
+                (variant) =>
+                    variant.quantity !== null && variant.quantity !== '',
+            ) &&
+            !window.confirm(
+                'Desmarcar todos os tamanhos apagará as quantidades informadas. Deseja continuar?',
+            )
+        ) {
+            return;
+        }
+
         updateStockData((previousData) => ({
             ...previousData,
             variants: previousData.variants.map((variant) => ({
@@ -477,6 +541,19 @@ export function ProductForm({ product }: ProductFormProps) {
     const sumOfVariantQuantities = sumVariantQuantities(form.data.variants);
 
     const hasCurrentStockData = hasStockOfferData(form.data);
+    const hasPositiveTotal = Number(form.data.total_quantity) > 0;
+    const hasAvailableVolumes =
+        !stockOfferRequiresVolumes(form.data.stock_offer_type) ||
+        Number(form.data.volumes) > 0;
+    const distributionStatus = !form.data.is_active
+        ? 'Não aparece para as vendedoras: produto oculto.'
+        : !form.data.has_stock_offer
+          ? 'Não aparece para as vendedoras: sem estoque disponível.'
+          : !hasPositiveTotal
+            ? 'Não aparece para as vendedoras: estoque zerado.'
+            : !hasAvailableVolumes
+              ? 'Não aparece para as vendedoras: sem sacos disponíveis.'
+              : 'Aparece para as vendedoras.';
 
     const clearCurrentStock = () => {
         const confirmed = window.confirm(
@@ -891,8 +968,12 @@ export function ProductForm({ product }: ProductFormProps) {
                         </h2>
                         <CardDescription className="text-xs sm:text-sm">
                             Informe o tipo e as quantidades do estoque atual.
-                            Deixe os campos vazios se ainda não houver estoque.
+                            O produto aparece para as vendedoras quando há
+                            estoque disponível.
                         </CardDescription>
+                        <p className="text-sm font-medium text-foreground">
+                            {distributionStatus}
+                        </p>
                     </div>
                 </CardHeader>
                 <CardContent className="grid gap-7 p-5 pt-0 sm:p-6 sm:pt-0">
@@ -930,7 +1011,12 @@ export function ProductForm({ product }: ProductFormProps) {
                                             id={optionId}
                                             value={offerType.id}
                                         />
-                                        {offerType.label}
+                                        <span className="grid gap-0.5">
+                                            <span>{offerType.label}</span>
+                                            <span className="text-xs font-normal text-muted-foreground">
+                                                {offerType.description}
+                                            </span>
+                                        </span>
                                     </label>
                                 );
                             })}
@@ -1010,12 +1096,11 @@ export function ProductForm({ product }: ProductFormProps) {
                                     </AlertTitle>
                                     <AlertDescription className="text-xs">
                                         <p>
-                                            Informe o total quando não quiser
-                                            controlar o estoque por tamanho. Ao
-                                            preencher uma quantidade por
-                                            tamanho, o total será somado
-                                            automaticamente e não poderá ser
-                                            editado.
+                                            Informe o total quando quiser controlar
+                                            apenas o estoque do lote. Ao preencher
+                                            uma quantidade por tamanho, o total
+                                            será somado automaticamente e não
+                                            poderá ser editado.
                                         </p>
                                     </AlertDescription>
                                 </Alert>
@@ -1100,9 +1185,10 @@ export function ProductForm({ product }: ProductFormProps) {
                                     </span>
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                    Ative um tamanho para informar que ele
-                                    existe neste lote. A quantidade pode ficar
-                                    em branco.
+                                    Marque os tamanhos que existem neste lote.
+                                    Informe a quantidade somente quando quiser
+                                    controlar o estoque por tamanho; deixe em
+                                    branco se não souber.
                                 </p>
                             </div>
 

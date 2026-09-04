@@ -30,7 +30,7 @@ class ProductController extends Controller
         Gate::authorize('viewAny', Product::class);
 
         $products = Product::query()
-            ->select(['id', 'code', 'model', 'name', 'notes', 'created_at', 'updated_at'])
+            ->select(['id', 'code', 'model', 'name', 'notes', 'is_active', 'created_at', 'updated_at'])
             ->with(['variants:id,product_id,size,sort_order', 'latestOffer.items', 'media'])
             ->latest()
             ->paginate(12);

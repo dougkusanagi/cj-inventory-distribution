@@ -17,7 +17,7 @@ class DashboardController extends Controller
     {
         Gate::authorize('viewAny', Product::class);
 
-        $activeOffers = StockOffer::query()->where('is_active', true);
+        $availableOffers = StockOffer::query()->availableForCatalog();
 
         return Inertia::render('dashboard', [
             'stats' => [
@@ -26,8 +26,8 @@ class DashboardController extends Controller
                     ->whereHas('media', fn ($query) => $query->where('collection_name', Product::MEDIA_COLLECTION))
                     ->count(),
                 'withSizes' => Product::query()->has('variants')->count(),
-                'activeOffers' => (clone $activeOffers)->count(),
-                'stockUnits' => (int) $activeOffers->sum('total_quantity'),
+                'activeOffers' => (clone $availableOffers)->distinct('product_id')->count('product_id'),
+                'stockUnits' => (int) $availableOffers->sum('total_quantity'),
             ],
         ]);
     }

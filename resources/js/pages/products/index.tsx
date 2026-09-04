@@ -14,6 +14,7 @@ import {
 import { useState } from 'react';
 import { destroy } from '@/actions/App/Http/Controllers/ProductController';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
     Card,
     CardContent,
@@ -110,6 +111,16 @@ function ProductVariants({ product }: { product: Product }) {
     ));
 }
 
+function DistributionStatus({ product }: { product: Product }) {
+    const available = product.available_for_distribution === true;
+
+    return (
+        <Badge variant={available ? 'secondary' : 'outline'}>
+            {product.distribution_status ?? 'Sem estoque disponível'}
+        </Badge>
+    );
+}
+
 function ProductCard({
     product,
     onDelete,
@@ -163,6 +174,7 @@ function ProductCard({
                             ? `Modelo ${product.model}`
                             : 'Modelo não informado'}
                     </p>
+                    <DistributionStatus product={product} />
                 </div>
 
                 <div className="flex min-h-7 flex-wrap gap-1.5">
@@ -174,6 +186,9 @@ function ProductCard({
                         {product.notes ?? 'Nenhuma observação registrada.'}
                     </p>
                     <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-card-foreground">
+                            {product.total_quantity ?? 0} peças
+                        </span>
                         <Button
                             variant="secondary"
                             size="sm"
@@ -276,6 +291,9 @@ function ProductTable({
                                                     ? `Modelo ${product.model}`
                                                     : 'Modelo não informado'}
                                             </span>
+                                        </div>
+                                        <div className="mt-2">
+                                            <DistributionStatus product={product} />
                                         </div>
                                     </div>
                                 </div>
@@ -556,7 +574,7 @@ export default function ProductsIndex({ products }: ProductsIndexProps) {
                         <DialogTitle>Excluir produto?</DialogTitle>
                         <DialogDescription>
                             {productToDelete
-                                ? `“${productToDelete.name}” e seus tamanhos serão removidos permanentemente.`
+                                ? `“${productToDelete.name}”, suas fotos, tamanhos e estoque serão removidos permanentemente.`
                                 : ''}
                         </DialogDescription>
                     </DialogHeader>
