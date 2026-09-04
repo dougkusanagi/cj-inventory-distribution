@@ -35,3 +35,4 @@ ADRs iniciais:
 - [0005 — Imagens de produto em coleção de mídia](0005-product-images-media-library.md)
 - [0006 — Volumes nas ofertas acondicionadas em sacos](0006-stock-offer-volumes.md)
 - [0007 — Ativação de produto independente da oferta de estoque](0007-product-activation-independent-of-stock-offer.md)
+- [0008 — Modo de definição do estoque total](0008-stock-quantity-mode.md)

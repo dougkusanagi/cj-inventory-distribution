@@ -191,6 +191,20 @@ updated_at
 informação é independente da quantidade e pode ser usada mesmo quando o
 estoquista não souber ou não quiser informar números.
 
+A oferta pode usar um dos dois modos de estoque, escolhidos implicitamente
+pela interface:
+
+- quando nenhuma quantidade por tamanho é informada, `total_quantity` é
+  digitado e representa o estoque total;
+- quando pelo menos uma quantidade de um tamanho ativo é informada, o estoque
+  passa a ser considerado definido por tamanho e `total_quantity` é calculado
+  pela soma das quantidades informadas nos tamanhos ativos.
+
+O segundo modo também é acionado quando a quantidade informada é zero. Valores
+nulos continuam representando uma contagem desconhecida e entram como zero no
+cálculo do total; a disponibilidade do tamanho continua sendo controlada por
+`is_active`.
+
 Quando `is_active` é `false`, o tamanho não deve aparecer como disponível para
 as vendedoras e sua quantidade deve permanecer nula. Quando é `true`, a
 quantidade continua opcional.
@@ -206,9 +220,9 @@ Estoque total: 30
 40: presente, desconhecido
 ```
 
-O sistema não deve exigir que a soma das quantidades conhecidas seja igual ao estoque total quando existirem valores desconhecidos.
-
-Quando todas as quantidades estiverem informadas, a interface pode ajudar a validar ou calcular o total.
+No modo por tamanho, o total não pode ser editado separadamente nem divergir
+da soma persistida pelo servidor. No modo somente total, quantidades nulas por
+tamanho não alteram o total informado manualmente.
 
 ## Order
 

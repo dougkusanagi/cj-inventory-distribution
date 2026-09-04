@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Accepted; a regra de definição do total foi parcialmente substituída pela ADR
+0008.
 
 ## Contexto
 

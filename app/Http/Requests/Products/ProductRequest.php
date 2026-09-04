@@ -104,7 +104,10 @@ abstract class ProductRequest extends FormRequest
             ],
             'total_quantity' => [
                 'nullable',
-                Rule::requiredIf(fn (): bool => $this->boolean('has_stock_offer')),
+                Rule::requiredIf(
+                    fn (): bool => $this->boolean('has_stock_offer')
+                        && ! $this->hasVariantQuantities(),
+                ),
                 'integer',
                 'min:0',
             ],
@@ -198,6 +201,33 @@ abstract class ProductRequest extends FormRequest
 
         return $this->boolean('has_stock_offer')
             && $type?->requiresVolumes() === true;
+    }
+
+    /**
+     * Determine whether the request is using quantities by size.
+     */
+    private function hasVariantQuantities(): bool
+    {
+        $variants = $this->input('variants', []);
+
+        if (! is_array($variants)) {
+            return false;
+        }
+
+        foreach ($variants as $variant) {
+            if (! is_array($variant)) {
+                continue;
+            }
+
+            $isActive = filter_var($variant['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN);
+            $quantity = $variant['quantity'] ?? null;
+
+            if ($isActive && $quantity !== null && $quantity !== '' && is_numeric($quantity)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

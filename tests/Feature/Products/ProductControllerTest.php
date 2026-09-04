@@ -34,6 +34,31 @@ test('authenticated users can view the product catalog', function () {
         );
 });
 
+test('product catalog explains when a product is available for distribution', function () {
+    $user = User::factory()->create();
+    $hiddenProduct = Product::factory()->create(['is_active' => false]);
+    $hiddenProduct->offers()->create([
+        'type' => StockOfferType::NewGrade,
+        'total_quantity' => 12,
+        'is_active' => true,
+    ]);
+    $availableProduct = Product::factory()->create();
+    $availableProduct->offers()->create([
+        'type' => StockOfferType::NewGrade,
+        'total_quantity' => 12,
+        'is_active' => true,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('products.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('products.data.0.available_for_distribution', false)
+            ->where('products.data.0.distribution_status', 'Produto oculto')
+            ->where('products.data.1.available_for_distribution', true)
+            ->where('products.data.1.distribution_status', 'Disponível para distribuição'),
+        );
+});
+
 test('product catalog keeps image URLs on the application origin', function () {
     Storage::fake('public');
     config(['filesystems.disks.public.url' => 'http://192.168.10.77:8089/storage']);
@@ -145,6 +170,29 @@ test('authenticated users can create a product with optional model, ordered size
     expect($product->latestOffer->type)->toBe(StockOfferType::NewGrade);
     expect($product->latestOffer->items->pluck('is_active')->all())->toBe([true, true, true]);
     expect($product->latestOffer->items->pluck('quantity')->all())->toBe([5, 5, 5]);
+});
+
+test('stock total is calculated from active size quantities', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->post(route('products.store'), [
+        'name' => 'Calça com estoque por tamanho',
+        'variants' => [
+            ['size' => '36', 'quantity' => 0, 'is_active' => true],
+            ['size' => '38', 'quantity' => 4, 'is_active' => true],
+            ['size' => '40', 'quantity' => 99, 'is_active' => false],
+        ],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $product = Product::query()->with('latestOffer.items')->sole();
+
+    expect($product->latestOffer->total_quantity)->toBe(4);
+    expect($product->latestOffer->items->pluck('is_active')->all())->toBe([true, true, false]);
+    expect($product->latestOffer->items->pluck('quantity')->all())->toBe([0, 4, null]);
 });
 
 test('authenticated users can save a product without creating a stock offer', function () {
@@ -508,7 +556,7 @@ test('authenticated users can update product details, sizes and stock without ch
         'name' => 'Short Mom',
         'model' => '3002',
         'notes' => 'Nova observação',
-        'total_quantity' => 20,
+        'total_quantity' => 999,
         'variants' => [
             ['size' => '36', 'quantity' => 10, 'is_active' => true],
             ['size' => '38', 'quantity' => null, 'is_active' => false],
@@ -524,7 +572,7 @@ test('authenticated users can update product details, sizes and stock without ch
     expect($product->name)->toBe('Short Mom');
     expect($product->model)->toBe('3002');
     expect($product->variants()->pluck('size')->all())->toBe(['36', '38']);
-    expect($product->latestOffer->total_quantity)->toBe(20);
+    expect($product->latestOffer->total_quantity)->toBe(10);
     expect($product->latestOffer->items->pluck('is_active')->all())->toBe([true, false]);
     expect($product->latestOffer->items->pluck('quantity')->all())->toBe([10, null]);
 });

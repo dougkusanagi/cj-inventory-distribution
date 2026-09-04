@@ -148,7 +148,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                     <MetricCard
                         label="produtos cadastrados"
                         value={stats.total.toString().padStart(2, '0')}
-                        description="Referências disponíveis no catálogo."
+                        description="Peças registradas no sistema."
                         icon={Package}
                         featured
                     />
@@ -165,10 +165,10 @@ export default function Dashboard({ stats }: DashboardProps) {
                         icon={Layers3}
                     />
                     <MetricCard
-                        label="ofertas ativas"
+                        label="produtos com estoque"
                         value={stats.activeOffers.toString().padStart(2, '0')}
                         description={
-                            stats.stockUnits + ' peças no estoque ativo.'
+                            stats.stockUnits + ' peças disponíveis para distribuição.'
                         }
                         icon={Warehouse}
                     />
@@ -205,13 +205,13 @@ export default function Dashboard({ stats }: DashboardProps) {
                             </span>
                             <div className="grid gap-1">
                                 <span className="text-xs font-semibold tracking-[0.16em] text-highlight uppercase">
-                                    Estoque ativo
+                                    Estoque disponível
                                 </span>
                                 <strong className="text-3xl font-semibold tracking-tight">
                                     {stats.stockUnits}
                                 </strong>
                                 <span className="text-sm text-muted-foreground">
-                                    unidades somadas nas ofertas atuais
+                                    unidades disponíveis para distribuição
                                 </span>
                             </div>
                         </CardContent>

@@ -24,6 +24,8 @@ export type Product = {
     images: ProductImage[];
     notes: string | null;
     has_stock_offer?: boolean;
+    available_for_distribution?: boolean;
+    distribution_status?: string;
     stock_offer_type?: StockOfferType | null;
     total_quantity?: number | null;
     volumes?: number | null;
