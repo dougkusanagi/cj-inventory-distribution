@@ -94,7 +94,7 @@ obrigatório.
 ```text
 product: obrigatório
 type: obrigatório
-total_quantity: inteiro >= 0
+total_quantity: inteiro >= 0; obrigatório no modo somente total e calculado no modo por tamanho
 volumes: inteiro >= 1 quando o tipo for `replenishment` ou `broken_grade`
 variant quantities: inteiro >= 0 ou null
 ```
@@ -107,9 +107,13 @@ O campo `volumes` representa a quantidade de sacos disponíveis para
 pela consulta do catálogo compartilhado. O switch do formulário controla a
 oferta de estoque; desativá-lo não desativa nem remove o produto.
 
-Se todas as quantidades por tamanho estiverem preenchidas, a aplicação deve evitar inconsistência evidente entre soma e total.
+O modo por tamanho é inferido quando houver pelo menos uma quantidade definida
+em um tamanho ativo, inclusive zero. Nesse modo, o total é sempre a soma das
+quantidades dos tamanhos ativos e o valor enviado pelo cliente não é a fonte de
+verdade. Quantidades nulas continuam permitidas e entram como zero na soma.
 
-Se alguma quantidade estiver desconhecida, o total continua sendo a referência obrigatória.
+Sem quantidades por tamanho, o operador informa o total manualmente, que
+continua sendo a referência da oferta.
 
 ## Pedido
 

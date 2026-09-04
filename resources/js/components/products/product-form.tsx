@@ -1,5 +1,17 @@
 import { router, useForm } from '@inertiajs/react';
-import { Layers, Package, PackageX, Plus, Sparkles, X } from 'lucide-react';
+import {
+    Info,
+    Layers,
+    ListCheck,
+    ListX,
+    Package,
+    PackageX,
+    Plus,
+    Save,
+    Sparkles,
+    TriangleAlert,
+    X,
+} from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
@@ -8,6 +20,7 @@ import {
 } from '@/actions/App/Http/Controllers/ProductController';
 import InputError from '@/components/input-error';
 import { ProductPhotoManager } from '@/components/products/product-photo-manager';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -15,11 +28,28 @@ import {
     CardDescription,
     CardHeader,
 } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    Drawer,
+    DrawerContent,
+    DrawerDescription,
+    DrawerFooter,
+    DrawerHeader,
+    DrawerTitle,
+} from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { useSidebar } from '@/components/ui/sidebar';
+import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useScrollVisibility } from '@/hooks/use-scroll-visibility';
@@ -126,6 +156,30 @@ function hasStockOfferData(
     );
 }
 
+function hasVariantQuantity(variant: VariantFormItem): boolean {
+    return (
+        variant.is_active &&
+        variant.quantity !== null &&
+        variant.quantity !== ''
+    );
+}
+
+function hasVariantQuantities(variants: VariantFormItem[]): boolean {
+    return variants.some(hasVariantQuantity);
+}
+
+function sumVariantQuantities(variants: VariantFormItem[]): number {
+    return variants.reduce((total, variant) => {
+        if (!hasVariantQuantity(variant)) {
+            return total;
+        }
+
+        const quantity = Number(variant.quantity);
+
+        return Number.isNaN(quantity) ? total : total + quantity;
+    }, 0);
+}
+
 function detectPreset(variants: Array<{ size: string }>): SizePresetId {
     const sizes = variants.map((variant) => variant.size.toUpperCase().trim());
 
@@ -146,6 +200,9 @@ export function ProductForm({ product }: ProductFormProps) {
         : 'numeric-female';
     const [selectedPreset, setSelectedPreset] =
         useState<SizePresetId>(initialPreset);
+    const [pendingPresetId, setPendingPresetId] = useState<SizePresetId | null>(
+        null,
+    );
     const [processingImages, setProcessingImages] = useState(false);
     const radioGroupId = useId();
     const formRef = useRef<HTMLFormElement>(null);
@@ -153,6 +210,12 @@ export function ProductForm({ product }: ProductFormProps) {
     const { isMobile, state: sidebarState } = useSidebar();
     const { isVisible: isFooterVisible, show: showFooter } =
         useScrollVisibility({ showAtDocumentEnd: true });
+    const pendingPreset = pendingPresetId
+        ? sizePresets.find((preset) => preset.id === pendingPresetId)
+        : undefined;
+    const pendingPresetDescription = pendingPreset
+        ? `Trocar para a grade "${pendingPreset.label}" substituirá a lista atual. Tamanhos fora da nova grade, com suas marcações e quantidades, serão descartados.`
+        : '';
 
     const initialVariants: VariantFormItem[] =
         product && product.variants.length > 0
@@ -169,6 +232,10 @@ export function ProductForm({ product }: ProductFormProps) {
                       quantity: null,
                   })) ?? []);
 
+    const initialTotalQuantity = hasVariantQuantities(initialVariants)
+        ? sumVariantQuantities(initialVariants)
+        : (product?.total_quantity ?? null);
+
     const form = useForm<ProductFormData>({
         name: product?.name ?? '',
         model: product?.model ?? '',
@@ -176,7 +243,7 @@ export function ProductForm({ product }: ProductFormProps) {
         is_active: product?.is_active ?? true,
         has_stock_offer: product?.has_stock_offer ?? false,
         stock_offer_type: product?.stock_offer_type ?? 'new_grade',
-        total_quantity: product?.total_quantity ?? null,
+        total_quantity: initialTotalQuantity,
         volumes: product?.volumes ?? null,
         variants: initialVariants,
         images: [],
@@ -248,12 +315,35 @@ export function ProductForm({ product }: ProductFormProps) {
     ) => {
         form.setData((previousData) => {
             const nextData = updater(previousData);
+            const nextHasVariantQuantities = hasVariantQuantities(
+                nextData.variants,
+            );
 
             return {
                 ...nextData,
+                total_quantity: nextHasVariantQuantities
+                    ? sumVariantQuantities(nextData.variants)
+                    : nextData.total_quantity,
                 has_stock_offer: hasStockOfferData(nextData),
             };
         });
+    };
+
+    const applyPreset = (nextPreset: SizePreset) => {
+        const currentVariants = new Map(
+            form.data.variants.map((variant) => [variant.size, variant]),
+        );
+
+        setSelectedPreset(nextPreset.id);
+
+        updateStockData((previousData) => ({
+            ...previousData,
+            variants: nextPreset.sizes.map((size) => ({
+                size,
+                is_active: currentVariants.get(size)?.is_active ?? false,
+                quantity: currentVariants.get(size)?.quantity ?? null,
+            })),
+        }));
     };
 
     const handlePresetChange = (presetId: string) => {
@@ -263,15 +353,12 @@ export function ProductForm({ product }: ProductFormProps) {
             return;
         }
 
-        setSelectedPreset(nextPreset.id);
-
         if (nextPreset.id === 'custom') {
+            setPendingPresetId(null);
+            setSelectedPreset(nextPreset.id);
+
             return;
         }
-
-        const currentVariants = new Map(
-            form.data.variants.map((variant) => [variant.size, variant]),
-        );
 
         const wouldDiscardData = form.data.variants.some(
             (variant) =>
@@ -283,19 +370,25 @@ export function ProductForm({ product }: ProductFormProps) {
         );
 
         if (wouldDiscardData) {
-            setSelectedPreset('custom');
+            setPendingPresetId(nextPreset.id);
 
             return;
         }
 
-        updateStockData((previousData) => ({
-            ...previousData,
-            variants: nextPreset.sizes.map((size) => ({
-                size,
-                is_active: currentVariants.get(size)?.is_active ?? false,
-                quantity: currentVariants.get(size)?.quantity ?? null,
-            })),
-        }));
+        applyPreset(nextPreset);
+    };
+
+    const cancelPresetChange = () => {
+        setPendingPresetId(null);
+    };
+
+    const confirmPresetChange = () => {
+        if (!pendingPreset) {
+            return;
+        }
+
+        applyPreset(pendingPreset);
+        setPendingPresetId(null);
     };
 
     const updateVariantSize = (index: number, size: string) => {
@@ -380,26 +473,8 @@ export function ProductForm({ product }: ProductFormProps) {
         }));
     };
 
-    const sumOfVariantQuantities = form.data.variants.reduce((acc, variant) => {
-        if (
-            variant.is_active &&
-            variant.quantity !== null &&
-            variant.quantity !== ''
-        ) {
-            const num = Number(variant.quantity);
-
-            return isNaN(num) ? acc : acc + num;
-        }
-
-        return acc;
-    }, 0);
-
-    const hasFilledVariantQuantities = form.data.variants.some(
-        (variant) =>
-            variant.is_active &&
-            variant.quantity !== null &&
-            variant.quantity !== '',
-    );
+    const hasFilledVariantQuantities = hasVariantQuantities(form.data.variants);
+    const sumOfVariantQuantities = sumVariantQuantities(form.data.variants);
 
     const hasCurrentStockData = hasStockOfferData(form.data);
 
@@ -424,13 +499,6 @@ export function ProductForm({ product }: ProductFormProps) {
                 is_active: false,
                 quantity: null,
             })),
-        }));
-    };
-
-    const applySumAsTotal = () => {
-        updateStockData((previousData) => ({
-            ...previousData,
-            total_quantity: sumOfVariantQuantities,
         }));
     };
 
@@ -885,8 +953,9 @@ export function ProductForm({ product }: ProductFormProps) {
                                     )}
                                 </Label>
                                 <p className="text-xs text-muted-foreground">
-                                    Quantidade total de peças disponíveis neste
-                                    lote.
+                                    {hasFilledVariantQuantities
+                                        ? 'Calculado pela soma das quantidades informadas nos tamanhos.'
+                                        : 'Quantidade total de peças disponíveis neste lote.'}
                                 </p>
                                 <Input
                                     id="total-quantity"
@@ -894,6 +963,12 @@ export function ProductForm({ product }: ProductFormProps) {
                                     type="number"
                                     min="0"
                                     inputMode="numeric"
+                                    readOnly={hasFilledVariantQuantities}
+                                    aria-readonly={
+                                        hasFilledVariantQuantities
+                                            ? true
+                                            : undefined
+                                    }
                                     value={form.data.total_quantity ?? ''}
                                     onChange={(event) =>
                                         updateStockData((previousData) => ({
@@ -912,8 +987,15 @@ export function ProductForm({ product }: ProductFormProps) {
                                         }))
                                     }
                                     placeholder="Ex.: 30"
-                                    className="h-11 text-base sm:h-10 sm:text-sm"
-                                    required={form.data.has_stock_offer}
+                                    className={cn(
+                                        'h-11 text-base sm:h-10 sm:text-sm',
+                                        hasFilledVariantQuantities &&
+                                            'cursor-not-allowed bg-muted/40 text-muted-foreground',
+                                    )}
+                                    required={
+                                        form.data.has_stock_offer &&
+                                        !hasFilledVariantQuantities
+                                    }
                                     aria-invalid={
                                         error('total_quantity')
                                             ? true
@@ -921,6 +1003,22 @@ export function ProductForm({ product }: ProductFormProps) {
                                     }
                                 />
                                 <InputError message={error('total_quantity')} />
+                                <Alert className="border-primary/25 bg-primary/5 p-3 [&>svg]:text-primary">
+                                    <Info />
+                                    <AlertTitle>
+                                        Regra do estoque total
+                                    </AlertTitle>
+                                    <AlertDescription className="text-xs">
+                                        <p>
+                                            Informe o total quando não quiser
+                                            controlar o estoque por tamanho. Ao
+                                            preencher uma quantidade por
+                                            tamanho, o total será somado
+                                            automaticamente e não poderá ser
+                                            editado.
+                                        </p>
+                                    </AlertDescription>
+                                </Alert>
                             </div>
 
                             {stockOfferRequiresVolumes(
@@ -983,18 +1081,9 @@ export function ProductForm({ product }: ProductFormProps) {
                             <div className="flex flex-wrap items-center gap-2">
                                 <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold text-foreground">
                                     <Sparkles className="size-3 text-primary" />
-                                    Soma dos tamanhos: {sumOfVariantQuantities}
+                                    Estoque por tamanho · total calculado:{' '}
+                                    {sumOfVariantQuantities}
                                 </span>
-                                {String(form.data.total_quantity ?? '') !==
-                                    String(sumOfVariantQuantities) && (
-                                    <button
-                                        type="button"
-                                        onClick={applySumAsTotal}
-                                        className="text-xs font-medium text-highlight underline underline-offset-2 hover:opacity-80 active:opacity-60"
-                                    >
-                                        Usar soma ({sumOfVariantQuantities})
-                                    </button>
-                                )}
                             </div>
                         ) : null}
                     </div>
@@ -1018,28 +1107,31 @@ export function ProductForm({ product }: ProductFormProps) {
                             </div>
 
                             {form.data.variants.length > 1 && (
-                                <div className="flex items-center gap-2">
-                                    <button
+                                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                                    <Button
                                         type="button"
                                         onClick={() =>
                                             setAllVariantsActive(true)
                                         }
-                                        className="text-xs font-medium text-highlight hover:underline"
+                                        variant="secondary"
+                                        size="sm"
+                                        className="w-full sm:w-auto"
                                     >
-                                        Ativar todos
-                                    </button>
-                                    <span className="text-xs text-muted-foreground/60">
-                                        ·
-                                    </span>
-                                    <button
+                                        <ListCheck />
+                                        Marcar todos
+                                    </Button>
+                                    <Button
                                         type="button"
                                         onClick={() =>
                                             setAllVariantsActive(false)
                                         }
-                                        className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full sm:w-auto"
                                     >
+                                        <ListX />
                                         Desmarcar todos
-                                    </button>
+                                    </Button>
                                 </div>
                             )}
                         </div>
@@ -1183,7 +1275,7 @@ export function ProductForm({ product }: ProductFormProps) {
             <div
                 onFocusCapture={showFooter}
                 className={cn(
-                    'fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 shadow-[0_-6px_24px_rgba(0,0,0,0.08)] backdrop-blur transition-[left,transform] duration-200 ease-out will-change-transform sm:p-4',
+                    'fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-card/90 p-3 shadow-[0_-8px_24px_-16px_rgba(0,0,0,0.45)] backdrop-blur-xl transition-[left,translate] duration-200 ease-in-out will-change-[translate] sm:p-4',
                     !isMobile &&
                         (sidebarState === 'collapsed'
                             ? 'md:left-[calc(var(--sidebar-width-icon)+1rem)]'
@@ -1191,12 +1283,17 @@ export function ProductForm({ product }: ProductFormProps) {
                     isFooterVisible ? 'translate-y-0' : 'translate-y-full',
                 )}
             >
-                <div className="mx-auto flex w-full max-w-7xl justify-end">
+                <div className="mx-auto flex w-full max-w-7xl justify-center sm:justify-end">
                     <Button
                         type="submit"
                         disabled={form.processing || processingImages}
-                        className="h-12 min-w-44 text-base font-semibold sm:text-sm"
+                        className="h-12 w-full min-w-44 text-base font-semibold sm:w-auto sm:text-sm"
                     >
+                        {form.processing || processingImages ? (
+                            <Spinner />
+                        ) : (
+                            <Save />
+                        )}
                         {form.processing
                             ? 'Salvando...'
                             : processingImages
@@ -1207,6 +1304,94 @@ export function ProductForm({ product }: ProductFormProps) {
                     </Button>
                 </div>
             </div>
+
+            {pendingPreset && (
+                <>
+                    <Dialog
+                        open={!isMobile}
+                        onOpenChange={(open) => {
+                            if (!open) {
+                                cancelPresetChange();
+                            }
+                        }}
+                    >
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <div className="flex items-start gap-3 text-left">
+                                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                        <TriangleAlert className="size-5" />
+                                    </span>
+                                    <div className="grid gap-1.5">
+                                        <DialogTitle>
+                                            Trocar grade de tamanhos?
+                                        </DialogTitle>
+                                        <DialogDescription>
+                                            {pendingPresetDescription}
+                                        </DialogDescription>
+                                    </div>
+                                </div>
+                            </DialogHeader>
+                            <DialogFooter>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={cancelPresetChange}
+                                >
+                                    Manter grade atual
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={confirmPresetChange}
+                                >
+                                    Trocar grade
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+
+                    <Drawer
+                        open={isMobile}
+                        onOpenChange={(open) => {
+                            if (!open) {
+                                cancelPresetChange();
+                            }
+                        }}
+                    >
+                        <DrawerContent>
+                            <DrawerHeader>
+                                <div className="flex items-start gap-3 text-left">
+                                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                        <TriangleAlert className="size-5" />
+                                    </span>
+                                    <div className="grid gap-1.5">
+                                        <DrawerTitle>
+                                            Trocar grade de tamanhos?
+                                        </DrawerTitle>
+                                        <DrawerDescription>
+                                            {pendingPresetDescription}
+                                        </DrawerDescription>
+                                    </div>
+                                </div>
+                            </DrawerHeader>
+                            <DrawerFooter>
+                                <Button
+                                    type="button"
+                                    onClick={confirmPresetChange}
+                                >
+                                    Trocar grade
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={cancelPresetChange}
+                                >
+                                    Manter grade atual
+                                </Button>
+                            </DrawerFooter>
+                        </DrawerContent>
+                    </Drawer>
+                </>
+            )}
         </form>
     );
 }

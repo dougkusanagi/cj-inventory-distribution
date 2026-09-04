@@ -46,9 +46,11 @@ class SyncProductStockOffer
         }
 
         $sumOfVariants = $activeVariants->sum(fn (array $variant): int => (int) ($variant['quantity'] ?? 0));
-        $totalQuantity = $totalQuantityInput !== null
-            ? (int) $totalQuantityInput
-            : $offer->total_quantity ?? $sumOfVariants;
+        $totalQuantity = $hasVariantQuantities
+            ? $sumOfVariants
+            : ($totalQuantityInput !== null
+                ? (int) $totalQuantityInput
+                : $offer->total_quantity ?? $sumOfVariants);
         $volumes = $type->requiresVolumes()
             ? ($volumesInput !== null
                 ? max(0, (int) $volumesInput)
