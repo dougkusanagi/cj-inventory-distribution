@@ -8,8 +8,15 @@
         "framework"
     ],
     "license": "MIT",
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/dougkusanagi/laravel-deploy.git"
+        }
+    ],
     "require": {
         "php": "^8.3",
+        "dougkusanagi/laravel-deploy": "^0.2",
         "inertiajs/inertia-laravel": "^3.0",
         "intervention/image": "^4.0",
         "laravel/chisel": "^0.1.0",
@@ -64,10 +71,11 @@
         "lint:check": [
             "pint --parallel --test"
         ],
-        "ci:check": [
+        "ci:check": "@ci:verify",
+        "ci:local": "@ci:verify",
+        "ci:verify": [
             "Composer\\Config::disableProcessTimeout",
-            "vp check",
-            "@test"
+            "bash scripts/ci-verify.sh"
         ],
         "types:check": [
             "phpstan analyse"

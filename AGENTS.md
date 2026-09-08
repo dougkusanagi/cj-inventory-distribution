@@ -77,7 +77,55 @@ Ao concluir uma mudança:
 3. verifique migrations e validações quando aplicável;
 4. atualize a documentação existente quando a regra de negócio tiver mudado.
 
+Para a conferência completa local, o agente deve executar `composer ci:verify`,
+que reúne os testes, formatadores, linters, análises estáticas, build e testes
+de navegador. O workflow do GitHub é apenas manual e não substitui essa
+conferência local.
+
 Não troque package manager, stack de frontend, banco ou bibliotecas principais sem autorização explícita.
+
+## Deploy
+
+O deploy é fornecido pelo pacote Composer `dougkusanagi/laravel-deploy` e o
+wrapper `./deploy.sh` executa `vendor/bin/deploy`. O pacote deve ficar
+em `require`, e não em `require-dev`, porque o deploy roda `composer install
+--no-dev` no servidor. Para instalar em outro projeto, use:
+
+`composer require dougkusanagi/laravel-deploy`
+
+Depois execute `vendor/bin/deploy init` uma vez para criar a
+configuração. Neste projeto, a configuração versionada está em
+`deploy.config.sh`. Use `./deploy.sh`, executado na raiz do repositório, quando
+o usuário solicitar deploy. Antes de executá-lo:
+
+1. Execute `composer ci:verify` no ambiente de desenvolvimento com dependências dev.
+2. Confirme que as alterações estão commitadas e disponíveis na branch de destino
+   no `origin`; o script exige uma árvore de trabalho limpa.
+3. Confira ferramentas, permissões dos serviços e a configuração do ambiente de destino.
+
+O arquivo de configuração define `master` como branch padrão
+(`DEPLOY_BRANCH` permite sobrescrever), `PHP_FPM_SERVICE=php8.5-fpm` e o build
+Vite+ deste projeto. `WEB_SERVICE` vazio ativa a detecção de Caddy/Nginx.
+Informe os nomes dos serviços sem o sufixo `.service`. Requer Bash, Git, flock,
+Composer, PHP, a ferramenta de frontend configurada, sudo e systemctl quando
+serviços estiverem definidos; usa mise quando disponível. Defina
+`HEALTHCHECK_URL` para verificar HTTP após o deploy (requer curl); sem essa
+variável, a verificação final cobre apenas a inicialização via Artisan.
+
+O lock padrão fica no caminho retornado por `git rev-parse --git-path
+laravel-deploy.lock`, fora dos arquivos versionados. Se precisar sobrescrever
+`DEPLOY_LOCK_FILE`, use um caminho compartilhado por todas as execuções do
+mesmo deploy, fora dos arquivos versionados.
+
+O deploy instala dependências PHP sem dev, compila o frontend, executa migrations,
+recria caches de configuração/eventos preservando o cache da aplicação e
+recarrega os serviços. Ele atualiza a aplicação no próprio diretório, sem rollback
+automático; uma falha pode deixar etapas já aplicadas. Não reverta migrations
+automaticamente. Investigue a falha antes de repetir a execução.
+
+Para validar alterações no pacote, use `bash -n` no binário instalado e os
+testes em `tests/Feature/Deployment`; não execute um deploy real apenas como
+teste.
 
 ## Decisões arquiteturais
 
