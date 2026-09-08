@@ -63,16 +63,6 @@ class Product extends Model implements HasMedia
     ];
 
     /**
-     * Get the size variants for the product.
-     *
-     * @return HasMany<ProductVariant, $this>
-     */
-    public function variants(): HasMany
-    {
-        return $this->hasMany(ProductVariant::class)->orderBy('sort_order');
-    }
-
-    /**
      * Get all stock offers for the product.
      *
      * @return HasMany<StockOffer, $this>

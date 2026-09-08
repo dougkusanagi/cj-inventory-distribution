@@ -5,6 +5,7 @@ use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
+Route::inertia('catalog', 'catalog')->name('catalog');
 Route::inertia('design-system', 'design-system')->name('design-system');
 
 Route::middleware(['auth', 'verified'])->group(function () {

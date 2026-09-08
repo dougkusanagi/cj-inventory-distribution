@@ -3,9 +3,7 @@
 namespace App\Actions\Products;
 
 use App\Models\Product;
-use App\Models\ProductVariant;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -19,7 +17,7 @@ class CreateProduct
     ) {}
 
     /**
-     * Create a product and its size variants atomically.
+     * Create a product and its stock offer atomically.
      *
      * @param  array<string, mixed>  $data
      */
@@ -42,14 +40,16 @@ class CreateProduct
                     'code' => 'CJ-'.str_pad((string) $product->id, 6, '0', STR_PAD_LEFT),
                 ]);
 
-                $createdVariants = $this->syncVariants($product, $data['variants'] ?? []);
-                $this->syncProductStockOffer->handle($product, $createdVariants, $data);
+                $this->syncProductStockOffer->handle($product, $data);
                 $addedMedia = $this->storeImages($product, $data['images'] ?? []);
                 Media::setNewOrder(
                     $product->getMedia(Product::MEDIA_COLLECTION)->pluck('id')->all(),
                 );
 
-                return $product->load(['variants', 'latestOffer.items', 'media']);
+                return $product->load([
+                    'latestOffer.stockVolumes.items',
+                    'media',
+                ]);
             });
         } catch (Throwable $exception) {
             foreach ($addedMedia as $media) {
@@ -96,23 +96,5 @@ class CreateProduct
         }
 
         return $addedMedia;
-    }
-
-    /**
-     * Replace the product's size variants in their display order.
-     *
-     * @param  array<int, array{size: string, quantity?: int|null, is_active?: bool}>  $variants
-     * @return Collection<int, ProductVariant>
-     */
-    private function syncVariants(Product $product, array $variants): Collection
-    {
-        return collect($variants)
-            ->values()
-            ->map(function (array $variant, int $index) use ($product) {
-                return $product->variants()->create([
-                    'size' => $variant['size'],
-                    'sort_order' => $index,
-                ]);
-            });
     }
 }

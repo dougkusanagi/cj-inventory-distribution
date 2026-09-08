@@ -80,40 +80,53 @@ name: obrigatório
 model: opcional
 images: opcional, até cinco imagens
 notes: opcional
-variants: zero ou mais
+stock_volumes: zero ou mais durante rascunho; ao ativar a oferta, pelo menos um
+saco
 ```
 
-Um produto pode existir sem grade definida inicialmente.
+Um produto pode existir sem oferta de estoque inicialmente; a grade é definida
+por saco quando uma oferta é cadastrada.
 
 Um produto pode ser salvo sem oferta de estoque. Quando a oferta for ativada,
-o tipo deve ser informado explicitamente e o estoque total passa a ser
-obrigatório.
+o tipo deve ser informado explicitamente, deve existir ao menos um saco e cada
+saco precisa de total manual ou calculado.
 
 ## Validação de oferta
 
 ```text
 product: obrigatório
-type: obrigatório
-total_quantity: inteiro >= 0; obrigatório no modo somente total e calculado no modo por tamanho
-volumes: inteiro >= 1 quando o tipo for `replenishment` ou `broken_grade`
-variant quantities: inteiro >= 0 ou null
+type: obrigatório quando a oferta está ativa
+stock_volumes: ao menos um saco quando a oferta está ativa
+stock_volumes.*.total_quantity: inteiro >= 0; manual ou calculado por saco
+stock_volumes.*.items.*.size: string, distinto dentro do saco
+stock_volumes.*.items.*.quantity: inteiro >= 0 ou null
 ```
 
 O tipo não deve ser deduzido das quantidades por tamanho. A ausência de oferta
 é representada separadamente e não cria uma `StockOffer` ativa.
 
-O campo `volumes` representa a quantidade de sacos disponíveis para
-`Reposição` e `Grade Furada`. Ao chegar a zero, a oferta não deve ser retornada
-pela consulta do catálogo compartilhado. O switch do formulário controla a
-oferta de estoque; desativá-lo não desativa nem remove o produto.
+Todos os tipos usam sacos físicos. O switch do formulário controla a oferta de
+estoque; desativá-lo não desativa nem remove o produto e preserva os sacos para
+reativação posterior. O catálogo usa a existência de sacos e a soma dos seus
+totais, não um contador agregado legado.
 
-O modo por tamanho é inferido quando houver pelo menos uma quantidade definida
-em um tamanho ativo, inclusive zero. Nesse modo, o total é sempre a soma das
-quantidades dos tamanhos ativos e o valor enviado pelo cliente não é a fonte de
-verdade. Quantidades nulas continuam permitidas e entram como zero na soma.
+Em cada saco, o modo por tamanho é inferido quando houver pelo menos uma
+quantidade definida em um tamanho ativo, inclusive zero. Nesse modo, o total é
+sempre a soma das quantidades numéricas ativas e o valor enviado pelo cliente
+não é a fonte de verdade. Quantidades nulas continuam permitidas e não
+representam zero conhecido.
 
-Sem quantidades por tamanho, o operador informa o total manualmente, que
-continua sendo a referência da oferta.
+Sem quantidades por tamanho, o operador informa o total manualmente de cada
+saco. O total público da oferta é a soma dos totais persistidos dos sacos.
+
+Para verificar a integridade das ofertas ativas, execute:
+
+```bash
+php artisan stock-offers:audit-volumes
+php artisan stock-offers:audit-volumes --json
+```
+
+O comando retorna código de falha e lista as ofertas ativas sem saco físico.
 
 ## Pedido
 
@@ -135,7 +148,10 @@ Cobrir primeiro regras que podem causar inconsistência:
 - geração de código único;
 - modelo opcional;
 - tamanhos numéricos e alfabéticos;
+- grades diferentes em sacos diferentes;
 - estoque total obrigatório quando houver oferta;
+- total manual por saco quando não houver quantidade conhecida;
+- soma server-side dos totais dos sacos;
 - quantidade por tamanho nullable;
 - criação de pedido;
 - pedido sem itens deve falhar;

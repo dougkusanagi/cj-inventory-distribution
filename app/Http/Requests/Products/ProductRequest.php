@@ -29,17 +29,12 @@ abstract class ProductRequest extends FormRequest
         $isActive = $this->input('is_active');
         $hasStockOffer = $this->input('has_stock_offer');
         $stockOfferType = $this->input('stock_offer_type');
-        $totalQuantity = $this->input('total_quantity');
-        $volumes = $this->input('volumes');
-        $inputVariants = $this->input('variants', []);
-        $variants = $inputVariants;
+        $stockVolumes = $this->input('stock_volumes');
 
         if ($isActive === null) {
             $isActive = true;
         }
 
-        // Keep accepting the original payload while the form migrates to the
-        // explicit optional-offer contract.
         if ($hasStockOffer === null) {
             $hasStockOffer = true;
         }
@@ -51,25 +46,10 @@ abstract class ProductRequest extends FormRequest
             $stockOfferType = StockOfferType::NewGrade->value;
         }
 
-        if (is_array($inputVariants)) {
-            $variants = [];
-
-            foreach ($inputVariants as $variant) {
-                if (! is_array($variant)) {
-                    $variants[] = $variant;
-
-                    continue;
-                }
-
-                $size = $variant['size'] ?? '';
-                $quantity = $variant['quantity'] ?? null;
-
-                $variants[] = [
-                    'size' => is_string($size) ? Str::squish($size) : $size,
-                    'quantity' => $quantity === '' || $quantity === null ? null : $quantity,
-                    'is_active' => $variant['is_active'] ?? true,
-                ];
-            }
+        if (is_array($stockVolumes)) {
+            $stockVolumes = $this->normalizeStockVolumes($stockVolumes);
+        } elseif ($stockVolumes === null) {
+            $stockVolumes = [];
         }
 
         $this->merge([
@@ -78,9 +58,7 @@ abstract class ProductRequest extends FormRequest
             'is_active' => $isActive,
             'has_stock_offer' => $hasStockOffer,
             'stock_offer_type' => $stockOfferType,
-            'total_quantity' => $totalQuantity === '' || $totalQuantity === null ? null : $totalQuantity,
-            'volumes' => $volumes === '' || $volumes === null ? null : $volumes,
-            'variants' => $variants,
+            'stock_volumes' => $stockVolumes,
         ]);
     }
 
@@ -102,30 +80,22 @@ abstract class ProductRequest extends FormRequest
                 Rule::requiredIf(fn (): bool => $this->boolean('has_stock_offer')),
                 Rule::enum(StockOfferType::class),
             ],
-            'total_quantity' => [
+            'stock_volumes' => [
                 'nullable',
-                Rule::requiredIf(
-                    fn (): bool => $this->boolean('has_stock_offer')
-                        && ! $this->hasVariantQuantities(),
-                ),
-                'integer',
-                'min:0',
+                'array',
+                'max:50',
+                Rule::requiredIf(fn (): bool => $this->boolean('has_stock_offer')),
             ],
-            'volumes' => [
-                'nullable',
-                Rule::requiredIf(fn (): bool => $this->stockOfferRequiresVolumes()),
-                'integer',
-                Rule::when(
-                    fn (): bool => $this->boolean('has_stock_offer'),
-                    ['min:1'],
-                    ['min:0'],
-                ),
-            ],
-            'variants' => ['nullable', 'array', 'max:50'],
-            'variants.*' => ['array:size,quantity,is_active'],
-            'variants.*.size' => ['required', 'string', 'max:30', 'distinct'],
-            'variants.*.quantity' => ['nullable', 'integer', 'min:0'],
-            'variants.*.is_active' => ['required', 'boolean'],
+            'stock_volumes.*' => ['array:id,sort_order,total_quantity,items'],
+            'stock_volumes.*.id' => ['nullable', 'integer', 'min:1', 'distinct'],
+            'stock_volumes.*.total_quantity' => ['nullable', 'integer', 'min:0'],
+            'stock_volumes.*.items' => ['nullable', 'array', 'max:50'],
+            'stock_volumes.*.items.*' => ['array:id,size,sort_order,is_active,quantity'],
+            'stock_volumes.*.items.*.id' => ['nullable', 'integer', 'min:1', 'distinct'],
+            'stock_volumes.*.items.*.size' => ['required', 'string', 'max:30'],
+            'stock_volumes.*.items.*.sort_order' => ['nullable', 'integer', 'min:0'],
+            'stock_volumes.*.items.*.is_active' => ['required', 'boolean'],
+            'stock_volumes.*.items.*.quantity' => ['nullable', 'integer', 'min:0'],
             'images' => ['nullable', 'array', 'max:5'],
             'images.*' => [
                 'image',
@@ -160,21 +130,23 @@ abstract class ProductRequest extends FormRequest
             'has_stock_offer.boolean' => 'Informe se o produto deve aparecer no catálogo.',
             'stock_offer_type.required' => 'Informe o tipo do estoque.',
             'stock_offer_type.enum' => 'Selecione um tipo de estoque válido.',
-            'total_quantity.required' => 'Informe o estoque total.',
-            'total_quantity.integer' => 'O estoque total deve ser um número.',
-            'total_quantity.min' => 'O estoque total não pode ser negativo.',
-            'volumes.required' => 'Informe a quantidade de sacos.',
-            'volumes.integer' => 'A quantidade de sacos deve ser um número inteiro.',
-            'volumes.min' => 'A quantidade de sacos deve ser maior que zero.',
-            'variants.array' => 'Envie os tamanhos em uma lista válida.',
-            'variants.max' => 'Cadastre no máximo 50 tamanhos.',
-            'variants.*.array' => 'Envie cada tamanho em um formato válido.',
-            'variants.*.size.required' => 'Informe o tamanho ou remova esta linha.',
-            'variants.*.size.max' => 'O tamanho deve ter no máximo 30 caracteres.',
-            'variants.*.size.distinct' => 'Os tamanhos precisam ser diferentes.',
-            'variants.*.quantity.integer' => 'A quantidade por tamanho deve ser um número.',
-            'variants.*.quantity.min' => 'A quantidade por tamanho não pode ser negativa.',
-            'variants.*.is_active.boolean' => 'Informe se o tamanho está disponível neste lote.',
+            'stock_volumes.required' => 'Adicione pelo menos um saco ao estoque.',
+            'stock_volumes.array' => 'Envie os sacos em uma lista válida.',
+            'stock_volumes.max' => 'Cadastre no máximo 50 sacos por oferta.',
+            'stock_volumes.*.array' => 'Envie cada saco em um formato válido.',
+            'stock_volumes.*.id' => 'O saco informado não pertence a esta oferta.',
+            'stock_volumes.*.total_quantity.integer' => 'O total do saco deve ser um número.',
+            'stock_volumes.*.total_quantity.min' => 'O total do saco não pode ser negativo.',
+            'stock_volumes.*.items.array' => 'Envie os tamanhos do saco em uma lista válida.',
+            'stock_volumes.*.items.max' => 'Cadastre no máximo 50 tamanhos por saco.',
+            'stock_volumes.*.items.*.array' => 'Envie cada tamanho do saco em um formato válido.',
+            'stock_volumes.*.items.*.id' => 'O tamanho informado não pertence a este saco.',
+            'stock_volumes.*.items.*.size.required' => 'Informe o tamanho ou remova esta linha.',
+            'stock_volumes.*.items.*.size.max' => 'O tamanho deve ter no máximo 30 caracteres.',
+            'stock_volumes.*.items.*.size.distinct' => 'Os tamanhos precisam ser diferentes dentro do saco.',
+            'stock_volumes.*.items.*.is_active.boolean' => 'Informe se o tamanho está disponível neste saco.',
+            'stock_volumes.*.items.*.quantity.integer' => 'A quantidade do tamanho deve ser um número.',
+            'stock_volumes.*.items.*.quantity.min' => 'A quantidade do tamanho não pode ser negativa.',
             'images.array' => 'Envie as fotos em uma lista válida.',
             'images.max' => 'Adicione no máximo 5 fotos por produto.',
             'images.*.image' => 'Envie imagens válidas.',
@@ -193,41 +165,53 @@ abstract class ProductRequest extends FormRequest
     }
 
     /**
-     * Determine whether the selected active offer requires a volume count.
+     * Normalize sack and size values before the wildcard rules run.
+     *
+     * @param  array<int|string, mixed>  $stockVolumes
+     * @return array<int|string, mixed>
      */
-    private function stockOfferRequiresVolumes(): bool
+    private function normalizeStockVolumes(array $stockVolumes): array
     {
-        $type = StockOfferType::tryFrom((string) $this->input('stock_offer_type'));
-
-        return $this->boolean('has_stock_offer')
-            && $type?->requiresVolumes() === true;
-    }
-
-    /**
-     * Determine whether the request is using quantities by size.
-     */
-    private function hasVariantQuantities(): bool
-    {
-        $variants = $this->input('variants', []);
-
-        if (! is_array($variants)) {
-            return false;
-        }
-
-        foreach ($variants as $variant) {
-            if (! is_array($variant)) {
+        foreach ($stockVolumes as $volumeIndex => $volume) {
+            if (! is_array($volume)) {
                 continue;
             }
 
-            $isActive = filter_var($variant['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN);
-            $quantity = $variant['quantity'] ?? null;
+            $items = $volume['items'] ?? [];
 
-            if ($isActive && $quantity !== null && $quantity !== '' && is_numeric($quantity)) {
-                return true;
+            if (is_array($items)) {
+                foreach ($items as $itemIndex => $item) {
+                    if (! is_array($item)) {
+                        continue;
+                    }
+
+                    $size = $item['size'] ?? '';
+                    $quantity = $item['quantity'] ?? null;
+                    $isActive = filter_var($item['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN);
+
+                    $items[$itemIndex] = [
+                        'id' => $item['id'] ?? null,
+                        'size' => is_string($size) ? Str::squish($size) : $size,
+                        'sort_order' => $item['sort_order'] ?? null,
+                        'is_active' => $isActive,
+                        'quantity' => $isActive && $quantity !== '' && $quantity !== null
+                            ? $quantity
+                            : null,
+                    ];
+                }
             }
+
+            $totalQuantity = $volume['total_quantity'] ?? null;
+            $stockVolumes[$volumeIndex] = [
+                'id' => $volume['id'] ?? null,
+                'total_quantity' => $totalQuantity === '' || $totalQuantity === null
+                    ? null
+                    : $totalQuantity,
+                'items' => $items,
+            ];
         }
 
-        return false;
+        return $stockVolumes;
     }
 
     /**
@@ -239,6 +223,9 @@ abstract class ProductRequest extends FormRequest
     {
         return [
             function (Validator $validator): void {
+                $this->validateVolumePayload($validator);
+                $this->validateVolumePayloadReferences($validator);
+
                 $product = $this->route('product');
                 $removeMediaIds = $this->input('remove_media_ids', []);
                 $removeMediaIds = is_array($removeMediaIds) ? $removeMediaIds : [];
@@ -291,6 +278,139 @@ abstract class ProductRequest extends FormRequest
                 }
             },
         ];
+    }
+
+    /**
+     * Require a manual total only when a sack has no known active quantities.
+     */
+    private function validateVolumePayload(Validator $validator): void
+    {
+        if (! is_array($this->input('stock_volumes'))) {
+            return;
+        }
+
+        $stockVolumes = $this->input('stock_volumes');
+
+        if ($this->boolean('has_stock_offer') && $stockVolumes === []) {
+            $validator->errors()->add(
+                'stock_volumes',
+                'Adicione pelo menos um saco ao estoque.',
+            );
+
+            return;
+        }
+
+        foreach ($stockVolumes as $volumeIndex => $volume) {
+            if (! is_array($volume)) {
+                continue;
+            }
+
+            $items = $volume['items'] ?? [];
+            $seenSizes = [];
+
+            if (is_array($items)) {
+                foreach ($items as $itemIndex => $item) {
+                    if (! is_array($item) || ! is_string($item['size'] ?? null)) {
+                        continue;
+                    }
+
+                    $normalizedSize = strtolower(Str::squish($item['size']));
+
+                    if ($normalizedSize === '') {
+                        continue;
+                    }
+
+                    if (isset($seenSizes[$normalizedSize])) {
+                        $validator->errors()->add(
+                            "stock_volumes.{$volumeIndex}.items.{$itemIndex}.size",
+                            'Os tamanhos precisam ser diferentes dentro do saco.',
+                        );
+                    }
+
+                    $seenSizes[$normalizedSize] = true;
+                }
+            }
+
+            $hasKnownQuantity = is_array($items) && collect($items)->contains(
+                fn (mixed $item): bool => is_array($item)
+                    && filter_var($item['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN)
+                    && ($item['quantity'] ?? null) !== null
+                    && $item['quantity'] !== ''
+                    && is_numeric($item['quantity']),
+            );
+            $totalQuantity = $volume['total_quantity'] ?? null;
+
+            if (
+                $this->boolean('has_stock_offer')
+                && ! $hasKnownQuantity
+                && ($totalQuantity === null || $totalQuantity === '')
+            ) {
+                $validator->errors()->add(
+                    "stock_volumes.{$volumeIndex}.total_quantity",
+                    'Informe o total do saco quando nenhuma quantidade por tamanho for conhecida.',
+                );
+            }
+        }
+    }
+
+    /**
+     * Ensure submitted sack and size IDs belong to the product being updated.
+     */
+    private function validateVolumePayloadReferences(Validator $validator): void
+    {
+        $product = $this->route('product');
+
+        if (! $product instanceof Product) {
+            return;
+        }
+
+        $offer = $product->latestOffer()->with('stockVolumes.items')->first();
+        $existingVolumes = $offer?->stockVolumes->keyBy('id') ?? collect();
+        $stockVolumes = $this->input('stock_volumes', []);
+
+        if (! is_array($stockVolumes)) {
+            return;
+        }
+
+        foreach ($stockVolumes as $volumeIndex => $volume) {
+            if (! is_array($volume)) {
+                continue;
+            }
+
+            $volumeId = $volume['id'] ?? null;
+            $existingVolume = is_numeric($volumeId)
+                ? $existingVolumes->get((int) $volumeId)
+                : null;
+
+            if ($volumeId !== null && $existingVolume === null) {
+                $validator->errors()->add(
+                    "stock_volumes.{$volumeIndex}.id",
+                    'O saco informado não pertence a esta oferta.',
+                );
+            }
+
+            $existingItems = $existingVolume?->items->keyBy('id') ?? collect();
+            $items = $volume['items'] ?? [];
+
+            if (! is_array($items)) {
+                continue;
+            }
+
+            foreach ($items as $itemIndex => $item) {
+                if (! is_array($item) || ($item['id'] ?? null) === null) {
+                    continue;
+                }
+
+                $itemId = $item['id'];
+
+                if (! is_numeric($itemId) || ! $existingItems->has((int) $itemId)) {
+                    $validator->errors()->add(
+                        "stock_volumes.{$volumeIndex}.items.{$itemIndex}.id",
+                        'O tamanho informado não pertence a este saco.',
+                    );
+                }
+            }
+        }
     }
 
     /**

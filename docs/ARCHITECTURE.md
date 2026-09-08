@@ -10,14 +10,12 @@ O objetivo inicial é manter produto, disponibilidade de estoque e pedido como c
 
 ```text
 Product
-  └── ProductVariant
-
-Product
   └── StockOffer
-        └── StockOfferItem -> ProductVariant
+        └── StockOfferVolume
+              └── StockOfferVolumeItem
 
 Order
-  └── OrderItem -> StockOffer / ProductVariant
+  └── OrderItem -> StockOfferVolume
 ```
 
 ## Product
@@ -67,57 +65,40 @@ de estoque. Produtos inativos não aparecem no catálogo compartilhado.
 
 Um produto também pode ser salvo sem uma oferta de estoque ativa. A oferta é
 criada ou atualizada somente quando o cadastro informar explicitamente que há
-disponibilidade; nesse caso, seu tipo e estoque total são obrigatórios.
+disponibilidade. Quando ativa, ela possui ao menos um saco.
 
-## ProductVariant
+## Tamanhos por saco
 
-Representa uma variação do produto.
+O tamanho pertence a um `StockOfferVolumeItem`, e não ao produto.
+Ele é uma string e é único dentro do saco, mas pode aparecer em sacos
+diferentes.
 
-No MVP, a principal variação é tamanho.
-
-Campos sugeridos:
-
-```text
-id
-product_id
-size
-sku nullable
-sort_order
-created_at
-updated_at
-```
-
-Exemplos de `size`:
+Exemplos de tamanho:
 
 ```text
 34
 36
-38
 P
 M
 G
 GG
+3G
 ```
 
-`size` deve ser string.
-
-Não assumir grade fixa nem tamanho numérico.
-
-### Grades de tamanho
-
-A interface pode oferecer presets para acelerar cadastro:
+A interface oferece presets para acelerar o cadastro:
 
 - Numérica feminina
 - Letras
 - Personalizada
 
-Esses presets são conveniência de interface. O domínio deve continuar aceitando qualquer tamanho válido.
-Presets masculino e de tamanho único não fazem parte da operação atual e não
-devem ser reintroduzidos sem um requisito explícito.
+Esses presets são apenas conveniência de interface. O domínio aceita qualquer
+tamanho válido e não inclui presets masculino ou de tamanho único sem requisito
+explícito.
 
 ## StockOffer
 
-Representa uma disponibilidade atual de estoque.
+Representa uma disponibilidade atual de estoque. A classificação e a ativação
+pertencem à oferta, não ao produto nem ao saco.
 
 Campos sugeridos:
 
@@ -125,8 +106,6 @@ Campos sugeridos:
 id
 product_id
 type
-total_quantity
-volumes nullable
 is_active
 notes nullable
 created_at
@@ -149,80 +128,75 @@ Grade Nova
 Grade Furada
 ```
 
-### Regra importante
-
-O tipo pertence à disponibilidade atual e não ao produto.
-
-O mesmo produto pode aparecer em contextos diferentes ao longo do tempo.
-
-O cadastro de produto não infere o tipo a partir das quantidades por tamanho.
-Quando houver oferta, o tipo escolhido pelo operador é persistido.
+O cadastro não infere o tipo a partir das quantidades. Quando a oferta está
+ativa, o tipo é informado explicitamente e existe pelo menos um
+`StockOfferVolume`.
 
 O estado ativo da oferta controla sua exibição no catálogo, desde que o produto
-também esteja ativo. Desativar uma oferta não deve zerar seu estoque, seus
-volumes nem a disponibilidade por tamanho. O encerramento do estoque atual é
-uma ação explícita e separada.
+também esteja ativo. Desativar uma oferta não zera seus sacos nem a
+disponibilidade por tamanho. O encerramento do estoque atual é uma ação
+explícita e separada.
 
-Para `Reposição` e `Grade Furada`, `volumes` registra quantos sacos ainda estão
-disponíveis para distribuição e é obrigatório quando a oferta está ativa.
-`Grade Nova` não usa esse controle. Uma oferta ativa desses dois tipos só é
-disponível no catálogo enquanto `volumes` for maior que zero. Todos os tipos
-exigem estoque total maior que zero para aparecer no catálogo.
+A disponibilidade usa a soma de `StockOfferVolume.total_quantity`: a oferta
+só aparece quando produto e oferta estão ativos, existe ao menos um saco e o
+total agregado é maior que zero.
 
-## StockOfferItem
+## StockOfferVolume
 
-Permite detalhar o estoque por tamanho.
+Representa um saco físico da oferta.
 
 Campos sugeridos:
 
 ```text
 id
 stock_offer_id
-product_variant_id
+sort_order
+total_quantity
+created_at
+updated_at
+```
+
+Uma oferta ativa precisa de ao menos um saco. A posição define o nome exibido
+(`Saco 1`, `Saco 2`) e pode mudar sem trocar a identidade persistida.
+
+## StockOfferVolumeItem
+
+Representa um tamanho dentro de um saco.
+
+Campos sugeridos:
+
+```text
+id
+stock_offer_volume_id
+size
+sort_order
 is_active
 quantity nullable
 created_at
 updated_at
 ```
 
-### Tamanho presente e quantidade por tamanho
+`size` é string e é único dentro do saco, mas pode aparecer em sacos
+diferentes. `is_active` registra se o tamanho está presente. Quando falso,
+`quantity` deve ser nula; quando verdadeiro, a quantidade continua
+opcional.
 
-`is_active` registra se aquele tamanho está presente no lote da oferta. Essa
-informação é independente da quantidade e pode ser usada mesmo quando o
-estoquista não souber ou não quiser informar números.
+Cada saco usa um dos dois modos:
 
-A oferta pode usar um dos dois modos de estoque, escolhidos implicitamente
-pela interface:
+- sem quantidade numérica em tamanho ativo, `total_quantity` é manual;
+- com ao menos uma quantidade numérica em tamanho ativo,
+  `total_quantity` é calculado pela soma das quantidades numéricas ativas.
 
-- quando nenhuma quantidade por tamanho é informada, `total_quantity` é
-  digitado e representa o estoque total;
-- quando pelo menos uma quantidade de um tamanho ativo é informada, o estoque
-  passa a ser considerado definido por tamanho e `total_quantity` é calculado
-  pela soma das quantidades informadas nos tamanhos ativos.
+O segundo modo também é acionado quando a quantidade é zero. Valores nulos
+representam contagem desconhecida e não impedem registrar a presença do
+tamanho. O total da oferta é a soma dos totais dos seus sacos.
 
-O segundo modo também é acionado quando a quantidade informada é zero. Valores
-nulos continuam representando uma contagem desconhecida e entram como zero no
-cálculo do total; a disponibilidade do tamanho continua sendo controlada por
-`is_active`.
+## Migração do modelo de estoque
 
-Quando `is_active` é `false`, o tamanho não deve aparecer como disponível para
-as vendedoras e sua quantidade deve permanecer nula. Quando é `true`, a
-quantidade continua opcional.
-
-Isso permite casos como:
-
-```text
-Estoque total: 30
-
-34: presente, 4
-36: presente, desconhecido
-38: ausente
-40: presente, desconhecido
-```
-
-No modo por tamanho, o total não pode ser editado separadamente nem divergir
-da soma persistida pelo servidor. No modo somente total, quantidades nulas por
-tamanho não alteram o total informado manualmente.
+O modelo vigente nasce diretamente com `StockOfferVolume` e
+`StockOfferVolumeItem`. Não há tabelas, colunas ou contratos de compatibilidade
+para a estrutura anterior; o total agregado é sempre calculado a partir dos
+sacos persistidos.
 
 ## Order
 
@@ -257,9 +231,8 @@ Campos sugeridos:
 ```text
 id
 order_id
-stock_offer_id
+stock_offer_volume_id
 product_id
-product_variant_id nullable
 quantity
 product_name_snapshot
 product_model_snapshot nullable
@@ -354,7 +327,7 @@ Para o MVP, a tela deve priorizar simplicidade e uso mobile.
 Requisitos:
 
 - listar somente ofertas ativas;
-- não listar ofertas de `Reposição` ou `Grade Furada` sem volumes disponíveis;
+- não listar ofertas sem saco físico ou com soma de sacos igual a zero;
 - mostrar a foto de capa, nome, modelo quando houver, tipo e estoque disponível;
 - permitir selecionar quantidades;
 - manter uma sacola;

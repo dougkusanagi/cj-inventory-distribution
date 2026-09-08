@@ -3,9 +3,7 @@
 namespace App\Actions\Products;
 
 use App\Models\Product;
-use App\Models\ProductVariant;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -21,7 +19,7 @@ class UpdateProduct
     ) {}
 
     /**
-     * Update a product and its size variants atomically.
+     * Update a product and its stock offer atomically.
      *
      * @param  array<string, mixed>  $data
      */
@@ -66,13 +64,7 @@ class UpdateProduct
                     ->whereNotIn('id', $removeMediaIds)
                     ->count();
 
-                $lockedProduct->variants()->delete();
-
-                $rawVariants = $data['variants'] ?? [];
-                $rawVariants = is_array($rawVariants) ? $rawVariants : [];
-                $createdVariants = $this->syncVariants($lockedProduct, $rawVariants);
-
-                $this->syncProductStockOffer->handle($lockedProduct, $createdVariants, $data);
+                $this->syncProductStockOffer->handle($lockedProduct, $data);
                 $addedMedia = $this->storeImages(
                     $lockedProduct,
                     $data['images'] ?? [],
@@ -115,7 +107,10 @@ class UpdateProduct
             }
         }
 
-        return $updatedProduct->fresh()->load(['variants', 'latestOffer.items', 'media']);
+        return $updatedProduct->fresh()->load([
+            'latestOffer.stockVolumes.items',
+            'media',
+        ]);
     }
 
     /**
@@ -301,23 +296,5 @@ class UpdateProduct
                 report($restoreException);
             }
         }
-    }
-
-    /**
-     * Replace the product's size variants in their display order.
-     *
-     * @param  array<int, array{size: string, quantity?: int|null, is_active?: bool}>  $variants
-     * @return Collection<int, ProductVariant>
-     */
-    private function syncVariants(Product $product, array $variants): Collection
-    {
-        return collect($variants)
-            ->values()
-            ->map(function (array $variant, int $index) use ($product) {
-                return $product->variants()->create([
-                    'size' => $variant['size'],
-                    'sort_order' => $index,
-                ]);
-            });
     }
 }

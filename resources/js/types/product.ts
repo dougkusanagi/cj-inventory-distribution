@@ -1,11 +1,3 @@
-export type ProductVariant = {
-    id?: number;
-    size: string;
-    sort_order?: number;
-    is_active?: boolean;
-    quantity?: number | null;
-};
-
 export type ProductImage = {
     id: number;
     url: string;
@@ -14,6 +6,21 @@ export type ProductImage = {
 };
 
 export type StockOfferType = 'replenishment' | 'new_grade' | 'broken_grade';
+
+export type StockOfferVolumeItem = {
+    id: number;
+    size: string;
+    sort_order: number;
+    is_active: boolean;
+    quantity: number | null;
+};
+
+export type StockOfferVolume = {
+    id: number;
+    sort_order: number;
+    total_quantity: number;
+    items: StockOfferVolumeItem[];
+};
 
 export type Product = {
     id: number;
@@ -28,8 +35,8 @@ export type Product = {
     distribution_status?: string;
     stock_offer_type?: StockOfferType | null;
     total_quantity?: number | null;
-    volumes?: number | null;
-    variants: ProductVariant[];
+    stock_volume_count: number;
+    stock_volumes: StockOfferVolume[];
     created_at: string | null;
     updated_at: string | null;
 };
