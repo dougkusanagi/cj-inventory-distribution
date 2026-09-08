@@ -6,6 +6,7 @@ use Symfony\Component\Process\Process;
 test('the deployment script uses the application production toolchain', function (): void {
     $script = file_get_contents(base_path('vendor/dougkusanagi/laravel-deploy/bin/deploy'));
     $wrapper = file_get_contents(base_path('deploy.sh'));
+    $entrypoint = file_get_contents(base_path('deploy'));
     $config = file_get_contents(base_path('deploy.config.sh'));
 
     expect($script)
@@ -36,13 +37,31 @@ test('the deployment script uses the application production toolchain', function
 
     expect($wrapper)
         ->not->toBeFalse()
+        ->toContain("printf 'Iniciando deploy em %s...\\n'")
         ->toContain('exec vendor/bin/deploy "$@"');
+
+    expect($entrypoint)
+        ->not->toBeFalse()
+        ->toContain('exec "$SCRIPT_DIR/deploy.sh" "$@"');
 
     expect($config)
         ->not->toBeFalse()
         ->toContain('DEPLOY_BRANCH="${DEPLOY_BRANCH:-master}"')
         ->toContain('FRONTEND_INSTALL=(vp install --frozen-lockfile)')
         ->toContain('FRONTEND_BUILD=(vp build)');
+});
+
+test('the short deployment entrypoint delegates to the package command', function (): void {
+    $process = new Process(
+        [base_path('deploy'), '--help'],
+        base_path(),
+    );
+    $process->run();
+
+    expect($process->isSuccessful())->toBeTrue();
+    expect($process->getOutput())
+        ->toContain('Iniciando deploy em')
+        ->toContain('vendor/bin/deploy [deploy]');
 });
 
 test('the deployment script stops before changing code when the worktree is dirty', function (): void {

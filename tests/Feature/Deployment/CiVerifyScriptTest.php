@@ -22,19 +22,18 @@ test('the local verification command covers the repository quality checks', func
         ->toContain('set -Eeuo pipefail')
         ->toContain('php artisan config:clear --ansi')
         ->toContain('composer lint:check')
-        ->toContain('vp fmt --check resources/')
-        ->toContain('vp lint')
+        ->toContain('vp check')
+        ->toContain('vp run types:check')
         ->toContain('vp build')
-        ->toContain('vp check --no-fmt --no-lint')
         ->toContain('composer types:check')
-        ->toContain('vp exec playwright install chromium')
+        ->toContain('vp run e2e:install')
         ->toContain('QUEUE_CONNECTION=sync php artisan test --compact')
         ->toContain('QUEUE_CONNECTION=sync composer test:e2e')
+        ->not->toContain('vp fmt --check resources/')
+        ->not->toContain('vp lint')
+        ->not->toContain('vp check --no-fmt --no-lint')
         ->not->toContain('horizon-new-dawn')
         ->not->toContain('DB_CONNECTION=mysql');
-
-    expect(strpos($script, 'vp build'))
-        ->toBeLessThan(strpos($script, 'vp check --no-fmt --no-lint'));
 
     expect($workflow)
         ->not->toBeFalse()
