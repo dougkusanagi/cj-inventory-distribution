@@ -22,11 +22,10 @@ printf 'Executando as validações locais.\n'
 
 php artisan config:clear --ansi
 composer lint:check
-vp fmt --check resources/
-vp lint
+vp check
+vp run types:check
 vp build
-vp check --no-fmt --no-lint
 composer types:check
-vp exec playwright install chromium
+vp run e2e:install
 QUEUE_CONNECTION=sync php artisan test --compact
 QUEUE_CONNECTION=sync composer test:e2e
