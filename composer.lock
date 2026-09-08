@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5bf81e3ae57f8c2ccbffb1496968dc22",
+    "content-hash": "5d73d45f3c86a38ed613696943c7b5bb",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -605,6 +605,44 @@
                 }
             ],
             "time": "2024-02-05T11:56:58+00:00"
+        },
+        {
+            "name": "dougkusanagi/laravel-deploy",
+            "version": "v0.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/dougkusanagi/laravel-deploy.git",
+                "reference": "3a1035a90d353f1d2c786a5cb6f01d851767948b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/dougkusanagi/laravel-deploy/zipball/3a1035a90d353f1d2c786a5cb6f01d851767948b",
+                "reference": "3a1035a90d353f1d2c786a5cb6f01d851767948b",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.3"
+            },
+            "bin": [
+                "bin/deploy"
+            ],
+            "type": "library",
+            "license": [
+                "MIT"
+            ],
+            "description": "Simple configurable deployment runner for Laravel applications",
+            "homepage": "https://github.com/dougkusanagi/laravel-deploy",
+            "keywords": [
+                "deploy",
+                "deployment",
+                "devops",
+                "laravel"
+            ],
+            "support": {
+                "issues": "https://github.com/dougkusanagi/laravel-deploy/issues",
+                "source": "https://github.com/dougkusanagi/laravel-deploy"
+            },
+            "time": "2026-09-08T18:01:41+00:00"
         },
         {
             "name": "dragonmantank/cron-expression",
