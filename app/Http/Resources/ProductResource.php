@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\StockOfferType;
 use App\Models\Product;
 use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
@@ -35,6 +36,7 @@ class ProductResource extends JsonResource
 
         $availableForDistribution = $this->is_active
             && $offer?->is_active === true
+            && $offer->type !== StockOfferType::NewGrade
             && $hasPositiveStock
             && $hasAvailableVolumes;
 
@@ -43,6 +45,13 @@ class ProductResource extends JsonResource
             'code' => $this->code,
             'model' => $this->model,
             'name' => $this->name,
+            'category_id' => $this->category_id,
+            'category' => $this->whenLoaded('category', fn () => $this->category === null ? null : [
+                'id' => $this->category->id,
+                'name' => $this->category->name,
+                'is_active' => $this->category->is_active,
+            ]),
+            'line' => $this->line?->value,
             'is_active' => $this->is_active,
             'images' => $this->whenLoaded('media', fn () => $this->media
                 ->where('collection_name', Product::MEDIA_COLLECTION)
@@ -105,9 +114,9 @@ class ProductResource extends JsonResource
      */
     private function hasAvailablePhysicalVolume(Collection $stockVolumes): bool
     {
-        return $stockVolumes->contains(
-            fn (StockOfferVolume $volume): bool => $volume->total_quantity > 0,
-        );
+        return $stockVolumes->contains(fn (StockOfferVolume $volume): bool => $volume->total_quantity > 0
+            && $volume->current_order_id === null
+            && $volume->consumed_at === null);
     }
 
     private function distributionStatus(?StockOffer $offer, bool $hasPositiveStock, bool $hasAvailableVolumes): string
@@ -118,6 +127,10 @@ class ProductResource extends JsonResource
 
         if ($offer?->is_active !== true) {
             return 'Sem estoque disponível';
+        }
+
+        if ($offer->type === StockOfferType::NewGrade) {
+            return 'Uso interno (Grade Nova)';
         }
 
         if (! $hasPositiveStock) {

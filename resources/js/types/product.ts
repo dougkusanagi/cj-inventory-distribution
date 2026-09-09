@@ -27,6 +27,9 @@ export type Product = {
     code: string;
     model: string | null;
     name: string;
+    category_id: number | null;
+    category: Category | null;
+    line: ProductLine | null;
     is_active: boolean;
     images: ProductImage[];
     notes: string | null;
@@ -39,6 +42,62 @@ export type Product = {
     stock_volumes: StockOfferVolume[];
     created_at: string | null;
     updated_at: string | null;
+};
+
+export type ProductLine = 'slim' | 'plus';
+
+export type Category = {
+    id: number;
+    name: string;
+    is_active: boolean;
+    slug?: string;
+    products_count?: number;
+};
+
+export type OrderStatus = 'pending' | 'completed' | 'canceled';
+
+export type OrderItem = {
+    id: number;
+    product_code: string;
+    product_name: string;
+    product_model: string | null;
+    category: string | null;
+    line: ProductLine | null;
+    offer_type: StockOfferType;
+    volume_code: string;
+    total_quantity: number;
+    sizes: Array<{ size: string; quantity: number | null }>;
+};
+
+export type Order = {
+    id: number;
+    code: string;
+    store_name: string;
+    requester_name: string;
+    whatsapp?: string | null;
+    notes?: string | null;
+    cancellation_reason?: string | null;
+    status: OrderStatus;
+    status_label: string;
+    items_count: number;
+    total_quantity: number;
+    submitted_at: string;
+    completed_at?: string | null;
+    canceled_at?: string | null;
+    items?: OrderItem[];
+};
+
+export type AvailableOrderVolume = {
+    id: number;
+    code: string;
+    total_quantity: number;
+    product: {
+        code: string;
+        name: string;
+        model: string | null;
+        category: string | null;
+    };
+    sizes: Array<{ size: string; quantity: number | null }>;
 };
 
 export type PaginationLink = {

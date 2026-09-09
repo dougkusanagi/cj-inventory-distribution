@@ -68,7 +68,13 @@ it('keeps a second sack when its removal is cancelled', function () {
     $page->script('window.confirm = () => false;');
 
     $page
-        ->click('button[aria-label="Remover Saco 2"]')
+        ->click('button[aria-label="Mais ações para o Saco 2"]')
+        ->assertSee('Duplicar saco')
+        ->assertSee('Remover saco');
+
+    $page->script("Array.from(document.querySelectorAll('[role=menuitem]')).find((element) => element.textContent?.includes('Remover saco'))?.click();");
+
+    $page
         ->assertSee('Saco 2')
         ->assertValue('#volume-total-1', '3')
         ->assertNoJavaScriptErrors();

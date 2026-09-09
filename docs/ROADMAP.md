@@ -2,6 +2,20 @@
 
 O roadmap descreve direção, não compromisso de implementação imediata.
 
+## Catálogo e pedidos para lojistas — plano vigente
+
+O [plano de catálogo e pedidos](CATALOGO-E-PEDIDOS.md) detalha a sequência atual,
+CRUD de categorias, Slim/Plus, reserva de sacos, separação/conferência e WhatsApp.
+O frontend demonstrativo substitui a home em `/` e também está em `/catalog`.
+Backend de catálogo conectado, persistência da sacola pública e contatos de
+WhatsApp ainda não estão implementados. O CRUD de categorias e a gestão interna
+de pedidos com reserva de sacos já estão disponíveis. As fases históricas
+abaixo não significam conclusão desses módulos.
+
+Regra definitiva: Grade Nova nunca aparece no catálogo; não há filtro por tipo.
+Busca, categoria e linha Slim/Plus são os filtros da interface. Pedidos por saco
+inteiro e reserva ao registrar são propostas aguardando validação operacional.
+
 ## Refatoração de estoque por saco
 
 A mudança da grade e do estoque para sacos individuais possui especificação e
@@ -57,12 +71,12 @@ legados; as migrations atuais já criam somente o modelo de sacos.
 
 ## Fase 4 — Gestão de pedidos
 
-- [ ] listagem de pedidos
-- [ ] detalhes
-- [ ] status `Pendente`
-- [ ] finalizar pedido
-- [ ] cancelar pedido
-- [ ] filtros básicos por status/data
+- [x] listagem de pedidos
+- [x] detalhes
+- [x] status `Pendente`
+- [x] finalizar pedido
+- [x] cancelar pedido
+- [x] filtros básicos por status e busca
 
 ## Depois do MVP
 

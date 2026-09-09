@@ -20,6 +20,18 @@ php artisan storage:link
 
 Instale e compile os assets usando o package manager já adotado pelo repositório.
 
+Para visualizar o catálogo com dados demonstrativos, execute:
+
+```bash
+php artisan migrate --seed
+```
+
+O `DatabaseSeeder` cria o usuário local `test@example.com` e chama o
+`CatalogDemoSeeder`, que é idempotente. Ele cadastra categorias, produtos
+classificados como Slim/Plus e ofertas com sacos e quantidades. O produto de
+tipo Grade Nova existe apenas para testar a regra de exclusão do catálogo;
+fotos reais ainda precisam ser enviadas pelo cadastro de produtos.
+
 ## Convenções Laravel
 
 Preferir recursos nativos:
@@ -49,6 +61,10 @@ OrderStatus
 - Pending
 - Completed
 - Canceled
+
+ProductLine
+- Slim
+- Plus
 ```
 
 Os valores persistidos devem ser estáveis e independentes dos rótulos apresentados na interface.

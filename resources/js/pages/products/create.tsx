@@ -2,8 +2,13 @@ import { Head } from '@inertiajs/react';
 import { PackagePlus } from 'lucide-react';
 import { ProductForm } from '@/components/products/product-form';
 import { index as productsIndex } from '@/routes/products';
+import type { Category } from '@/types';
 
-export default function CreateProduct() {
+export default function CreateProduct({
+    categories,
+}: {
+    categories: Category[];
+}) {
     return (
         <>
             <Head title="Novo produto" />
@@ -29,7 +34,7 @@ export default function CreateProduct() {
                     </div>
                 </header>
 
-                <ProductForm />
+                <ProductForm categories={categories} />
             </div>
         </>
     );

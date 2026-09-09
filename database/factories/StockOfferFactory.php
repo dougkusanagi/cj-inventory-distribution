@@ -26,4 +26,34 @@ class StockOfferFactory extends Factory
             'notes' => null,
         ];
     }
+
+    /**
+     * Create an offer for regular stock replenishment.
+     */
+    public function replenishment(): static
+    {
+        return $this->state([
+            'type' => StockOfferType::Replenishment,
+        ]);
+    }
+
+    /**
+     * Create an offer for a broken grade.
+     */
+    public function brokenGrade(): static
+    {
+        return $this->state([
+            'type' => StockOfferType::BrokenGrade,
+        ]);
+    }
+
+    /**
+     * Keep the offer out of the catalog.
+     */
+    public function inactive(): static
+    {
+        return $this->state([
+            'is_active' => false,
+        ]);
+    }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Products;
 
+use App\Enums\ProductLine;
 use App\Enums\StockOfferType;
 use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
@@ -72,6 +73,8 @@ abstract class ProductRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:100'],
+            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'line' => ['nullable', Rule::enum(ProductLine::class)],
             'notes' => ['nullable', 'string', 'max:5000'],
             'is_active' => ['required', 'boolean'],
             'has_stock_offer' => ['required', 'boolean'],
@@ -125,6 +128,8 @@ abstract class ProductRequest extends FormRequest
             'name.required' => 'Informe o nome do produto.',
             'name.max' => 'O nome do produto deve ter no máximo 255 caracteres.',
             'model.max' => 'O modelo deve ter no máximo 100 caracteres.',
+            'category_id.exists' => 'Selecione uma categoria válida.',
+            'line.enum' => 'Selecione uma linha válida.',
             'notes.max' => 'A observação deve ter no máximo 5.000 caracteres.',
             'is_active.boolean' => 'Informe se o produto está ativo.',
             'has_stock_offer.boolean' => 'Informe se o produto deve aparecer no catálogo.',

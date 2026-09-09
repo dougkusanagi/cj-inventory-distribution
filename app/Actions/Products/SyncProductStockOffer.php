@@ -9,6 +9,7 @@ use App\Models\StockOfferVolume;
 use App\Models\StockOfferVolumeItem;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 class SyncProductStockOffer
@@ -55,7 +56,7 @@ class SyncProductStockOffer
                 ]);
             }
 
-            $existingVolumes = $offer->stockVolumes()->get()->keyBy('id');
+            $existingVolumes = $offer->stockVolumes()->lockForUpdate()->get()->keyBy('id');
             $usedVolumeIds = [];
 
             foreach ($rawVolumes as $index => $rawVolume) {
@@ -69,6 +70,7 @@ class SyncProductStockOffer
                         'total_quantity' => $volumeTotal,
                     ]);
                 } else {
+                    $this->ensureProtectedVolumeIsUnchanged($volume, $index, $volumeTotal, $items);
                     $volume->update([
                         'sort_order' => $index,
                         'total_quantity' => $volumeTotal,
@@ -81,6 +83,16 @@ class SyncProductStockOffer
 
             if ($usedVolumeIds === []) {
                 throw new InvalidArgumentException('An offer must contain at least one stock volume.');
+            }
+
+            $protectedVolumeWasRemoved = $existingVolumes
+                ->except($usedVolumeIds)
+                ->contains(fn (StockOfferVolume $volume): bool => $this->isProtected($volume));
+
+            if ($protectedVolumeWasRemoved) {
+                throw ValidationException::withMessages([
+                    'stock_volumes' => 'Sacos reservados ou finalizados não podem ser removidos.',
+                ]);
             }
 
             $offer->stockVolumes()->whereNotIn('id', $usedVolumeIds)->delete();
@@ -218,5 +230,43 @@ class SyncProductStockOffer
     private function isActive(array $item): bool
     {
         return filter_var($item['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /** @param Collection<int, mixed[]> $items */
+    private function ensureProtectedVolumeIsUnchanged(
+        StockOfferVolume $volume,
+        int $sortOrder,
+        int $totalQuantity,
+        Collection $items,
+    ): void {
+        if (! $this->isProtected($volume)) {
+            return;
+        }
+
+        $storedItems = $volume->items()->get()->map(fn (StockOfferVolumeItem $item): array => [
+            'size' => $item->size,
+            'sort_order' => $item->sort_order,
+            'is_active' => $item->is_active,
+            'quantity' => $item->quantity,
+        ])->values()->all();
+        $submittedItems = $items->map(fn (array $item, int $index): array => [
+            'size' => trim((string) ($item['size'] ?? '')),
+            'sort_order' => $index,
+            'is_active' => $this->isActive($item),
+            'quantity' => $this->isActive($item) && is_numeric($item['quantity'] ?? null)
+                ? max(0, (int) $item['quantity'])
+                : null,
+        ])->values()->all();
+
+        if ($volume->sort_order !== $sortOrder || $volume->total_quantity !== $totalQuantity || $storedItems !== $submittedItems) {
+            throw ValidationException::withMessages([
+                'stock_volumes' => 'Sacos reservados ou finalizados não podem ser alterados.',
+            ]);
+        }
+    }
+
+    private function isProtected(StockOfferVolume $volume): bool
+    {
+        return $volume->current_order_id !== null || $volume->consumed_at !== null;
     }
 }
