@@ -11,7 +11,7 @@ import {
     Plus,
     Trash2,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import InputError from '@/components/input-error';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -184,7 +184,24 @@ function synchronizeVolumesToSizes(
 }
 
 function integerValue(rawValue: string): number | null {
-    return rawValue === '' ? null : Math.max(0, parseInt(rawValue, 10) || 0);
+    const digitsOnly = rawValue.replace(/[^0-9]/g, '');
+
+    return digitsOnly === '' ? null : Number(digitsOnly);
+}
+
+function preventsNonNumericKey(key: string): boolean {
+    return (
+        !/[0-9]/.test(key) &&
+        ![
+            'Backspace',
+            'Delete',
+            'Tab',
+            'ArrowLeft',
+            'ArrowRight',
+            'Home',
+            'End',
+        ].includes(key)
+    );
 }
 
 export function StockOfferVolumeEditor({
@@ -192,6 +209,11 @@ export function StockOfferVolumeEditor({
     errors,
     onChange,
 }: StockOfferVolumeEditorProps) {
+    const isHydrated = useSyncExternalStore(
+        () => () => {},
+        () => true,
+        () => false,
+    );
     const [selectedPreset, setSelectedPreset] = useState<SizePresetId>(() =>
         detectSharedPreset(volumes),
     );
@@ -640,12 +662,24 @@ export function StockOfferVolumeEditor({
                                         type="number"
                                         min="0"
                                         inputMode="numeric"
+                                        pattern="[0-9]*"
                                         value={
                                             knownQuantities
                                                 ? volumeTotal(volume)
                                                 : (volume.total_quantity ?? '')
                                         }
                                         readOnly={knownQuantities}
+                                        onKeyDown={(event) => {
+                                            if (
+                                                preventsNonNumericKey(
+                                                    event.key,
+                                                ) &&
+                                                !event.ctrlKey &&
+                                                !event.metaKey
+                                            ) {
+                                                event.preventDefault();
+                                            }
+                                        }}
                                         onChange={(event) =>
                                             updateVolume(
                                                 volumeIndex,
@@ -678,16 +712,18 @@ export function StockOfferVolumeEditor({
                                     </p>
                                     <InputError message={volumeError} />
                                 </div>
-                                <div className="flex gap-1.5">
+                                <div className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-1.5 sm:w-auto sm:grid-cols-3">
                                     <Button
                                         type="button"
                                         variant="ghost"
                                         size="icon"
-                                        className="size-11 sm:size-9"
+                                        className="h-11 w-full! sm:size-9"
                                         onClick={() =>
                                             moveVolume(volumeIndex, -1)
                                         }
-                                        disabled={volumeIndex === 0}
+                                        disabled={
+                                            !isHydrated || volumeIndex === 0
+                                        }
                                         aria-label={`Mover Saco ${volumeIndex + 1} para cima`}
                                     >
                                         <ArrowUp />
@@ -696,11 +732,12 @@ export function StockOfferVolumeEditor({
                                         type="button"
                                         variant="ghost"
                                         size="icon"
-                                        className="size-11 sm:size-9"
+                                        className="h-11 w-full! sm:size-9"
                                         onClick={() =>
                                             moveVolume(volumeIndex, 1)
                                         }
                                         disabled={
+                                            !isHydrated ||
                                             volumeIndex === volumes.length - 1
                                         }
                                         aria-label={`Mover Saco ${volumeIndex + 1} para baixo`}

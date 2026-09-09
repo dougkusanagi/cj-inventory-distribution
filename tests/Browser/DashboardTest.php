@@ -37,6 +37,8 @@ it('shows the stock summary and opens the product catalog', function () {
         ->assertSee('01')
         ->assertSee('8 peças disponíveis para distribuição.')
         ->assertSee('unidades disponíveis para distribuição')
+        ->assertDisabled('button[aria-label="Pedidos indisponível por enquanto"]')
+        ->assertSee('Em breve')
         ->assertNoJavaScriptErrors();
 
     $page
@@ -44,5 +46,23 @@ it('shows the stock summary and opens the product catalog', function () {
         ->wait(1)
         ->assertRoute('products.index')
         ->assertSee($product->name)
+        ->assertNoJavaScriptErrors();
+});
+
+it('closes the mobile sidebar after navigating from it', function () {
+    $this->actingAs(User::factory()->create());
+
+    $page = visit(route('dashboard', [], false))
+        ->wait(1)
+        ->resize(390, 844)
+        ->wait(1);
+
+    $page
+        ->click('[data-slot="sidebar-trigger"]')
+        ->assertVisible('[data-slot="sidebar"][data-mobile="true"]')
+        ->click('[data-sidebar="menu-button"]:has-text("Produtos")')
+        ->wait(1)
+        ->assertRoute('products.index')
+        ->assertMissing('[data-slot="sidebar"][data-mobile="true"]')
         ->assertNoJavaScriptErrors();
 });

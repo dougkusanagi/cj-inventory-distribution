@@ -751,12 +751,12 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                         >
                             <div className="grid gap-1">
                                 <p className="text-sm font-semibold text-foreground">
-                                    Mostrar oferta no catálogo
+                                    Oferta de estoque ativa
                                 </p>
                                 <p className="text-sm leading-5 text-muted-foreground">
                                     {form.data.has_stock_offer
-                                        ? 'A oferta poderá aparecer quando o produto estiver ativo e tiver estoque disponível.'
-                                        : 'A oferta ficará oculta, preservando os dados dos sacos para uma próxima ativação.'}
+                                        ? 'Este lote está disponível para distribuição. A exibição também depende do produto, do tipo da grade e do total em estoque.'
+                                        : 'Este lote está pausado, mas os dados dos sacos ficam preservados para uma próxima ativação.'}
                                 </p>
                             </div>
                             <Switch
@@ -767,8 +767,8 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                                 }
                                 aria-label={
                                     form.data.has_stock_offer
-                                        ? 'Ocultar oferta do catálogo'
-                                        : 'Mostrar oferta no catálogo'
+                                        ? 'Pausar oferta de estoque'
+                                        : 'Ativar oferta de estoque'
                                 }
                             />
                         </label>

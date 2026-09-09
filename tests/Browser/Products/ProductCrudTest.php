@@ -29,6 +29,9 @@ it('renders the product creation form for an authenticated user', function () {
         ->assertSee('Cadastrar produto')
         ->assertPresent('#product-name')
         ->assertPresent('#has-stock-offer')
+        ->click('#product-tab-stock')
+        ->assertSee('Oferta de estoque ativa')
+        ->assertDontSee('Mostrar oferta no catálogo')
         ->assertAttribute('#has-stock-offer', 'aria-checked', 'false')
         ->assertNoJavaScriptErrors();
 });
@@ -249,6 +252,8 @@ it('keeps the product form usable on a narrow mobile viewport', function () {
         ->assertScript("(() => { const cards = [...document.querySelectorAll('label[for^=\"stock-offer-type-\"]')]; return cards.length === 3 && new Set(cards.map((card) => Math.round(card.getBoundingClientRect().top))).size === 1; })()")
         ->assertScript("(() => { const cards = [...document.querySelectorAll('label[for^=\"stock-offer-type-\"]')]; return cards.every((card) => { const radio = card.querySelector('[role=\"radio\"]'); const content = card.querySelector('span.grid'); if (!radio || !content) { return false; } const cardRect = card.getBoundingClientRect(); const radioRect = radio.getBoundingClientRect(); const contentRect = content.getBoundingClientRect(); const paddingLeft = Number.parseFloat(getComputedStyle(card).paddingLeft); return Math.abs((radioRect.left + radioRect.width / 2) - (cardRect.left + cardRect.width / 2)) <= 1 && contentRect.top >= radioRect.bottom && Math.abs(contentRect.left - (cardRect.left + paddingLeft)) <= 1 && getComputedStyle(content).textAlign === 'left'; }); })()")
         ->type('#volume-total-0', '9')
+        ->assertAttribute('#volume-total-0', 'type', 'number')
+        ->assertScript("(() => { const up = document.querySelector('button[aria-label=\"Mover Saco 1 para cima\"]'); const down = document.querySelector('button[aria-label=\"Mover Saco 1 para baixo\"]'); const menu = document.querySelector('button[aria-label=\"Mais ações para o Saco 1\"]'); if (!up || !down || !menu) { return false; } return up.getBoundingClientRect().width > menu.getBoundingClientRect().width && down.getBoundingClientRect().width > menu.getBoundingClientRect().width; })()")
         ->assertScript('document.querySelector("#volume-total-0").closest("[data-slot=card]").parentElement.closest("[data-slot=card]") === null')
         ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
         ->click('#product-tab-product')
