@@ -1,5 +1,5 @@
 import { router, useForm } from '@inertiajs/react';
-import { Layers, PackageX, Save } from 'lucide-react';
+import { Layers, Package, PackageX, Save } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
@@ -31,7 +31,6 @@ import { useSidebar } from '@/components/ui/sidebar';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { useScrollVisibility } from '@/hooks/use-scroll-visibility';
 import { cn } from '@/lib/utils';
 import type { Category, Product, ProductLine, StockOfferType } from '@/types';
 
@@ -56,6 +55,19 @@ type ProductFormProps = {
     categories: Category[];
 };
 
+type ProductFormTab = 'product' | 'stock';
+
+const formTabs = [
+    { id: 'product', label: 'Produto', icon: Package },
+    { id: 'stock', label: 'Estoque', icon: Layers },
+] as const;
+
+function tabForError(field: string): ProductFormTab {
+    return field === 'has_stock_offer' || field.startsWith('stock_')
+        ? 'stock'
+        : 'product';
+}
+
 type ProductErrorField =
     | keyof ProductFormData
     | `stock_volumes.${number}.total_quantity`
@@ -74,13 +86,13 @@ const stockOfferTypes: Array<{
     },
     {
         id: 'new_grade',
-        label: 'Grade Nova',
-        description: 'Grade completa, organizada por sacos.',
+        label: 'Nova',
+        description: 'Grade completa.',
     },
     {
         id: 'broken_grade',
-        label: 'Grade Furada',
-        description: 'Grade incompleta, organizada por sacos.',
+        label: 'Furada',
+        description: 'Grade incompleta.',
     },
 ];
 
@@ -141,12 +153,11 @@ function volumeTotal(volume: StockOfferVolumeFormItem): number {
 export function ProductForm({ product, categories }: ProductFormProps) {
     const isEditing = product !== undefined;
     const [processingImages, setProcessingImages] = useState(false);
+    const [activeTab, setActiveTab] = useState<ProductFormTab>('product');
     const radioGroupId = useId();
     const formRef = useRef<HTMLFormElement>(null);
     const submittingRef = useRef(false);
     const { isMobile, state: sidebarState } = useSidebar();
-    const { isVisible: isFooterVisible, show: showFooter } =
-        useScrollVisibility({ showAtDocumentEnd: true });
 
     const form = useForm<ProductFormData>({
         name: product?.name ?? '',
@@ -171,6 +182,13 @@ export function ProductForm({ product, categories }: ProductFormProps) {
     const errorEntries = Object.entries(form.errors).filter(([, message]) =>
         Boolean(message),
     );
+
+    const changeTab = (tab: ProductFormTab) => {
+        setActiveTab(tab);
+        window.requestAnimationFrame(() => {
+            formRef.current?.scrollIntoView({ block: 'start' });
+        });
+    };
 
     useEffect(() => {
         const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -214,7 +232,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
         window.requestAnimationFrame(() => {
             const firstInvalidField =
                 formRef.current?.querySelector<HTMLElement>(
-                    '[aria-invalid="true"]',
+                    '[role="tabpanel"]:not([hidden]) [aria-invalid="true"]',
                 );
 
             firstInvalidField?.scrollIntoView({ block: 'center' });
@@ -277,12 +295,37 @@ export function ProductForm({ product, categories }: ProductFormProps) {
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        const invalidField = formRef.current?.querySelector<HTMLInputElement>(
+            'input:invalid, textarea:invalid, select:invalid',
+        );
+
+        if (invalidField) {
+            setActiveTab(
+                invalidField.closest('[data-form-tab="stock"]')
+                    ? 'stock'
+                    : 'product',
+            );
+            window.requestAnimationFrame(() => {
+                invalidField.focus();
+                invalidField.reportValidity();
+            });
+
+            return;
+        }
+
         submittingRef.current = true;
 
         form.post(isEditing ? update.url(product.id) : store.url(), {
             forceFormData: form.data.images.length > 0,
             preserveState: true,
             preserveScroll: true,
+            onError: (errors) => {
+                const firstField = Object.keys(errors)[0];
+
+                if (firstField) {
+                    setActiveTab(tabForError(firstField));
+                }
+            },
             onFinish: () => {
                 submittingRef.current = false;
             },
@@ -293,6 +336,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
         <form
             ref={formRef}
             onSubmit={submit}
+            noValidate
             className="grid min-w-0 gap-6 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:pb-28"
         >
             <p className="text-xs text-muted-foreground sm:text-sm">
@@ -321,402 +365,515 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                 </div>
             )}
 
-            <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
-                <label
-                    htmlFor="is-active"
-                    className="flex min-h-12 cursor-pointer items-center justify-between gap-4 p-5 select-none sm:p-6"
-                >
-                    <div className="grid gap-1">
-                        <p className="text-sm font-semibold text-foreground">
-                            Produto ativo
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                            {form.data.is_active
-                                ? 'O produto poderá aparecer no catálogo quando houver estoque disponível.'
-                                : 'O produto ficará oculto do catálogo, sem alterar o estoque.'}
-                        </p>
-                    </div>
-                    <Switch
-                        id="is-active"
-                        checked={form.data.is_active}
-                        onCheckedChange={toggleProductActive}
-                        aria-label={
-                            form.data.is_active
-                                ? 'Desativar produto'
-                                : 'Ativar produto'
-                        }
-                    />
-                </label>
-            </Card>
+            <div
+                role="tablist"
+                aria-label="Informações do produto"
+                className="sticky top-0 z-20 grid grid-cols-2 gap-2 rounded-2xl border border-border bg-muted/95 p-1.5 backdrop-blur"
+            >
+                {formTabs.map(({ id, label, icon: Icon }, index) => {
+                    const errorCount = errorEntries.filter(
+                        ([field]) => tabForError(field) === id,
+                    ).length;
 
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
-                {/* 1. Identidade da peça */}
-                <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
-                    <CardHeader className="p-5 sm:p-6">
-                        <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
-                            Identidade da peça
-                        </p>
-                        <h2 className="text-xl tracking-tight sm:text-2xl">
-                            Dados do produto
-                        </h2>
-                        <CardDescription className="text-xs sm:text-sm">
-                            O código interno é gerado automaticamente ao salvar.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid gap-5 p-5 pt-0 sm:p-6 sm:pt-0">
-                        {isEditing && (
-                            <div className="flex items-center justify-between rounded-xl bg-muted px-4 py-3">
-                                <span className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
-                                    Código interno
-                                </span>
-                                <span className="font-mono text-sm font-semibold text-foreground">
-                                    {product.code}
-                                </span>
-                            </div>
-                        )}
-
-                        <div className="grid gap-2">
-                            <Label
-                                htmlFor="product-name"
-                                className="text-sm font-medium"
-                            >
-                                Nome do produto{' '}
-                                <span className="text-destructive">*</span>
-                            </Label>
-                            <Input
-                                id="product-name"
-                                name="name"
-                                value={form.data.name}
-                                onChange={(event) =>
-                                    form.setData('name', event.target.value)
+                    return (
+                        <button
+                            key={id}
+                            id={`product-tab-${id}`}
+                            type="button"
+                            role="tab"
+                            aria-selected={activeTab === id}
+                            aria-controls={`product-panel-${id}`}
+                            tabIndex={activeTab === id ? 0 : -1}
+                            onClick={() => changeTab(id)}
+                            onKeyDown={(event) => {
+                                if (
+                                    ![
+                                        'ArrowLeft',
+                                        'ArrowRight',
+                                        'Home',
+                                        'End',
+                                    ].includes(event.key)
+                                ) {
+                                    return;
                                 }
-                                aria-invalid={error('name') ? true : undefined}
-                                placeholder="Ex.: Calça Wide Leg"
-                                className="h-11 text-base sm:h-10 sm:text-sm"
-                                required
-                            />
-                            <InputError message={error('name')} />
-                        </div>
 
-                        <div className="grid gap-4 sm:grid-cols-2">
+                                event.preventDefault();
+                                const nextIndex =
+                                    event.key === 'Home'
+                                        ? 0
+                                        : event.key === 'End'
+                                          ? formTabs.length - 1
+                                          : (index + 1) % formTabs.length;
+                                const nextTab = formTabs[nextIndex].id;
+                                changeTab(nextTab);
+                                document
+                                    .getElementById(`product-tab-${nextTab}`)
+                                    ?.focus();
+                            }}
+                            className={cn(
+                                'flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                                activeTab === id
+                                    ? 'bg-card text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:bg-card/60 hover:text-foreground',
+                            )}
+                        >
+                            <Icon className="size-5" aria-hidden="true" />
+                            {label}
+                            {errorCount > 0 && (
+                                <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs text-destructive">
+                                    {errorCount}
+                                    <span className="sr-only">
+                                        {' '}
+                                        erros para revisar
+                                    </span>
+                                </span>
+                            )}
+                        </button>
+                    );
+                })}
+            </div>
+
+            <section
+                id="product-panel-product"
+                role="tabpanel"
+                aria-labelledby="product-tab-product"
+                data-form-tab="product"
+                hidden={activeTab !== 'product'}
+                className={cn(
+                    'min-w-0 gap-6',
+                    activeTab === 'product' ? 'grid' : 'hidden',
+                )}
+            >
+                <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
+                    <label
+                        htmlFor="is-active"
+                        className="flex min-h-12 cursor-pointer items-center justify-between gap-4 p-5 select-none sm:p-6"
+                    >
+                        <div className="grid gap-1">
+                            <p className="text-sm font-semibold text-foreground">
+                                Produto ativo
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                {form.data.is_active
+                                    ? 'O produto poderá aparecer no catálogo quando houver estoque disponível.'
+                                    : 'O produto ficará oculto do catálogo, sem alterar o estoque.'}
+                            </p>
+                        </div>
+                        <Switch
+                            id="is-active"
+                            checked={form.data.is_active}
+                            onCheckedChange={toggleProductActive}
+                            aria-label={
+                                form.data.is_active
+                                    ? 'Desativar produto'
+                                    : 'Ativar produto'
+                            }
+                        />
+                    </label>
+                </Card>
+
+                <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
+                    {/* 1. Identidade da peça */}
+                    <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
+                        <CardHeader className="p-5 sm:p-6">
+                            <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
+                                Identidade da peça
+                            </p>
+                            <h2 className="text-xl tracking-tight sm:text-2xl">
+                                Dados do produto
+                            </h2>
+                            <CardDescription className="text-xs sm:text-sm">
+                                O código interno é gerado automaticamente ao
+                                salvar.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid gap-5 p-5 pt-0 sm:p-6 sm:pt-0">
+                            {isEditing && (
+                                <div className="flex items-center justify-between rounded-xl bg-muted px-4 py-3">
+                                    <span className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                                        Código interno
+                                    </span>
+                                    <span className="font-mono text-sm font-semibold text-foreground">
+                                        {product.code}
+                                    </span>
+                                </div>
+                            )}
+
                             <div className="grid gap-2">
                                 <Label
-                                    htmlFor="product-model"
+                                    htmlFor="product-name"
                                     className="text-sm font-medium"
                                 >
-                                    Modelo{' '}
+                                    Nome do produto{' '}
+                                    <span className="text-destructive">*</span>
+                                </Label>
+                                <Input
+                                    id="product-name"
+                                    name="name"
+                                    value={form.data.name}
+                                    onChange={(event) =>
+                                        form.setData('name', event.target.value)
+                                    }
+                                    aria-invalid={
+                                        error('name') ? true : undefined
+                                    }
+                                    placeholder="Ex.: Calça Wide Leg"
+                                    className="h-11 text-base sm:h-10 sm:text-sm"
+                                    required
+                                />
+                                <InputError message={error('name')} />
+                            </div>
+
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="grid gap-2">
+                                    <Label
+                                        htmlFor="product-model"
+                                        className="text-sm font-medium"
+                                    >
+                                        Modelo{' '}
+                                        <span className="text-xs font-normal text-muted-foreground">
+                                            (opcional)
+                                        </span>
+                                    </Label>
+                                    <Input
+                                        id="product-model"
+                                        name="model"
+                                        value={form.data.model}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'model',
+                                                event.target.value,
+                                            )
+                                        }
+                                        aria-invalid={
+                                            error('model') ? true : undefined
+                                        }
+                                        placeholder="Ex.: 2451"
+                                        className="h-11 text-base sm:h-10 sm:text-sm"
+                                    />
+                                    <InputError message={error('model')} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="product-category">
+                                        Categoria
+                                    </Label>
+                                    <Select
+                                        value={form.data.category_id || 'none'}
+                                        onValueChange={(value) =>
+                                            form.setData(
+                                                'category_id',
+                                                value === 'none' ? '' : value,
+                                            )
+                                        }
+                                    >
+                                        <SelectTrigger
+                                            id="product-category"
+                                            className="h-11 w-full sm:h-10"
+                                            aria-invalid={
+                                                error('category_id')
+                                                    ? true
+                                                    : undefined
+                                            }
+                                        >
+                                            <SelectValue placeholder="Sem categoria" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none">
+                                                Sem categoria
+                                            </SelectItem>
+                                            {categories.map((category) => (
+                                                <SelectItem
+                                                    key={category.id}
+                                                    value={category.id.toString()}
+                                                >
+                                                    {category.name}
+                                                    {!category.is_active
+                                                        ? ' (inativa)'
+                                                        : ''}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError
+                                        message={error('category_id')}
+                                    />
+                                </div>
+                            </div>
+
+                            <fieldset className="grid gap-2">
+                                <legend className="text-sm font-medium">
+                                    Linha comercial
+                                </legend>
+                                <RadioGroup
+                                    value={form.data.line || 'none'}
+                                    onValueChange={(value) =>
+                                        form.setData(
+                                            'line',
+                                            value === 'none'
+                                                ? ''
+                                                : (value as ProductLine),
+                                        )
+                                    }
+                                    aria-label="Linha comercial"
+                                    aria-invalid={
+                                        error('line') ? true : undefined
+                                    }
+                                    className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3"
+                                >
+                                    {[
+                                        ['none', 'Não informada'],
+                                        ['slim', 'Slim'],
+                                        ['plus', 'Plus'],
+                                    ].map(([value, label]) => (
+                                        <label
+                                            key={value}
+                                            className={cn(
+                                                'flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 text-sm font-medium transition-colors',
+                                                (form.data.line || 'none') ===
+                                                    value
+                                                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                                                    : 'border-border hover:bg-muted/30',
+                                            )}
+                                        >
+                                            <RadioGroupItem value={value} />
+                                            {label}
+                                        </label>
+                                    ))}
+                                </RadioGroup>
+                                <InputError message={error('line')} />
+                            </fieldset>
+
+                            <div className="grid gap-2">
+                                <Label
+                                    htmlFor="product-notes"
+                                    className="text-sm font-medium"
+                                >
+                                    Observações{' '}
                                     <span className="text-xs font-normal text-muted-foreground">
                                         (opcional)
                                     </span>
                                 </Label>
-                                <Input
-                                    id="product-model"
-                                    name="model"
-                                    value={form.data.model}
+                                <Textarea
+                                    id="product-notes"
+                                    name="notes"
+                                    value={form.data.notes}
                                     onChange={(event) =>
                                         form.setData(
-                                            'model',
+                                            'notes',
                                             event.target.value,
                                         )
                                     }
                                     aria-invalid={
-                                        error('model') ? true : undefined
+                                        error('notes') ? true : undefined
                                     }
-                                    placeholder="Ex.: 2451"
-                                    className="h-11 text-base sm:h-10 sm:text-sm"
+                                    placeholder="Cor, lavagem ou algum detalhe importante..."
+                                    rows={3}
+                                    className="text-base sm:text-sm"
                                 />
-                                <InputError message={error('model')} />
+                                <InputError message={error('notes')} />
                             </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="product-category">
-                                    Categoria
-                                </Label>
-                                <Select
-                                    value={form.data.category_id || 'none'}
-                                    onValueChange={(value) =>
-                                        form.setData(
-                                            'category_id',
-                                            value === 'none' ? '' : value,
-                                        )
-                                    }
-                                >
-                                    <SelectTrigger
-                                        id="product-category"
-                                        className="h-11 w-full sm:h-10"
-                                        aria-invalid={
-                                            error('category_id')
-                                                ? true
-                                                : undefined
-                                        }
-                                    >
-                                        <SelectValue placeholder="Sem categoria" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="none">
-                                            Sem categoria
-                                        </SelectItem>
-                                        {categories.map((category) => (
-                                            <SelectItem
-                                                key={category.id}
-                                                value={category.id.toString()}
-                                            >
-                                                {category.name}
-                                                {!category.is_active
-                                                    ? ' (inativa)'
-                                                    : ''}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <InputError message={error('category_id')} />
-                            </div>
-                        </div>
+                        </CardContent>
+                    </Card>
 
-                        <fieldset className="grid gap-2">
-                            <legend className="text-sm font-medium">
-                                Linha comercial
-                            </legend>
-                            <RadioGroup
-                                value={form.data.line || 'none'}
-                                onValueChange={(value) =>
-                                    form.setData(
-                                        'line',
-                                        value === 'none'
-                                            ? ''
-                                            : (value as ProductLine),
-                                    )
-                                }
-                                className="grid grid-cols-3 gap-2"
-                            >
-                                {[
-                                    ['none', 'Não informada'],
-                                    ['slim', 'Slim'],
-                                    ['plus', 'Plus'],
-                                ].map(([value, label]) => (
-                                    <label
-                                        key={value}
-                                        className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-border px-3 text-sm"
-                                    >
-                                        <RadioGroupItem value={value} />
-                                        {label}
-                                    </label>
-                                ))}
-                            </RadioGroup>
-                            <InputError message={error('line')} />
-                        </fieldset>
-
-                        <div className="grid gap-2">
-                            <Label
-                                htmlFor="product-notes"
-                                className="text-sm font-medium"
-                            >
-                                Observações{' '}
-                                <span className="text-xs font-normal text-muted-foreground">
-                                    (opcional)
-                                </span>
-                            </Label>
-                            <Textarea
-                                id="product-notes"
-                                name="notes"
-                                value={form.data.notes}
-                                onChange={(event) =>
-                                    form.setData('notes', event.target.value)
-                                }
-                                aria-invalid={error('notes') ? true : undefined}
-                                placeholder="Cor, lavagem ou algum detalhe importante..."
-                                rows={3}
-                                className="text-base sm:text-sm"
+                    {/* 2. Referência visual */}
+                    <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
+                        <CardHeader className="p-5 sm:p-6">
+                            <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
+                                Referência visual
+                            </p>
+                            <h2 className="text-xl tracking-tight sm:text-2xl">
+                                Fotos
+                            </h2>
+                            <CardDescription className="text-xs sm:text-sm">
+                                Adicione até 5 fotos pela câmera ou pela
+                                galeria. O enquadramento é definido antes de
+                                salvar cada foto.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-5 pt-0 sm:p-6 sm:pt-0">
+                            <ProductPhotoManager
+                                value={form.data.images}
+                                existingImages={product?.images ?? []}
+                                error={error('images') ?? error('image_order')}
+                                errors={form.errors as Record<string, string>}
+                                onChange={(change) => {
+                                    form.setData((previousData) => ({
+                                        ...previousData,
+                                        images: change.files,
+                                        image_order: change.imageOrder,
+                                        remove_media_ids: change.removeMediaIds,
+                                    }));
+                                }}
+                                onProcessingChange={setProcessingImages}
                             />
-                            <InputError message={error('notes')} />
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                </div>
+            </section>
 
-                {/* 2. Referência visual */}
+            <section
+                id="product-panel-stock"
+                role="tabpanel"
+                aria-labelledby="product-tab-stock"
+                data-form-tab="stock"
+                hidden={activeTab !== 'stock'}
+                className={cn(
+                    'min-w-0 gap-6',
+                    activeTab === 'stock' ? 'grid' : 'hidden',
+                )}
+            >
+                {/* 3. Disponibilidade do lote */}
                 <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
                     <CardHeader className="p-5 sm:p-6">
-                        <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
-                            Referência visual
-                        </p>
-                        <h2 className="text-xl tracking-tight sm:text-2xl">
-                            Fotos
-                        </h2>
-                        <CardDescription className="text-xs sm:text-sm">
-                            Adicione até 5 fotos pela câmera ou pela galeria. O
-                            enquadramento é definido antes de salvar cada foto.
-                        </CardDescription>
+                        <div className="grid gap-1.5">
+                            <div className="flex items-center gap-2">
+                                <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                    <Layers className="size-4" />
+                                </span>
+                                <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
+                                    Disponibilidade em estoque
+                                </p>
+                            </div>
+                            <h2 className="text-xl tracking-tight sm:text-2xl">
+                                Estoque organizado por sacos
+                            </h2>
+                            <CardDescription className="text-xs sm:text-sm">
+                                Cada saco tem sua própria grade e total. O total
+                                da oferta é a soma dos sacos e é recalculado no
+                                servidor.
+                            </CardDescription>
+                            <p className="text-sm font-medium text-foreground">
+                                {distributionStatus}
+                            </p>
+                        </div>
                     </CardHeader>
-                    <CardContent className="p-5 pt-0 sm:p-6 sm:pt-0">
-                        <ProductPhotoManager
-                            value={form.data.images}
-                            existingImages={product?.images ?? []}
-                            error={error('images') ?? error('image_order')}
-                            errors={form.errors as Record<string, string>}
-                            onChange={(change) => {
-                                form.setData((previousData) => ({
-                                    ...previousData,
-                                    images: change.files,
-                                    image_order: change.imageOrder,
-                                    remove_media_ids: change.removeMediaIds,
-                                }));
-                            }}
-                            onProcessingChange={setProcessingImages}
-                        />
+                    <CardContent className="grid gap-6 p-5 pt-0 sm:p-6 sm:pt-0">
+                        <label
+                            htmlFor="has-stock-offer"
+                            className="flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-2xl border border-border/80 bg-muted/20 p-4 select-none"
+                        >
+                            <div className="grid gap-1">
+                                <p className="text-sm font-semibold text-foreground">
+                                    Mostrar oferta no catálogo
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {form.data.has_stock_offer
+                                        ? 'A oferta poderá aparecer quando o produto estiver ativo e tiver estoque disponível.'
+                                        : 'A oferta ficará oculta, preservando os dados dos sacos para uma próxima ativação.'}
+                                </p>
+                            </div>
+                            <Switch
+                                id="has-stock-offer"
+                                checked={form.data.has_stock_offer}
+                                onCheckedChange={(checked) =>
+                                    form.setData('has_stock_offer', checked)
+                                }
+                                aria-label={
+                                    form.data.has_stock_offer
+                                        ? 'Ocultar oferta do catálogo'
+                                        : 'Mostrar oferta no catálogo'
+                                }
+                            />
+                        </label>
+                        <InputError message={error('has_stock_offer')} />
+
+                        <fieldset className="grid gap-3">
+                            <legend
+                                id={radioGroupId}
+                                className="text-sm font-semibold text-foreground"
+                            >
+                                Tipo de Grade
+                            </legend>
+                            <p className="text-xs text-muted-foreground">
+                                Todos os tipos usam pelo menos um saco; a
+                                diferença está na classificação da oferta.
+                            </p>
+                            <RadioGroup
+                                value={form.data.stock_offer_type}
+                                onValueChange={selectStockOfferType}
+                                className="grid grid-cols-3 gap-2"
+                                aria-labelledby={radioGroupId}
+                                aria-invalid={
+                                    error('stock_offer_type') ? true : undefined
+                                }
+                            >
+                                {stockOfferTypes.map((offerType) => {
+                                    const optionId =
+                                        'stock-offer-type-' + offerType.id;
+
+                                    return (
+                                        <label
+                                            key={offerType.id}
+                                            htmlFor={optionId}
+                                            className={cn(
+                                                'flex min-h-16 min-w-0 flex-col items-stretch gap-1.5 rounded-xl border px-2.5 py-2.5 text-sm font-medium transition-colors select-none',
+                                                form.data.stock_offer_type ===
+                                                    offerType.id
+                                                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                                                    : 'border-border hover:bg-muted/30',
+                                            )}
+                                        >
+                                            <RadioGroupItem
+                                                id={optionId}
+                                                value={offerType.id}
+                                                className="shrink-0 self-center"
+                                            />
+                                            <span className="grid w-full min-w-0 gap-0.5 text-left">
+                                                <span className="text-xs leading-4 break-words sm:text-sm">
+                                                    {offerType.label}
+                                                </span>
+                                                <span className="text-[10px] leading-3.5 font-normal break-words text-muted-foreground sm:text-xs sm:leading-4">
+                                                    {offerType.description}
+                                                </span>
+                                            </span>
+                                        </label>
+                                    );
+                                })}
+                            </RadioGroup>
+                            <InputError message={error('stock_offer_type')} />
+                        </fieldset>
                     </CardContent>
                 </Card>
-            </div>
-            {/* 3. Disponibilidade do lote */}
-            <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
-                <CardHeader className="p-5 sm:p-6">
-                    <div className="grid gap-1.5">
-                        <div className="flex items-center gap-2">
-                            <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                <Layers className="size-4" />
-                            </span>
-                            <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
-                                Disponibilidade em estoque
-                            </p>
-                        </div>
-                        <h2 className="text-xl tracking-tight sm:text-2xl">
-                            Estoque organizado por sacos
-                        </h2>
-                        <CardDescription className="text-xs sm:text-sm">
-                            Cada saco tem sua própria grade e total. O total da
-                            oferta é a soma dos sacos e é recalculado no
-                            servidor.
-                        </CardDescription>
-                        <p className="text-sm font-medium text-foreground">
-                            {distributionStatus}
-                        </p>
-                    </div>
-                </CardHeader>
-                <CardContent className="grid gap-6 p-5 pt-0 sm:p-6 sm:pt-0">
-                    <label
-                        htmlFor="has-stock-offer"
-                        className="flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-2xl border border-border/80 bg-muted/20 p-4 select-none"
-                    >
-                        <div className="grid gap-1">
-                            <p className="text-sm font-semibold text-foreground">
-                                Mostrar oferta no catálogo
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                {form.data.has_stock_offer
-                                    ? 'A oferta poderá aparecer quando o produto estiver ativo e tiver estoque disponível.'
-                                    : 'A oferta ficará oculta, preservando os dados dos sacos para uma próxima ativação.'}
-                            </p>
-                        </div>
-                        <Switch
-                            id="has-stock-offer"
-                            checked={form.data.has_stock_offer}
-                            onCheckedChange={(checked) =>
-                                form.setData('has_stock_offer', checked)
-                            }
-                            aria-label={
-                                form.data.has_stock_offer
-                                    ? 'Ocultar oferta do catálogo'
-                                    : 'Mostrar oferta no catálogo'
-                            }
-                        />
-                    </label>
-                    <InputError message={error('has_stock_offer')} />
 
-                    <fieldset className="grid gap-3">
-                        <legend
-                            id={radioGroupId}
-                            className="text-sm font-semibold text-foreground"
-                        >
-                            Tipo do estoque
-                        </legend>
+                <StockOfferVolumeEditor
+                    volumes={form.data.stock_volumes}
+                    errors={form.errors as Record<string, string>}
+                    onChange={(volumes) =>
+                        form.setData('stock_volumes', volumes)
+                    }
+                />
+
+                <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="grid gap-1">
+                        <p className="text-sm font-semibold text-foreground">
+                            Encerrar estoque atual
+                        </p>
                         <p className="text-xs text-muted-foreground">
-                            Todos os tipos usam pelo menos um saco; a diferença
-                            está na classificação da oferta.
+                            Oculta a oferta, zera os sacos e desativa os
+                            tamanhos deste lote ao salvar.
                         </p>
-                        <RadioGroup
-                            value={form.data.stock_offer_type}
-                            onValueChange={selectStockOfferType}
-                            className="grid grid-cols-1 gap-2 sm:grid-cols-3"
-                            aria-labelledby={radioGroupId}
-                            aria-invalid={
-                                error('stock_offer_type') ? true : undefined
-                            }
-                        >
-                            {stockOfferTypes.map((offerType) => {
-                                const optionId =
-                                    'stock-offer-type-' + offerType.id;
-
-                                return (
-                                    <label
-                                        key={offerType.id}
-                                        htmlFor={optionId}
-                                        className={cn(
-                                            'flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors select-none',
-                                            form.data.stock_offer_type ===
-                                                offerType.id
-                                                ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                                                : 'border-border hover:bg-muted/30',
-                                        )}
-                                    >
-                                        <RadioGroupItem
-                                            id={optionId}
-                                            value={offerType.id}
-                                        />
-                                        <span className="grid gap-0.5">
-                                            <span>{offerType.label}</span>
-                                            <span className="text-xs font-normal text-muted-foreground">
-                                                {offerType.description}
-                                            </span>
-                                        </span>
-                                    </label>
-                                );
-                            })}
-                        </RadioGroup>
-                        <InputError message={error('stock_offer_type')} />
-                    </fieldset>
-
-                    <StockOfferVolumeEditor
-                        volumes={form.data.stock_volumes}
-                        errors={form.errors as Record<string, string>}
-                        onChange={(volumes) =>
-                            form.setData('stock_volumes', volumes)
-                        }
-                    />
-
-                    <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="grid gap-1">
-                            <p className="text-sm font-semibold text-foreground">
-                                Encerrar estoque atual
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                Oculta a oferta, zera os sacos e desativa os
-                                tamanhos deste lote ao salvar.
-                            </p>
-                        </div>
-                        <Button
-                            type="button"
-                            variant="destructive"
-                            onClick={clearCurrentStock}
-                            disabled={!hasCurrentStockData}
-                            className="h-11 shrink-0"
-                        >
-                            <PackageX />
-                            Encerrar estoque
-                        </Button>
                     </div>
-                </CardContent>
-            </Card>
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={clearCurrentStock}
+                        disabled={!hasCurrentStockData}
+                        className="h-11 shrink-0"
+                    >
+                        <PackageX />
+                        Encerrar estoque
+                    </Button>
+                </div>
+            </section>
 
             {/* 5. Ações inferiores (Mobile-First) */}
             <div
-                onFocusCapture={showFooter}
                 className={cn(
-                    'fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-card/95 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-16px_rgba(0,0,0,0.45)] backdrop-blur-xl transition-[left,translate] duration-200 ease-in-out will-change-[translate] sm:p-4',
+                    'fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-card/95 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-16px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-4',
                     !isMobile &&
                         (sidebarState === 'collapsed'
                             ? 'md:left-[calc(var(--sidebar-width-icon)+1rem)]'
                             : 'md:left-(--sidebar-width)'),
-                    isFooterVisible
-                        ? 'translate-y-0'
-                        : 'translate-y-0 md:translate-y-full',
                 )}
             >
                 <div className="mx-auto flex w-full max-w-7xl justify-center sm:justify-end">

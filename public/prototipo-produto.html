@@ -1,0 +1,886 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="robots" content="noindex, nofollow" />
+        <title>Cadastro em etapas · Protótipo Crônicas Jeans</title>
+        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+        <style type="text/tailwindcss">
+            @theme {
+                --color-background: oklch(0.985 0.008 85);
+                --color-foreground: oklch(0.22 0.035 38);
+                --color-card: white;
+                --color-action: oklch(0.74 0.16 78);
+                --color-action-foreground: oklch(0.14 0.035 35);
+                --color-highlight: oklch(0.5 0.13 67);
+                --color-muted: oklch(0.95 0.012 80);
+                --color-muted-foreground: oklch(0.52 0.035 45);
+                --color-border: oklch(0.89 0.018 78);
+                --color-input: oklch(0.65 0.022 75);
+                --color-destructive: oklch(0.5 0.2 25);
+            }
+            @layer base {
+                [hidden] {
+                    display: none !important;
+                }
+                button,
+                select {
+                    cursor: pointer;
+                }
+                button:disabled {
+                    cursor: default;
+                    opacity: 0.4;
+                }
+                :focus-visible {
+                    outline: 3px solid var(--color-highlight);
+                    outline-offset: 3px;
+                }
+            }
+            @layer components {
+                .card {
+                    @apply rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-7;
+                }
+                .field {
+                    @apply grid min-w-0 gap-2 text-sm font-medium;
+                }
+                .input {
+                    @apply min-h-12 w-full rounded-xl border border-input bg-card px-3 py-2 text-base font-normal;
+                }
+                .secondary {
+                    @apply inline-flex min-h-12 items-center justify-center rounded-xl border border-input bg-card px-4 text-sm font-semibold hover:bg-muted;
+                }
+                .primary {
+                    @apply text-action-foreground inline-flex min-h-12 items-center justify-center rounded-xl bg-action px-5 font-semibold hover:brightness-95;
+                }
+                .step {
+                    @apply flex min-h-16 flex-1 items-center justify-center gap-2 rounded-xl px-2 py-3 text-sm font-semibold text-muted-foreground sm:justify-start sm:gap-3 sm:px-4;
+                }
+                .step[aria-current='step'] {
+                    @apply bg-card text-foreground shadow-sm;
+                }
+                .step-number {
+                    @apply flex size-7 shrink-0 items-center justify-center rounded-full border border-input text-xs;
+                }
+                .step[aria-current='step'] .step-number {
+                    @apply text-action-foreground border-action bg-action;
+                }
+                .help {
+                    @apply text-sm leading-6 text-muted-foreground;
+                }
+            }
+        </style>
+    </head>
+    <body class="bg-background font-sans text-foreground antialiased">
+        <header class="border-b border-border bg-card">
+            <div
+                class="mx-auto flex min-h-20 max-w-5xl items-center justify-between gap-4 px-4 sm:px-6"
+            >
+                <img
+                    src="/images/brand/logo-cronicas-color.png"
+                    alt="Crônicas Jeans"
+                    class="h-10 w-auto"
+                />
+                <span
+                    class="rounded-full bg-muted px-3 py-1.5 text-xs font-semibold"
+                    >Protótipo interativo</span
+                >
+            </div>
+        </header>
+        <main class="mx-auto max-w-5xl px-4 pt-7 pb-36 sm:px-6 sm:pt-10">
+            <div class="mb-7 flex flex-wrap items-start justify-between gap-4">
+                <div class="grid gap-2">
+                    <p
+                        class="text-xs font-semibold tracking-widest text-highlight uppercase"
+                    >
+                        Produtos / Novo cadastro
+                    </p>
+                    <h1
+                        class="text-3xl font-semibold tracking-tight sm:text-4xl"
+                    >
+                        Um passo de cada vez.
+                    </h1>
+                    <p class="help">
+                        Cadastre a peça, organize os sacos e confira antes de
+                        salvar.
+                    </p>
+                </div>
+                <p
+                    class="max-w-56 rounded-xl bg-muted px-3 py-2 text-xs leading-5"
+                >
+                    Teste à vontade. Os dados ficam só nesta página e não são
+                    salvos no sistema.
+                </p>
+            </div>
+
+            <nav
+                aria-label="Etapas do cadastro"
+                class="mb-7 flex gap-1 rounded-2xl bg-muted p-1.5"
+            >
+                <button
+                    type="button"
+                    class="step"
+                    data-step="0"
+                    aria-controls="step-0"
+                    aria-current="step"
+                >
+                    <span class="step-number">1</span><span>Produto</span>
+                </button>
+                <button
+                    type="button"
+                    class="step"
+                    data-step="1"
+                    aria-controls="step-1"
+                >
+                    <span class="step-number">2</span
+                    ><span
+                        >Estoque
+                        <span class="hidden sm:inline">e sacos</span></span
+                    >
+                </button>
+                <button
+                    type="button"
+                    class="step"
+                    data-step="2"
+                    aria-controls="step-2"
+                >
+                    <span class="step-number">3</span><span>Revisão</span>
+                </button>
+            </nav>
+
+            <form id="wizard" novalidate>
+                <p
+                    id="form-error"
+                    role="alert"
+                    hidden
+                    class="mb-5 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+                ></p>
+
+                <section
+                    id="step-0"
+                    aria-labelledby="product-heading"
+                    class="grid gap-6"
+                >
+                    <div class="grid gap-1">
+                        <h2
+                            id="product-heading"
+                            tabindex="-1"
+                            class="text-xl font-semibold"
+                        >
+                            Qual peça você está cadastrando?
+                        </h2>
+                        <p class="help">
+                            Comece pelas informações que ajudam a reconhecer o
+                            produto.
+                        </p>
+                    </div>
+                    <div
+                        class="grid items-start gap-6 md:grid-cols-[1fr_17rem]"
+                    >
+                        <div class="card grid gap-5">
+                            <label class="field" for="product-name"
+                                >Nome da peça
+                                <span class="sr-only">obrigatório</span>
+                                <input
+                                    id="product-name"
+                                    class="input"
+                                    value="Calça Wide Leg"
+                                    required
+                                    maxlength="255"
+                                />
+                            </label>
+                            <div class="grid gap-5 sm:grid-cols-2">
+                                <label class="field" for="product-category"
+                                    >Categoria
+                                    <span
+                                        class="text-xs font-normal text-muted-foreground"
+                                        >Opcional</span
+                                    >
+                                    <select id="product-category" class="input">
+                                        <option value="">Não informada</option>
+                                        <option selected>Calça</option>
+                                        <option>Bermuda</option>
+                                        <option>Short</option>
+                                        <option>Cropped</option>
+                                    </select>
+                                </label>
+                                <label class="field" for="product-line"
+                                    >Linha
+                                    <span
+                                        class="text-xs font-normal text-muted-foreground"
+                                        >Opcional</span
+                                    >
+                                    <select id="product-line" class="input">
+                                        <option value="">Não informada</option>
+                                        <option selected>Slim</option>
+                                        <option>Plus</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <label class="field" for="product-model"
+                                >Modelo / referência
+                                <span
+                                    class="text-xs font-normal text-muted-foreground"
+                                    >Opcional</span
+                                >
+                                <input
+                                    id="product-model"
+                                    class="input"
+                                    value="2451"
+                                    placeholder="Ex.: 2451"
+                                />
+                            </label>
+                            <label class="field" for="product-status"
+                                >Situação do produto
+                                <select id="product-status" class="input">
+                                    <option value="active">Ativo</option>
+                                    <option value="inactive">Inativo</option>
+                                </select>
+                            </label>
+                            <label class="field" for="product-notes"
+                                >Observações
+                                <span
+                                    class="text-xs font-normal text-muted-foreground"
+                                    >Opcional</span
+                                >
+                                <textarea
+                                    id="product-notes"
+                                    class="input min-h-24"
+                                    placeholder="Algum detalhe importante sobre a peça?"
+                                ></textarea>
+                            </label>
+                            <p
+                                class="rounded-xl bg-muted p-3 text-xs leading-5"
+                            >
+                                O código interno será gerado automaticamente ao
+                                salvar o produto.
+                            </p>
+                        </div>
+                        <aside
+                            class="card grid gap-4"
+                            aria-label="Referência visual do produto"
+                        >
+                            <div>
+                                <h3 class="font-semibold">Fotos da peça</h3>
+                                <p class="help">Junto dos dados do produto.</p>
+                            </div>
+                            <img
+                                src="/images/products/calca-wide-leg.png"
+                                alt="Foto ilustrativa de uma calça wide leg"
+                                class="aspect-[4/5] w-full rounded-2xl object-cover"
+                            />
+                            <p class="text-xs leading-5 text-muted-foreground">
+                                Foto ilustrativa. No formulário real, este
+                                espaço recebe o editor de até 5 fotos.
+                            </p>
+                        </aside>
+                    </div>
+                </section>
+
+                <section
+                    id="step-1"
+                    aria-labelledby="stock-heading"
+                    class="grid gap-6"
+                    hidden
+                >
+                    <div class="grid gap-1">
+                        <h2
+                            id="stock-heading"
+                            tabindex="-1"
+                            class="text-xl font-semibold"
+                        >
+                            Como está o estoque desta peça?
+                        </h2>
+                        <p class="help">
+                            Cada saco aparece em seu próprio card, com espaço
+                            para conferir os tamanhos.
+                        </p>
+                    </div>
+                    <div class="card grid gap-5">
+                        <h3 class="font-semibold">
+                            Disponibilidade em estoque
+                        </h3>
+                        <label class="field" for="stock-availability"
+                            >O que você quer cadastrar agora?
+                            <select id="stock-availability" class="input">
+                                <option value="available">
+                                    Estoque disponível
+                                </option>
+                                <option value="hidden">
+                                    Estoque oculto do catálogo
+                                </option>
+                                <option value="none">
+                                    Somente o produto, sem estoque
+                                </option>
+                            </select>
+                        </label>
+                        <div
+                            id="offer-options"
+                            class="grid gap-5 sm:grid-cols-2"
+                        >
+                            <label class="field" for="offer-type"
+                                >Tipo da oferta
+                                <select id="offer-type" class="input">
+                                    <option>Reposição</option>
+                                    <option>Grade Furada</option>
+                                    <option>Grade Nova</option>
+                                </select>
+                            </label>
+                            <label class="field" for="size-preset"
+                                >Modelo de grade
+                                <select id="size-preset" class="input">
+                                    <option value="numeric">
+                                        Numérica feminina
+                                    </option>
+                                    <option value="letters">Por letras</option>
+                                    <option value="custom">
+                                        Personalizada
+                                    </option>
+                                </select>
+                            </label>
+                        </div>
+                        <label
+                            id="custom-sizes-label"
+                            class="field"
+                            for="custom-sizes"
+                            hidden
+                            >Tamanhos separados por vírgula
+                            <input
+                                id="custom-sizes"
+                                class="input"
+                                value="G1, G2, G3"
+                                placeholder="Ex.: G1, G2, G3"
+                            />
+                        </label>
+                        <p id="catalog-notice" class="help">
+                            Produto ativo e sacos com estoque positivo podem
+                            aparecer no catálogo.
+                        </p>
+                    </div>
+
+                    <div id="sack-section" class="grid gap-5">
+                        <div
+                            class="flex flex-wrap items-center justify-between gap-3"
+                        >
+                            <h3 class="text-lg font-semibold">
+                                Sacos desta oferta
+                            </h3>
+                            <p
+                                id="stock-summary"
+                                role="status"
+                                class="rounded-full bg-muted px-3 py-1.5 text-sm font-medium"
+                            ></p>
+                        </div>
+                        <div id="sacks" class="grid gap-5"></div>
+                        <button
+                            id="add-sack"
+                            type="button"
+                            class="secondary w-full border-dashed"
+                        >
+                            + Adicionar outro saco
+                        </button>
+                        <p class="text-xs leading-5 text-muted-foreground">
+                            Sabe apenas o total do saco? Pode deixar todas as
+                            quantidades por tamanho em branco.
+                        </p>
+                    </div>
+                </section>
+
+                <section
+                    id="step-2"
+                    aria-labelledby="review-heading"
+                    class="grid gap-6"
+                    hidden
+                >
+                    <div class="grid gap-1">
+                        <h2
+                            id="review-heading"
+                            tabindex="-1"
+                            class="text-xl font-semibold"
+                        >
+                            Tudo certo para salvar?
+                        </h2>
+                        <p class="help">
+                            Confira as informações. Você pode voltar a qualquer
+                            etapa sem perder o que preencheu.
+                        </p>
+                    </div>
+                    <div class="card grid gap-5">
+                        <div class="flex items-center justify-between gap-3">
+                            <h3 class="font-semibold">Produto</h3>
+                            <button
+                                type="button"
+                                data-step="0"
+                                class="min-h-11 px-2 text-sm font-semibold underline underline-offset-4"
+                            >
+                                Editar dados
+                            </button>
+                        </div>
+                        <dl
+                            id="product-summary"
+                            class="grid gap-5 sm:grid-cols-2"
+                        ></dl>
+                    </div>
+                    <div
+                        class="flex flex-wrap items-center justify-between gap-3"
+                    >
+                        <h3 class="text-lg font-semibold">Estoque e sacos</h3>
+                        <button
+                            type="button"
+                            data-step="1"
+                            class="min-h-11 px-2 text-sm font-semibold underline underline-offset-4"
+                        >
+                            Editar estoque
+                        </button>
+                    </div>
+                    <p id="review-availability" class="help"></p>
+                    <div id="sack-summary" class="grid gap-4"></div>
+                    <p class="rounded-xl bg-muted p-4 text-sm leading-6">
+                        Este botão apenas simula a conclusão. Nenhum produto
+                        será criado ou alterado.
+                    </p>
+                </section>
+
+                <section
+                    id="success"
+                    hidden
+                    class="card grid justify-items-center gap-5 py-12 text-center"
+                    aria-labelledby="success-heading"
+                >
+                    <span
+                        class="text-action-foreground flex size-16 items-center justify-center rounded-full bg-action text-3xl"
+                        aria-hidden="true"
+                        >✓</span
+                    >
+                    <h2
+                        id="success-heading"
+                        tabindex="-1"
+                        class="text-2xl font-semibold"
+                    >
+                        Simulação concluída!
+                    </h2>
+                    <p class="help">
+                        Você chegou ao fim do cadastro. Nenhum dado foi salvo no
+                        sistema.
+                    </p>
+                    <button id="review-again" type="button" class="secondary">
+                        Voltar à revisão
+                    </button>
+                </section>
+
+                <footer
+                    id="actions"
+                    class="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-card/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur sm:px-6"
+                >
+                    <div
+                        class="mx-auto flex max-w-5xl items-center justify-between gap-3"
+                    >
+                        <div>
+                            <p
+                                id="progress"
+                                aria-live="polite"
+                                class="text-sm font-semibold"
+                            >
+                                Etapa 1 de 3
+                            </p>
+                            <p
+                                class="hidden text-xs text-muted-foreground sm:block"
+                            >
+                                Suas alterações ficam aqui enquanto você navega.
+                            </p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button
+                                id="back"
+                                type="button"
+                                class="secondary"
+                                disabled
+                            >
+                                Voltar</button
+                            ><button id="next" type="submit" class="primary">
+                                Continuar
+                            </button>
+                        </div>
+                    </div>
+                </footer>
+            </form>
+            <noscript
+                >Ative o JavaScript para testar a navegação entre as
+                etapas.</noscript
+            >
+        </main>
+
+        <template id="sack-template">
+            <article class="card grid gap-5">
+                <div class="flex items-center justify-between gap-3">
+                    <h4 class="sack-title text-lg font-semibold"></h4>
+                    <button
+                        type="button"
+                        class="remove-sack min-h-11 px-2 text-sm text-destructive underline underline-offset-4"
+                    >
+                        Remover
+                    </button>
+                </div>
+                <label class="field max-w-xs"
+                    >Total de peças no saco
+                    <input
+                        class="sack-total input"
+                        type="number"
+                        min="0"
+                        step="1"
+                        inputmode="numeric"
+                        required
+                /></label>
+                <fieldset class="grid gap-3">
+                    <legend class="mb-3 text-sm font-medium">
+                        Tamanhos presentes neste saco
+                    </legend>
+                    <div class="sizes flex flex-wrap gap-2"></div>
+                </fieldset>
+                <details class="border-t border-border pt-3">
+                    <summary
+                        class="min-h-11 cursor-pointer py-2 text-sm font-semibold"
+                    >
+                        Informar quantidades por tamanho
+                        <span class="font-normal text-muted-foreground"
+                            >(opcional)</span
+                        >
+                    </summary>
+                    <p class="help mb-3">
+                        Ao informar uma quantidade, o total passa a ser a soma
+                        dos valores preenchidos. Em branco significa quantidade
+                        desconhecida.
+                    </p>
+                    <div
+                        class="quantities grid grid-cols-3 gap-3 sm:grid-cols-7"
+                    ></div>
+                </details>
+                <p class="total-help text-xs leading-5 text-muted-foreground">
+                    Total informado manualmente.
+                </p>
+            </article>
+        </template>
+
+        <script>
+            const $ = (selector) => document.querySelector(selector);
+            const steps = [...document.querySelectorAll('[id^="step-"]')];
+            let currentStep = 0;
+            let nextSackId = 1;
+            const quantities = new WeakMap();
+
+            function selectedSizes() {
+                if ($('#size-preset').value === 'letters')
+                    return ['PP', 'P', 'M', 'G', 'GG'];
+                if ($('#size-preset').value === 'custom')
+                    return [
+                        ...new Set(
+                            $('#custom-sizes')
+                                .value.split(',')
+                                .map((size) => size.trim())
+                                .filter(Boolean),
+                        ),
+                    ];
+                return ['34', '36', '38', '40', '42', '44', '46'];
+            }
+
+            function renderSizes(card, initial = false) {
+                const previous = quantities.get(card) || new Map();
+                const current = new Map();
+                card.querySelector('.sizes').replaceChildren();
+                card.querySelector('.quantities').replaceChildren();
+                selectedSizes().forEach((size, index) => {
+                    const old = previous.get(size);
+                    const id = `sack-${card.dataset.id}-size-${index}`;
+                    const label = document.createElement('label');
+                    label.className =
+                        'flex min-h-12 cursor-pointer items-center gap-2 rounded-lg border border-input px-3 text-sm has-checked:border-highlight has-checked:bg-action/10';
+                    const checked = document.createElement('input');
+                    checked.type = 'checkbox';
+                    checked.className = 'size-4 accent-highlight';
+                    checked.checked = old
+                        ? old.checked.checked
+                        : initial && index < 5;
+                    label.append(checked, document.createTextNode(size));
+                    card.querySelector('.sizes').append(label);
+                    const countLabel = document.createElement('label');
+                    countLabel.className = 'field';
+                    countLabel.htmlFor = id;
+                    countLabel.append(document.createTextNode(size));
+                    const count = document.createElement('input');
+                    Object.assign(count, {
+                        type: 'number',
+                        min: '0',
+                        step: '1',
+                        inputMode: 'numeric',
+                        id,
+                        placeholder: '—',
+                        className: 'input px-2 text-center disabled:bg-muted',
+                    });
+                    count.value = old?.count.value || '';
+                    count.disabled = !checked.checked;
+                    countLabel.append(count);
+                    card.querySelector('.quantities').append(countLabel);
+                    current.set(size, { checked, count });
+                    checked.addEventListener('change', () => {
+                        count.disabled = !checked.checked;
+                        if (!checked.checked) count.value = '';
+                        updateTotal(card);
+                    });
+                    count.addEventListener('input', () => updateTotal(card));
+                });
+                quantities.set(card, current);
+                updateTotal(card);
+            }
+
+            function updateTotal(card) {
+                const counts = [...quantities.get(card).values()].filter(
+                    (item) => item.checked.checked && item.count.value !== '',
+                );
+                const total = card.querySelector('.sack-total');
+                if (!total.readOnly) card.dataset.manualTotal = total.value;
+                total.readOnly = counts.length > 0;
+                total.setAttribute('aria-readonly', String(total.readOnly));
+                total.value = counts.length
+                    ? counts.reduce(
+                          (sum, item) => sum + Number(item.count.value),
+                          0,
+                      )
+                    : card.dataset.manualTotal;
+                card.querySelector('.total-help').textContent = counts.length
+                    ? 'Total calculado pelas quantidades informadas.'
+                    : 'Total informado manualmente.';
+                updateSummary();
+            }
+
+            function updateSummary() {
+                const cards = [...$('#sacks').children];
+                cards.forEach((card, index) => {
+                    card.querySelector('.sack-title').textContent =
+                        `Saco ${index + 1}`;
+                    card.querySelector('.remove-sack').disabled =
+                        cards.length === 1;
+                    card.querySelector('.remove-sack').setAttribute(
+                        'aria-label',
+                        `Remover Saco ${index + 1}`,
+                    );
+                });
+                const total = cards.reduce(
+                    (sum, card) =>
+                        sum +
+                        Number(card.querySelector('.sack-total').value || 0),
+                    0,
+                );
+                $('#stock-summary').textContent =
+                    `${cards.length} ${cards.length === 1 ? 'saco' : 'sacos'} · ${total} peças`;
+            }
+
+            function addSack(total = '') {
+                const card =
+                    $('#sack-template').content.firstElementChild.cloneNode(
+                        true,
+                    );
+                card.dataset.id = nextSackId++;
+                card.querySelector('.sack-total').value = total;
+                card.querySelector('.sack-total').addEventListener(
+                    'input',
+                    () => updateTotal(card),
+                );
+                card.querySelector('.remove-sack').addEventListener(
+                    'click',
+                    () => {
+                        card.remove();
+                        updateSummary();
+                    },
+                );
+                $('#sacks').append(card);
+                renderSizes(card, total !== '');
+                return card;
+            }
+
+            function updateAvailability() {
+                const hasStock = $('#stock-availability').value !== 'none';
+                $('#offer-options').hidden = !hasStock;
+                $('#sack-section').hidden = !hasStock;
+                $('#custom-sizes-label').hidden =
+                    !hasStock || $('#size-preset').value !== 'custom';
+                $('#catalog-notice').textContent = !hasStock
+                    ? 'Você pode cadastrar os sacos depois, ao editar o produto.'
+                    : $('#offer-type').value === 'Grade Nova'
+                      ? 'Grade Nova é apenas para uso interno e nunca aparece no catálogo.'
+                      : $('#stock-availability').value === 'hidden'
+                        ? 'Os sacos ficam cadastrados, mas esta oferta não aparece no catálogo.'
+                        : $('#product-status').value === 'inactive'
+                          ? 'O produto está inativo. Esta oferta ficará oculta do catálogo.'
+                          : 'Produto ativo e sacos com estoque positivo podem aparecer no catálogo.';
+            }
+
+            function summaryField(label, value) {
+                const row = document.createElement('div');
+                const term = document.createElement('dt');
+                term.className = 'text-xs text-muted-foreground';
+                term.textContent = label;
+                const description = document.createElement('dd');
+                description.className = 'mt-1 break-words text-sm font-medium';
+                description.textContent = value || 'Não informado';
+                row.append(term, description);
+                return row;
+            }
+
+            function renderReview() {
+                $('#product-summary').replaceChildren(
+                    ...[
+                        ['Nome', $('#product-name').value],
+                        ['Modelo / referência', $('#product-model').value],
+                        ['Categoria', $('#product-category').value],
+                        ['Linha', $('#product-line').value],
+                        [
+                            'Situação',
+                            $('#product-status').selectedOptions[0].text,
+                        ],
+                        ['Código interno', 'Gerado ao salvar'],
+                        ['Observações', $('#product-notes').value],
+                    ].map(([label, value]) => summaryField(label, value)),
+                );
+                $('#sack-summary').replaceChildren();
+                $('#review-availability').textContent =
+                    $('#catalog-notice').textContent;
+                if ($('#stock-availability').value === 'none') return;
+                [...$('#sacks').children].forEach((card, index) => {
+                    const row = document.createElement('article');
+                    row.className = 'card grid gap-2';
+                    const heading = document.createElement('h4');
+                    heading.className = 'font-semibold';
+                    heading.textContent = `Saco ${index + 1} · ${card.querySelector('.sack-total').value} peças · ${$('#offer-type').value}`;
+                    const sizes = [...quantities.get(card).entries()]
+                        .filter(([, item]) => item.checked.checked)
+                        .map(([size, item]) =>
+                            item.count.value === ''
+                                ? `${size}: quantidade não informada`
+                                : `${size}: ${item.count.value}`,
+                        );
+                    const detail = document.createElement('p');
+                    detail.className = 'help';
+                    detail.textContent = sizes.length
+                        ? sizes.join(' · ')
+                        : 'Tamanhos não informados.';
+                    row.append(heading, detail);
+                    $('#sack-summary').append(row);
+                });
+            }
+
+            function validate(target) {
+                let field = null;
+                let message = '';
+                if (target > 0 && !$('#product-name').value.trim()) {
+                    field = $('#product-name');
+                    message = 'Informe o nome da peça para continuar.';
+                } else if (
+                    target > 1 &&
+                    $('#stock-availability').value !== 'none'
+                ) {
+                    field = [
+                        ...$('#sacks').querySelectorAll('input[type="number"]'),
+                    ].find(
+                        (input) => !input.disabled && !input.checkValidity(),
+                    );
+                    if (field)
+                        message =
+                            'Informe o total de cada saco e use quantidades inteiras, iguais ou maiores que zero.';
+                    if (
+                        !field &&
+                        $('#size-preset').value === 'custom' &&
+                        selectedSizes().length === 0
+                    ) {
+                        field = $('#custom-sizes');
+                        message =
+                            'Informe pelo menos um tamanho para a grade personalizada.';
+                    }
+                }
+                if (field) {
+                    showStep(field.closest('#step-0') ? 0 : 1, false);
+                    const details = field.closest('details');
+                    if (details) details.open = true;
+                    $('#form-error').textContent = message;
+                    $('#form-error').hidden = false;
+                    field.setAttribute('aria-invalid', 'true');
+                    field.focus();
+                    return false;
+                }
+                return true;
+            }
+
+            function showStep(index, shouldValidate = true) {
+                if (shouldValidate && index > currentStep && !validate(index))
+                    return;
+                currentStep = index;
+                $('#success').hidden = true;
+                $('#actions').hidden = false;
+                $('#form-error').hidden = true;
+                steps.forEach((step, position) => {
+                    step.hidden = position !== index;
+                });
+                document
+                    .querySelectorAll('nav [data-step]')
+                    .forEach((button) => {
+                        if (Number(button.dataset.step) === index)
+                            button.setAttribute('aria-current', 'step');
+                        else button.removeAttribute('aria-current');
+                    });
+                $('#back').disabled = index === 0;
+                $('#next').textContent =
+                    index === 2 ? 'Simular cadastro' : 'Continuar';
+                $('#progress').textContent = `Etapa ${index + 1} de 3`;
+                updateAvailability();
+                if (index === 2) renderReview();
+                steps[index].querySelector('h2').focus({ preventScroll: true });
+                window.scrollTo({ top: 0 });
+            }
+
+            document
+                .querySelectorAll('[data-step]')
+                .forEach((button) =>
+                    button.addEventListener('click', () =>
+                        showStep(Number(button.dataset.step)),
+                    ),
+                );
+            $('#back').addEventListener('click', () =>
+                showStep(currentStep - 1),
+            );
+            $('#review-again').addEventListener('click', () => showStep(2));
+            $('#add-sack').addEventListener('click', () => {
+                addSack().querySelector('.sack-total').focus();
+            });
+            $('#stock-availability').addEventListener(
+                'change',
+                updateAvailability,
+            );
+            $('#offer-type').addEventListener('change', updateAvailability);
+            $('#size-preset').addEventListener('change', () => {
+                [...$('#sacks').children].forEach((card) => renderSizes(card));
+                updateAvailability();
+            });
+            $('#custom-sizes').addEventListener('change', () => {
+                [...$('#sacks').children].forEach((card) => renderSizes(card));
+            });
+            $('#wizard').addEventListener('input', (event) => {
+                event.target.removeAttribute('aria-invalid');
+            });
+            $('#wizard').addEventListener('submit', (event) => {
+                event.preventDefault();
+                if (currentStep < 2) {
+                    showStep(currentStep + 1);
+                    return;
+                }
+                if (!validate(2)) return;
+                steps.forEach((step) => {
+                    step.hidden = true;
+                });
+                $('#actions').hidden = true;
+                $('#success').hidden = false;
+                $('#success-heading').focus();
+            });
+            addSack(20);
+            addSack(15);
+        </script>
+    </body>
+</html>

@@ -1,7 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
     Check,
-    PackageOpen,
     Search,
     ShoppingBag,
     SlidersHorizontal,
@@ -29,6 +28,16 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import {
+    Sheet,
+    SheetClose,
+    SheetContent,
+    SheetDescription,
+    SheetFooter,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { catalogPreviewProducts } from '@/lib/catalog-preview';
 import type { CatalogPreviewProduct } from '@/lib/catalog-preview';
 import { cn } from '@/lib/utils';
@@ -81,10 +90,13 @@ function CatalogFilter({
 function ProductPhoto({ product }: { product: CatalogPreviewProduct }) {
     return (
         <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-xl bg-muted/60">
-            <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                <PackageOpen className="size-12 stroke-1" aria-hidden="true" />
-                <span className="text-sm">Foto em breve</span>
-            </div>
+            <img
+                src={product.image}
+                alt={product.name}
+                loading="lazy"
+                data-testid={`catalog-product-image-${product.id}`}
+                className="size-full object-cover"
+            />
             <Badge
                 variant="secondary"
                 className="absolute top-3 left-3 bg-card text-foreground"
@@ -98,8 +110,170 @@ function ProductPhoto({ product }: { product: CatalogPreviewProduct }) {
     );
 }
 
+function ProductVolumeOptions({
+    product,
+    selectedVolumeIds,
+    onAddVolume,
+    onRemoveVolume,
+    className,
+}: {
+    product: CatalogPreviewProduct;
+    selectedVolumeIds: number[];
+    onAddVolume: (id: number) => void;
+    onRemoveVolume: (id: number) => void;
+    className?: string;
+}) {
+    return (
+        <div
+            className={cn(
+                'min-h-0 overflow-y-auto overscroll-contain',
+                className,
+            )}
+        >
+            <div className="grid gap-3">
+                {product.volumes.map((volume) => {
+                    const selected = selectedVolumeIds.includes(volume.id);
+
+                    return (
+                        <section
+                            key={volume.id}
+                            className={cn(
+                                'grid gap-3 rounded-xl border p-4',
+                                selected
+                                    ? 'border-primary bg-primary/5'
+                                    : 'border-border',
+                            )}
+                        >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <h3 className="font-semibold">{volume.name}</h3>
+                                <strong>{volume.pieces} peças</strong>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                                Tamanhos: {volume.sizes.join(' · ')}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                Quantidade por tamanho não informada.
+                            </p>
+                            <Button
+                                variant={selected ? 'secondary' : 'default'}
+                                className="h-11 w-full"
+                                onClick={() =>
+                                    selected
+                                        ? onRemoveVolume(volume.id)
+                                        : onAddVolume(volume.id)
+                                }
+                                aria-label={
+                                    selected
+                                        ? `Remover ${volume.name} da sacola`
+                                        : `Adicionar ${volume.name}`
+                                }
+                            >
+                                {selected ? <Trash2 /> : <ShoppingBag />}
+                                {selected ? 'Remover saco' : 'Adicionar saco'}
+                            </Button>
+                        </section>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+function ProductSelectionActions({
+    bagLength,
+    onReviewBag,
+    onContinue,
+}: {
+    bagLength: number;
+    onReviewBag: () => void;
+    onContinue: () => void;
+}) {
+    return (
+        <>
+            <Button
+                className="h-12"
+                onClick={onReviewBag}
+                disabled={bagLength === 0}
+            >
+                Revisar sacola ({bagLength})
+            </Button>
+            <Button variant="ghost" className="h-11" onClick={onContinue}>
+                Continuar escolhendo
+            </Button>
+        </>
+    );
+}
+
+type CatalogBagItem = {
+    product: CatalogPreviewProduct;
+    volume: CatalogPreviewProduct['volumes'][number];
+};
+
+function BagItems({
+    bag,
+    onRemoveVolume,
+    className,
+}: {
+    bag: CatalogBagItem[];
+    onRemoveVolume: (id: number) => void;
+    className?: string;
+}) {
+    return (
+        <div
+            className={cn(
+                'min-h-0 overflow-y-auto overscroll-contain',
+                className,
+            )}
+        >
+            {bag.length === 0 ? (
+                <div className="grid justify-items-center gap-3 py-10 text-center">
+                    <ShoppingBag className="size-10 text-muted-foreground" />
+                    <p>Sua sacola está vazia.</p>
+                </div>
+            ) : (
+                bag.map(({ product, volume }) => (
+                    <article
+                        key={volume.id}
+                        className="mb-3 flex items-start justify-between gap-3 rounded-xl border border-border p-4"
+                    >
+                        <div className="grid min-w-0 gap-1">
+                            <h3 className="font-semibold">{product.name}</h3>
+                            <p className="text-sm">
+                                {volume.name} · {volume.pieces} peças
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                                {volume.sizes.join(' · ')}
+                            </p>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-11 shrink-0"
+                            onClick={() => onRemoveVolume(volume.id)}
+                            aria-label={`Remover ${volume.name} de ${product.name}`}
+                        >
+                            <Trash2 />
+                        </Button>
+                    </article>
+                ))
+            )}
+        </div>
+    );
+}
+
+function BagDemoNotice() {
+    return (
+        <p className="rounded-lg bg-muted p-3 text-sm leading-6">
+            Esta é uma demonstração. A sacola fica apenas nesta página e será
+            limpa ao recarregar. O envio de pedidos será disponibilizado na
+            próxima etapa.
+        </p>
+    );
+}
+
 export default function Catalog() {
     const { auth } = usePage().props;
+    const isMobile = useIsMobile();
     const [query, setQuery] = useState('');
     const [category, setCategory] = useState('all');
     const [line, setLine] = useState('all');
@@ -121,12 +295,15 @@ export default function Catalog() {
             (category === 'all' || product.category === category) &&
             (line === 'all' || product.line === line),
     );
-    const bag = products.flatMap((product) =>
+    const bag: CatalogBagItem[] = products.flatMap((product) =>
         product.volumes
             .filter((volume) => selectedVolumeIds.includes(volume.id))
             .map((volume) => ({ product, volume })),
     );
     const totalPieces = bag.reduce((sum, item) => sum + item.volume.pieces, 0);
+    const bagDescription = bag.length
+        ? `${bag.length} ${bag.length === 1 ? 'saco' : 'sacos'} · ${totalPieces} peças no total`
+        : 'Escolha os sacos para reabastecer sua loja.';
     const filterCount = [category, line].filter(
         (value) => value !== 'all',
     ).length;
@@ -172,12 +349,12 @@ export default function Catalog() {
                             <img
                                 src="/images/brand/logo-cronicas-color.png"
                                 alt="Crônicas Jeans"
-                                className="h-auto max-h-10 w-32 object-contain sm:w-40 dark:hidden"
+                                className="h-10 w-auto object-contain sm:h-12 dark:hidden"
                             />
                             <img
                                 src="/images/brand/logo-cronicas-white.png"
                                 alt="Crônicas Jeans"
-                                className="hidden h-auto max-h-10 w-32 object-contain sm:w-40 dark:block"
+                                className="hidden h-10 w-auto object-contain sm:h-12 dark:block"
                             />
                         </a>
                         <Button
@@ -226,67 +403,69 @@ export default function Catalog() {
 
                     <section
                         aria-label="Buscar e filtrar produtos"
-                        className="my-6 grid gap-4 rounded-2xl border border-border bg-card/50 p-4 sm:p-5"
+                        className="my-6"
                     >
-                        <div className="flex items-end gap-2">
-                            <div className="grid min-w-0 flex-1 gap-2">
-                                <Label htmlFor="catalog-search">
-                                    O que você procura?
-                                </Label>
-                                <div className="relative">
-                                    <Search className="pointer-events-none absolute top-3.5 left-3 size-4 text-muted-foreground" />
-                                    <Input
-                                        id="catalog-search"
-                                        type="search"
-                                        value={query}
-                                        onChange={(event) =>
-                                            setQuery(event.target.value)
-                                        }
-                                        placeholder="Nome, modelo ou código"
-                                        className="h-11 bg-card pl-10 text-base"
-                                    />
+                        <div className="grid gap-3 sm:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)_minmax(0,1fr)] sm:items-end">
+                            <div className="flex items-end gap-3 sm:contents">
+                                <div className="grid min-w-0 flex-1 gap-2">
+                                    <Label htmlFor="catalog-search">
+                                        O que você procura?
+                                    </Label>
+                                    <div className="relative">
+                                        <Search className="pointer-events-none absolute top-3.5 left-3 size-4 text-muted-foreground" />
+                                        <Input
+                                            id="catalog-search"
+                                            type="search"
+                                            value={query}
+                                            onChange={(event) =>
+                                                setQuery(event.target.value)
+                                            }
+                                            placeholder="Nome, modelo ou código"
+                                            className="h-11 bg-card pl-10 text-base"
+                                        />
+                                    </div>
                                 </div>
+                                <Button
+                                    variant="secondary"
+                                    className="h-11 shrink-0 sm:hidden"
+                                    aria-expanded={filtersOpen}
+                                    aria-controls="catalog-filters"
+                                    onClick={() =>
+                                        setFiltersOpen((current) => !current)
+                                    }
+                                >
+                                    <SlidersHorizontal /> Filtros
+                                    {filterCount > 0 && ` (${filterCount})`}
+                                </Button>
                             </div>
-                            <Button
-                                variant="secondary"
-                                className="h-11 sm:hidden"
-                                aria-expanded={filtersOpen}
-                                aria-controls="catalog-filters"
-                                onClick={() =>
-                                    setFiltersOpen((current) => !current)
-                                }
+                            <div
+                                id="catalog-filters"
+                                className={cn(
+                                    'contents',
+                                    !filtersOpen && 'hidden sm:contents',
+                                )}
                             >
-                                <SlidersHorizontal /> Filtros
-                                {filterCount > 0 && ` (${filterCount})`}
-                            </Button>
-                        </div>
-                        <div
-                            id="catalog-filters"
-                            className={cn(
-                                'grid grid-cols-1 gap-4 sm:grid sm:grid-cols-2',
-                                !filtersOpen && 'hidden',
-                            )}
-                        >
-                            <CatalogFilter
-                                id="catalog-category"
-                                label="Categoria"
-                                value={category}
-                                options={[
-                                    ...new Set(
-                                        products.map(
-                                            (product) => product.category,
+                                <CatalogFilter
+                                    id="catalog-category"
+                                    label="Categoria"
+                                    value={category}
+                                    options={[
+                                        ...new Set(
+                                            products.map(
+                                                (product) => product.category,
+                                            ),
                                         ),
-                                    ),
-                                ]}
-                                onChange={setCategory}
-                            />
-                            <CatalogFilter
-                                id="catalog-line"
-                                label="Linha"
-                                value={line}
-                                options={['Slim', 'Plus']}
-                                onChange={setLine}
-                            />
+                                    ]}
+                                    onChange={setCategory}
+                                />
+                                <CatalogFilter
+                                    id="catalog-line"
+                                    label="Linha"
+                                    value={line}
+                                    options={['Slim', 'Plus']}
+                                    onChange={setLine}
+                                />
+                            </div>
                         </div>
                     </section>
 
@@ -445,211 +624,166 @@ export default function Catalog() {
                 <p role="status" aria-live="polite" className="sr-only">
                     {feedback}
                 </p>
-                {bag.length > 0 && (
-                    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
-                        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
-                            <div className="min-w-0 text-sm">
-                                <strong className="block">
-                                    {bag.length}{' '}
-                                    {bag.length === 1
-                                        ? 'saco na sacola'
-                                        : 'sacos na sacola'}
-                                </strong>
-                                <span className="text-muted-foreground">
-                                    {totalPieces} peças
-                                </span>
-                            </div>
-                            <Button
-                                className="h-12 shrink-0"
-                                onClick={() => setBagOpen(true)}
-                            >
-                                Revisar sacola <ShoppingBag />
-                            </Button>
-                        </div>
-                    </div>
+
+                {isMobile ? (
+                    <Drawer
+                        open={selectedProduct !== null}
+                        onOpenChange={(open) => {
+                            if (!open) {
+                                setSelectedProduct(null);
+                            }
+                        }}
+                    >
+                        <DrawerContent className="mx-auto max-w-2xl">
+                            <DrawerHeader className="relative shrink-0 pr-16 text-left">
+                                <DrawerTitle>
+                                    {selectedProduct?.name ?? 'Escolher sacos'}
+                                </DrawerTitle>
+                                <DrawerDescription>
+                                    Escolha os sacos completos. Os tamanhos
+                                    mostram o conteúdo de cada saco.
+                                </DrawerDescription>
+                                <DrawerClose asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute top-4 right-4 size-11"
+                                        aria-label="Fechar seleção de sacos"
+                                    >
+                                        <X />
+                                    </Button>
+                                </DrawerClose>
+                            </DrawerHeader>
+                            {selectedProduct && (
+                                <ProductVolumeOptions
+                                    product={selectedProduct}
+                                    selectedVolumeIds={selectedVolumeIds}
+                                    onAddVolume={addVolume}
+                                    onRemoveVolume={removeVolume}
+                                    className="px-4 pb-5 sm:px-6"
+                                />
+                            )}
+                            <DrawerFooter className="shrink-0 border-t border-border px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">
+                                <ProductSelectionActions
+                                    bagLength={bag.length}
+                                    onReviewBag={() => {
+                                        setSelectedProduct(null);
+                                        setBagOpen(true);
+                                    }}
+                                    onContinue={() => setSelectedProduct(null)}
+                                />
+                            </DrawerFooter>
+                        </DrawerContent>
+                    </Drawer>
+                ) : (
+                    <Sheet
+                        open={selectedProduct !== null}
+                        onOpenChange={(open) => {
+                            if (!open) {
+                                setSelectedProduct(null);
+                            }
+                        }}
+                    >
+                        <SheetContent
+                            side="right"
+                            className="w-full gap-0 overflow-hidden p-0 sm:max-w-lg"
+                        >
+                            <SheetHeader className="relative shrink-0 border-b border-border px-6 py-5 pr-16 text-left">
+                                <SheetTitle className="text-xl">
+                                    {selectedProduct?.name ?? 'Escolher sacos'}
+                                </SheetTitle>
+                                <SheetDescription>
+                                    Escolha os sacos completos. Os tamanhos
+                                    mostram o conteúdo de cada saco.
+                                </SheetDescription>
+                            </SheetHeader>
+                            {selectedProduct && (
+                                <ProductVolumeOptions
+                                    product={selectedProduct}
+                                    selectedVolumeIds={selectedVolumeIds}
+                                    onAddVolume={addVolume}
+                                    onRemoveVolume={removeVolume}
+                                    className="flex-1 px-6 py-5"
+                                />
+                            )}
+                            <SheetFooter className="shrink-0 flex-col border-t border-border p-6 sm:flex-col sm:justify-start">
+                                <ProductSelectionActions
+                                    bagLength={bag.length}
+                                    onReviewBag={() => {
+                                        setSelectedProduct(null);
+                                        setBagOpen(true);
+                                    }}
+                                    onContinue={() => setSelectedProduct(null)}
+                                />
+                            </SheetFooter>
+                        </SheetContent>
+                    </Sheet>
                 )}
 
-                <Drawer
-                    open={selectedProduct !== null}
-                    onOpenChange={(open) => {
-                        if (!open) {
-                            setSelectedProduct(null);
-                        }
-                    }}
-                >
-                    <DrawerContent className="mx-auto max-w-2xl">
-                        <DrawerHeader className="relative shrink-0 pr-16 text-left">
-                            <DrawerTitle>
-                                {selectedProduct?.name ?? 'Escolher sacos'}
-                            </DrawerTitle>
-                            <DrawerDescription>
-                                Escolha os sacos completos. Os tamanhos mostram
-                                o conteúdo de cada saco.
-                            </DrawerDescription>
-                            <DrawerClose asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute top-4 right-4 size-11"
-                                    aria-label="Fechar seleção de sacos"
-                                >
-                                    <X />
-                                </Button>
-                            </DrawerClose>
-                        </DrawerHeader>
-                        <div className="min-h-0 overflow-y-auto overscroll-contain px-4 pb-5 sm:px-6">
-                            {selectedProduct?.volumes.map((volume) => {
-                                const selected = selectedVolumeIds.includes(
-                                    volume.id,
-                                );
-
-                                return (
-                                    <section
-                                        key={volume.id}
-                                        className={cn(
-                                            'mb-3 grid gap-3 rounded-xl border p-4',
-                                            selected
-                                                ? 'border-primary bg-primary/5'
-                                                : 'border-border',
-                                        )}
+                {isMobile ? (
+                    <Drawer open={bagOpen} onOpenChange={setBagOpen}>
+                        <DrawerContent className="mx-auto max-w-2xl">
+                            <DrawerHeader className="relative shrink-0 pr-16 text-left">
+                                <DrawerTitle>Sua sacola</DrawerTitle>
+                                <DrawerDescription>
+                                    {bagDescription}
+                                </DrawerDescription>
+                                <DrawerClose asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute top-4 right-4 size-11"
+                                        aria-label="Fechar sacola"
                                     >
-                                        <div className="flex flex-wrap items-center justify-between gap-2">
-                                            <h3 className="font-semibold">
-                                                {volume.name}
-                                            </h3>
-                                            <strong>
-                                                {volume.pieces} peças
-                                            </strong>
-                                        </div>
-                                        <p className="text-sm text-muted-foreground">
-                                            Tamanhos: {volume.sizes.join(' · ')}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            Quantidade por tamanho não
-                                            informada.
-                                        </p>
-                                        <Button
-                                            variant={
-                                                selected
-                                                    ? 'secondary'
-                                                    : 'default'
-                                            }
-                                            className="h-11 w-full"
-                                            disabled={selected}
-                                            onClick={() => addVolume(volume.id)}
-                                            aria-label={
-                                                selected
-                                                    ? `${volume.name} já está na sacola`
-                                                    : `Adicionar ${volume.name}`
-                                            }
-                                        >
-                                            {selected ? (
-                                                <Check />
-                                            ) : (
-                                                <ShoppingBag />
-                                            )}
-                                            {selected
-                                                ? 'Na sacola'
-                                                : 'Adicionar saco'}
-                                        </Button>
-                                    </section>
-                                );
-                            })}
-                        </div>
-                        <DrawerFooter className="shrink-0 border-t border-border px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">
-                            <Button
-                                className="h-12"
-                                onClick={() => {
-                                    setSelectedProduct(null);
-                                    setBagOpen(true);
-                                }}
-                                disabled={bag.length === 0}
-                            >
-                                Revisar sacola ({bag.length})
-                            </Button>
-                            <DrawerClose asChild>
-                                <Button variant="ghost" className="h-11">
-                                    Continuar escolhendo
-                                </Button>
-                            </DrawerClose>
-                        </DrawerFooter>
-                    </DrawerContent>
-                </Drawer>
-
-                <Drawer open={bagOpen} onOpenChange={setBagOpen}>
-                    <DrawerContent className="mx-auto max-w-2xl">
-                        <DrawerHeader className="relative shrink-0 pr-16 text-left">
-                            <DrawerTitle>Sua sacola</DrawerTitle>
-                            <DrawerDescription>
-                                {bag.length
-                                    ? `${bag.length} ${bag.length === 1 ? 'saco' : 'sacos'} · ${totalPieces} peças no total`
-                                    : 'Escolha os sacos para reabastecer sua loja.'}
-                            </DrawerDescription>
-                            <DrawerClose asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute top-4 right-4 size-11"
-                                    aria-label="Fechar sacola"
-                                >
-                                    <X />
-                                </Button>
-                            </DrawerClose>
-                        </DrawerHeader>
-                        <div className="min-h-0 overflow-y-auto overscroll-contain px-4 pb-5 sm:px-6">
-                            {bag.length === 0 ? (
-                                <div className="grid justify-items-center gap-3 py-10 text-center">
-                                    <ShoppingBag className="size-10 text-muted-foreground" />
-                                    <p>Sua sacola está vazia.</p>
-                                </div>
-                            ) : (
-                                bag.map(({ product, volume }) => (
-                                    <article
-                                        key={volume.id}
-                                        className="mb-3 flex items-start justify-between gap-3 rounded-xl border border-border p-4"
-                                    >
-                                        <div className="grid min-w-0 gap-1">
-                                            <h3 className="font-semibold">
-                                                {product.name}
-                                            </h3>
-                                            <p className="text-sm">
-                                                {volume.name} · {volume.pieces}{' '}
-                                                peças
-                                            </p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {volume.sizes.join(' · ')}
-                                            </p>
-                                        </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="size-11 shrink-0"
-                                            onClick={() =>
-                                                removeVolume(volume.id)
-                                            }
-                                            aria-label={`Remover ${volume.name} de ${product.name}`}
-                                        >
-                                            <Trash2 />
-                                        </Button>
-                                    </article>
-                                ))
-                            )}
-                        </div>
-                        <DrawerFooter className="shrink-0 border-t border-border px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">
-                            <p className="rounded-lg bg-muted p-3 text-sm leading-6">
-                                Esta é uma demonstração. A sacola fica apenas
-                                nesta página e será limpa ao recarregar. O envio
-                                de pedidos será disponibilizado na próxima
-                                etapa.
-                            </p>
-                            <DrawerClose asChild>
-                                <Button className="h-12">
-                                    Continuar escolhendo
-                                </Button>
-                            </DrawerClose>
-                        </DrawerFooter>
-                    </DrawerContent>
-                </Drawer>
+                                        <X />
+                                    </Button>
+                                </DrawerClose>
+                            </DrawerHeader>
+                            <BagItems
+                                bag={bag}
+                                onRemoveVolume={removeVolume}
+                                className="px-4 pb-5 sm:px-6"
+                            />
+                            <DrawerFooter className="shrink-0 border-t border-border px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">
+                                <BagDemoNotice />
+                                <DrawerClose asChild>
+                                    <Button className="h-12">
+                                        Continuar escolhendo
+                                    </Button>
+                                </DrawerClose>
+                            </DrawerFooter>
+                        </DrawerContent>
+                    </Drawer>
+                ) : (
+                    <Sheet open={bagOpen} onOpenChange={setBagOpen}>
+                        <SheetContent
+                            side="right"
+                            className="w-full gap-0 overflow-hidden p-0 sm:max-w-lg"
+                        >
+                            <SheetHeader className="relative shrink-0 border-b border-border px-6 py-5 pr-16 text-left">
+                                <SheetTitle className="text-xl">
+                                    Sua sacola
+                                </SheetTitle>
+                                <SheetDescription>
+                                    {bagDescription}
+                                </SheetDescription>
+                            </SheetHeader>
+                            <BagItems
+                                bag={bag}
+                                onRemoveVolume={removeVolume}
+                                className="flex-1 px-6 py-5"
+                            />
+                            <SheetFooter className="shrink-0 flex-col border-t border-border p-6 sm:flex-col sm:justify-start">
+                                <BagDemoNotice />
+                                <SheetClose asChild>
+                                    <Button className="h-12">
+                                        Continuar escolhendo
+                                    </Button>
+                                </SheetClose>
+                            </SheetFooter>
+                        </SheetContent>
+                    </Sheet>
+                )}
             </div>
         </>
     );
