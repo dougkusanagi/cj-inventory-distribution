@@ -26,4 +26,26 @@ class StockOfferVolumeItemFactory extends Factory
             'quantity' => null,
         ];
     }
+
+    /**
+     * Set a known quantity for the size in this sack.
+     */
+    public function withQuantity(int $quantity): static
+    {
+        return $this->state([
+            'quantity' => max(0, $quantity),
+            'is_active' => true,
+        ]);
+    }
+
+    /**
+     * Mark the size as absent from this sack.
+     */
+    public function inactive(): static
+    {
+        return $this->state([
+            'is_active' => false,
+            'quantity' => null,
+        ]);
+    }
 }

@@ -25,5 +25,7 @@ class DatabaseSeeder extends Seeder
         ]);
         $testUser->forceFill(['email_verified_at' => now()]);
         $testUser->save();
+
+        $this->call(CatalogDemoSeeder::class);
     }
 }

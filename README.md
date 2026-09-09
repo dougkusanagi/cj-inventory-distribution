@@ -39,6 +39,11 @@ Campos principais:
 - observação
 - status ativo/inativo independente do estoque
 
+Cada produto pode receber uma categoria (por exemplo, calça, bermuda, short ou
+cropped) e uma linha comercial: `Slim` ou `Plus`. Esses campos são opcionais
+durante a transição dos produtos antigos e serão usados pelos filtros do
+catálogo.
+
 ### Tamanho
 
 Representa um tamanho presente em um saco de uma oferta.
@@ -84,9 +89,16 @@ O tipo pertence à oferta de estoque, e não ao produto.
 Ativar ou desativar o produto não altera os dados da oferta de estoque.
 Desativar a exibição de uma oferta no catálogo também preserva seus dados para
 edição ou reativação posterior.
-Todos os tipos usam a mesma regra física: a oferta só aparece no catálogo
-quando o produto e a oferta estão ativos, existe ao menos um saco e a soma dos
-totais dos sacos é maior que zero.
+Todos os tipos usam sacos físicos. Para aparecer no catálogo, produto e oferta
+precisam estar ativos, existir ao menos um saco com total positivo e a oferta
+não pode ser Grade Nova.
+
+**Regra atualizada do catálogo para lojistas:** Grade Nova nunca aparece,
+mesmo com produto/oferta ativos e estoque positivo. A exclusão está implementada
+na prévia de frontend e planejada para a consulta real de backend. Veja o
+[plano de catálogo e pedidos](docs/CATALOGO-E-PEDIDOS.md), que também documenta
+categorias, Slim/Plus, pedidos, conferência e WhatsApp. A home atual é uma
+demonstração com dados ilustrativos e não registra pedidos.
 
 ### Pedido
 

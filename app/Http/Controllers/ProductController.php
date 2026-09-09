@@ -8,6 +8,7 @@ use App\Actions\Products\UpdateProduct;
 use App\Http\Requests\Products\StoreProductRequest;
 use App\Http\Requests\Products\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
+use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
@@ -30,9 +31,10 @@ class ProductController extends Controller
         Gate::authorize('viewAny', Product::class);
 
         $products = Product::query()
-            ->select(['id', 'code', 'model', 'name', 'notes', 'is_active', 'created_at', 'updated_at'])
+            ->select(['id', 'code', 'model', 'name', 'category_id', 'line', 'notes', 'is_active', 'created_at', 'updated_at'])
             ->with([
-                'latestOffer.stockVolumes:id,stock_offer_id,sort_order,total_quantity',
+                'category:id,name,is_active',
+                'latestOffer.stockVolumes:id,stock_offer_id,sort_order,total_quantity,current_order_id,consumed_at',
                 'latestOffer.stockVolumes.items:id,stock_offer_volume_id,size,sort_order,is_active,quantity',
                 'media',
             ])
@@ -51,7 +53,9 @@ class ProductController extends Controller
     {
         Gate::authorize('create', Product::class);
 
-        return Inertia::render('products/create');
+        return Inertia::render('products/create', [
+            'categories' => $this->categoryOptions(),
+        ]);
     }
 
     /**
@@ -77,8 +81,10 @@ class ProductController extends Controller
         return Inertia::render('products/edit', [
             'product' => ProductResource::make($product->load([
                 'latestOffer.stockVolumes.items',
+                'category:id,name,is_active',
                 'media',
             ]))->resolve(),
+            'categories' => $this->categoryOptions($product->category_id),
         ]);
     }
 
@@ -106,5 +112,16 @@ class ProductController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Produto excluído.']);
 
         return to_route('products.index');
+    }
+
+    /** @return array<int, array{id: int, name: string, is_active: bool}> */
+    private function categoryOptions(?int $includeCategoryId = null): array
+    {
+        return Category::query()
+            ->where('is_active', true)
+            ->when($includeCategoryId !== null, fn ($query) => $query->orWhereKey($includeCategoryId))
+            ->orderBy('name')
+            ->get(['id', 'name', 'is_active'])
+            ->toArray();
     }
 }

@@ -20,17 +20,26 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { useSidebar } from '@/components/ui/sidebar';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useScrollVisibility } from '@/hooks/use-scroll-visibility';
 import { cn } from '@/lib/utils';
-import type { Product, StockOfferType } from '@/types';
+import type { Category, Product, ProductLine, StockOfferType } from '@/types';
 
 type ProductFormData = {
     name: string;
     model: string;
+    category_id: string;
+    line: ProductLine | '';
     notes: string;
     is_active: boolean;
     has_stock_offer: boolean;
@@ -44,6 +53,7 @@ type ProductFormData = {
 
 type ProductFormProps = {
     product?: Product;
+    categories: Category[];
 };
 
 type ProductErrorField =
@@ -128,7 +138,7 @@ function volumeTotal(volume: StockOfferVolumeFormItem): number {
     return Number(volume.total_quantity) || 0;
 }
 
-export function ProductForm({ product }: ProductFormProps) {
+export function ProductForm({ product, categories }: ProductFormProps) {
     const isEditing = product !== undefined;
     const [processingImages, setProcessingImages] = useState(false);
     const radioGroupId = useId();
@@ -141,6 +151,8 @@ export function ProductForm({ product }: ProductFormProps) {
     const form = useForm<ProductFormData>({
         name: product?.name ?? '',
         model: product?.model ?? '',
+        category_id: product?.category_id?.toString() ?? '',
+        line: product?.line ?? '',
         notes: product?.notes ?? '',
         is_active: product?.is_active ?? true,
         has_stock_offer: product?.has_stock_offer ?? false,
@@ -231,11 +243,13 @@ export function ProductForm({ product }: ProductFormProps) {
         ? 'Não aparece para as vendedoras: produto oculto.'
         : !form.data.has_stock_offer
           ? 'Não aparece para as vendedoras: sem estoque disponível.'
-          : !hasPositiveTotal
-            ? 'Não aparece para as vendedoras: estoque zerado.'
-            : !hasAvailableVolumes
-              ? 'Não aparece para as vendedoras: sem sacos disponíveis.'
-              : 'Aparece para as vendedoras.';
+          : form.data.stock_offer_type === 'new_grade'
+            ? 'Não aparece para as vendedoras: Grade Nova é somente para uso interno.'
+            : !hasPositiveTotal
+              ? 'Não aparece para as vendedoras: estoque zerado.'
+              : !hasAvailableVolumes
+                ? 'Não aparece para as vendedoras: sem sacos disponíveis.'
+                : 'Aparece para as vendedoras.';
 
     const clearCurrentStock = () => {
         const confirmed = window.confirm(
@@ -384,7 +398,7 @@ export function ProductForm({ product }: ProductFormProps) {
                             <InputError message={error('name')} />
                         </div>
 
-                        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+                        <div className="grid gap-4 sm:grid-cols-2">
                             <div className="grid gap-2">
                                 <Label
                                     htmlFor="product-model"
@@ -413,7 +427,83 @@ export function ProductForm({ product }: ProductFormProps) {
                                 />
                                 <InputError message={error('model')} />
                             </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="product-category">
+                                    Categoria
+                                </Label>
+                                <Select
+                                    value={form.data.category_id || 'none'}
+                                    onValueChange={(value) =>
+                                        form.setData(
+                                            'category_id',
+                                            value === 'none' ? '' : value,
+                                        )
+                                    }
+                                >
+                                    <SelectTrigger
+                                        id="product-category"
+                                        className="h-11 w-full sm:h-10"
+                                        aria-invalid={
+                                            error('category_id')
+                                                ? true
+                                                : undefined
+                                        }
+                                    >
+                                        <SelectValue placeholder="Sem categoria" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">
+                                            Sem categoria
+                                        </SelectItem>
+                                        {categories.map((category) => (
+                                            <SelectItem
+                                                key={category.id}
+                                                value={category.id.toString()}
+                                            >
+                                                {category.name}
+                                                {!category.is_active
+                                                    ? ' (inativa)'
+                                                    : ''}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <InputError message={error('category_id')} />
+                            </div>
                         </div>
+
+                        <fieldset className="grid gap-2">
+                            <legend className="text-sm font-medium">
+                                Linha comercial
+                            </legend>
+                            <RadioGroup
+                                value={form.data.line || 'none'}
+                                onValueChange={(value) =>
+                                    form.setData(
+                                        'line',
+                                        value === 'none'
+                                            ? ''
+                                            : (value as ProductLine),
+                                    )
+                                }
+                                className="grid grid-cols-3 gap-2"
+                            >
+                                {[
+                                    ['none', 'Não informada'],
+                                    ['slim', 'Slim'],
+                                    ['plus', 'Plus'],
+                                ].map(([value, label]) => (
+                                    <label
+                                        key={value}
+                                        className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-border px-3 text-sm"
+                                    >
+                                        <RadioGroupItem value={value} />
+                                        {label}
+                                    </label>
+                                ))}
+                            </RadioGroup>
+                            <InputError message={error('line')} />
+                        </fieldset>
 
                         <div className="grid gap-2">
                             <Label

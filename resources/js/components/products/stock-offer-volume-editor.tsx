@@ -2,6 +2,7 @@ import {
     ArrowDown,
     ArrowUp,
     Copy,
+    Ellipsis,
     Eye,
     EyeOff,
     Layers,
@@ -14,6 +15,13 @@ import { useState } from 'react';
 import InputError from '@/components/input-error';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -594,15 +602,12 @@ export function StockOfferVolumeEditor({
                     );
 
                     return (
-                        <section
+                        <Card
                             key={volume.id ?? `new-volume-${volumeIndex}`}
                             aria-labelledby={`volume-title-${volumeIndex}`}
                             className={cn(
-                                'grid gap-4',
-                                volumeIndex > 0 &&
-                                    'border-t border-border/70 pt-5',
-                                volumeError &&
-                                    'border-l-2 border-destructive/60 pl-4',
+                                'grid gap-5 rounded-2xl border-border/80 p-4 shadow-sm sm:p-5',
+                                volumeError && 'border-destructive/60',
                             )}
                         >
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -673,7 +678,7 @@ export function StockOfferVolumeEditor({
                                     </p>
                                     <InputError message={volumeError} />
                                 </div>
-                                <div className="grid grid-cols-4 gap-1.5 sm:flex sm:flex-wrap">
+                                <div className="flex gap-1.5">
                                     <Button
                                         type="button"
                                         variant="ghost"
@@ -702,31 +707,43 @@ export function StockOfferVolumeEditor({
                                     >
                                         <ArrowDown />
                                     </Button>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="size-11 sm:size-9"
-                                        onClick={() =>
-                                            duplicateVolume(volumeIndex)
-                                        }
-                                        aria-label={`Duplicar Saco ${volumeIndex + 1}`}
-                                    >
-                                        <Copy />
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() =>
-                                            removeVolume(volumeIndex)
-                                        }
-                                        disabled={volumes.length <= 1}
-                                        className="size-11 text-muted-foreground hover:bg-destructive/10 hover:text-destructive sm:size-9"
-                                        aria-label={`Remover Saco ${volumeIndex + 1}`}
-                                    >
-                                        <Trash2 />
-                                    </Button>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="size-11 sm:size-9"
+                                                aria-label={`Mais ações para o Saco ${volumeIndex + 1}`}
+                                            >
+                                                <Ellipsis />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                                id={`duplicate-volume-${volumeIndex}`}
+                                                aria-label={`Duplicar Saco ${volumeIndex + 1}`}
+                                                onSelect={() =>
+                                                    duplicateVolume(volumeIndex)
+                                                }
+                                            >
+                                                <Copy />
+                                                Duplicar saco
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                id={`remove-volume-${volumeIndex}`}
+                                                aria-label={`Remover Saco ${volumeIndex + 1}`}
+                                                variant="destructive"
+                                                disabled={volumes.length <= 1}
+                                                onSelect={() =>
+                                                    removeVolume(volumeIndex)
+                                                }
+                                            >
+                                                <Trash2 />
+                                                Remover saco
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
                             </div>
 
@@ -876,7 +893,7 @@ export function StockOfferVolumeEditor({
                                     );
                                 })}
                             </div>
-                        </section>
+                        </Card>
                     );
                 })}
             </div>

@@ -52,7 +52,7 @@ test('product catalog explains when a product is available for distribution', fu
     $hiddenOffer->stockVolumes()->create(['total_quantity' => 12]);
     $availableProduct = Product::factory()->create();
     $availableOffer = $availableProduct->offers()->create([
-        'type' => StockOfferType::NewGrade,
+        'type' => StockOfferType::Replenishment,
         'is_active' => true,
     ]);
     $availableOffer->stockVolumes()->create(['total_quantity' => 12]);
@@ -359,9 +359,10 @@ test('the shared catalog excludes offers without physical stock', function () {
         ->pluck('id')
         ->all();
 
-    expect($availableOfferIds)->toBe([$availableOffer->id, $newGradeOffer->id]);
+    expect($availableOfferIds)->toBe([$availableOffer->id]);
     expect($availableOfferIds)->not->toContain($exhaustedOffer->id);
     expect($availableOfferIds)->not->toContain($inactiveOffer->id);
+    expect($availableOfferIds)->not->toContain($newGradeOffer->id);
     expect($availableOfferIds)->not->toContain($zeroStockOffer->id);
     expect(
         StockOffer::query()
@@ -369,7 +370,7 @@ test('the shared catalog excludes offers without physical stock', function () {
             ->whereKey($inactiveProductOffer->getKey())
             ->exists(),
     )->toBeFalse();
-    expect($product->fresh()->latestAvailableOffer->is($newGradeOffer))->toBeTrue();
+    expect($product->fresh()->latestAvailableOffer->is($availableOffer))->toBeTrue();
 });
 
 test('product creation stores up to five images with thumbnails', function () {

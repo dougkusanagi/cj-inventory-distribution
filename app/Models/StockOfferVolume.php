@@ -18,7 +18,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['stock_offer_id', 'sort_order', 'total_quantity'])]
+#[Fillable(['code', 'stock_offer_id', 'sort_order', 'total_quantity', 'current_order_id', 'consumed_at'])]
 class StockOfferVolume extends Model
 {
     /** @use HasFactory<StockOfferVolumeFactory> */
@@ -56,6 +56,12 @@ class StockOfferVolume extends Model
             ->orderBy('id');
     }
 
+    /** @return BelongsTo<Order, $this> */
+    public function currentOrder(): BelongsTo
+    {
+        return $this->belongsTo(Order::class, 'current_order_id');
+    }
+
     /**
      * Get the model's attribute casts.
      *
@@ -66,6 +72,7 @@ class StockOfferVolume extends Model
         return [
             'sort_order' => 'integer',
             'total_quantity' => 'integer',
+            'consumed_at' => 'datetime',
         ];
     }
 }

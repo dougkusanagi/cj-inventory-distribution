@@ -71,11 +71,14 @@ class StockOffer extends Model
     {
         $query
             ->where('is_active', true)
+            ->where('type', '!=', StockOfferType::NewGrade->value)
             ->whereHas('product', function (Builder $query): void {
                 $query->where('is_active', true);
             })
             ->whereHas('stockVolumes', function (Builder $query): void {
-                $query->where('total_quantity', '>', 0);
+                $query->where('total_quantity', '>', 0)
+                    ->whereNull('current_order_id')
+                    ->whereNull('consumed_at');
             });
     }
 

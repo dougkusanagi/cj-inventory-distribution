@@ -2,9 +2,15 @@ import { Head } from '@inertiajs/react';
 import { Package } from 'lucide-react';
 import { ProductForm } from '@/components/products/product-form';
 import { index as productsIndex } from '@/routes/products';
-import type { Product } from '@/types';
+import type { Category, Product } from '@/types';
 
-export default function EditProduct({ product }: { product: Product }) {
+export default function EditProduct({
+    product,
+    categories,
+}: {
+    product: Product;
+    categories: Category[];
+}) {
     return (
         <>
             <Head title={`Editar ${product.name}`} />
@@ -30,7 +36,7 @@ export default function EditProduct({ product }: { product: Product }) {
                     </div>
                 </header>
 
-                <ProductForm product={product} />
+                <ProductForm product={product} categories={categories} />
             </div>
         </>
     );

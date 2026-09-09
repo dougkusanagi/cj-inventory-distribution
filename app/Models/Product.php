@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Enums\ProductLine;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
@@ -20,13 +22,15 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property string $code
  * @property string|null $model
  * @property string $name
+ * @property int|null $category_id
+ * @property ProductLine|null $line
  * @property string|null $notes
  * @property bool $is_active
  * @property-read StockOffer|null $latestOffer
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['code', 'model', 'name', 'notes', 'is_active'])]
+#[Fillable(['code', 'model', 'name', 'category_id', 'line', 'notes', 'is_active'])]
 class Product extends Model implements HasMedia
 {
     /** @use HasFactory<ProductFactory> */
@@ -61,6 +65,16 @@ class Product extends Model implements HasMedia
     protected $attributes = [
         'is_active' => true,
     ];
+
+    /**
+     * Get the category assigned to the product.
+     *
+     * @return BelongsTo<Category, $this>
+     */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
 
     /**
      * Get all stock offers for the product.
@@ -105,6 +119,7 @@ class Product extends Model implements HasMedia
     {
         return [
             'is_active' => 'boolean',
+            'line' => ProductLine::class,
         ];
     }
 

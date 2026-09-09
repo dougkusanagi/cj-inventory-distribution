@@ -81,7 +81,7 @@ it('keeps a stock quantity when disabling a size is cancelled', function () {
         ->assertValue('#volume-0-quantity-2', '7')
         ->assertValue('#volume-total-0', '7')
         ->assertAttribute('#volume-total-0', 'aria-readonly', 'true')
-        ->assertDisabled('button[aria-label="Remover Saco 1"]');
+        ->assertPresent('button[aria-label="Mais ações para o Saco 1"]');
 
     $page->script('window.confirm = () => false;');
 
@@ -95,7 +95,7 @@ it('keeps a stock quantity when disabling a size is cancelled', function () {
     $page
         ->assertRoute('products.index')
         ->assertSee('Blusa com grade E2E')
-        ->assertSee('Disponível para distribuição')
+        ->assertSee('Uso interno (Grade Nova)')
         ->assertSee('7')
         ->assertSee('1 saco')
         ->assertSee('Produto cadastrado.')

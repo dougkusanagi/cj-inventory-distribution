@@ -24,4 +24,14 @@ class StockOfferVolumeFactory extends Factory
             'total_quantity' => 0,
         ];
     }
+
+    /**
+     * Set the number of pieces represented by this physical sack.
+     */
+    public function withTotal(int $totalQuantity): static
+    {
+        return $this->state([
+            'total_quantity' => max(0, $totalQuantity),
+        ]);
+    }
 }

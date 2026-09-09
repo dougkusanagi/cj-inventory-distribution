@@ -46,6 +46,7 @@ it('logs in and logs out through the authenticated navigation', function () {
         ->click('@logout-button')
         ->wait(1)
         ->assertRoute('home')
-        ->assertSee('Log in')
+        ->assertSee('Reabasteça sua loja')
+        ->assertSee('Área da equipe')
         ->assertNoJavaScriptErrors();
 });

@@ -6,6 +6,14 @@ O sistema começa como uma aplicação Laravel monolítica.
 
 O objetivo inicial é manter produto, disponibilidade de estoque e pedido como conceitos separados para permitir evolução posterior sem antecipar um PCP completo.
 
+### Atualização de catálogo e pedidos (09/09/2026)
+
+O [plano de catálogo e pedidos](CATALOGO-E-PEDIDOS.md) distingue o frontend
+demonstrativo entregue do backend futuro, incluindo categorias, Slim/Plus,
+reserva e conferência. Os campos de pedidos descritos abaixo são sugestões
+históricas, não entidades já implementadas. A proposta de sacos inteiros está
+no ADR 0012; a exclusão definitiva de Grade Nova está no ADR 0011.
+
 ## Modelo de domínio
 
 ```text
@@ -140,6 +148,11 @@ explícita e separada.
 A disponibilidade usa a soma de `StockOfferVolume.total_quantity`: a oferta
 só aparece quando produto e oferta estão ativos, existe ao menos um saco e o
 total agregado é maior que zero.
+
+Além dessas condições, o catálogo para lojistas **nunca mostra Grade Nova**.
+O frontend demonstrativo já aplica essa exclusão; o scope de backend ainda
+deve ser atualizado antes da conexão aos dados reais. Grade Nova continua
+válida para gestão interna, sem opção de publicá-la no catálogo.
 
 ## StockOfferVolume
 
