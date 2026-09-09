@@ -18,6 +18,7 @@ it('shows validation feedback and does not save an invalid stock offer', functio
     $page = visit(route('products.create', [], false))
         ->wait(1)
         ->type('#product-name', '   ')
+        ->click('#product-tab-stock')
         ->click('#has-stock-offer');
 
     $page->script('window.scrollTo(0, document.body.scrollHeight);');
@@ -25,6 +26,7 @@ it('shows validation feedback and does not save an invalid stock offer', functio
 
     $page
         ->assertRoute('products.create')
+        ->assertAttribute('#product-tab-product', 'aria-selected', 'true')
         ->assertSee('Não foi possível salvar o produto.')
         ->assertSee('Informe o nome do produto.')
         ->assertSee('Informe o total do saco quando nenhuma quantidade por tamanho for conhecida.')
@@ -61,6 +63,7 @@ it('keeps a second sack when its removal is cancelled', function () {
 
     $page = visit(route('products.edit', [$product->id], false))
         ->wait(1)
+        ->click('#product-tab-stock')
         ->assertSee('Saco 1')
         ->assertSee('Saco 2')
         ->assertValue('#volume-total-1', '3');
@@ -68,6 +71,7 @@ it('keeps a second sack when its removal is cancelled', function () {
     $page->script('window.confirm = () => false;');
 
     $page
+        ->click('#product-tab-stock')
         ->click('button[aria-label="Mais ações para o Saco 2"]')
         ->assertSee('Duplicar saco')
         ->assertSee('Remover saco');
@@ -80,6 +84,47 @@ it('keeps a second sack when its removal is cancelled', function () {
         ->assertNoJavaScriptErrors();
 
     expect($offer->stockVolumes()->count())->toBe(2);
+});
+
+it('opens the stock tab when saving from the product tab returns stock errors', function () {
+    $this->actingAs(User::factory()->create());
+
+    $page = visit(route('products.create', [], false))
+        ->type('#product-name', 'Produto com estoque incompleto')
+        ->click('#product-tab-stock')
+        ->click('#has-stock-offer')
+        ->click('#product-tab-product');
+
+    $page->submit()->wait(1);
+
+    $page
+        ->assertAttribute('#product-tab-stock', 'aria-selected', 'true')
+        ->assertVisible('#volume-total-0')
+        ->assertSee('Informe o total do saco quando nenhuma quantidade por tamanho for conhecida.')
+        ->assertScript('document.activeElement.id === "volume-total-0"')
+        ->assertNoJavaScriptErrors();
+
+    expect(Product::query()->count())->toBe(0);
+});
+
+it('opens the product tab for native validation when saving from stock', function () {
+    $this->actingAs(User::factory()->create());
+
+    $page = visit(route('products.create', [], false))
+        ->click('#product-tab-stock')
+        ->type('#volume-total-0', '12');
+
+    $page->submit();
+
+    $page
+        ->assertAttribute('#product-tab-product', 'aria-selected', 'true')
+        ->assertVisible('#product-name')
+        ->assertScript('document.activeElement.id === "product-name"')
+        ->click('#product-tab-stock')
+        ->assertValue('#volume-total-0', '12')
+        ->assertNoJavaScriptErrors();
+
+    expect(Product::query()->count())->toBe(0);
 });
 
 it('prevents leaving a product form with unsaved changes when navigation is cancelled', function () {

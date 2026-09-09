@@ -4,6 +4,7 @@ export type CatalogPreviewProduct = {
     name: string;
     code: string;
     model: string | null;
+    image: string;
     category: string;
     line: 'Slim' | 'Plus';
     type: 'Reposição' | 'Grade Nova' | 'Grade Furada';
@@ -16,6 +17,7 @@ export const catalogPreviewProducts: CatalogPreviewProduct[] = [
         name: 'Calça Wide Leg',
         code: 'CJ-000001',
         model: '2451',
+        image: '/images/products/calca-wide-leg.png',
         category: 'Calça',
         line: 'Slim',
         type: 'Reposição',
@@ -39,6 +41,7 @@ export const catalogPreviewProducts: CatalogPreviewProduct[] = [
         name: 'Bermuda Jeans',
         code: 'CJ-000002',
         model: '1820',
+        image: '/images/products/bermuda-jeans.png',
         category: 'Bermuda',
         line: 'Plus',
         type: 'Reposição',
@@ -56,6 +59,7 @@ export const catalogPreviewProducts: CatalogPreviewProduct[] = [
         name: 'Short Mom',
         code: 'CJ-000003',
         model: '1938',
+        image: '/images/products/short-mom.png',
         category: 'Short',
         line: 'Slim',
         type: 'Grade Furada',
@@ -69,6 +73,7 @@ export const catalogPreviewProducts: CatalogPreviewProduct[] = [
         name: 'Cropped Jeans',
         code: 'CJ-000004',
         model: null,
+        image: '/images/products/cropped-jeans.png',
         category: 'Cropped',
         line: 'Plus',
         type: 'Grade Furada',
@@ -81,6 +86,7 @@ export const catalogPreviewProducts: CatalogPreviewProduct[] = [
         name: 'Calça Reta',
         code: 'CJ-000005',
         model: '3107',
+        image: '/images/products/calca-reta.png',
         category: 'Calça',
         line: 'Plus',
         type: 'Reposição',
@@ -94,6 +100,7 @@ export const catalogPreviewProducts: CatalogPreviewProduct[] = [
         name: 'Bermuda Ciclista',
         code: 'CJ-000006',
         model: '2040',
+        image: '/images/products/bermuda-ciclista.png',
         category: 'Bermuda',
         line: 'Slim',
         type: 'Reposição',
@@ -111,6 +118,7 @@ export const catalogPreviewProducts: CatalogPreviewProduct[] = [
         name: 'Produto interno de grade nova',
         code: 'CJ-000007',
         model: null,
+        image: '/images/products/produto-interno-grade-nova.png',
         category: 'Calça',
         line: 'Slim',
         type: 'Grade Nova',
