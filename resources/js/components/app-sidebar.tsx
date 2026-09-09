@@ -40,6 +40,7 @@ const mainNavItems: NavItem[] = [
         title: 'Pedidos',
         href: ordersIndex(),
         icon: ShoppingCart,
+        disabled: true,
     },
 ];
 
