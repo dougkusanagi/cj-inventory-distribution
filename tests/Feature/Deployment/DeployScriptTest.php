@@ -37,6 +37,8 @@ test('the deployment script uses the application production toolchain', function
 
     expect($wrapper)
         ->not->toBeFalse()
+        ->toContain('if [[ "$EUID" -eq 0 ]]')
+        ->toContain('export COMPOSER_ALLOW_SUPERUSER="${COMPOSER_ALLOW_SUPERUSER:-1}"')
         ->toContain("printf 'Iniciando deploy em %s...\\n'")
         ->toContain('exec vendor/bin/deploy "$@"');
 
