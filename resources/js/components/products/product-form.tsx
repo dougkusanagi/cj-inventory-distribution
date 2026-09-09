@@ -279,7 +279,7 @@ export function ProductForm({ product }: ProductFormProps) {
         <form
             ref={formRef}
             onSubmit={submit}
-            className="grid gap-6 pb-48 sm:pb-28"
+            className="grid min-w-0 gap-6 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:pb-28"
         >
             <p className="text-xs text-muted-foreground sm:text-sm">
                 Campos marcados com <span className="text-destructive">*</span>{' '}
@@ -619,12 +619,14 @@ export function ProductForm({ product }: ProductFormProps) {
             <div
                 onFocusCapture={showFooter}
                 className={cn(
-                    'fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-card/90 p-3 shadow-[0_-8px_24px_-16px_rgba(0,0,0,0.45)] backdrop-blur-xl transition-[left,translate] duration-200 ease-in-out will-change-[translate] sm:p-4',
+                    'fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-card/95 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-16px_rgba(0,0,0,0.45)] backdrop-blur-xl transition-[left,translate] duration-200 ease-in-out will-change-[translate] sm:p-4',
                     !isMobile &&
                         (sidebarState === 'collapsed'
                             ? 'md:left-[calc(var(--sidebar-width-icon)+1rem)]'
                             : 'md:left-(--sidebar-width)'),
-                    isFooterVisible ? 'translate-y-0' : 'translate-y-full',
+                    isFooterVisible
+                        ? 'translate-y-0'
+                        : 'translate-y-0 md:translate-y-full',
                 )}
             >
                 <div className="mx-auto flex w-full max-w-7xl justify-center sm:justify-end">

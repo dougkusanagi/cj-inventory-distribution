@@ -620,8 +620,8 @@ export function StockOfferVolumeEditor({
                                 </div>
                             </div>
 
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                                <div className="grid gap-2 sm:max-w-xs">
+                            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                                <div className="grid min-w-0 gap-2 sm:max-w-xs sm:flex-1">
                                     <Label
                                         htmlFor={`volume-total-${volumeIndex}`}
                                     >
@@ -673,11 +673,12 @@ export function StockOfferVolumeEditor({
                                     </p>
                                     <InputError message={volumeError} />
                                 </div>
-                                <div className="flex flex-wrap gap-1.5">
+                                <div className="grid grid-cols-4 gap-1.5 sm:flex sm:flex-wrap">
                                     <Button
                                         type="button"
                                         variant="ghost"
                                         size="icon"
+                                        className="size-11 sm:size-9"
                                         onClick={() =>
                                             moveVolume(volumeIndex, -1)
                                         }
@@ -690,6 +691,7 @@ export function StockOfferVolumeEditor({
                                         type="button"
                                         variant="ghost"
                                         size="icon"
+                                        className="size-11 sm:size-9"
                                         onClick={() =>
                                             moveVolume(volumeIndex, 1)
                                         }
@@ -704,6 +706,7 @@ export function StockOfferVolumeEditor({
                                         type="button"
                                         variant="ghost"
                                         size="icon"
+                                        className="size-11 sm:size-9"
                                         onClick={() =>
                                             duplicateVolume(volumeIndex)
                                         }
@@ -719,7 +722,7 @@ export function StockOfferVolumeEditor({
                                             removeVolume(volumeIndex)
                                         }
                                         disabled={volumes.length <= 1}
-                                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                        className="size-11 text-muted-foreground hover:bg-destructive/10 hover:text-destructive sm:size-9"
                                         aria-label={`Remover Saco ${volumeIndex + 1}`}
                                     >
                                         <Trash2 />
@@ -737,7 +740,7 @@ export function StockOfferVolumeEditor({
                                         saco.
                                     </p>
                                 </div>
-                                <div className="flex flex-col gap-2 sm:flex-row">
+                                <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:flex sm:flex-row">
                                     {volume.items.length > 1 && (
                                         <>
                                             <Button
@@ -773,7 +776,7 @@ export function StockOfferVolumeEditor({
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 md:grid-cols-7">
+                            <div className="grid min-w-0 grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 sm:grid-cols-4 md:grid-cols-7">
                                 {volume.items.map((item, itemIndex) => {
                                     const itemError = error(
                                         `stock_volumes.${volumeIndex}.items.${itemIndex}.quantity`,
@@ -788,7 +791,7 @@ export function StockOfferVolumeEditor({
                                                 `new-item-card-${volumeIndex}-${itemIndex}`
                                             }
                                             className={cn(
-                                                'flex flex-row items-center justify-between gap-3 rounded-xl border p-3 transition-colors sm:flex-col sm:items-stretch',
+                                                'grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(5.5rem,7rem)] items-center gap-3 rounded-xl border p-3 transition-colors min-[420px]:flex min-[420px]:flex-col min-[420px]:items-stretch',
                                                 item.is_active
                                                     ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/15'
                                                     : 'border-border/70 bg-card',
@@ -818,7 +821,7 @@ export function StockOfferVolumeEditor({
                                                     aria-label={`${item.is_active ? 'Desativar' : 'Ativar'} tamanho ${item.size || itemIndex + 1} do Saco ${volumeIndex + 1}`}
                                                 />
                                             </div>
-                                            <div className="grid gap-1 sm:w-full">
+                                            <div className="grid min-w-0 gap-1 min-[420px]:w-full">
                                                 <Label
                                                     htmlFor={quantityId}
                                                     className="sr-only"
@@ -863,7 +866,7 @@ export function StockOfferVolumeEditor({
                                                             ? true
                                                             : undefined
                                                     }
-                                                    className="h-10 w-24 text-center font-mono text-sm sm:w-full"
+                                                    className="h-11 w-full min-w-0 text-center font-mono text-base min-[420px]:h-10 min-[420px]:text-sm"
                                                 />
                                                 <InputError
                                                     message={itemError}
