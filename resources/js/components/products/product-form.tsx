@@ -337,7 +337,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
             ref={formRef}
             onSubmit={submit}
             noValidate
-            className="grid min-w-0 gap-6 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:pb-28"
+            className="grid min-w-0 scroll-mt-4 gap-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:pb-28"
         >
             <p className="text-xs text-muted-foreground sm:text-sm">
                 Campos marcados com <span className="text-destructive">*</span>{' '}
@@ -444,16 +444,16 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                     activeTab === 'product' ? 'grid' : 'hidden',
                 )}
             >
-                <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
+                <Card className="gap-0 rounded-2xl border-border p-0 shadow-none">
                     <label
                         htmlFor="is-active"
-                        className="flex min-h-12 cursor-pointer items-center justify-between gap-4 p-5 select-none sm:p-6"
+                        className="flex min-h-12 cursor-pointer items-center justify-between gap-4 p-4 select-none sm:px-6"
                     >
                         <div className="grid gap-1">
                             <p className="text-sm font-semibold text-foreground">
                                 Produto ativo
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-sm leading-5 text-muted-foreground">
                                 {form.data.is_active
                                     ? 'O produto poderá aparecer no catálogo quando houver estoque disponível.'
                                     : 'O produto ficará oculto do catálogo, sem alterar o estoque.'}
@@ -472,17 +472,14 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                     </label>
                 </Card>
 
-                <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
+                <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
                     {/* 1. Identidade da peça */}
-                    <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
+                    <Card className="gap-0 rounded-2xl border-border p-0 shadow-none">
                         <CardHeader className="p-5 sm:p-6">
-                            <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
-                                Identidade da peça
-                            </p>
-                            <h2 className="text-xl tracking-tight sm:text-2xl">
+                            <h2 className="text-xl font-semibold tracking-tight">
                                 Dados do produto
                             </h2>
-                            <CardDescription className="text-xs sm:text-sm">
+                            <CardDescription className="text-sm leading-6">
                                 O código interno é gerado automaticamente ao
                                 salvar.
                             </CardDescription>
@@ -524,7 +521,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                                 <InputError message={error('name')} />
                             </div>
 
-                            <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="grid gap-5 sm:grid-cols-2 sm:gap-4">
                                 <div className="grid gap-2">
                                     <Label
                                         htmlFor="product-model"
@@ -568,7 +565,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                                     >
                                         <SelectTrigger
                                             id="product-category"
-                                            className="h-11 w-full sm:h-10"
+                                            className="h-11 w-full text-base sm:h-10 sm:text-sm"
                                             aria-invalid={
                                                 error('category_id')
                                                     ? true
@@ -600,8 +597,8 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                                 </div>
                             </div>
 
-                            <fieldset className="grid gap-2">
-                                <legend className="text-sm font-medium">
+                            <fieldset className="min-w-0">
+                                <legend className="mb-2 text-sm font-medium">
                                     Linha comercial
                                 </legend>
                                 <RadioGroup
@@ -631,7 +628,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                                                 'flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 text-sm font-medium transition-colors',
                                                 (form.data.line || 'none') ===
                                                     value
-                                                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                                                    ? 'border-highlight bg-accent/50'
                                                     : 'border-border hover:bg-muted/30',
                                             )}
                                         >
@@ -640,7 +637,10 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                                         </label>
                                     ))}
                                 </RadioGroup>
-                                <InputError message={error('line')} />
+                                <InputError
+                                    message={error('line')}
+                                    className="mt-2"
+                                />
                             </fieldset>
 
                             <div className="grid gap-2">
@@ -676,15 +676,12 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                     </Card>
 
                     {/* 2. Referência visual */}
-                    <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
+                    <Card className="gap-0 rounded-2xl border-border p-0 shadow-none">
                         <CardHeader className="p-5 sm:p-6">
-                            <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
-                                Referência visual
-                            </p>
-                            <h2 className="text-xl tracking-tight sm:text-2xl">
+                            <h2 className="text-xl font-semibold tracking-tight">
                                 Fotos
                             </h2>
-                            <CardDescription className="text-xs sm:text-sm">
+                            <CardDescription className="text-sm leading-6">
                                 Adicione até 5 fotos pela câmera ou pela
                                 galeria. O enquadramento é definido antes de
                                 salvar cada foto.
@@ -723,21 +720,21 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                 )}
             >
                 {/* 3. Disponibilidade do lote */}
-                <Card className="gap-0 rounded-[1.75rem] border-border/80 p-0 shadow-sm">
+                <Card className="gap-0 rounded-2xl border-border p-0 shadow-none">
                     <CardHeader className="p-5 sm:p-6">
                         <div className="grid gap-1.5">
                             <div className="flex items-center gap-2">
-                                <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <span className="flex size-7 items-center justify-center rounded-lg bg-accent text-highlight">
                                     <Layers className="size-4" />
                                 </span>
                                 <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
                                     Disponibilidade em estoque
                                 </p>
                             </div>
-                            <h2 className="text-xl tracking-tight sm:text-2xl">
+                            <h2 className="text-xl font-semibold tracking-tight">
                                 Estoque organizado por sacos
                             </h2>
-                            <CardDescription className="text-xs sm:text-sm">
+                            <CardDescription className="text-sm leading-6">
                                 Cada saco tem sua própria grade e total. O total
                                 da oferta é a soma dos sacos e é recalculado no
                                 servidor.
@@ -756,7 +753,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                                 <p className="text-sm font-semibold text-foreground">
                                     Mostrar oferta no catálogo
                                 </p>
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-sm leading-5 text-muted-foreground">
                                     {form.data.has_stock_offer
                                         ? 'A oferta poderá aparecer quando o produto estiver ativo e tiver estoque disponível.'
                                         : 'A oferta ficará oculta, preservando os dados dos sacos para uma próxima ativação.'}
@@ -784,7 +781,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                             >
                                 Tipo de Grade
                             </legend>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-sm leading-5 text-muted-foreground">
                                 Todos os tipos usam pelo menos um saco; a
                                 diferença está na classificação da oferta.
                             </p>
@@ -806,10 +803,10 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                                             key={offerType.id}
                                             htmlFor={optionId}
                                             className={cn(
-                                                'flex min-h-16 min-w-0 flex-col items-stretch gap-1.5 rounded-xl border px-2.5 py-2.5 text-sm font-medium transition-colors select-none',
+                                                'flex min-h-16 min-w-0 cursor-pointer flex-col items-stretch gap-1.5 rounded-xl border px-2.5 py-2.5 text-sm font-medium transition-colors select-none',
                                                 form.data.stock_offer_type ===
                                                     offerType.id
-                                                    ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                                                    ? 'border-highlight bg-accent/50'
                                                     : 'border-border hover:bg-muted/30',
                                             )}
                                         >
@@ -822,7 +819,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                                                 <span className="text-xs leading-4 break-words sm:text-sm">
                                                     {offerType.label}
                                                 </span>
-                                                <span className="text-[10px] leading-3.5 font-normal break-words text-muted-foreground sm:text-xs sm:leading-4">
+                                                <span className="text-xs leading-4 font-normal break-words text-muted-foreground">
                                                     {offerType.description}
                                                 </span>
                                             </span>
@@ -848,7 +845,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                         <p className="text-sm font-semibold text-foreground">
                             Encerrar estoque atual
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-sm leading-5 text-muted-foreground">
                             Oculta a oferta, zera os sacos e desativa os
                             tamanhos deste lote ao salvar.
                         </p>
@@ -869,7 +866,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
             {/* 5. Ações inferiores (Mobile-First) */}
             <div
                 className={cn(
-                    'fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-card/95 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-16px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-4',
+                    'fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-card px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-4 sm:pb-[calc(1rem+env(safe-area-inset-bottom))] lg:px-8',
                     !isMobile &&
                         (sidebarState === 'collapsed'
                             ? 'md:left-[calc(var(--sidebar-width-icon)+1rem)]'

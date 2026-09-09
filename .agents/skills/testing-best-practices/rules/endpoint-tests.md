@@ -6,7 +6,7 @@ Fetch `https://laravel.com/framework/docs/http-tests` for the request helpers, t
 
 Choose an assertion based on the subject of the check: the status, a header, a redirect, the JSON body, the session, a validation error, or the view. Laravel provides a named assertion for each subject that identifies the incorrect value.
 
-## The Coverage of an Endpoint
+## Endpoint Coverage
 
 Write a test for each applicable case:
 
@@ -19,7 +19,7 @@ Write a test for each applicable case:
 
 Assert the application's actual behavior rather than a generic status code. An API returns `401` for a missing or invalid token, while a browser endpoint redirects to the sign-in route.
 
-## The Isolation of a Tenant
+## Tenant Isolation
 
 Assert the status code returned for a cross-tenant request. Use `404` rather than `403` when one tenant must not learn that another tenant's record exists, because `403` confirms its existence.
 
@@ -31,11 +31,36 @@ An HTTP test shows that the endpoint performs authorization. It cannot identify 
 - Write one HTTP test for one refused role, which shows that the endpoint calls the authorization.
 - Use the helper of the project that asserts the ability and the arguments of the gate, if such a helper exists.
 
-## The Validation
+## Browser Tests
+
+Write a browser test only for JavaScript behavior that an HTTP test cannot reach, such as modal interaction, drag-and-drop, live search, or client-side validation. Browser tests are slower than HTTP tests and can fail for reasons unrelated to the code under test.
+
+- Assert the state that the user can see, and assert the state in the database that the interaction saves.
+- Wait until the test reaches the required state. Do not wait for a fixed number of seconds, which can fail on a slower machine.
+- Call `assertNoJavaScriptErrors()` in each browser test. An error in the console is a defect.
+
+### Where a Browser Test Lives and How to Run It
+
+The plugin runs browser tests as normal Pest tests, so they need no separate suite. Put them in `tests/Browser` to separate them from faster tests and run the directory with one command.
+
+- Run a browser test with `vendor/bin/pest tests/Browser`, and add `--parallel` for the complete suite.
+- Run `vendor/bin/pest --debug` to open the window of the browser and to pause at a failure. Use `--headed` to watch a run that passes.
+- Add `--browser firefox` or `--browser safari` to run the test in a different browser. The default browser is Chrome.
+- The run needs Playwright and a browser on the machine. Follow the plugin documentation for local and CI installation commands.
+- Fetch `https://pestphp.com/docs/browser-testing` for the interactions, the assertions, and the devices that the plugin gives.
+
+### Browser Test Pitfalls
+
+- The plugin waits five seconds for an element. Raise the value with `pest()->browser()->timeout(10000)` in `Pest.php` for a page that is slower, and do not add a wait for a number of seconds to the test.
+- Apply `RefreshDatabase` to the browser tests in `Pest.php`. A browser test hits the application through a real request, and the records that it leaves break the next test.
+- Add `tests/Browser/Screenshots` to `.gitignore`. A failure writes a screenshot, and the file is not part of the repository.
+- Give `withKeyDown()` a key code, such as `KeyA`. A letter such as `'a'` gives the lowercase character, whatever modifier the test holds.
+- Interact inside the callback of `withinFrame()`. An interaction outside the callback does not reach the frame.
+
+## Testing Validation
 
 - Write one test for each validation rule when each failure represents a separate contract.
 - Write one test with an empty payload to assert several required fields together.
-- Give the status code in the name of a test for an API.
 - Assert the text of the message that the user gets. A message that is present but wrong is a defect.
 - Use a dataset for input values that need the same setup and the same assertions.
 

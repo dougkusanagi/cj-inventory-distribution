@@ -240,6 +240,7 @@ it('keeps the product form usable on a narrow mobile viewport', function () {
         ->assertVisible('#product-tab-product')
         ->assertVisible('#product-tab-stock')
         ->assertVisible('button[type="submit"]')
+        ->assertScript("(() => { const modelInput = document.querySelector('#product-model'); const categoryLabel = document.querySelector('label[for=\"product-category\"]'); const categoryInput = document.querySelector('#product-category'); const lineLabel = [...document.querySelectorAll('legend')].find((element) => element.textContent?.trim() === 'Linha comercial'); const lineInput = document.querySelector('[aria-label=\"Linha comercial\"]'); if (!modelInput || !categoryLabel || !categoryInput || !lineLabel || !lineInput) { return false; } const closeTo = (value, expected) => Math.abs(value - expected) <= 1; return closeTo(categoryLabel.getBoundingClientRect().top - modelInput.getBoundingClientRect().bottom, 20) && closeTo(lineLabel.getBoundingClientRect().top - categoryInput.getBoundingClientRect().bottom, 20) && closeTo(categoryInput.getBoundingClientRect().top - categoryLabel.getBoundingClientRect().bottom, 8) && closeTo(lineInput.getBoundingClientRect().top - lineLabel.getBoundingClientRect().bottom, 8); })()")
         ->type('#product-name', 'Produto mobile')
         ->click('#product-tab-stock')
         ->assertSee('Tipo de Grade')
