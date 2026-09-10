@@ -16,7 +16,6 @@ test('the deployment script uses the application production toolchain', function
         ->toContain('DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"')
         ->toContain('DEPLOY_LOCK_FILE="${DEPLOY_LOCK_FILE:-$(git rev-parse --git-path laravel-deploy.lock)}"')
         ->toContain('flock -n 9')
-        ->toContain('git status --porcelain=v1 --untracked-files=all')
         ->toContain('git switch "$DEPLOY_BRANCH"')
         ->toContain('git pull --ff-only origin "$DEPLOY_BRANCH"')
         ->toContain('run_tool composer install')
@@ -66,19 +65,18 @@ test('the short deployment entrypoint delegates to the package command', functio
         ->toContain('vendor/bin/deploy [deploy]');
 });
 
-test('the deployment script stops before changing code when the worktree is dirty', function (): void {
+test('the deployment script pulls remote changes when an untracked file exists', function (): void {
     $filesystem = new Filesystem;
     $fixture = sys_get_temp_dir().'/estoque-deploy-'.bin2hex(random_bytes(8));
+    $remote = $fixture.'/remote.git';
+    $source = $fixture.'/source';
+    $application = $fixture.'/application';
     $fixtureBin = $fixture.'/bin';
 
     try {
         $filesystem->makeDirectory($fixtureBin, 0755, true);
-        $filesystem->copy(base_path('vendor/dougkusanagi/laravel-deploy/bin/deploy'), $fixture.'/deploy.sh');
-        $filesystem->copy(base_path('deploy.config.sh'), $fixture.'/deploy.config.sh');
-        chmod($fixture.'/deploy.sh', 0755);
-        $filesystem->put($fixture.'/uncommitted.txt', 'alteração local');
 
-        foreach (['composer', 'php', 'vp', 'systemctl', 'sudo'] as $command) {
+        foreach (['composer', 'php'] as $command) {
             $commandPath = $fixtureBin.'/'.$command;
 
             $filesystem->put($commandPath, "#!/usr/bin/env bash\nexit 0\n");
@@ -87,23 +85,46 @@ test('the deployment script stops before changing code when the worktree is dirt
 
         symlink('/usr/bin/flock', $fixtureBin.'/flock');
 
-        $git = new Process(
-            ['git', 'init', '--initial-branch=master'],
-            $fixture,
-        );
-        $git->mustRun();
+        (new Process(['git', 'init', '--bare', '--initial-branch=master', $remote]))->mustRun();
+        (new Process(['git', 'clone', $remote, $source]))->mustRun();
+        (new Process(['git', 'config', 'user.name', 'Test'], $source))->mustRun();
+        (new Process(['git', 'config', 'user.email', 'test@example.com'], $source))->mustRun();
+
+        $filesystem->put($source.'/version.txt', "old\n");
+        (new Process(['git', 'add', 'version.txt'], $source))->mustRun();
+        (new Process(['git', 'commit', '-m', 'Initial version'], $source))->mustRun();
+        (new Process(['git', 'push', 'origin', 'master'], $source))->mustRun();
+        (new Process(['git', 'clone', $remote, $application]))->mustRun();
+
+        $filesystem->put($source.'/version.txt', "new\n");
+        (new Process(['git', 'commit', '-am', 'Update version'], $source))->mustRun();
+        (new Process(['git', 'push', 'origin', 'master'], $source))->mustRun();
+
+        $filesystem->copy(base_path('vendor/dougkusanagi/laravel-deploy/bin/deploy'), $application.'/deploy.sh');
+        $filesystem->put($application.'/deploy.config.sh', <<<'BASH'
+DEPLOY_BRANCH="master"
+PHP_FPM_SERVICE=""
+WEB_SERVICE=""
+AUTO_DETECT_WEB_SERVICE="false"
+STORAGE_LINK="false"
+FRONTEND_INSTALL=()
+FRONTEND_BUILD=()
+BASH);
+        $filesystem->put($application.'/untracked.txt', 'alteração local');
+        chmod($application.'/deploy.sh', 0755);
 
         $process = new Process(
-            ['bash', $fixture.'/deploy.sh'],
-            $fixture,
+            ['bash', $application.'/deploy.sh'],
+            $application,
             ['PATH' => $fixtureBin.':/usr/bin:/bin'],
         );
-        $process->run();
+        $process->mustRun();
 
-        expect($process->getExitCode())->not->toBe(0);
         expect($process->getOutput().$process->getErrorOutput())
-            ->toContain('a árvore de trabalho não está limpa')
-            ->toContain('antes de atualizar o código');
+            ->toContain('Atualizando o código da branch master')
+            ->toContain('Deploy concluído.');
+        expect(file_get_contents($application.'/version.txt'))->toBe("new\n");
+        expect(file_get_contents($application.'/untracked.txt'))->toBe('alteração local');
     } finally {
         $filesystem->deleteDirectory($fixture);
     }
