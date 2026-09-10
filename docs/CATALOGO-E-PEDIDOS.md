@@ -16,10 +16,12 @@ da sacola funcionam localmente no navegador. Grade Nova nunca aparece.
 O `CatalogDemoSeeder` cria categorias, classificação Slim/Plus, ofertas em
 sacos e anexa as fotos de demonstração versionadas pela Media Library. Ele
 prepara o banco local com `php artisan migrate --seed` e pode ser executado
-novamente sem duplicar registros ou mídias. A sacola não persiste ao
-recarregar; ao confirmar, porém, coleta a identificação mínima, grava o pedido,
-reserva os sacos e abre o `wa.me`. Sem um WhatsApp de destino configurado no
-painel, a confirmação fica indisponível.
+novamente sem duplicar registros ou mídias. A sacola persiste no `localStorage`
+do navegador usando somente os IDs dos sacos e é recuperada ao recarregar o
+catálogo; IDs que não estiverem mais disponíveis são ignorados. Ao confirmar,
+porém, coleta a identificação mínima, grava o pedido, reserva os sacos e abre o
+`wa.me`. Sem um WhatsApp de destino configurado no painel, a confirmação fica
+indisponível.
 
 As factories permitem montar cenários de teste sem repetir atributos:
 
@@ -115,8 +117,8 @@ responsável → registrar pedido → abrir WhatsApp.
   se necessário para expedição. Não criar cadastro longo por antecipação.
 - Ao perder disponibilidade, manter a sacola e informar quais sacos precisam
   ser removidos. Não substituir mercadoria automaticamente.
-- Futuro rascunho local guarda somente IDs dos sacos; revalidar no servidor
-  ao recuperar e confirmar. A prévia atual não persiste o rascunho.
+- O rascunho local guarda somente IDs dos sacos; a disponibilidade é conferida
+  ao recuperar e novamente no servidor ao confirmar.
 - Confirmação real retorna número do pedido; repetir a abertura do WhatsApp
   não cria outro pedido. Sem chamar “Enviado” apenas porque abriu um link.
 
