@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\CatalogSettingsController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Auth\Middleware\RequirePassword;
@@ -24,6 +25,11 @@ Route::middleware(['auth', 'verified'])->prefix('painel')->group(function () {
         ->name('user-password.update');
 
     Route::inertia('configuracoes/aparencia', 'settings/appearance')->name('appearance.edit');
+
+    Route::get('configuracoes/catalogo', [CatalogSettingsController::class, 'edit'])
+        ->name('catalog-settings.edit');
+    Route::put('configuracoes/catalogo', [CatalogSettingsController::class, 'update'])
+        ->name('catalog-settings.update');
 });
 
 Route::get('.well-known/passkey-endpoints', function () {

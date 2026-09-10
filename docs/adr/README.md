@@ -40,3 +40,4 @@ ADRs iniciais:
 - [0010 — Corte direto para o estoque por saco](0010-stock-by-volume-direct-cutover.md)
 - [0011 — Grade Nova nunca aparece no catálogo para lojistas](0011-no-new-grade-in-public-catalog.md)
 - [0012 — Pedidos de sacos inteiros com reserva e conferência (proposta)](0012-whole-sack-orders-proposal.md)
+- [0013 — Pedidos do catálogo enviados via WhatsApp](0013-catalog-orders-via-whatsapp.md)

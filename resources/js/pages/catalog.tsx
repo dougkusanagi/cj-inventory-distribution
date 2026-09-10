@@ -1,6 +1,7 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import {
     Check,
+    MessageCircle,
     Search,
     ShoppingBag,
     SlidersHorizontal,
@@ -8,6 +9,9 @@ import {
     X,
 } from 'lucide-react';
 import { useState } from 'react';
+import type { FormEvent } from 'react';
+import CatalogOrderController from '@/actions/App/Http/Controllers/CatalogOrderController';
+import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,7 +34,6 @@ import {
 } from '@/components/ui/select';
 import {
     Sheet,
-    SheetClose,
     SheetContent,
     SheetDescription,
     SheetFooter,
@@ -268,10 +271,162 @@ function BagItems({
     );
 }
 
+function CatalogCheckout({
+    bag,
+    canPlaceOrder,
+}: {
+    bag: CatalogBagItem[];
+    canPlaceOrder: boolean;
+}) {
+    const [checkoutResult, setCheckoutResult] = useState<{
+        orderCode: string;
+        whatsappUrl: string;
+    } | null>(null);
+    const form = useForm({
+        store_name: '',
+        requester_name: '',
+        whatsapp: '',
+        notes: '',
+        order: '',
+        volume_ids: [] as number[],
+    });
+
+    function submit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        form.transform((data) => ({
+            ...data,
+            volume_ids: bag.map(({ volume }) => volume.id),
+        }));
+        form.post(CatalogOrderController.url(), {
+            onFlash: (flash) => {
+                const checkout = flash.checkout as
+                    | { orderCode: string; whatsappUrl: string }
+                    | undefined;
+
+                if (checkout) {
+                    setCheckoutResult(checkout);
+                }
+            },
+        });
+    }
+
+    if (checkoutResult) {
+        return (
+            <div className="grid gap-4 border-t border-border p-4 text-center sm:p-6">
+                <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/15 text-highlight">
+                    <MessageCircle className="size-6" />
+                </div>
+                <div className="grid gap-2">
+                    <h3 className="text-lg font-semibold">
+                        Pedido {checkoutResult.orderCode} registrado
+                    </h3>
+                    <p className="text-sm leading-6 text-muted-foreground">
+                        Clique abaixo e envie os detalhes pelo WhatsApp. Nossa
+                        equipe está pronta para atender você.
+                    </p>
+                </div>
+                <Button asChild className="h-12 w-full">
+                    <a
+                        href={checkoutResult.whatsappUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        data-testid="finalizar-whatsapp"
+                    >
+                        <MessageCircle />
+                        Abrir WhatsApp e enviar pedido
+                    </a>
+                </Button>
+            </div>
+        );
+    }
+
+    return (
+        <form
+            onSubmit={submit}
+            className="grid gap-4 border-t border-border p-4 sm:p-6"
+        >
+            <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                    <Label htmlFor="catalog-store-name">Loja</Label>
+                    <Input
+                        id="catalog-store-name"
+                        value={form.data.store_name}
+                        onChange={(event) =>
+                            form.setData('store_name', event.target.value)
+                        }
+                        placeholder="Nome da sua loja"
+                        autoComplete="organization"
+                        required
+                    />
+                    <InputError message={form.errors.store_name} />
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="catalog-requester-name">Responsável</Label>
+                    <Input
+                        id="catalog-requester-name"
+                        value={form.data.requester_name}
+                        onChange={(event) =>
+                            form.setData('requester_name', event.target.value)
+                        }
+                        placeholder="Seu nome"
+                        autoComplete="name"
+                        required
+                    />
+                    <InputError message={form.errors.requester_name} />
+                </div>
+                <div className="grid gap-2 sm:col-span-2">
+                    <Label htmlFor="catalog-whatsapp">
+                        Seu WhatsApp (opcional)
+                    </Label>
+                    <Input
+                        id="catalog-whatsapp"
+                        type="tel"
+                        inputMode="tel"
+                        value={form.data.whatsapp}
+                        onChange={(event) =>
+                            form.setData('whatsapp', event.target.value)
+                        }
+                        placeholder="Ex.: 55 11 99999-9999"
+                        autoComplete="tel"
+                    />
+                    <InputError message={form.errors.whatsapp} />
+                </div>
+            </div>
+
+            <InputError message={form.errors.volume_ids} />
+            <InputError message={form.errors.order} />
+
+            {!canPlaceOrder && (
+                <p className="rounded-xl bg-muted p-3 text-sm leading-6 text-muted-foreground">
+                    Os pedidos estão temporariamente indisponíveis. A equipe
+                    ainda precisa configurar o WhatsApp de atendimento.
+                </p>
+            )}
+
+            <Button
+                type="submit"
+                className="h-12 w-full"
+                disabled={form.processing || bag.length === 0 || !canPlaceOrder}
+            >
+                <MessageCircle />
+                {form.processing
+                    ? 'Registrando pedido...'
+                    : 'Finalizar no WhatsApp'}
+            </Button>
+            <p className="text-center text-xs leading-5 text-muted-foreground">
+                Seu pedido será registrado antes de abrir a conversa no
+                WhatsApp.
+            </p>
+        </form>
+    );
+}
+
 export default function Catalog({
     products,
+    canPlaceOrder,
 }: {
     products: CatalogPreviewProduct[];
+    canPlaceOrder: boolean;
 }) {
     const { auth } = usePage().props;
     const isMobile = useIsMobile();
@@ -746,13 +901,10 @@ export default function Catalog({
                                 onRemoveVolume={removeVolume}
                                 className="px-4 pb-5 sm:px-6"
                             />
-                            <DrawerFooter className="shrink-0 border-t border-border px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">
-                                <DrawerClose asChild>
-                                    <Button className="h-12">
-                                        Continuar escolhendo
-                                    </Button>
-                                </DrawerClose>
-                            </DrawerFooter>
+                            <CatalogCheckout
+                                bag={bag}
+                                canPlaceOrder={canPlaceOrder}
+                            />
                         </DrawerContent>
                     </Drawer>
                 ) : (
@@ -774,13 +926,10 @@ export default function Catalog({
                                 onRemoveVolume={removeVolume}
                                 className="flex-1 px-6 py-5"
                             />
-                            <SheetFooter className="shrink-0 flex-col border-t border-border p-6 sm:flex-col sm:justify-start">
-                                <SheetClose asChild>
-                                    <Button className="h-12">
-                                        Continuar escolhendo
-                                    </Button>
-                                </SheetClose>
-                            </SheetFooter>
+                            <CatalogCheckout
+                                bag={bag}
+                                canPlaceOrder={canPlaceOrder}
+                            />
                         </SheetContent>
                     </Sheet>
                 )}

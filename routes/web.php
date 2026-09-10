@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\CatalogOrderController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrderController;
@@ -9,6 +10,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', CatalogController::class)->name('home');
 Route::get('catalog', CatalogController::class)->name('catalog');
+Route::post('catalog/pedidos', CatalogOrderController::class)
+    ->middleware('throttle:10,1')
+    ->name('catalog-orders.store');
 Route::inertia('design-system', 'design-system')->name('design-system');
 
 Route::middleware(['auth', 'verified'])->prefix('painel')->group(function () {

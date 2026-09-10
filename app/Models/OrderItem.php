@@ -8,6 +8,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property string $product_name_snapshot
+ * @property string $product_code_snapshot
+ * @property string|null $product_model_snapshot
+ * @property string $volume_code_snapshot
+ * @property int $total_quantity
+ * @property array<int, array{size: string, quantity: int|null}> $size_grid
+ */
 #[Fillable(['order_id', 'stock_offer_volume_id', 'product_id', 'product_code_snapshot', 'product_name_snapshot', 'product_model_snapshot', 'category_snapshot', 'line_snapshot', 'offer_type_snapshot', 'volume_code_snapshot', 'total_quantity', 'size_grid'])]
 class OrderItem extends Model
 {

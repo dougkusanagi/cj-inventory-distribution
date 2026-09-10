@@ -8,7 +8,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 
@@ -92,12 +91,9 @@ export default function Login({ status, canResetPassword }: Props) {
                             </Button>
                         </div>
 
-                        <div className="text-center text-sm text-muted-foreground">
-                            Ainda não tem uma conta?{' '}
-                            <TextLink href={register()} tabIndex={5}>
-                                Criar conta
-                            </TextLink>
-                        </div>
+                        <p className="text-center text-sm leading-6 text-muted-foreground">
+                            O acesso é exclusivo para a equipe autorizada.
+                        </p>
                     </>
                 )}
             </Form>
@@ -112,6 +108,6 @@ export default function Login({ status, canResetPassword }: Props) {
 }
 
 Login.layout = {
-    title: 'Entre na sua conta',
-    description: 'Informe seu e-mail e sua senha para entrar',
+    title: 'Acesse a área da equipe',
+    description: 'Entre com seu e-mail corporativo e sua senha.',
 };
