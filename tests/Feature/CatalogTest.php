@@ -3,6 +3,8 @@
 use App\Models\Product;
 use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('renders database products with available stock in the public catalog', function () {
@@ -43,4 +45,20 @@ test('does not expose new grade products in the public catalog', function () {
         ->component('catalog')
         ->has('products', 0)
     );
+});
+
+test('catalog keeps image URLs on the application origin', function () {
+    Storage::fake('public');
+    config(['filesystems.disks.public.url' => 'http://localhost:8000/storage']);
+
+    $product = Product::factory()->create(['name' => 'Produto com foto']);
+    $offer = StockOffer::factory()->replenishment()->for($product)->create();
+    StockOfferVolume::factory()->for($offer)->withTotal(12)->create();
+    $media = $product->addMedia(UploadedFile::fake()->image('product.jpg'))
+        ->toMediaCollection(Product::MEDIA_COLLECTION);
+
+    $this->get(route('catalog'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('products.0.image', '/storage/'.$media->getPathRelativeToRoot('thumb')),
+        );
 });
