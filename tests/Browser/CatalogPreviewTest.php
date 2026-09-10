@@ -11,7 +11,8 @@ it('replaces the starter home with a searchable catalog and never shows new grad
     visit(route('home', [], false))
         ->resize(390, 844)
         ->assertSee('Reabasteça sua loja')
-        ->assertSee('Catálogo de demonstração.')
+        ->assertDontSee('Catálogo de demonstração.')
+        ->assertDontSee('Produtos ilustrativos')
         ->assertDontSee('Grade Nova')
         ->assertDontSee('Produto interno de grade nova')
         ->type('#catalog-search', 'calca')
@@ -113,7 +114,7 @@ it('selects each physical sack once and removes it from the preview bag', functi
         ->assertVisible('button[aria-label="Remover Saco 01 da sacola"]')
         ->click('button:has-text("Revisar sacola (1)")')
         ->assertSee('1 saco · 20 peças no total')
-        ->assertSee('Esta é uma demonstração.')
+        ->assertDontSee('Esta é uma demonstração.')
         ->click('button[aria-label="Remover Saco 01 de Calça Wide Leg"]')
         ->assertSee('Sua sacola está vazia.')
         ->assertNoJavaScriptErrors();
