@@ -47,9 +47,9 @@ test('does not expose new grade products in the public catalog', function () {
     );
 });
 
-test('catalog keeps image URLs on the application origin', function () {
+test('catalog uses the configured public URL for product images', function () {
     Storage::fake('public');
-    config(['filesystems.disks.public.url' => 'http://localhost:8000/storage']);
+    config(['filesystems.disks.public.url' => 'https://inventario.cronicasjeans.com.br/storage']);
 
     $product = Product::factory()->create(['name' => 'Produto com foto']);
     $offer = StockOffer::factory()->replenishment()->for($product)->create();
@@ -59,6 +59,6 @@ test('catalog keeps image URLs on the application origin', function () {
 
     $this->get(route('catalog'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('products.0.image', '/storage/'.$media->getPathRelativeToRoot('thumb')),
+            ->where('products.0.image', $media->getUrl('thumb')),
         );
 });
