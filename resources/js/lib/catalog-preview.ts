@@ -7,5 +7,10 @@ export type CatalogPreviewProduct = {
     category: string;
     line: string;
     type: string;
-    volumes: { id: number; name: string; pieces: number; sizes: string[] }[];
+    volumes: {
+        id: number;
+        name: string;
+        pieces: number;
+        sizes: { size: string; quantity: number | null }[];
+    }[];
 };

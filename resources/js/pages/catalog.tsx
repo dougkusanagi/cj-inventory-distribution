@@ -118,6 +118,22 @@ function ProductPhoto({ product }: { product: CatalogPreviewProduct }) {
     );
 }
 
+function sizeComposition(
+    sizes: CatalogPreviewProduct['volumes'][number]['sizes'],
+) {
+    if (!sizes.some(({ quantity }) => quantity !== null)) {
+        return null;
+    }
+
+    return sizes
+        .map(({ size, quantity }) =>
+            quantity === null
+                ? `${size}: qtd. não informada`
+                : `${size}: ${quantity} ${quantity === 1 ? 'pç' : 'pçs'}`,
+        )
+        .join(' · ');
+}
+
 function ProductVolumeOptions({
     product,
     selectedVolumeIds,
@@ -141,6 +157,7 @@ function ProductVolumeOptions({
             <div className="grid gap-3">
                 {product.volumes.map((volume) => {
                     const selected = selectedVolumeIds.includes(volume.id);
+                    const composition = sizeComposition(volume.sizes);
 
                     return (
                         <section
@@ -158,12 +175,23 @@ function ProductVolumeOptions({
                                     {volume.pieces} peças
                                 </strong>
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                                Tamanhos: {volume.sizes.join(' · ')}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                Quantidade por tamanho não informada.
-                            </p>
+                            {composition ? (
+                                <p className="text-sm leading-6 text-muted-foreground tabular-nums">
+                                    {composition}
+                                </p>
+                            ) : (
+                                <div className="grid gap-1 text-muted-foreground">
+                                    <p className="text-sm">
+                                        Tamanhos:{' '}
+                                        {volume.sizes
+                                            .map(({ size }) => size)
+                                            .join(' · ')}
+                                    </p>
+                                    <p className="text-xs">
+                                        Quantidade por tamanho não informada.
+                                    </p>
+                                </div>
+                            )}
                             <Button
                                 variant={selected ? 'secondary' : 'default'}
                                 className="h-11 w-full"
@@ -252,7 +280,10 @@ function BagItems({
                                 {volume.name} · {volume.pieces} peças
                             </p>
                             <p className="text-sm text-muted-foreground">
-                                {volume.sizes.join(' · ')}
+                                {sizeComposition(volume.sizes) ??
+                                    volume.sizes
+                                        .map(({ size }) => size)
+                                        .join(' · ')}
                             </p>
                         </div>
                         <Button
@@ -670,8 +701,10 @@ export default function Catalog({
                                 ).length;
                                 const sizes = [
                                     ...new Set(
-                                        product.volumes.flatMap(
-                                            (volume) => volume.sizes,
+                                        product.volumes.flatMap((volume) =>
+                                            volume.sizes.map(
+                                                ({ size }) => size,
+                                            ),
                                         ),
                                     ),
                                 ];
