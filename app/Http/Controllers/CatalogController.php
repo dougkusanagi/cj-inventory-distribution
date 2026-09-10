@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Inertia\Inertia;
 use Inertia\Response;
 use LogicException;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class CatalogController extends Controller
 {
@@ -48,7 +47,9 @@ class CatalogController extends Controller
                     'name' => $product->name,
                     'code' => $product->code,
                     'model' => $product->model,
-                    'image' => $this->mediaUrl($cover, $imageConversion),
+                    'image' => $imageConversion === null
+                        ? $cover?->getUrl()
+                        : $cover?->getUrl($imageConversion),
                     'category' => $product->category_id === null
                         ? 'Sem categoria'
                         : $product->category->name,
@@ -64,30 +65,5 @@ class CatalogController extends Controller
             });
 
         return Inertia::render('catalog', ['products' => $products]);
-    }
-
-    /**
-     * Keep catalog media on the origin that served the page.
-     *
-     * The public disk URL can still point to a development host in an
-     * environment using a shared database or cached configuration. A path
-     * relative to the current origin works for both local and online hosts.
-     */
-    private function mediaUrl(?Media $media, ?string $conversion = null): ?string
-    {
-        if ($media === null) {
-            return null;
-        }
-
-        $url = $conversion === null
-            ? $media->getUrl()
-            : $media->getUrl($conversion);
-        $parts = parse_url($url);
-
-        if ($parts === false || ! isset($parts['path'])) {
-            return $url;
-        }
-
-        return $parts['path'].(isset($parts['query']) ? '?'.$parts['query'] : '');
     }
 }
