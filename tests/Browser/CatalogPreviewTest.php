@@ -31,7 +31,7 @@ it('replaces the starter home with a searchable catalog and never shows new grad
 it('renders a generated photo for each visible product card', function () {
     visit(route('catalog', [], false))
         ->resize(1280, 900)
-        ->assertCount('img[data-testid^="catalog-product-image-"]', 6)
+        ->assertCount('img[data-testid^="catalog-product-image-"]', 7)
         ->assertScript("(() => Array.from(document.querySelectorAll('img[data-testid^=\"catalog-product-image-\"]')).every((image) => image.getAttribute('src')?.includes('/storage/')))()")
         ->assertAttributeContains(
             'img[data-testid="catalog-product-image-1"]',
