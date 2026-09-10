@@ -89,7 +89,7 @@ function CatalogFilter({
 
 function ProductPhoto({ product }: { product: CatalogPreviewProduct }) {
     return (
-        <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-xl bg-muted/60">
+        <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-t-2xl bg-muted/60">
             <img
                 src={product.image}
                 alt={product.name}
@@ -140,13 +140,15 @@ function ProductVolumeOptions({
                             className={cn(
                                 'grid gap-3 rounded-xl border p-4',
                                 selected
-                                    ? 'border-primary bg-primary/5'
+                                    ? 'border-highlight bg-primary/5'
                                     : 'border-border',
                             )}
                         >
                             <div className="flex flex-wrap items-center justify-between gap-2">
                                 <h3 className="font-semibold">{volume.name}</h3>
-                                <strong>{volume.pieces} peças</strong>
+                                <strong className="tabular-nums">
+                                    {volume.pieces} peças
+                                </strong>
                             </div>
                             <p className="text-sm text-muted-foreground">
                                 Tamanhos: {volume.sizes.join(' · ')}
@@ -261,16 +263,6 @@ function BagItems({
     );
 }
 
-function BagDemoNotice() {
-    return (
-        <p className="rounded-lg bg-muted p-3 text-sm leading-6">
-            Esta é uma demonstração. A sacola fica apenas nesta página e será
-            limpa ao recarregar. O envio de pedidos será disponibilizado na
-            próxima etapa.
-        </p>
-    );
-}
-
 export default function Catalog() {
     const { auth } = usePage().props;
     const isMobile = useIsMobile();
@@ -332,7 +324,7 @@ export default function Catalog() {
     return (
         <>
             <Head title="Catálogo para lojistas" />
-            <div className="min-h-svh bg-background text-foreground">
+            <div className="min-h-svh bg-background text-foreground selection:bg-primary/30">
                 <a
                     href="#produtos"
                     className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:p-3 focus:text-primary-foreground"
@@ -374,21 +366,14 @@ export default function Catalog() {
 
                 <main
                     id="produtos"
-                    className="mx-auto max-w-7xl scroll-mt-24 px-4 pt-6 pb-40 sm:px-6 lg:px-8"
+                    className="mx-auto max-w-7xl scroll-mt-24 px-4 pt-5 pb-12 sm:px-6 sm:pt-8 lg:px-8"
                 >
-                    <div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm leading-6">
-                        <span className="font-semibold text-highlight">
-                            Catálogo de demonstração.
-                        </span>{' '}
-                        Produtos ilustrativos para experimentar a sacola. Nenhum
-                        pedido será enviado.
-                    </div>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                         <div className="grid gap-2">
                             <p className="text-xs font-semibold tracking-widest text-highlight uppercase">
                                 Crônicas Jeans · para lojistas
                             </p>
-                            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                            <h1 className="text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl">
                                 Reabasteça sua loja
                             </h1>
                             <p className="max-w-xl text-sm leading-6 text-muted-foreground">
@@ -403,7 +388,7 @@ export default function Catalog() {
 
                     <section
                         aria-label="Buscar e filtrar produtos"
-                        className="my-6"
+                        className="mt-8 mb-3 border-y border-border py-5"
                     >
                         <div className="grid gap-3 sm:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)_minmax(0,1fr)] sm:items-end">
                             <div className="flex items-end gap-3 sm:contents">
@@ -510,7 +495,7 @@ export default function Catalog() {
                             </Button>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
                             {filteredProducts.map((product) => {
                                 const selectedCount = product.volumes.filter(
                                     (volume) =>
@@ -528,10 +513,15 @@ export default function Catalog() {
                                     <article
                                         key={product.id}
                                         data-testid="catalog-product"
-                                        className="flex min-w-0 flex-col rounded-2xl border border-border bg-card p-4 transition-colors hover:border-input"
+                                        className={cn(
+                                            'flex min-w-0 flex-col rounded-2xl border bg-card transition-colors motion-reduce:transition-none',
+                                            selectedCount > 0
+                                                ? 'border-highlight'
+                                                : 'border-border hover:border-input',
+                                        )}
                                     >
                                         <button
-                                            className="rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                            className="rounded-t-2xl text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                                             onClick={() =>
                                                 setSelectedProduct(product)
                                             }
@@ -539,14 +529,14 @@ export default function Catalog() {
                                         >
                                             <ProductPhoto product={product} />
                                         </button>
-                                        <div className="mt-4 flex flex-1 flex-col gap-3">
+                                        <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
                                             <div>
-                                                <p className="font-mono text-xs text-highlight">
+                                                <p className="font-mono text-xs text-muted-foreground">
                                                     {product.code}
                                                     {product.model &&
                                                         ` · Mod. ${product.model}`}
                                                 </p>
-                                                <h2 className="mt-1 text-xl font-semibold tracking-tight">
+                                                <h2 className="mt-1.5 text-xl leading-snug font-semibold tracking-tight text-balance">
                                                     {product.name}
                                                 </h2>
                                             </div>
@@ -566,7 +556,7 @@ export default function Catalog() {
                                                 {sizes.map((size) => (
                                                     <span
                                                         key={size}
-                                                        className="rounded-md border border-border bg-background px-2.5 py-1 font-mono text-sm"
+                                                        className="inline-flex min-w-9 items-center justify-center rounded-md bg-muted px-2.5 py-1 text-sm font-medium tabular-nums"
                                                     >
                                                         {size}
                                                     </span>
@@ -745,7 +735,6 @@ export default function Catalog() {
                                 className="px-4 pb-5 sm:px-6"
                             />
                             <DrawerFooter className="shrink-0 border-t border-border px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">
-                                <BagDemoNotice />
                                 <DrawerClose asChild>
                                     <Button className="h-12">
                                         Continuar escolhendo
@@ -774,7 +763,6 @@ export default function Catalog() {
                                 className="flex-1 px-6 py-5"
                             />
                             <SheetFooter className="shrink-0 flex-col border-t border-border p-6 sm:flex-col sm:justify-start">
-                                <BagDemoNotice />
                                 <SheetClose asChild>
                                     <Button className="h-12">
                                         Continuar escolhendo
