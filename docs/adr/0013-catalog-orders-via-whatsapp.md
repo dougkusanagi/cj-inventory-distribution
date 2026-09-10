@@ -27,5 +27,7 @@ altera o status do pedido e não comprova o envio da mensagem.
 - o pedido continua sendo a fonte de verdade;
 - o contato pode mudar sem alterar pedidos anteriores;
 - falhas ou abandono no WhatsApp deixam um pedido pendente para revisão;
+- no painel, a finalização exige a abertura do link `wa.me`; essa confirmação é
+  transitória e não representa envio ou entrega da mensagem;
 - repetir a confirmação ainda exige uma estratégia própria de idempotência em
   uma evolução futura.

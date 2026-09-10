@@ -275,10 +275,16 @@ Envia pedido
         ↓
 Pedido fica Pendente
         ↓
-Sistema gera texto para WhatsApp
+Sistema gera link `wa.me` com o pedido
+        ↓
+Responsável abre o link (sem comprovar o envio)
         ↓
 Admin finaliza ou cancela
 ```
+
+No painel, `Finalizar pedido` só fica disponível depois que a pessoa da equipe
+abre o link `wa.me`. Essa confirmação é apenas do clique no navegador; não é
+persistida como prova de envio ou entrega da mensagem.
 
 ## Mensagem de WhatsApp
 

@@ -135,6 +135,27 @@ it('keeps the bag action in the header without a duplicate fixed action', functi
         ->assertNoJavaScriptErrors();
 });
 
+it('restores the selected sacks after reloading the catalog', function () {
+    $page = visit(route('catalog', [], false))
+        ->resize(390, 844);
+
+    $page->script('localStorage.removeItem("catalog-bag");');
+
+    $page
+        ->click('button[aria-label="Escolher sacos de Calça Wide Leg"]')
+        ->click('button[aria-label="Adicionar Saco 01"]')
+        ->click('button:has-text("Continuar escolhendo")')
+        ->refresh()
+        ->assertAttribute(
+            'button[aria-label^="Ver sacola"]',
+            'aria-label',
+            'Ver sacola, 1 sacos',
+        )
+        ->click('button[aria-label="Ver sacola, 1 sacos"]')
+        ->assertSee('1 saco · 20 peças no total')
+        ->assertNoJavaScriptErrors();
+});
+
 it('selects each physical sack once and removes it from the preview bag', function () {
     visit(route('home', [], false))
         ->resize(390, 844)

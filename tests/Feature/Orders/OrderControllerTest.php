@@ -2,6 +2,7 @@
 
 use App\Enums\OrderStatus;
 use App\Enums\StockOfferType;
+use App\Models\CatalogSetting;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\StockOfferVolume;
@@ -98,7 +99,7 @@ test('pending orders can be edited and canceled with their reservations released
         ->and($volume->refresh()->current_order_id)->toBeNull();
 });
 
-test('finalizing an order consumes every reserved sack', function () {
+test('does not finalize an order before WhatsApp is opened', function () {
     $volume = availableOrderVolume();
     $user = User::factory()->create();
     $this->actingAs($user)->post(route('orders.store'), [
@@ -109,6 +110,45 @@ test('finalizing an order consumes every reserved sack', function () {
     $order = Order::query()->sole();
 
     $this->actingAs($user)->post(route('orders.complete', $order))
+        ->assertInvalid(['whatsapp_opened' => 'Abra o WhatsApp do pedido antes de finalizá-lo.']);
+
+    expect($order->refresh()->status)->toBe(OrderStatus::Pending)
+        ->and($volume->refresh()->current_order_id)->toBe($order->id)
+        ->and($volume->consumed_at)->toBeNull();
+});
+
+test('order details expose the generated WhatsApp link', function () {
+    CatalogSetting::factory()->create(['whatsapp_number' => '5511988887777']);
+    $volume = availableOrderVolume();
+    $user = User::factory()->create();
+    $this->actingAs($user)->post(route('orders.store'), [
+        'store_name' => 'Loja Centro',
+        'requester_name' => 'Ana',
+        'whatsapp' => '5511999999999',
+        'volume_ids' => [$volume->id],
+    ]);
+    $order = Order::query()->sole();
+
+    $this->actingAs($user)
+        ->get(route('orders.show', $order))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('order.whatsapp_url', fn (string $url): bool => str_starts_with($url, 'https://wa.me/5511988887777?text='))
+        );
+});
+
+test('finalizing an order consumes every reserved sack after WhatsApp is opened', function () {
+    $volume = availableOrderVolume();
+    $user = User::factory()->create();
+    $this->actingAs($user)->post(route('orders.store'), [
+        'store_name' => 'Loja Centro',
+        'requester_name' => 'Ana',
+        'volume_ids' => [$volume->id],
+    ]);
+    $order = Order::query()->sole();
+
+    $this->actingAs($user)->post(route('orders.complete', $order), [
+        'whatsapp_opened' => true,
+    ])
         ->assertRedirect(route('orders.show', $order));
 
     expect($order->refresh()->status)->toBe(OrderStatus::Completed)

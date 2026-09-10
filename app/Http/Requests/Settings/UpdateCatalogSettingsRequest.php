@@ -31,7 +31,9 @@ class UpdateCatalogSettingsRequest extends FormRequest
     {
         $whatsapp = preg_replace('/\D+/', '', (string) $this->input('whatsapp_number'));
 
-        if ($whatsapp !== '' && ! str_starts_with($whatsapp, '55')) {
+        $hasCountryCode = str_starts_with($whatsapp, '55') && strlen($whatsapp) > 11;
+
+        if ($whatsapp !== '' && ! $hasCountryCode) {
             $whatsapp = '55'.$whatsapp;
         }
 
