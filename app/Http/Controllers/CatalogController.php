@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CatalogSetting;
 use App\Models\Product;
 use App\Models\StockOfferVolume;
+use App\Models\StockOfferVolumeItem;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -60,7 +61,10 @@ class CatalogController extends Controller
                         'id' => $volume->id,
                         'name' => 'Saco '.str_pad((string) ($volume->sort_order + 1), 2, '0', STR_PAD_LEFT),
                         'pieces' => $volume->total_quantity,
-                        'sizes' => $volume->items->pluck('size')->all(),
+                        'sizes' => $volume->items->map(fn (StockOfferVolumeItem $item): array => [
+                            'size' => $item->size,
+                            'quantity' => $item->quantity,
+                        ])->values()->all(),
                     ])->values()->all(),
                 ];
             });

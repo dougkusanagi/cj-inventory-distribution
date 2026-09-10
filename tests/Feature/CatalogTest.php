@@ -33,7 +33,10 @@ test('renders database products with available stock in the public catalog', fun
         ->where('products.0.code', 'CJ-BANCO')
         ->where('products.0.type', 'Reposição')
         ->where('products.0.volumes.0.pieces', 12)
-        ->where('products.0.volumes.0.sizes', ['M'])
+        ->where('products.0.volumes.0.sizes', [[
+            'size' => 'M',
+            'quantity' => 12,
+        ]])
     );
 });
 

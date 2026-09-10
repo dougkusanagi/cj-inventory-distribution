@@ -70,6 +70,16 @@ it('opens product selection in a side panel on desktop', function () {
         ->assertScript("(() => { const panel = document.querySelector('[data-slot=\"sheet-content\"][data-state=\"open\"]'); return panel !== null && panel.getBoundingClientRect().left > window.innerWidth / 2 && panel.getBoundingClientRect().right <= window.innerWidth; })()");
 });
 
+it('shows the quantity of each size in every sack', function () {
+    visit(route('catalog', [], false))
+        ->resize(390, 844)
+        ->click('button[aria-label="Escolher sacos de Short Mom"]')
+        ->assertSee('36: 4 pçs · 38: 4 pçs · 40: 4 pçs')
+        ->assertSee('34: 5 pçs · 38: 5 pçs')
+        ->assertDontSee('Quantidade por tamanho não informada.')
+        ->assertNoJavaScriptErrors();
+});
+
 it('opens the bag in a side panel on desktop', function () {
     visit(route('catalog', [], false))
         ->resize(1280, 900)
