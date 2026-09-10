@@ -47,6 +47,54 @@ it('shows the grade type, commercial line, and category in product cards and tab
         ->assertNoJavaScriptErrors();
 });
 
+it('collapses product filters into a mobile drawer', function () {
+    $user = User::factory()->create();
+    $category = Category::factory()->create(['name' => 'Categoria filtrada']);
+    $otherCategory = Category::factory()->create(['name' => 'Outra categoria']);
+    $matchingProduct = Product::factory()
+        ->inCategory($category)
+        ->create(['name' => 'Produto filtrado no mobile']);
+    $otherProduct = Product::factory()
+        ->inCategory($otherCategory)
+        ->create(['name' => 'Produto fora do filtro mobile']);
+
+    $this->actingAs($user);
+
+    visit(route('products.index', [], false))
+        ->resize(390, 844)
+        ->assertPresent('[data-testid="mobile-product-filters"]')
+        ->assertScript('document.querySelector(\'[data-testid="mobile-product-filters"]\').getBoundingClientRect().height < 110')
+        ->click('button[aria-label="Abrir filtros de produtos"]')
+        ->assertVisible('[data-slot="drawer-content"]')
+        ->assertSee('Filtrar produtos')
+        ->assertPresent('#mobile-product-filter-category')
+        ->click('#mobile-product-filter-category')
+        ->click('[role="option"]:has-text("Categoria filtrada")')
+        ->click('button[aria-label="Aplicar filtros de produtos"]')
+        ->assertSee($matchingProduct->name)
+        ->assertDontSee($otherProduct->name)
+        ->assertNoJavaScriptErrors();
+});
+
+it('uses only product cards on mobile', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create([
+        'name' => 'Produto em card no mobile',
+    ]);
+
+    $this->actingAs($user);
+
+    visit(route('products.index', [], false))
+        ->resize(390, 844)
+        ->assertPresent('[data-testid="product-cards"]')
+        ->assertPresent('[data-testid="product-card"]')
+        ->assertSee($product->name)
+        ->assertMissing('table[aria-label="Produtos cadastrados"]')
+        ->assertMissing('button[aria-label="Visualização em tabela"]')
+        ->assertMissing('button[aria-label="Visualização em cards"]')
+        ->assertNoJavaScriptErrors();
+});
+
 it('opens a product image gallery and changes the selected image', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create([
@@ -79,7 +127,6 @@ it('opens a product image gallery and changes the selected image', function () {
         ->click('button[aria-label="Ver imagem 1 de Produto com galeria E2E"]')
         ->assertSee('1 de 2')
         ->click('[data-testid="galeria-produto-'.$product->id.'"] > button')
-        ->click('button[aria-label="Visualização em cards"]')
         ->click('[data-testid="abrir-galeria-produto-'.$product->id.'"]')
         ->assertPresent('[data-testid="galeria-produto-'.$product->id.'"]')
         ->assertNoJavaScriptErrors();

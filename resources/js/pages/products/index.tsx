@@ -7,10 +7,18 @@ import {
     Package,
     Plus,
     Search,
+    SlidersHorizontal,
     Table2,
     Trash2,
+    X,
 } from 'lucide-react';
-import { Fragment, useState, type FormEvent } from 'react';
+import {
+    Fragment,
+    useEffect,
+    useState,
+    type FormEvent,
+    type ReactNode,
+} from 'react';
 import { destroy } from '@/actions/App/Http/Controllers/ProductController';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,6 +29,15 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import {
+    Drawer,
+    DrawerClose,
+    DrawerContent,
+    DrawerDescription,
+    DrawerFooter,
+    DrawerHeader,
+    DrawerTitle,
+} from '@/components/ui/drawer';
+import {
     Dialog,
     DialogClose,
     DialogContent,
@@ -30,6 +47,8 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
     Select,
     SelectContent,
@@ -68,6 +87,14 @@ type ProductsIndexProps = {
 
 type ProductView = 'table' | 'cards';
 
+type ProductFilterValues = {
+    search: string;
+    category: string;
+    line: string;
+    stock_offer_type: string;
+    image: string;
+};
+
 function formValue(data: FormData, name: string): string {
     const value = data.get(name);
 
@@ -84,6 +111,122 @@ function paginationLabel(label: string): string {
     }
 
     return label;
+}
+
+function ProductFilterSelect({
+    name,
+    id,
+    defaultValue,
+    placeholder,
+    label,
+    children,
+    triggerClassName,
+}: {
+    name: string;
+    id: string;
+    defaultValue: string;
+    placeholder: string;
+    label?: string;
+    children: ReactNode;
+    triggerClassName?: string;
+}) {
+    const select = (
+        <Select name={name} defaultValue={defaultValue}>
+            <SelectTrigger
+                id={id}
+                aria-label={label ?? placeholder}
+                className={cn('w-full', triggerClassName)}
+            >
+                <SelectValue placeholder={placeholder} />
+            </SelectTrigger>
+            <SelectContent>{children}</SelectContent>
+        </Select>
+    );
+
+    if (!label) {
+        return select;
+    }
+
+    return (
+        <div className="grid gap-2">
+            <Label htmlFor={id}>{label}</Label>
+            {select}
+        </div>
+    );
+}
+
+function ProductFilterFields({
+    categories,
+    idPrefix,
+    values,
+    labelled = false,
+}: {
+    categories: Category[];
+    idPrefix: string;
+    values: Omit<ProductFilterValues, 'search'>;
+    labelled?: boolean;
+}) {
+    const triggerClassName = labelled ? 'h-11' : undefined;
+
+    return (
+        <>
+            <ProductFilterSelect
+                name="category"
+                id={`${idPrefix}-category`}
+                defaultValue={values.category || 'all'}
+                placeholder="Todas as categorias"
+                label={labelled ? 'Categoria' : undefined}
+                triggerClassName={triggerClassName}
+            >
+                <SelectItem value="all">Todas as categorias</SelectItem>
+                {categories.map((category) => (
+                    <SelectItem
+                        key={category.id}
+                        value={category.id.toString()}
+                    >
+                        {category.name}
+                    </SelectItem>
+                ))}
+            </ProductFilterSelect>
+            <ProductFilterSelect
+                name="line"
+                id={`${idPrefix}-line`}
+                defaultValue={values.line || 'all'}
+                placeholder="Slim ou Plus"
+                label={labelled ? 'Linha comercial' : undefined}
+                triggerClassName={triggerClassName}
+            >
+                <SelectItem value="all">Slim e Plus</SelectItem>
+                <SelectItem value="slim">Slim</SelectItem>
+                <SelectItem value="plus">Plus</SelectItem>
+            </ProductFilterSelect>
+            <ProductFilterSelect
+                name="stock_offer_type"
+                id={`${idPrefix}-stock-offer-type`}
+                defaultValue={values.stock_offer_type || 'all'}
+                placeholder="Tipo de grade"
+                label={labelled ? 'Tipo de grade' : undefined}
+                triggerClassName={triggerClassName}
+            >
+                <SelectItem value="all">Todas as grades</SelectItem>
+                <SelectItem value="replenishment">Reposição</SelectItem>
+                <SelectItem value="new_grade">Grade Nova</SelectItem>
+                <SelectItem value="broken_grade">Grade Furada</SelectItem>
+            </ProductFilterSelect>
+            <ProductFilterSelect
+                name="image"
+                id={`${idPrefix}-image`}
+                defaultValue={values.image || 'all'}
+                placeholder="Fotos"
+                label={labelled ? 'Fotos' : undefined}
+                triggerClassName={triggerClassName}
+            >
+                <SelectItem value="all">Com ou sem foto</SelectItem>
+                <SelectItem value="with">Com foto</SelectItem>
+                <SelectItem value="without">Sem foto</SelectItem>
+            </ProductFilterSelect>
+        </>
+    );
 }
 
 function ProductImage({
@@ -250,7 +393,10 @@ function ProductCard({
     onOpenGallery: (product: Product) => void;
 }) {
     return (
-        <article className="group flex min-h-full flex-col overflow-hidden rounded-[1.75rem] border border-border/80 bg-card shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
+        <article
+            data-testid="product-card"
+            className="group flex min-h-full flex-col overflow-hidden rounded-[1.75rem] border border-border/80 bg-card shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+        >
             <div className="relative aspect-[4/5] overflow-hidden bg-featured-card">
                 <ProductImageButton
                     product={product}
@@ -471,7 +617,10 @@ export default function ProductsIndex({
     filters,
     categories,
 }: ProductsIndexProps) {
+    const isMobile = useIsMobile();
     const [view, setView] = useState<ProductView>('table');
+    const [filtersOpen, setFiltersOpen] = useState(false);
+    const [mobileSearch, setMobileSearch] = useState(filters.search);
     const [galleryProduct, setGalleryProduct] = useState<Product | null>(null);
     const [galleryImageIndex, setGalleryImageIndex] = useState(0);
     const [productToDelete, setProductToDelete] = useState<Product | null>(
@@ -488,22 +637,68 @@ export default function ProductsIndex({
         setGalleryProduct(product);
     };
 
+    const applyFilters = (values: ProductFilterValues) => {
+        setMobileSearch(values.search);
+        router.get(productsIndex.url(), values, {
+            preserveState: true,
+            replace: true,
+            onSuccess: () => setFiltersOpen(false),
+        });
+    };
+
     const submitFilters = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
 
-        router.get(
-            productsIndex.url(),
-            {
-                search: formValue(data, 'search'),
-                category: formValue(data, 'category'),
-                line: formValue(data, 'line'),
-                stock_offer_type: formValue(data, 'stock_offer_type'),
-                image: formValue(data, 'image'),
-            },
-            { preserveState: true, replace: true },
-        );
+        applyFilters({
+            search: formValue(data, 'search'),
+            category: formValue(data, 'category'),
+            line: formValue(data, 'line'),
+            stock_offer_type: formValue(data, 'stock_offer_type'),
+            image: formValue(data, 'image'),
+        });
     };
+
+    useEffect(() => {
+        setMobileSearch(filters.search);
+    }, [filters.search]);
+
+    const submitMobileSearch = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+
+        applyFilters({
+            search: formValue(data, 'search'),
+            category: filters.category?.toString() ?? 'all',
+            line: filters.line || 'all',
+            stock_offer_type: filters.stock_offer_type || 'all',
+            image: filters.image || 'all',
+        });
+    };
+
+    const clearFilters = () => {
+        applyFilters({
+            search: '',
+            category: '',
+            line: '',
+            stock_offer_type: '',
+            image: '',
+        });
+    };
+
+    const filterValues: Omit<ProductFilterValues, 'search'> = {
+        category: filters.category?.toString() ?? 'all',
+        line: filters.line || 'all',
+        stock_offer_type: filters.stock_offer_type || 'all',
+        image: filters.image || 'all',
+    };
+    const activeFilterCount = [
+        filters.category !== null,
+        filters.line !== '' && filters.line !== 'all',
+        filters.stock_offer_type !== '' && filters.stock_offer_type !== 'all',
+        filters.image !== '' && filters.image !== 'all',
+    ].filter(Boolean).length;
+    const hasAppliedFilters = filters.search !== '' || activeFilterCount > 0;
 
     const handleDelete = () => {
         if (!productToDelete) {
@@ -554,9 +749,126 @@ export default function ProductsIndex({
                     </Button>
                 </header>
 
+                <div className="md:hidden">
+                    <form
+                        onSubmit={submitMobileSearch}
+                        data-testid="mobile-product-filters"
+                        aria-label="Buscar produtos"
+                        className="grid gap-2 rounded-[1.25rem] border border-border/80 bg-card p-3 shadow-sm"
+                    >
+                        <div className="flex items-center gap-2">
+                            <Input
+                                id="mobile-product-search"
+                                name="search"
+                                type="search"
+                                value={mobileSearch}
+                                placeholder="Buscar por nome"
+                                aria-label="Buscar por nome"
+                                onChange={(event) =>
+                                    setMobileSearch(event.target.value)
+                                }
+                                className="h-11 bg-background"
+                            />
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                className="h-11 shrink-0 gap-2 px-3"
+                                aria-expanded={filtersOpen}
+                                aria-controls="mobile-product-filter-drawer"
+                                aria-label="Abrir filtros de produtos"
+                                onClick={() => setFiltersOpen(true)}
+                            >
+                                <SlidersHorizontal />
+                                <span>Filtros</span>
+                                {activeFilterCount > 0 && (
+                                    <span className="flex min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs font-bold text-primary-foreground">
+                                        {activeFilterCount}
+                                    </span>
+                                )}
+                            </Button>
+                        </div>
+                        {hasAppliedFilters && activeFilterCount > 0 && (
+                            <p className="px-1 text-xs text-muted-foreground">
+                                {activeFilterCount}{' '}
+                                {activeFilterCount === 1
+                                    ? 'filtro aplicado'
+                                    : 'filtros aplicados'}
+                            </p>
+                        )}
+                    </form>
+
+                    <Drawer open={filtersOpen} onOpenChange={setFiltersOpen}>
+                        <DrawerContent
+                            id="mobile-product-filter-drawer"
+                            className="mx-auto max-w-2xl"
+                        >
+                            <form
+                                onSubmit={submitFilters}
+                                className="flex min-h-0 flex-1 flex-col"
+                            >
+                                <DrawerHeader className="relative shrink-0 px-4 pt-5 pr-16 pb-4 text-left sm:px-6">
+                                    <DrawerTitle>Filtrar produtos</DrawerTitle>
+                                    <DrawerDescription>
+                                        Refine a lista e aplique todos os
+                                        filtros de uma vez.
+                                    </DrawerDescription>
+                                    <DrawerClose asChild>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="absolute top-4 right-4 size-11"
+                                            aria-label="Fechar filtros de produtos"
+                                        >
+                                            <X />
+                                        </Button>
+                                    </DrawerClose>
+                                </DrawerHeader>
+                                <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 sm:px-6">
+                                    <div className="grid gap-4">
+                                        <input
+                                            type="hidden"
+                                            name="search"
+                                            value={mobileSearch}
+                                            readOnly
+                                        />
+                                        <ProductFilterFields
+                                            key={`mobile-${Object.values(filterValues).join('-')}`}
+                                            categories={categories}
+                                            idPrefix="mobile-product-filter"
+                                            values={filterValues}
+                                            labelled
+                                        />
+                                    </div>
+                                </div>
+                                <DrawerFooter className="shrink-0 border-t border-border px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">
+                                    <Button
+                                        type="submit"
+                                        className="h-11"
+                                        aria-label="Aplicar filtros de produtos"
+                                    >
+                                        <Search />
+                                        Aplicar filtros
+                                    </Button>
+                                    {hasAppliedFilters && (
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            className="h-11"
+                                            onClick={clearFilters}
+                                        >
+                                            Limpar filtros
+                                        </Button>
+                                    )}
+                                </DrawerFooter>
+                            </form>
+                        </DrawerContent>
+                    </Drawer>
+                </div>
+
                 <form
                     onSubmit={submitFilters}
-                    className="grid gap-3 rounded-[1.75rem] border border-border/80 bg-card p-4 shadow-sm xl:grid-cols-[minmax(0,1.4fr)_minmax(11rem,1fr)_minmax(9rem,.75fr)_minmax(10rem,.9fr)_minmax(10rem,.8fr)_auto]"
+                    className="hidden gap-3 rounded-[1.75rem] border border-border/80 bg-card p-4 shadow-sm md:grid xl:grid-cols-[minmax(0,1.4fr)_minmax(11rem,1fr)_minmax(9rem,.75fr)_minmax(10rem,.9fr)_minmax(10rem,.8fr)_auto]"
                 >
                     <Input
                         name="search"
@@ -564,67 +876,12 @@ export default function ProductsIndex({
                         placeholder="Buscar por nome"
                         aria-label="Buscar por nome"
                     />
-                    <Select
-                        name="category"
-                        defaultValue={filters.category?.toString() ?? 'all'}
-                    >
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Todas as categorias" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">
-                                Todas as categorias
-                            </SelectItem>
-                            {categories.map((category) => (
-                                <SelectItem
-                                    key={category.id}
-                                    value={category.id.toString()}
-                                >
-                                    {category.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Select name="line" defaultValue={filters.line || 'all'}>
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Slim ou Plus" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Slim e Plus</SelectItem>
-                            <SelectItem value="slim">Slim</SelectItem>
-                            <SelectItem value="plus">Plus</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Select
-                        name="stock_offer_type"
-                        defaultValue={filters.stock_offer_type || 'all'}
-                    >
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Tipo de grade" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todas as grades</SelectItem>
-                            <SelectItem value="replenishment">
-                                Reposição
-                            </SelectItem>
-                            <SelectItem value="new_grade">
-                                Grade Nova
-                            </SelectItem>
-                            <SelectItem value="broken_grade">
-                                Grade Furada
-                            </SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Select name="image" defaultValue={filters.image || 'all'}>
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Fotos" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Com ou sem foto</SelectItem>
-                            <SelectItem value="with">Com foto</SelectItem>
-                            <SelectItem value="without">Sem foto</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <ProductFilterFields
+                        key={`desktop-${Object.values(filterValues).join('-')}`}
+                        categories={categories}
+                        idPrefix="desktop-product-filter"
+                        values={filterValues}
+                    />
                     <Button type="submit" variant="secondary">
                         <Search />
                         Filtrar
@@ -633,50 +890,47 @@ export default function ProductsIndex({
 
                 {products.data.length > 0 ? (
                     <>
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <p className="text-sm text-muted-foreground">
-                                Escolha como visualizar seu catálogo.
-                            </p>
-                            <ToggleGroup
-                                type="single"
-                                value={view}
-                                onValueChange={(value) => {
-                                    if (value) {
-                                        setView(value as ProductView);
-                                    }
-                                }}
-                                variant="outline"
-                                size="sm"
-                                aria-label="Escolher visualização dos produtos"
-                                className="w-full sm:w-fit"
-                            >
-                                <ToggleGroupItem
-                                    value="table"
-                                    aria-label="Visualização em tabela"
-                                    className="flex-1 px-3 data-[state=on]:bg-secondary sm:flex-none"
+                        {!isMobile && (
+                            <div className="hidden flex-col gap-3 md:flex md:flex-row md:items-center md:justify-between">
+                                <p className="text-sm text-muted-foreground">
+                                    Escolha como visualizar seu catálogo.
+                                </p>
+                                <ToggleGroup
+                                    type="single"
+                                    value={view}
+                                    onValueChange={(value) => {
+                                        if (value) {
+                                            setView(value as ProductView);
+                                        }
+                                    }}
+                                    variant="outline"
+                                    size="sm"
+                                    aria-label="Escolher visualização dos produtos"
+                                    className="w-full md:w-fit"
                                 >
-                                    <Table2 />
-                                    Tabela
-                                </ToggleGroupItem>
-                                <ToggleGroupItem
-                                    value="cards"
-                                    aria-label="Visualização em cards"
-                                    className="flex-1 px-3 data-[state=on]:bg-secondary sm:flex-none"
-                                >
-                                    <LayoutGrid />
-                                    Cards
-                                </ToggleGroupItem>
-                            </ToggleGroup>
-                        </div>
+                                    <ToggleGroupItem
+                                        value="table"
+                                        aria-label="Visualização em tabela"
+                                        className="flex-1 px-3 data-[state=on]:bg-secondary md:flex-none"
+                                    >
+                                        <Table2 />
+                                        Tabela
+                                    </ToggleGroupItem>
+                                    <ToggleGroupItem
+                                        value="cards"
+                                        aria-label="Visualização em cards"
+                                        className="flex-1 px-3 data-[state=on]:bg-secondary md:flex-none"
+                                    >
+                                        <LayoutGrid />
+                                        Cards
+                                    </ToggleGroupItem>
+                                </ToggleGroup>
+                            </div>
+                        )}
 
-                        {view === 'table' ? (
-                            <ProductTable
-                                products={products.data}
-                                onDelete={setProductToDelete}
-                                onOpenGallery={openProductGallery}
-                            />
-                        ) : (
+                        {isMobile || view === 'cards' ? (
                             <section
+                                data-testid="product-cards"
                                 className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
                                 aria-label="Produtos cadastrados"
                             >
@@ -689,6 +943,12 @@ export default function ProductsIndex({
                                     />
                                 ))}
                             </section>
+                        ) : (
+                            <ProductTable
+                                products={products.data}
+                                onDelete={setProductToDelete}
+                                onOpenGallery={openProductGallery}
+                            />
                         )}
                     </>
                 ) : (
