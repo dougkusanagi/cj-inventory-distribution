@@ -36,6 +36,13 @@ test('authenticated users can visit the dashboard', function () {
         );
 });
 
+test('the dashboard and internal resources use the Portuguese panel paths', function () {
+    expect(route('dashboard', absolute: false))->toBe('/painel')
+        ->and(route('products.index', absolute: false))->toBe('/painel/produtos')
+        ->and(route('categories.index', absolute: false))->toBe('/painel/categorias')
+        ->and(route('orders.index', absolute: false))->toBe('/painel/pedidos');
+});
+
 test('dashboard stock units are summed from physical sacks', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();

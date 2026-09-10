@@ -38,6 +38,13 @@ test('seeds a repeatable catalog demo with classified products and physical sack
         ->firstOrFail();
 
     expect($newGrade->latestOffer->type)->toBe(StockOfferType::NewGrade);
+
+    $skirt = Product::query()->where('code', 'DEMO-CJ-0007')->firstOrFail();
+
+    expect($skirt->getMedia(Product::MEDIA_COLLECTION))
+        ->toHaveCount(1)
+        ->and($skirt->getFirstMedia(Product::MEDIA_COLLECTION)?->file_name)
+        ->toBe('saia-midi.png');
 });
 
 test('product and category factories expose catalog classifications', function () {

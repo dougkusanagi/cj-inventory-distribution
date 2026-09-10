@@ -134,7 +134,7 @@ class CatalogDemoSeeder extends Seeder
                 'model' => '2870',
                 'name' => 'Saia Midi',
                 'category' => 'saia',
-                'image' => null,
+                'image' => 'saia-midi.png',
                 'line' => ProductLine::Plus,
                 'type' => StockOfferType::BrokenGrade,
                 'volumes' => [
