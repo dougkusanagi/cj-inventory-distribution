@@ -1,13 +1,14 @@
 <?php
 
+use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'welcome')->name('home');
-Route::inertia('catalog', 'catalog')->name('catalog');
+Route::get('/', CatalogController::class)->name('home');
+Route::get('catalog', CatalogController::class)->name('catalog');
 Route::inertia('design-system', 'design-system')->name('design-system');
 
 Route::middleware(['auth', 'verified'])->group(function () {

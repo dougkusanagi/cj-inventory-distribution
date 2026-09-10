@@ -150,8 +150,8 @@ só aparece quando produto e oferta estão ativos, existe ao menos um saco e o
 total agregado é maior que zero.
 
 Além dessas condições, o catálogo para lojistas **nunca mostra Grade Nova**.
-O frontend demonstrativo já aplica essa exclusão; o scope de backend ainda
-deve ser atualizado antes da conexão aos dados reais. Grade Nova continua
+O scope de backend aplica essa exclusão antes de enviar os dados ao frontend.
+Grade Nova continua
 válida para gestão interna, sem opção de publicá-la no catálogo.
 
 ## StockOfferVolume

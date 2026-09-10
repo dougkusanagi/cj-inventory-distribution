@@ -47,6 +47,7 @@ class CatalogDemoSeeder extends Seeder
          *     model: string|null,
          *     name: string,
          *     category: string,
+         *     image: string|null,
          *     line: ProductLine,
          *     type: StockOfferType,
          *     volumes: list<array{total: int, sizes: array<string, int>}>
@@ -58,6 +59,7 @@ class CatalogDemoSeeder extends Seeder
                 'model' => '2451',
                 'name' => 'Calça Wide Leg',
                 'category' => 'calca',
+                'image' => 'calca-wide-leg.png',
                 'line' => ProductLine::Slim,
                 'type' => StockOfferType::Replenishment,
                 'volumes' => [
@@ -70,6 +72,7 @@ class CatalogDemoSeeder extends Seeder
                 'model' => '1820',
                 'name' => 'Bermuda Jeans',
                 'category' => 'bermuda',
+                'image' => 'bermuda-jeans.png',
                 'line' => ProductLine::Plus,
                 'type' => StockOfferType::Replenishment,
                 'volumes' => [
@@ -81,6 +84,7 @@ class CatalogDemoSeeder extends Seeder
                 'model' => '1938',
                 'name' => 'Short Mom',
                 'category' => 'short',
+                'image' => 'short-mom.png',
                 'line' => ProductLine::Slim,
                 'type' => StockOfferType::BrokenGrade,
                 'volumes' => [
@@ -91,8 +95,9 @@ class CatalogDemoSeeder extends Seeder
             [
                 'code' => 'DEMO-CJ-0004',
                 'model' => null,
-                'name' => 'Cropped Básico',
+                'name' => 'Cropped Jeans',
                 'category' => 'cropped',
+                'image' => 'cropped-jeans.png',
                 'line' => ProductLine::Plus,
                 'type' => StockOfferType::BrokenGrade,
                 'volumes' => [
@@ -104,6 +109,7 @@ class CatalogDemoSeeder extends Seeder
                 'model' => '3107',
                 'name' => 'Calça Reta',
                 'category' => 'calca',
+                'image' => 'calca-reta.png',
                 'line' => ProductLine::Plus,
                 'type' => StockOfferType::Replenishment,
                 'volumes' => [
@@ -116,6 +122,7 @@ class CatalogDemoSeeder extends Seeder
                 'model' => '2040',
                 'name' => 'Bermuda Ciclista',
                 'category' => 'bermuda',
+                'image' => 'bermuda-ciclista.png',
                 'line' => ProductLine::Slim,
                 'type' => StockOfferType::Replenishment,
                 'volumes' => [
@@ -127,6 +134,7 @@ class CatalogDemoSeeder extends Seeder
                 'model' => '2870',
                 'name' => 'Saia Midi',
                 'category' => 'saia',
+                'image' => null,
                 'line' => ProductLine::Plus,
                 'type' => StockOfferType::BrokenGrade,
                 'volumes' => [
@@ -138,6 +146,7 @@ class CatalogDemoSeeder extends Seeder
                 'model' => '9999',
                 'name' => 'Grade Nova Interna',
                 'category' => 'blusa',
+                'image' => 'produto-interno-grade-nova.png',
                 'line' => ProductLine::Slim,
                 'type' => StockOfferType::NewGrade,
                 'volumes' => [
@@ -158,6 +167,13 @@ class CatalogDemoSeeder extends Seeder
                     'is_active' => true,
                 ],
             );
+
+            if ($definition['image'] !== null && ! $product->hasMedia(Product::MEDIA_COLLECTION)) {
+                $product
+                    ->addMedia(public_path('images/products/'.$definition['image']))
+                    ->preservingOriginal()
+                    ->toMediaCollection(Product::MEDIA_COLLECTION);
+            }
 
             $offer = $product->offers()->latest('id')->first() ?? new StockOffer;
             $offer->product()->associate($product);

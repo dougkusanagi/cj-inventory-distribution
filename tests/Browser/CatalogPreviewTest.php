@@ -1,10 +1,12 @@
 <?php
 
+use Database\Seeders\CatalogDemoSeeder;
 use Illuminate\Support\Facades\Vite;
 
 beforeEach(function (): void {
     config(['inertia.ssr.enabled' => false]);
     Vite::useHotFile(storage_path('framework/testing-hot-file'));
+    $this->seed(CatalogDemoSeeder::class);
 });
 
 it('replaces the starter home with a searchable catalog and never shows new grade offers', function () {
@@ -21,7 +23,7 @@ it('replaces the starter home with a searchable catalog and never shows new grad
         ->type('#catalog-search', 'referencia-inexistente')
         ->assertSee('Nenhum produto encontrado')
         ->click('Ver todos os produtos')
-        ->assertSee('6 produtos encontrados')
+        ->assertSee('7 produtos encontrados')
         ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
         ->assertNoJavaScriptErrors();
 });
@@ -30,11 +32,11 @@ it('renders a generated photo for each visible product card', function () {
     visit(route('catalog', [], false))
         ->resize(1280, 900)
         ->assertCount('img[data-testid^="catalog-product-image-"]', 6)
-        ->assertScript("(() => Array.from(document.querySelectorAll('img[data-testid^=\"catalog-product-image-\"]')).every((image) => image.getAttribute('src')?.startsWith('/images/products/')))()")
+        ->assertScript("(() => Array.from(document.querySelectorAll('img[data-testid^=\"catalog-product-image-\"]')).every((image) => image.getAttribute('src')?.includes('/storage/')))()")
         ->assertAttributeContains(
             'img[data-testid="catalog-product-image-1"]',
             'src',
-            '/images/products/calca-wide-leg.png',
+            '/storage/',
         )
         ->assertAttribute(
             'img[data-testid="catalog-product-image-1"]',
@@ -55,7 +57,7 @@ it('combines category and line filters and clears them', function () {
         ->assertSee('Calça Reta')
         ->assertDontSee('Calça Wide Leg')
         ->click('Limpar filtros')
-        ->assertSee('6 produtos encontrados')
+        ->assertSee('7 produtos encontrados')
         ->assertNoJavaScriptErrors();
 });
 

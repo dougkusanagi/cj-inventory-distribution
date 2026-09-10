@@ -94,11 +94,11 @@ precisam estar ativos, existir ao menos um saco com total positivo e a oferta
 não pode ser Grade Nova.
 
 **Regra atualizada do catálogo para lojistas:** Grade Nova nunca aparece,
-mesmo com produto/oferta ativos e estoque positivo. A exclusão está implementada
-na prévia de frontend e planejada para a consulta real de backend. Veja o
+mesmo com produto/oferta ativos e estoque positivo. A exclusão é aplicada
+na consulta real do backend. Veja o
 [plano de catálogo e pedidos](docs/CATALOGO-E-PEDIDOS.md), que também documenta
-categorias, Slim/Plus, pedidos, conferência e WhatsApp. A home atual é uma
-demonstração com dados ilustrativos e não registra pedidos.
+categorias, Slim/Plus, pedidos, conferência e WhatsApp. A home lista o estoque
+persistido disponível e ainda não registra pedidos.
 
 ### Pedido
 
