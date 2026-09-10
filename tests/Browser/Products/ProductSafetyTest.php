@@ -26,7 +26,7 @@ it('shows validation feedback and does not save an invalid stock offer', functio
 
     $page
         ->assertRoute('products.create')
-        ->assertAttribute('#product-tab-product', 'aria-selected', 'true')
+        ->assertAttribute('#product-tab-details', 'aria-selected', 'true')
         ->assertSee('Não foi possível salvar o produto.')
         ->assertSee('Informe o nome do produto.')
         ->assertSee('Informe o total do saco quando nenhuma quantidade por tamanho for conhecida.')
@@ -86,14 +86,14 @@ it('keeps a second sack when its removal is cancelled', function () {
     expect($offer->stockVolumes()->count())->toBe(2);
 });
 
-it('opens the stock tab when saving from the product tab returns stock errors', function () {
+it('opens the stock tab when saving from the details tab returns stock errors', function () {
     $this->actingAs(User::factory()->create());
 
     $page = visit(route('products.create', [], false))
         ->type('#product-name', 'Produto com estoque incompleto')
         ->click('#product-tab-stock')
         ->click('#has-stock-offer')
-        ->click('#product-tab-product');
+        ->click('#product-tab-details');
 
     $page->submit()->wait(1);
 
@@ -107,7 +107,7 @@ it('opens the stock tab when saving from the product tab returns stock errors', 
     expect(Product::query()->count())->toBe(0);
 });
 
-it('opens the product tab for native validation when saving from stock', function () {
+it('opens the details tab for native validation when saving from stock', function () {
     $this->actingAs(User::factory()->create());
 
     $page = visit(route('products.create', [], false))
@@ -117,7 +117,7 @@ it('opens the product tab for native validation when saving from stock', functio
     $page->submit();
 
     $page
-        ->assertAttribute('#product-tab-product', 'aria-selected', 'true')
+        ->assertAttribute('#product-tab-details', 'aria-selected', 'true')
         ->assertVisible('#product-name')
         ->assertScript('document.activeElement.id === "product-name"')
         ->click('#product-tab-stock')

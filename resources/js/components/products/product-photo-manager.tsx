@@ -84,12 +84,19 @@ export type PhotoChange = {
     removeMediaIds: number[];
 };
 
+export type ProductCoverPreview = {
+    url: string;
+    name: string;
+    kind: PhotoItem['kind'];
+};
+
 type PhotoManagerProps = {
     value: File[];
     existingImages: ProductImage[];
     error?: string;
     errors?: Record<string, string>;
     onChange: (change: PhotoChange) => void;
+    onCoverChange?: (cover: ProductCoverPreview | null) => void;
     onProcessingChange?: (processing: boolean) => void;
 };
 
@@ -337,6 +344,7 @@ export function ProductPhotoManager({
     error,
     errors = {},
     onChange,
+    onCoverChange,
     onProcessingChange,
 }: PhotoManagerProps) {
     const isMobile = useIsMobile();
@@ -391,6 +399,23 @@ export function ProductPhotoManager({
     useEffect(() => {
         onChangeRef.current(serializePhotos(state.items));
     }, [state.items]);
+
+    useEffect(() => {
+        const cover = state.items.find((item) => !item.removed);
+
+        onCoverChange?.(
+            cover
+                ? {
+                      url:
+                          cover.kind === 'existing'
+                              ? cover.thumbUrl
+                              : cover.previewUrl,
+                      name: cover.name,
+                      kind: cover.kind,
+                  }
+                : null,
+        );
+    }, [onCoverChange, state.items]);
 
     useEffect(() => {
         onProcessingChange?.(processing);
