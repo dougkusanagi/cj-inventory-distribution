@@ -45,6 +45,13 @@ test('seeds a repeatable catalog demo with classified products and physical sack
         ->toHaveCount(1)
         ->and($skirt->getFirstMedia(Product::MEDIA_COLLECTION)?->file_name)
         ->toBe('saia-midi.png');
+
+    $shortMom = Product::query()->where('code', 'DEMO-CJ-0003')->firstOrFail();
+
+    expect($shortMom->getMedia(Product::MEDIA_COLLECTION))
+        ->toHaveCount(1)
+        ->and($shortMom->getFirstMedia(Product::MEDIA_COLLECTION)?->file_name)
+        ->toBe('short-mom.png');
 });
 
 test('product and category factories expose catalog classifications', function () {

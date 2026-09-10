@@ -11,6 +11,7 @@ import {
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import CatalogOrderController from '@/actions/App/Http/Controllers/CatalogOrderController';
+import AppearanceToggleTab from '@/components/appearance-tabs';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -134,6 +135,53 @@ function sizeComposition(
         .join(' · ');
 }
 
+function SizeBreakdown({
+    sizes,
+}: {
+    sizes: CatalogPreviewProduct['volumes'][number]['sizes'];
+}) {
+    if (!sizes.some(({ quantity }) => quantity !== null)) {
+        return (
+            <div className="grid gap-1 text-muted-foreground">
+                <p className="text-sm">
+                    Tamanhos: {sizes.map(({ size }) => size).join(' · ')}
+                </p>
+                <p className="text-xs">Quantidade por tamanho não informada.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="grid gap-2">
+            <p className="text-xs font-medium text-muted-foreground">
+                Conteúdo por tamanho
+            </p>
+            <dl className="flex flex-wrap gap-2">
+                {sizes.map(({ size, quantity }) => (
+                    <div
+                        key={size}
+                        className="grid min-w-16 justify-items-center gap-0.5 rounded-lg bg-muted px-3 py-2 tabular-nums"
+                        aria-label={
+                            quantity === null
+                                ? `Tamanho ${size}, quantidade não informada`
+                                : `Tamanho ${size}, ${quantity} ${quantity === 1 ? 'peça' : 'peças'}`
+                        }
+                    >
+                        <dt className="text-base leading-5 font-semibold text-foreground">
+                            {size}
+                        </dt>
+                        <dd className="text-xs leading-4 text-muted-foreground">
+                            {quantity === null
+                                ? 'Não informada'
+                                : `${quantity} ${quantity === 1 ? 'pç' : 'pçs'}`}
+                        </dd>
+                    </div>
+                ))}
+            </dl>
+        </div>
+    );
+}
+
 function ProductVolumeOptions({
     product,
     selectedVolumeIds,
@@ -157,7 +205,6 @@ function ProductVolumeOptions({
             <div className="grid gap-3">
                 {product.volumes.map((volume) => {
                     const selected = selectedVolumeIds.includes(volume.id);
-                    const composition = sizeComposition(volume.sizes);
 
                     return (
                         <section
@@ -175,23 +222,7 @@ function ProductVolumeOptions({
                                     {volume.pieces} peças
                                 </strong>
                             </div>
-                            {composition ? (
-                                <p className="text-sm leading-6 text-muted-foreground tabular-nums">
-                                    {composition}
-                                </p>
-                            ) : (
-                                <div className="grid gap-1 text-muted-foreground">
-                                    <p className="text-sm">
-                                        Tamanhos:{' '}
-                                        {volume.sizes
-                                            .map(({ size }) => size)
-                                            .join(' · ')}
-                                    </p>
-                                    <p className="text-xs">
-                                        Quantidade por tamanho não informada.
-                                    </p>
-                                </div>
-                            )}
+                            <SizeBreakdown sizes={volume.sizes} />
                             <Button
                                 variant={selected ? 'secondary' : 'default'}
                                 className="h-11 w-full"
@@ -541,18 +572,24 @@ export default function Catalog({
                                 className="hidden h-10 w-auto object-contain sm:h-12 dark:block"
                             />
                         </a>
-                        <Button
-                            variant="secondary"
-                            className="h-11 shrink-0 gap-2"
-                            onClick={() => setBagOpen(true)}
-                            aria-label={`Ver sacola, ${bag.length} sacos`}
-                        >
-                            <ShoppingBag aria-hidden="true" />
-                            <span>Sacola</span>
-                            <span className="flex min-w-6 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-bold text-primary-foreground">
-                                {bag.length}
-                            </span>
-                        </Button>
+                        <div className="flex shrink-0 items-center gap-2">
+                            <AppearanceToggleTab
+                                collapsed
+                                dropdownSide="bottom"
+                            />
+                            <Button
+                                variant="secondary"
+                                className="h-11 gap-2"
+                                onClick={() => setBagOpen(true)}
+                                aria-label={`Ver sacola, ${bag.length} sacos`}
+                            >
+                                <ShoppingBag aria-hidden="true" />
+                                <span>Sacola</span>
+                                <span className="flex min-w-6 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-bold text-primary-foreground">
+                                    {bag.length}
+                                </span>
+                            </Button>
+                        </div>
                     </div>
                 </header>
 

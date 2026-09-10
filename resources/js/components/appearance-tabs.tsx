@@ -16,10 +16,14 @@ import { cn } from '@/lib/utils';
 
 type AppearanceToggleTabProps = HTMLAttributes<HTMLDivElement> & {
     collapsed?: boolean;
+    dropdownAlign?: 'start' | 'center' | 'end';
+    dropdownSide?: 'top' | 'right' | 'bottom' | 'left';
 };
 
 export default function AppearanceToggleTab({
     collapsed = false,
+    dropdownAlign = 'end',
+    dropdownSide = 'right',
     className = '',
     ...props
 }: AppearanceToggleTabProps) {
@@ -57,8 +61,8 @@ export default function AppearanceToggleTab({
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
-                        side="right"
-                        align="end"
+                        side={dropdownSide}
+                        align={dropdownAlign}
                         className="min-w-40"
                     >
                         <DropdownMenuLabel>Tema da interface</DropdownMenuLabel>

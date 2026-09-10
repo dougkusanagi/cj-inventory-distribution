@@ -46,6 +46,20 @@ it('renders a generated photo for each visible product card', function () {
         ->assertNoJavaScriptErrors();
 });
 
+it('changes the catalog theme from the top navigation selector', function () {
+    visit(route('catalog', [], false))
+        ->resize(390, 844)
+        ->assertPresent('button[aria-label="Selecionar tema da interface"]')
+        ->click('button[aria-label="Selecionar tema da interface"]')
+        ->assertSee('Sistema')
+        ->assertSee('Claro')
+        ->assertSee('Escuro')
+        ->click('[role="menuitemradio"]:has-text("Escuro")')
+        ->assertScript('document.documentElement.classList.contains("dark")')
+        ->assertScript('localStorage.getItem("appearance") === "dark"')
+        ->assertNoJavaScriptErrors();
+});
+
 it('combines category and line filters and clears them', function () {
     visit(route('catalog', [], false))
         ->resize(1280, 900)
@@ -74,8 +88,11 @@ it('shows the quantity of each size in every sack', function () {
     visit(route('catalog', [], false))
         ->resize(390, 844)
         ->click('button[aria-label="Escolher sacos de Short Mom"]')
-        ->assertSee('36: 4 pçs · 38: 4 pçs · 40: 4 pçs')
-        ->assertSee('34: 5 pçs · 38: 5 pçs')
+        ->assertSee('Conteúdo por tamanho')
+        ->assertVisible('[aria-label="Tamanho 36, 4 peças"]')
+        ->assertVisible('[aria-label="Tamanho 40, 4 peças"]')
+        ->assertVisible('[aria-label="Tamanho 34, 5 peças"]')
+        ->assertVisible('[aria-label="Tamanho 38, 5 peças"]')
         ->assertDontSee('Quantidade por tamanho não informada.')
         ->assertNoJavaScriptErrors();
 });
