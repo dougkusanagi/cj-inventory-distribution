@@ -19,6 +19,17 @@ it('stores the normalized WhatsApp destination for catalog orders', function () 
     expect(CatalogSetting::query()->sole()->whatsapp_number)->toBe('5511999999999');
 });
 
+it('stores a national WhatsApp destination with area code 55', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->put(route('catalog-settings.update'), [
+        'whatsapp_number' => '(55) 99999-8888',
+    ]);
+
+    $response->assertRedirect(route('catalog-settings.edit'));
+    expect(CatalogSetting::query()->sole()->whatsapp_number)->toBe('5555999998888');
+});
+
 it('shows the current WhatsApp destination', function () {
     $setting = CatalogSetting::factory()->create();
 

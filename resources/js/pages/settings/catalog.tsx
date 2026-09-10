@@ -1,5 +1,6 @@
 import { Form, Head } from '@inertiajs/react';
 import { MessageCircle } from 'lucide-react';
+import { useState } from 'react';
 import CatalogSettingsController from '@/actions/App/Http/Controllers/Settings/CatalogSettingsController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
@@ -8,11 +9,67 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { edit } from '@/routes/catalog-settings';
 
+function onlyDigits(value: string): string {
+    return value.replace(/\D/g, '');
+}
+
+function formatNationalPhoneNumber(value: string): string {
+    const areaCode = value.slice(0, 2);
+    const phone = value.slice(2);
+
+    if (areaCode.length === 0) {
+        return '';
+    }
+
+    if (areaCode.length === 1) {
+        return `(${areaCode}`;
+    }
+
+    if (phone.length === 0) {
+        return `(${areaCode})`;
+    }
+
+    if (phone.length <= 4) {
+        return `(${areaCode}) ${phone}`;
+    }
+
+    if (phone.length <= 8) {
+        return `(${areaCode}) ${phone.slice(0, 4)}-${phone.slice(4)}`;
+    }
+
+    return `(${areaCode}) ${phone.slice(0, 5)}-${phone.slice(5, 9)}`;
+}
+
+function formatWhatsAppNumber(value: string): string {
+    const digits = onlyDigits(value);
+    const hasCountryCode =
+        value.trim().startsWith('+55') ||
+        (digits.startsWith('55') && digits.length > 11);
+    const nationalNumber = hasCountryCode
+        ? digits.slice(2, 13)
+        : digits.slice(0, 11);
+    const formattedNationalNumber = formatNationalPhoneNumber(nationalNumber);
+
+    if (!hasCountryCode) {
+        return formattedNationalNumber;
+    }
+
+    if (formattedNationalNumber === '') {
+        return '+55';
+    }
+
+    return `+55 ${formattedNationalNumber}`;
+}
+
 export default function CatalogSettings({
     whatsappNumber,
 }: {
     whatsappNumber: string | null;
 }) {
+    const [formattedWhatsAppNumber, setFormattedWhatsAppNumber] = useState(
+        formatWhatsAppNumber(whatsappNumber ?? ''),
+    );
+
     return (
         <>
             <Head title="Configurações do catálogo" />
@@ -42,8 +99,15 @@ export default function CatalogSettings({
                                     type="tel"
                                     inputMode="tel"
                                     autoComplete="tel"
-                                    defaultValue={whatsappNumber ?? ''}
-                                    placeholder="Ex.: 55 11 99999-9999"
+                                    value={formattedWhatsAppNumber}
+                                    onInput={(event) =>
+                                        setFormattedWhatsAppNumber(
+                                            formatWhatsAppNumber(
+                                                event.currentTarget.value,
+                                            ),
+                                        )
+                                    }
+                                    placeholder="Ex.: (11) 99999-9999"
                                     required
                                     aria-invalid={
                                         errors.whatsapp_number
