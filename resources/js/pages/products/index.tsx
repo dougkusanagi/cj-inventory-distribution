@@ -8,10 +8,11 @@ import {
     Package,
     Pencil,
     Plus,
+    Search,
     Table2,
     Trash2,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { destroy } from '@/actions/App/Http/Controllers/ProductController';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,14 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
 import {
@@ -38,13 +47,27 @@ import {
     edit as productEdit,
     create as productCreate,
 } from '@/routes/products';
-import type { Paginated, Product } from '@/types';
+import type { Category, Paginated, Product } from '@/types';
 
 type ProductsIndexProps = {
     products: Paginated<Product>;
+    filters: {
+        search: string;
+        category: number | null;
+        line: string;
+        stock_offer_type: string;
+        image: string;
+    };
+    categories: Category[];
 };
 
 type ProductView = 'table' | 'cards';
+
+function formValue(data: FormData, name: string): string {
+    const value = data.get(name);
+
+    return typeof value === 'string' ? value : '';
+}
 
 function paginationLabel(label: string): string {
     if (label.includes('Previous') || label.includes('laquo')) {
@@ -133,6 +156,14 @@ function DistributionStatus({ product }: { product: Product }) {
     );
 }
 
+function ImageStatus({ product }: { product: Product }) {
+    if (product.images.length === 0) {
+        return null;
+    }
+
+    return <Badge variant="secondary">Com foto</Badge>;
+}
+
 function ProductCard({
     product,
     onDelete,
@@ -186,7 +217,10 @@ function ProductCard({
                             ? `Modelo ${product.model}`
                             : 'Modelo não informado'}
                     </p>
-                    <DistributionStatus product={product} />
+                    <div className="flex flex-wrap gap-2">
+                        <DistributionStatus product={product} />
+                        <ImageStatus product={product} />
+                    </div>
                 </div>
 
                 <div className="flex min-h-7 flex-wrap gap-1.5">
@@ -313,10 +347,11 @@ function ProductTable({
                                                     : 'Modelo não informado'}
                                             </span>
                                         </div>
-                                        <div className="mt-2">
+                                        <div className="mt-2 flex flex-wrap gap-2">
                                             <DistributionStatus
                                                 product={product}
                                             />
+                                            <ImageStatus product={product} />
                                         </div>
                                     </div>
                                 </div>
@@ -399,12 +434,33 @@ function ProductTable({
     );
 }
 
-export default function ProductsIndex({ products }: ProductsIndexProps) {
+export default function ProductsIndex({
+    products,
+    filters,
+    categories,
+}: ProductsIndexProps) {
     const [view, setView] = useState<ProductView>('table');
     const [productToDelete, setProductToDelete] = useState<Product | null>(
         null,
     );
     const [deleting, setDeleting] = useState(false);
+
+    const submitFilters = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+
+        router.get(
+            productsIndex.url(),
+            {
+                search: formValue(data, 'search'),
+                category: formValue(data, 'category'),
+                line: formValue(data, 'line'),
+                stock_offer_type: formValue(data, 'stock_offer_type'),
+                image: formValue(data, 'image'),
+            },
+            { preserveState: true, replace: true },
+        );
+    };
 
     const handleDelete = () => {
         if (!productToDelete) {
@@ -454,6 +510,83 @@ export default function ProductsIndex({ products }: ProductsIndexProps) {
                         </Link>
                     </Button>
                 </header>
+
+                <form
+                    onSubmit={submitFilters}
+                    className="grid gap-3 rounded-[1.75rem] border border-border/80 bg-card p-4 shadow-sm xl:grid-cols-[minmax(0,1.4fr)_minmax(11rem,1fr)_minmax(9rem,.75fr)_minmax(10rem,.9fr)_minmax(10rem,.8fr)_auto]"
+                >
+                    <Input
+                        name="search"
+                        defaultValue={filters.search}
+                        placeholder="Buscar por nome"
+                        aria-label="Buscar por nome"
+                    />
+                    <Select
+                        name="category"
+                        defaultValue={filters.category?.toString() ?? 'all'}
+                    >
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Todas as categorias" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">
+                                Todas as categorias
+                            </SelectItem>
+                            {categories.map((category) => (
+                                <SelectItem
+                                    key={category.id}
+                                    value={category.id.toString()}
+                                >
+                                    {category.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select name="line" defaultValue={filters.line || 'all'}>
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Slim ou Plus" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Slim e Plus</SelectItem>
+                            <SelectItem value="slim">Slim</SelectItem>
+                            <SelectItem value="plus">Plus</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select
+                        name="stock_offer_type"
+                        defaultValue={filters.stock_offer_type || 'all'}
+                    >
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Tipo de grade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todas as grades</SelectItem>
+                            <SelectItem value="replenishment">
+                                Reposição
+                            </SelectItem>
+                            <SelectItem value="new_grade">
+                                Grade Nova
+                            </SelectItem>
+                            <SelectItem value="broken_grade">
+                                Grade Furada
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select name="image" defaultValue={filters.image || 'all'}>
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Fotos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Com ou sem foto</SelectItem>
+                            <SelectItem value="with">Com foto</SelectItem>
+                            <SelectItem value="without">Sem foto</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button type="submit" variant="secondary">
+                        <Search />
+                        Filtrar
+                    </Button>
+                </form>
 
                 {products.data.length > 0 ? (
                     <>

@@ -236,6 +236,24 @@ it('crops a gallery image before adding it to the product form', function () {
     expect(Product::query()->count())->toBe(0);
 });
 
+it('asks for confirmation before removing a product photo', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user);
+
+    visit(route('products.create', [], false))
+        ->wait(1)
+        ->click('#product-tab-photos')
+        ->attach('#product-images-gallery', base_path('public/apple-touch-icon.png'))
+        ->press('Cortar e usar foto')
+        ->press('Remover')
+        ->assertSee('Remover foto?')
+        ->assertSee('A foto será descartada do formulário.')
+        ->assertSee('Cancelar')
+        ->assertSee('Remover foto')
+        ->assertNoJavaScriptErrors();
+});
+
 it('keeps the product form usable on a narrow mobile viewport', function () {
     $user = User::factory()->create();
 
