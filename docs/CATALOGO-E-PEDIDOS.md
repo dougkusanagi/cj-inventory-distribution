@@ -2,7 +2,8 @@
 
 Plano atualizado em 09/09/2026. Este documento distingue o frontend entregue
 das etapas futuras. O CRUD de categorias e a gestão interna de pedidos estão
-disponíveis; checkout público e WhatsApp continuam planejados.
+disponíveis. O checkout público registra e reserva os sacos antes de abrir a
+mensagem do pedido no WhatsApp configurado pela equipe.
 
 ## 1. Escopo e situação atual
 
@@ -15,10 +16,10 @@ da sacola funcionam localmente no navegador. Grade Nova nunca aparece.
 O `CatalogDemoSeeder` cria categorias, classificação Slim/Plus, ofertas em
 sacos e anexa as fotos de demonstração versionadas pela Media Library. Ele
 prepara o banco local com `php artisan migrate --seed` e pode ser executado
-novamente sem duplicar registros ou mídias. A sacola não
-grava pedidos, não reserva estoque, não persiste ao recarregar e não envia
-WhatsApp. Há aviso visível na página e na sacola. Não coletamos dados pessoais
-nesta prévia.
+novamente sem duplicar registros ou mídias. A sacola não persiste ao
+recarregar; ao confirmar, porém, coleta a identificação mínima, grava o pedido,
+reserva os sacos e abre o `wa.me`. Sem um WhatsApp de destino configurado no
+painel, a confirmação fica indisponível.
 
 As factories permitem montar cenários de teste sem repetir atributos:
 
@@ -64,10 +65,7 @@ mostrando Grade Nova na operação.
   configuração ou exceção de usuário para habilitá-la. Ver ADR 0011.
 - Categorias terão CRUD: calça, bermuda, short, cropped e outras cadastradas.
 - Pedidos terão seção de separação e conferência dos sacos.
-- WhatsApp usa `wa.me`, com número configurável no sistema e possibilidade
-  de dois contatos.
-- Nesta entrega, apenas frontend do catálogo e documentação; demais módulos
-  ficam planejados.
+- WhatsApp usa `wa.me`, com um número de destino configurável no sistema.
 
 ### Propostas para validar antes da implementação do domínio
 

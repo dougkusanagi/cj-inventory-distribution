@@ -63,11 +63,11 @@ legados; as migrations atuais já criam somente o modelo de sacos.
 - [ ] catálogo de ofertas disponíveis
 - [ ] seleção por tamanho
 - [ ] quantidade
-- [ ] sacola
-- [ ] revisão do pedido
-- [ ] identificação da solicitante
-- [ ] envio do pedido
-- [ ] geração de mensagem para WhatsApp
+- [x] sacola
+- [x] revisão do pedido
+- [x] identificação da solicitante
+- [x] envio do pedido
+- [x] geração de mensagem para WhatsApp
 
 ## Fase 4 — Gestão de pedidos
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\CatalogSetting;
 use App\Models\Product;
 use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
@@ -8,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('renders database products with available stock in the public catalog', function () {
+    CatalogSetting::factory()->create();
     $product = Product::factory()->plus()->create([
         'name' => 'Produto persistido',
         'code' => 'CJ-BANCO',
@@ -25,6 +27,7 @@ test('renders database products with available stock in the public catalog', fun
 
     $response->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('catalog')
+        ->where('canPlaceOrder', true)
         ->has('products', 1)
         ->where('products.0.name', 'Produto persistido')
         ->where('products.0.code', 'CJ-BANCO')
@@ -32,6 +35,13 @@ test('renders database products with available stock in the public catalog', fun
         ->where('products.0.volumes.0.pieces', 12)
         ->where('products.0.volumes.0.sizes', ['M'])
     );
+});
+
+test('disables catalog checkout until a WhatsApp destination is configured', function () {
+    $this->get(route('catalog'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('catalog')
+            ->where('canPlaceOrder', false));
 });
 
 test('does not expose new grade products in the public catalog', function () {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CatalogSetting;
 use App\Models\Product;
 use App\Models\StockOfferVolume;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -47,9 +48,9 @@ class CatalogController extends Controller
                     'name' => $product->name,
                     'code' => $product->code,
                     'model' => $product->model,
-                    'image' => $imageConversion === null
-                        ? $cover?->getUrl()
-                        : $cover?->getUrl($imageConversion),
+                    'image' => $cover === null
+                        ? null
+                        : ($imageConversion === null ? $cover->getUrl() : $cover->getUrl($imageConversion)),
                     'category' => $product->category_id === null
                         ? 'Sem categoria'
                         : $product->category->name,
@@ -64,6 +65,9 @@ class CatalogController extends Controller
                 ];
             });
 
-        return Inertia::render('catalog', ['products' => $products]);
+        return Inertia::render('catalog', [
+            'products' => $products,
+            'canPlaceOrder' => CatalogSetting::query()->exists(),
+        ]);
     }
 }
