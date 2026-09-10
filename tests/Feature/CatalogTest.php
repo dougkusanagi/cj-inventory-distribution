@@ -1,11 +1,46 @@
 <?php
 
+use App\Models\Product;
+use App\Models\StockOffer;
+use App\Models\StockOfferVolume;
 use Inertia\Testing\AssertableInertia as Assert;
 
-test('renders the public catalog prototype', function () {
+test('renders database products with available stock in the public catalog', function () {
+    $product = Product::factory()->plus()->create([
+        'name' => 'Produto persistido',
+        'code' => 'CJ-BANCO',
+    ]);
+    $offer = StockOffer::factory()->replenishment()->for($product)->create();
+    $volume = StockOfferVolume::factory()->for($offer)->withTotal(12)->create();
+    $volume->items()->create([
+        'size' => 'M',
+        'sort_order' => 0,
+        'is_active' => true,
+        'quantity' => 12,
+    ]);
+
     $response = $this->get(route('catalog'));
 
     $response->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('catalog')
+        ->has('products', 1)
+        ->where('products.0.name', 'Produto persistido')
+        ->where('products.0.code', 'CJ-BANCO')
+        ->where('products.0.type', 'Reposição')
+        ->where('products.0.volumes.0.pieces', 12)
+        ->where('products.0.volumes.0.sizes', ['M'])
+    );
+});
+
+test('does not expose new grade products in the public catalog', function () {
+    $product = Product::factory()->create();
+    $offer = StockOffer::factory()->for($product)->create();
+    StockOfferVolume::factory()->for($offer)->withTotal(10)->create();
+
+    $response = $this->get(route('catalog'));
+
+    $response->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->component('catalog')
+        ->has('products', 0)
     );
 });

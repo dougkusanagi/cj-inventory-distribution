@@ -14,6 +14,7 @@ use App\Http\Requests\Orders\UpdateOrderRequest;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\StockOfferVolume;
+use App\Models\StockOfferVolumeItem;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -147,7 +148,7 @@ class OrderController extends Controller
                     'model' => $volume->offer->product->model,
                     'category' => $volume->offer->product->category?->name,
                 ],
-                'sizes' => $volume->items->where('is_active', true)->map(fn ($item): array => [
+                'sizes' => $volume->items->where('is_active', true)->map(fn (StockOfferVolumeItem $item): array => [
                     'size' => $item->size,
                     'quantity' => $item->quantity,
                 ])->values()->all(),

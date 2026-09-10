@@ -6,18 +6,16 @@ disponíveis; checkout público e WhatsApp continuam planejados.
 
 ## 1. Escopo e situação atual
 
-**Entregue nesta etapa:** frontend do catálogo em `/` e `/catalog`, usando o
-mesmo componente. A home padrão do Laravel foi substituída sem alterar rotas
-ou criar controllers. Cards responsivos, busca por nome/modelo/código,
+**Entregue nesta etapa:** catálogo em `/` e `/catalog`, usando o mesmo
+componente e produtos disponíveis consultados no banco. Cards responsivos,
+busca por nome/modelo/código,
 filtros por categoria e linha Slim/Plus, seleção de sacos distintos e revisão
 da sacola funcionam localmente no navegador. Grade Nova nunca aparece.
 
-Dados e categorias da prévia continuam isolados em
-`resources/js/lib/catalog-preview.ts`; as fotos usam placeholder explícito,
-sem representar fotos reais dos produtos. Também há um `CatalogDemoSeeder`
-com categorias, classificação Slim/Plus e ofertas em sacos para preparar o
-banco local: `php artisan migrate --seed`. O seeder é repetível e não cria
-imagens, pois ainda não há fotos de demonstração versionadas. A sacola não
+O `CatalogDemoSeeder` cria categorias, classificação Slim/Plus, ofertas em
+sacos e anexa as fotos de demonstração versionadas pela Media Library. Ele
+prepara o banco local com `php artisan migrate --seed` e pode ser executado
+novamente sem duplicar registros ou mídias. A sacola não
 grava pedidos, não reserva estoque, não persiste ao recarregar e não envia
 WhatsApp. Há aviso visível na página e na sacola. Não coletamos dados pessoais
 nesta prévia.
@@ -51,7 +49,7 @@ Slim/Plus já têm model, migration, enum, factories e seeder demonstrativo;
 O CRUD de categorias está conectado ao cadastro de produtos. A gestão interna
 de pedidos permite registrar pedidos por saco inteiro, consultar, editar os
 dados enquanto pendente, cancelar e finalizar, com reserva transacional. O
-catálogo público ainda usa dados demonstrativos e não registra pedidos. O scope
+catálogo público usa os dados persistidos e ainda não registra pedidos. O scope
 `StockOffer::availableForCatalog` exclui Grade Nova e sacos reservados ou já
 consumidos; o dashboard usa uma consulta interna própria para continuar
 mostrando Grade Nova na operação.

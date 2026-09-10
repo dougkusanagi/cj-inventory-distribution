@@ -6,9 +6,9 @@ O roadmap descreve direção, não compromisso de implementação imediata.
 
 O [plano de catálogo e pedidos](CATALOGO-E-PEDIDOS.md) detalha a sequência atual,
 CRUD de categorias, Slim/Plus, reserva de sacos, separação/conferência e WhatsApp.
-O frontend demonstrativo substitui a home em `/` e também está em `/catalog`.
-Backend de catálogo conectado, persistência da sacola pública e contatos de
-WhatsApp ainda não estão implementados. O CRUD de categorias e a gestão interna
+O catálogo conectado ao banco substitui a home em `/` e também está em
+`/catalog`. Persistência da sacola pública e contatos de WhatsApp ainda não
+estão implementados. O CRUD de categorias e a gestão interna
 de pedidos com reserva de sacos já estão disponíveis. As fases históricas
 abaixo não significam conclusão desses módulos.
 

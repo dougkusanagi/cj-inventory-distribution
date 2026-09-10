@@ -1,6 +1,14 @@
 import { router, useForm } from '@inertiajs/react';
-import { Layers, Package, PackageX, Save } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import {
+    FileText,
+    ImagePlus,
+    Images,
+    Layers,
+    Package,
+    PackageX,
+    Save,
+} from 'lucide-react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
     update,
@@ -8,6 +16,7 @@ import {
 } from '@/actions/App/Http/Controllers/ProductController';
 import InputError from '@/components/input-error';
 import { ProductPhotoManager } from '@/components/products/product-photo-manager';
+import type { ProductCoverPreview } from '@/components/products/product-photo-manager';
 import { StockOfferVolumeEditor } from '@/components/products/stock-offer-volume-editor';
 import type { StockOfferVolumeFormItem } from '@/components/products/stock-offer-volume-editor';
 import { Button } from '@/components/ui/button';
@@ -55,17 +64,29 @@ type ProductFormProps = {
     categories: Category[];
 };
 
-type ProductFormTab = 'product' | 'stock';
+type ProductFormTab = 'details' | 'photos' | 'stock';
 
 const formTabs = [
-    { id: 'product', label: 'Produto', icon: Package },
-    { id: 'stock', label: 'Estoque', icon: Layers },
+    { id: 'details', label: 'Detalhes', icon: FileText },
+    { id: 'photos', label: 'Fotos', icon: Images },
+    { id: 'stock', label: 'Estoque', icon: Package },
 ] as const;
 
 function tabForError(field: string): ProductFormTab {
+    if (
+        field === 'images' ||
+        field.startsWith('images.') ||
+        field === 'image_order' ||
+        field.startsWith('image_order.') ||
+        field === 'remove_media_ids' ||
+        field.startsWith('remove_media_ids.')
+    ) {
+        return 'photos';
+    }
+
     return field === 'has_stock_offer' || field.startsWith('stock_')
         ? 'stock'
-        : 'product';
+        : 'details';
 }
 
 type ProductErrorField =
@@ -153,7 +174,19 @@ function volumeTotal(volume: StockOfferVolumeFormItem): number {
 export function ProductForm({ product, categories }: ProductFormProps) {
     const isEditing = product !== undefined;
     const [processingImages, setProcessingImages] = useState(false);
-    const [activeTab, setActiveTab] = useState<ProductFormTab>('product');
+    const [activeTab, setActiveTab] = useState<ProductFormTab>('details');
+    const [coverPreview, setCoverPreview] =
+        useState<ProductCoverPreview | null>(() => {
+            const cover = product?.images[0];
+
+            return cover
+                ? {
+                      url: cover.thumb_url ?? cover.url,
+                      name: cover.name,
+                      kind: 'existing',
+                  }
+                : null;
+        });
     const radioGroupId = useId();
     const formRef = useRef<HTMLFormElement>(null);
     const submittingRef = useRef(false);
@@ -189,6 +222,13 @@ export function ProductForm({ product, categories }: ProductFormProps) {
             formRef.current?.scrollIntoView({ block: 'start' });
         });
     };
+
+    const handleCoverChange = useCallback(
+        (cover: ProductCoverPreview | null) => {
+            setCoverPreview(cover);
+        },
+        [],
+    );
 
     useEffect(() => {
         const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -232,7 +272,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
         window.requestAnimationFrame(() => {
             const firstInvalidField =
                 formRef.current?.querySelector<HTMLElement>(
-                    '[role="tabpanel"]:not([hidden]) [aria-invalid="true"]',
+                    '#product-identity [aria-invalid="true"], [role="tabpanel"]:not([hidden]) [aria-invalid="true"]',
                 );
 
             firstInvalidField?.scrollIntoView({ block: 'center' });
@@ -303,7 +343,9 @@ export function ProductForm({ product, categories }: ProductFormProps) {
             setActiveTab(
                 invalidField.closest('[data-form-tab="stock"]')
                     ? 'stock'
-                    : 'product',
+                    : invalidField.closest('[data-form-tab="photos"]')
+                      ? 'photos'
+                      : 'details',
             );
             window.requestAnimationFrame(() => {
                 invalidField.focus();
@@ -365,10 +407,82 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                 </div>
             )}
 
+            <section
+                id="product-identity"
+                aria-labelledby="product-identity-title"
+                className="grid gap-4 rounded-2xl border border-border bg-card p-4 sm:grid-cols-[6rem_minmax(0,1fr)] sm:items-center sm:gap-5 sm:p-5"
+            >
+                <div className="grid gap-1.5">
+                    <p
+                        id="product-identity-title"
+                        className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase"
+                    >
+                        Capa
+                    </p>
+                    <button
+                        id="product-cover"
+                        type="button"
+                        onClick={() => changeTab('photos')}
+                        className="group relative aspect-[4/5] w-24 overflow-hidden rounded-xl bg-muted text-left transition-colors hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none sm:w-full"
+                        aria-label={
+                            coverPreview
+                                ? 'Abrir fotos do produto'
+                                : 'Adicionar capa nas fotos do produto'
+                        }
+                    >
+                        {coverPreview?.url ? (
+                            <img
+                                id="product-cover-image"
+                                src={coverPreview.url}
+                                alt=""
+                                className="size-full object-cover"
+                                decoding="async"
+                            />
+                        ) : (
+                            <span className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground">
+                                <ImagePlus className="size-5" />
+                                <span className="text-[10px] font-semibold">
+                                    Adicionar
+                                </span>
+                            </span>
+                        )}
+                        <span className="absolute inset-0 bg-foreground/0 transition-colors group-hover:bg-foreground/10" />
+                        {coverPreview && (
+                            <span className="absolute inset-x-1 bottom-1 rounded-md bg-background/75 px-1 py-1 text-center text-[9px] font-bold tracking-[0.08em] text-foreground uppercase backdrop-blur-sm">
+                                Capa
+                            </span>
+                        )}
+                    </button>
+                </div>
+
+                <div className="grid min-w-0 gap-2">
+                    <Label
+                        htmlFor="product-name"
+                        className="text-sm font-medium"
+                    >
+                        Nome do produto{' '}
+                        <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                        id="product-name"
+                        name="name"
+                        value={form.data.name}
+                        onChange={(event) =>
+                            form.setData('name', event.target.value)
+                        }
+                        aria-invalid={error('name') ? true : undefined}
+                        placeholder="Ex.: Calça Wide Leg"
+                        className="h-11 text-base sm:h-10 sm:text-sm"
+                        required
+                    />
+                    <InputError message={error('name')} />
+                </div>
+            </section>
+
             <div
                 role="tablist"
-                aria-label="Informações do produto"
-                className="sticky top-0 z-20 grid grid-cols-2 gap-2 rounded-2xl border border-border bg-muted/95 p-1.5 backdrop-blur"
+                aria-label="Seções do cadastro"
+                className="sticky top-0 z-20 grid grid-cols-3 gap-1.5 rounded-2xl border border-border bg-muted/95 p-1.5 backdrop-blur"
             >
                 {formTabs.map(({ id, label, icon: Icon }, index) => {
                     const errorCount = errorEntries.filter(
@@ -403,7 +517,12 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                                         ? 0
                                         : event.key === 'End'
                                           ? formTabs.length - 1
-                                          : (index + 1) % formTabs.length;
+                                          : (index +
+                                                (event.key === 'ArrowLeft'
+                                                    ? -1
+                                                    : 1) +
+                                                formTabs.length) %
+                                            formTabs.length;
                                 const nextTab = formTabs[nextIndex].id;
                                 changeTab(nextTab);
                                 document
@@ -434,14 +553,14 @@ export function ProductForm({ product, categories }: ProductFormProps) {
             </div>
 
             <section
-                id="product-panel-product"
+                id="product-panel-details"
                 role="tabpanel"
-                aria-labelledby="product-tab-product"
-                data-form-tab="product"
-                hidden={activeTab !== 'product'}
+                aria-labelledby="product-tab-details"
+                data-form-tab="details"
+                hidden={activeTab !== 'details'}
                 className={cn(
                     'min-w-0 gap-6',
-                    activeTab === 'product' ? 'grid' : 'hidden',
+                    activeTab === 'details' ? 'grid' : 'hidden',
                 )}
             >
                 <Card className="gap-0 rounded-2xl border-border p-0 shadow-none">
@@ -472,16 +591,16 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                     </label>
                 </Card>
 
-                <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
-                    {/* 1. Identidade da peça */}
+                <div className="grid items-start gap-6">
+                    {/* Informações complementares */}
                     <Card className="gap-0 rounded-2xl border-border p-0 shadow-none">
                         <CardHeader className="p-5 sm:p-6">
                             <h2 className="text-xl font-semibold tracking-tight">
-                                Dados do produto
+                                Informações do produto
                             </h2>
                             <CardDescription className="text-sm leading-6">
-                                O código interno é gerado automaticamente ao
-                                salvar.
+                                Modelo, categoria, linha comercial e observações
+                                da peça.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-5 p-5 pt-0 sm:p-6 sm:pt-0">
@@ -495,31 +614,6 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                                     </span>
                                 </div>
                             )}
-
-                            <div className="grid gap-2">
-                                <Label
-                                    htmlFor="product-name"
-                                    className="text-sm font-medium"
-                                >
-                                    Nome do produto{' '}
-                                    <span className="text-destructive">*</span>
-                                </Label>
-                                <Input
-                                    id="product-name"
-                                    name="name"
-                                    value={form.data.name}
-                                    onChange={(event) =>
-                                        form.setData('name', event.target.value)
-                                    }
-                                    aria-invalid={
-                                        error('name') ? true : undefined
-                                    }
-                                    placeholder="Ex.: Calça Wide Leg"
-                                    className="h-11 text-base sm:h-10 sm:text-sm"
-                                    required
-                                />
-                                <InputError message={error('name')} />
-                            </div>
 
                             <div className="grid gap-5 sm:grid-cols-2 sm:gap-4">
                                 <div className="grid gap-2">
@@ -674,38 +768,49 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                             </div>
                         </CardContent>
                     </Card>
-
-                    {/* 2. Referência visual */}
-                    <Card className="gap-0 rounded-2xl border-border p-0 shadow-none">
-                        <CardHeader className="p-5 sm:p-6">
-                            <h2 className="text-xl font-semibold tracking-tight">
-                                Fotos
-                            </h2>
-                            <CardDescription className="text-sm leading-6">
-                                Adicione até 5 fotos pela câmera ou pela
-                                galeria. O enquadramento é definido antes de
-                                salvar cada foto.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-5 pt-0 sm:p-6 sm:pt-0">
-                            <ProductPhotoManager
-                                value={form.data.images}
-                                existingImages={product?.images ?? []}
-                                error={error('images') ?? error('image_order')}
-                                errors={form.errors as Record<string, string>}
-                                onChange={(change) => {
-                                    form.setData((previousData) => ({
-                                        ...previousData,
-                                        images: change.files,
-                                        image_order: change.imageOrder,
-                                        remove_media_ids: change.removeMediaIds,
-                                    }));
-                                }}
-                                onProcessingChange={setProcessingImages}
-                            />
-                        </CardContent>
-                    </Card>
                 </div>
+            </section>
+
+            <section
+                id="product-panel-photos"
+                role="tabpanel"
+                aria-labelledby="product-tab-photos"
+                data-form-tab="photos"
+                hidden={activeTab !== 'photos'}
+                className={cn(
+                    'min-w-0 gap-6',
+                    activeTab === 'photos' ? 'grid' : 'hidden',
+                )}
+            >
+                <Card className="gap-0 rounded-2xl border-border p-0 shadow-none">
+                    <CardHeader className="p-5 sm:p-6">
+                        <h2 className="text-xl font-semibold tracking-tight">
+                            Galeria de fotos
+                        </h2>
+                        <CardDescription className="text-sm leading-6">
+                            Adicione até 5 fotos, escolha a capa e ajuste a
+                            ordem de exibição.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-5 pt-0 sm:p-6 sm:pt-0">
+                        <ProductPhotoManager
+                            value={form.data.images}
+                            existingImages={product?.images ?? []}
+                            error={error('images') ?? error('image_order')}
+                            errors={form.errors as Record<string, string>}
+                            onChange={(change) => {
+                                form.setData((previousData) => ({
+                                    ...previousData,
+                                    images: change.files,
+                                    image_order: change.imageOrder,
+                                    remove_media_ids: change.removeMediaIds,
+                                }));
+                            }}
+                            onCoverChange={handleCoverChange}
+                            onProcessingChange={setProcessingImages}
+                        />
+                    </CardContent>
+                </Card>
             </section>
 
             <section

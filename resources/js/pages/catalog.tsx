@@ -38,7 +38,6 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { catalogPreviewProducts } from '@/lib/catalog-preview';
 import type { CatalogPreviewProduct } from '@/lib/catalog-preview';
 import { cn } from '@/lib/utils';
 import { dashboard, login } from '@/routes';
@@ -90,13 +89,19 @@ function CatalogFilter({
 function ProductPhoto({ product }: { product: CatalogPreviewProduct }) {
     return (
         <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-t-2xl bg-muted/60">
-            <img
-                src={product.image}
-                alt={product.name}
-                loading="lazy"
-                data-testid={`catalog-product-image-${product.id}`}
-                className="size-full object-cover"
-            />
+            {product.image ? (
+                <img
+                    src={product.image}
+                    alt={product.name}
+                    loading="lazy"
+                    data-testid={`catalog-product-image-${product.id}`}
+                    className="size-full object-cover"
+                />
+            ) : (
+                <span className="px-6 text-center text-sm text-muted-foreground">
+                    Produto sem foto
+                </span>
+            )}
             <Badge
                 variant="secondary"
                 className="absolute top-3 left-3 bg-card text-foreground"
@@ -263,7 +268,11 @@ function BagItems({
     );
 }
 
-export default function Catalog() {
+export default function Catalog({
+    products,
+}: {
+    products: CatalogPreviewProduct[];
+}) {
     const { auth } = usePage().props;
     const isMobile = useIsMobile();
     const [query, setQuery] = useState('');
@@ -276,9 +285,6 @@ export default function Catalog() {
     const [bagOpen, setBagOpen] = useState(false);
     const [feedback, setFeedback] = useState('');
 
-    const products = catalogPreviewProducts.filter(
-        (product) => product.type !== 'Grade Nova',
-    );
     const filteredProducts = products.filter(
         (product) =>
             normalize(
@@ -447,7 +453,13 @@ export default function Catalog() {
                                     id="catalog-line"
                                     label="Linha"
                                     value={line}
-                                    options={['Slim', 'Plus']}
+                                    options={[
+                                        ...new Set(
+                                            products.map(
+                                                (product) => product.line,
+                                            ),
+                                        ),
+                                    ]}
                                     onChange={setLine}
                                 />
                             </div>
