@@ -1,20 +1,17 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
-    Camera,
     ChevronLeft,
     ChevronRight,
     ImageOff,
     LayoutGrid,
     Package,
-    Pencil,
     Plus,
     Search,
     Table2,
     Trash2,
 } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { Fragment, useState, type FormEvent } from 'react';
 import { destroy } from '@/actions/App/Http/Controllers/ProductController';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -41,13 +38,21 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import TextLink from '@/components/text-link';
+import ProductImageGallery from '@/components/products/product-image-gallery';
 import { cn } from '@/lib/utils';
 import {
     index as productsIndex,
     edit as productEdit,
     create as productCreate,
 } from '@/routes/products';
-import type { Category, Paginated, Product } from '@/types';
+import type {
+    Category,
+    Paginated,
+    Product,
+    ProductLine,
+    StockOfferType,
+} from '@/types';
 
 type ProductsIndexProps = {
     products: Paginated<Product>;
@@ -84,9 +89,11 @@ function paginationLabel(label: string): string {
 function ProductImage({
     product,
     className,
+    iconClassName,
 }: {
     product: Product;
     className?: string;
+    iconClassName?: string;
 }) {
     const coverImage = product.images[0];
 
@@ -110,8 +117,55 @@ function ProductImage({
             )}
             aria-label="Produto sem foto"
         >
-            <ImageOff className="size-5" strokeWidth={1.25} />
+            <ImageOff
+                className={cn('size-5', iconClassName)}
+                strokeWidth={1.25}
+            />
         </div>
+    );
+}
+
+function ProductImageButton({
+    product,
+    onOpenGallery,
+    className,
+    iconClassName,
+}: {
+    product: Product;
+    onOpenGallery: (product: Product) => void;
+    className?: string;
+    iconClassName?: string;
+}) {
+    const coverImage = product.images[0];
+
+    if (!coverImage) {
+        return (
+            <ProductImage
+                product={product}
+                className={className}
+                iconClassName={iconClassName}
+            />
+        );
+    }
+
+    return (
+        <button
+            type="button"
+            data-testid={`abrir-galeria-produto-${product.id}`}
+            aria-label={`Abrir galeria de imagens de ${product.name}`}
+            onClick={() => onOpenGallery(product)}
+            className={cn(
+                'group/image relative block size-full overflow-hidden text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none',
+                className,
+            )}
+        >
+            <ProductImage product={product} />
+            {product.images.length > 1 && (
+                <span className="pointer-events-none absolute right-2 bottom-2 inline-flex items-center gap-1 rounded-full bg-foreground/75 px-2 py-1 text-[10px] font-semibold text-background tabular-nums backdrop-blur-sm">
+                    {product.images.length} fotos
+                </span>
+            )}
+        </button>
     );
 }
 
@@ -146,69 +200,82 @@ function ProductSizes({ product }: { product: Product }) {
     ));
 }
 
-function DistributionStatus({ product }: { product: Product }) {
-    const available = product.available_for_distribution === true;
+const stockOfferTypeLabels: Record<StockOfferType, string> = {
+    replenishment: 'Reposição',
+    new_grade: 'Nova',
+    broken_grade: 'Furada',
+};
+
+const productLineLabels: Record<ProductLine, string> = {
+    slim: 'Slim',
+    plus: 'Plus',
+};
+
+function ProductClassification({ product }: { product: Product }) {
+    const stockOfferType = product.stock_offer_type;
+    const productLine = product.line;
+
+    const classifications = [
+        `Grade: ${stockOfferType ? stockOfferTypeLabels[stockOfferType] : 'Sem oferta'}`,
+        productLine ? productLineLabels[productLine] : null,
+        product.category?.name ?? null,
+    ].filter(
+        (classification): classification is string => classification !== null,
+    );
 
     return (
-        <Badge variant={available ? 'secondary' : 'outline'}>
-            {product.distribution_status ?? 'Sem estoque disponível'}
-        </Badge>
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
+            {classifications.map((classification, index) => (
+                <Fragment key={`${classification}-${index}`}>
+                    {index > 0 && (
+                        <span
+                            className="size-1 rounded-full bg-muted-foreground/60"
+                            aria-hidden="true"
+                        />
+                    )}
+                    <span>{classification}</span>
+                </Fragment>
+            ))}
+        </div>
     );
-}
-
-function ImageStatus({ product }: { product: Product }) {
-    if (product.images.length === 0) {
-        return null;
-    }
-
-    return <Badge variant="secondary">Com foto</Badge>;
 }
 
 function ProductCard({
     product,
     onDelete,
+    onOpenGallery,
 }: {
     product: Product;
     onDelete: (product: Product) => void;
+    onOpenGallery: (product: Product) => void;
 }) {
-    const coverImage = product.images[0];
-
     return (
         <article className="group flex min-h-full flex-col overflow-hidden rounded-[1.75rem] border border-border/80 bg-card shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
             <div className="relative aspect-[4/5] overflow-hidden bg-featured-card">
-                {coverImage ? (
-                    <ProductImage
-                        product={product}
-                        className="transition duration-500 group-hover:scale-105"
-                    />
-                ) : (
-                    <div className="flex size-full flex-col items-center justify-center gap-2 text-featured-card-muted">
-                        <ImageOff className="size-8" strokeWidth={1.25} />
-                        <span className="text-xs tracking-[0.16em] uppercase">
-                            Sem foto
-                        </span>
-                    </div>
-                )}
-                <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4">
+                <ProductImageButton
+                    product={product}
+                    onOpenGallery={onOpenGallery}
+                    className="transition duration-500 group-hover:scale-105"
+                    iconClassName="size-8"
+                />
+                <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between p-4">
                     <span className="rounded-full bg-background/90 px-3 py-1 font-mono text-[11px] font-semibold tracking-[0.12em] text-foreground shadow-sm backdrop-blur">
                         {product.code}
                     </span>
-                    {coverImage && (
-                        <span className="flex size-8 items-center justify-center rounded-full bg-background/90 text-highlight shadow-sm backdrop-blur">
-                            <Camera className="size-4" />
-                        </span>
-                    )}
                 </div>
             </div>
 
             <div className="flex flex-1 flex-col gap-5 p-5">
                 <div className="grid gap-2">
                     <div className="flex items-start justify-between gap-3">
-                        <h2 className="text-xl leading-tight font-semibold tracking-tight text-card-foreground">
+                        <TextLink
+                            href={productEdit(product.id)}
+                            className="text-xl leading-tight font-semibold tracking-tight text-card-foreground"
+                        >
                             {product.name}
-                        </h2>
+                        </TextLink>
                         <span
-                            className="mt-1 size-2 shrink-0 rounded-full bg-primary"
+                            className="mt-1 size-2 shrink-0 rounded-full bg-muted-foreground/60"
                             aria-hidden="true"
                         />
                     </div>
@@ -217,10 +284,7 @@ function ProductCard({
                             ? `Modelo ${product.model}`
                             : 'Modelo não informado'}
                     </p>
-                    <div className="flex flex-wrap gap-2">
-                        <DistributionStatus product={product} />
-                        <ImageStatus product={product} />
-                    </div>
+                    <ProductClassification product={product} />
                 </div>
 
                 <div className="flex min-h-7 flex-wrap gap-1.5">
@@ -245,20 +309,9 @@ function ProductCard({
                             </span>
                         ) : null}
                         <Button
-                            variant="secondary"
-                            size="sm"
-                            asChild
-                            className="flex-1"
-                        >
-                            <Link href={productEdit(product.id)}>
-                                <Pencil />
-                                Editar
-                            </Link>
-                        </Button>
-                        <Button
                             variant="ghost"
                             size="icon"
-                            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            className="ml-auto text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                             onClick={() => onDelete(product)}
                             aria-label={`Excluir ${product.name}`}
                         >
@@ -274,9 +327,11 @@ function ProductCard({
 function ProductTable({
     products,
     onDelete,
+    onOpenGallery,
 }: {
     products: Product[];
     onDelete: (product: Product) => void;
+    onOpenGallery: (product: Product) => void;
 }) {
     return (
         <div className="overflow-hidden rounded-[1.75rem] border border-border/80 bg-card shadow-sm">
@@ -307,12 +362,6 @@ function ProductTable({
                         >
                             Estoque total
                         </th>
-                        <th
-                            scope="col"
-                            className="h-12 px-5 text-left text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase"
-                        >
-                            Observação
-                        </th>
                         <th scope="col" className="h-12 px-5">
                             <span className="sr-only">Ações</span>
                         </th>
@@ -327,18 +376,24 @@ function ProductTable({
                             <td className="block p-0 lg:table-cell lg:px-5 lg:py-4">
                                 <div className="flex items-center gap-3">
                                     <div className="size-14 shrink-0 overflow-hidden rounded-xl border border-border bg-featured-card">
-                                        <ProductImage product={product} />
+                                        <ProductImageButton
+                                            product={product}
+                                            onOpenGallery={onOpenGallery}
+                                        />
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <p className="line-clamp-2 font-semibold break-words text-card-foreground">
+                                        <TextLink
+                                            href={productEdit(product.id)}
+                                            className="line-clamp-2 font-semibold break-words text-card-foreground"
+                                        >
                                             {product.name}
-                                        </p>
+                                        </TextLink>
                                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                                             <span className="font-mono tracking-[0.08em]">
                                                 {product.code}
                                             </span>
                                             <span
-                                                className="size-1 rounded-full bg-primary"
+                                                className="size-1 rounded-full bg-muted-foreground/60"
                                                 aria-hidden="true"
                                             />
                                             <span className="min-w-0 break-words">
@@ -347,11 +402,10 @@ function ProductTable({
                                                     : 'Modelo não informado'}
                                             </span>
                                         </div>
-                                        <div className="mt-2 flex flex-wrap gap-2">
-                                            <DistributionStatus
+                                        <div className="mt-2">
+                                            <ProductClassification
                                                 product={product}
                                             />
-                                            <ImageStatus product={product} />
                                         </div>
                                     </div>
                                 </div>
@@ -389,32 +443,10 @@ function ProductTable({
                                 )}
                             </td>
                             <td className="block p-0 lg:table-cell lg:px-5 lg:py-4 lg:align-middle">
-                                <span className="mb-1 block text-[10px] font-semibold tracking-[0.16em] text-muted-foreground uppercase lg:hidden">
-                                    Observação
-                                </span>
-                                <p
-                                    className="line-clamp-2 max-w-full leading-5 text-muted-foreground lg:max-w-[15rem]"
-                                    title={product.notes ?? undefined}
-                                >
-                                    {product.notes ?? 'Nenhuma observação'}
-                                </p>
-                            </td>
-                            <td className="block p-0 lg:table-cell lg:px-5 lg:py-4 lg:align-middle">
                                 <span className="mb-2 block text-[10px] font-semibold tracking-[0.16em] text-muted-foreground uppercase lg:hidden">
                                     Ações
                                 </span>
                                 <div className="flex w-full items-center gap-2 lg:w-auto lg:justify-end">
-                                    <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        asChild
-                                        className="flex-1 lg:flex-none"
-                                    >
-                                        <Link href={productEdit(product.id)}>
-                                            <Pencil />
-                                            Editar
-                                        </Link>
-                                    </Button>
                                     <Button
                                         variant="ghost"
                                         size="icon"
@@ -440,10 +472,21 @@ export default function ProductsIndex({
     categories,
 }: ProductsIndexProps) {
     const [view, setView] = useState<ProductView>('table');
+    const [galleryProduct, setGalleryProduct] = useState<Product | null>(null);
+    const [galleryImageIndex, setGalleryImageIndex] = useState(0);
     const [productToDelete, setProductToDelete] = useState<Product | null>(
         null,
     );
     const [deleting, setDeleting] = useState(false);
+
+    const openProductGallery = (product: Product): void => {
+        if (product.images.length === 0) {
+            return;
+        }
+
+        setGalleryImageIndex(0);
+        setGalleryProduct(product);
+    };
 
     const submitFilters = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -630,6 +673,7 @@ export default function ProductsIndex({
                             <ProductTable
                                 products={products.data}
                                 onDelete={setProductToDelete}
+                                onOpenGallery={openProductGallery}
                             />
                         ) : (
                             <section
@@ -641,6 +685,7 @@ export default function ProductsIndex({
                                         key={product.id}
                                         product={product}
                                         onDelete={setProductToDelete}
+                                        onOpenGallery={openProductGallery}
                                     />
                                 ))}
                             </section>
@@ -671,6 +716,18 @@ export default function ProductsIndex({
                         </CardContent>
                     </Card>
                 )}
+
+                <ProductImageGallery
+                    product={galleryProduct}
+                    open={galleryProduct !== null}
+                    selectedIndex={galleryImageIndex}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setGalleryProduct(null);
+                        }
+                    }}
+                    onSelectedIndexChange={setGalleryImageIndex}
+                />
 
                 {products.links.length > 3 && (
                     <nav

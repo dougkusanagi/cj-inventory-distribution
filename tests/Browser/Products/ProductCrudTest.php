@@ -1,8 +1,10 @@
 <?php
 
 use App\Enums\StockOfferType;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Vite;
 
 beforeEach(function (): void {
@@ -16,6 +18,89 @@ it('redirects a guest away from the product creation form', function () {
         ->assertRoute('login')
         ->assertSee('Entrar')
         ->assertNoJavaScriptErrors();
+});
+
+it('shows the grade type, commercial line, and category in product cards and table', function () {
+    $user = User::factory()->create();
+    $category = Category::factory()->create(['name' => 'Calças']);
+    $product = Product::factory()
+        ->inCategory($category)
+        ->slim()
+        ->create(['name' => 'Produto classificado E2E']);
+    $offer = $product->offers()->create([
+        'type' => StockOfferType::BrokenGrade,
+        'is_active' => true,
+    ]);
+    $offer->stockVolumes()->create(['total_quantity' => 3]);
+
+    $this->actingAs($user);
+
+    visit(route('products.index', [], false))
+        ->wait(1)
+        ->assertSee('Grade: Furada')
+        ->assertSee('Slim')
+        ->assertSee('Calças')
+        ->click('button[aria-label="Visualização em cards"]')
+        ->assertSee('Grade: Furada')
+        ->assertSee('Slim')
+        ->assertSee('Calças')
+        ->assertNoJavaScriptErrors();
+});
+
+it('opens a product image gallery and changes the selected image', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create([
+        'name' => 'Produto com galeria E2E',
+    ]);
+    $product->addMedia(UploadedFile::fake()->image('gallery-one.jpg', 800, 1000))
+        ->toMediaCollection(Product::MEDIA_COLLECTION);
+    $product->addMedia(UploadedFile::fake()->image('gallery-two.jpg', 800, 1000))
+        ->toMediaCollection(Product::MEDIA_COLLECTION);
+
+    $this->actingAs($user);
+
+    $page = visit(route('products.index', [], false))
+        ->resize(390, 844)
+        ->assertSee('Produto com galeria E2E')
+        ->assertPresent('[data-testid="abrir-galeria-produto-'.$product->id.'"]')
+        ->click('[data-testid="abrir-galeria-produto-'.$product->id.'"]')
+        ->assertPresent('[data-testid="galeria-produto-'.$product->id.'"]')
+        ->assertPresent('#galeria-zoom-'.$product->id)
+        ->assertValue('#galeria-zoom-'.$product->id, '1');
+
+    $page->script('() => { const input = document.querySelector(\'#galeria-zoom-'.$product->id.'\'); const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, \'value\').set; setter.call(input, \'2\'); input.dispatchEvent(new Event(\'input\', { bubbles: true })); input.dispatchEvent(new Event(\'change\', { bubbles: true })); }');
+
+    $page
+        ->assertSee('1 de 2')
+        ->assertSee('200%')
+        ->click('button[aria-label="Próxima imagem de Produto com galeria E2E"]')
+        ->assertSee('2 de 2')
+        ->assertSee('100%')
+        ->click('button[aria-label="Ver imagem 1 de Produto com galeria E2E"]')
+        ->assertSee('1 de 2')
+        ->click('[data-testid="galeria-produto-'.$product->id.'"] > button')
+        ->click('button[aria-label="Visualização em cards"]')
+        ->click('[data-testid="abrir-galeria-produto-'.$product->id.'"]')
+        ->assertPresent('[data-testid="galeria-produto-'.$product->id.'"]')
+        ->assertNoJavaScriptErrors();
+});
+
+it('requires confirmation before deleting a product', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create(['name' => 'Produto para excluir E2E']);
+
+    $this->actingAs($user);
+
+    visit(route('products.index', [], false))
+        ->wait(1)
+        ->click('button[aria-label="Excluir Produto para excluir E2E"]')
+        ->assertSee('Excluir produto?')
+        ->assertSee('Produto para excluir E2E')
+        ->assertSee('Excluir produto')
+        ->assertSee('Cancelar')
+        ->assertNoJavaScriptErrors();
+
+    $this->assertModelExists($product);
 });
 
 it('renders the product creation form for an authenticated user', function () {
@@ -102,7 +187,7 @@ it('keeps a stock quantity when disabling a size is cancelled', function () {
     $page
         ->assertRoute('products.index')
         ->assertSee('Blusa com grade E2E')
-        ->assertSee('Uso interno (Grade Nova)')
+        ->assertSee('Grade: Nova')
         ->assertSee('7')
         ->assertSee('1 saco')
         ->assertSee('Produto cadastrado.')
