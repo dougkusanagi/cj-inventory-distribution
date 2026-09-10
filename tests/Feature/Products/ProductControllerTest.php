@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\StockOfferType;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
@@ -40,6 +41,71 @@ test('authenticated users can view the product catalog', function () {
             ->where('products.data.0.stock_volumes.0.items.0.size', '34')
             ->where('products.data.0.images', []),
         );
+});
+
+test('product catalog filters names by prefix, category, line, and image presence', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $category = Category::factory()->create(['name' => 'Calça']);
+    $matchingProduct = Product::factory()
+        ->inCategory($category)
+        ->slim()
+        ->create(['name' => 'Calça Slim com foto']);
+    $matchingProduct->addMedia(UploadedFile::fake()->image('calca.jpg'))
+        ->toMediaCollection(Product::MEDIA_COLLECTION);
+    Product::factory()->inCategory($category)->slim()->create(['name' => 'Calça Slim sem foto']);
+    Product::factory()->inCategory($category)->plus()->create(['name' => 'Calça Plus com foto']);
+    Product::factory()->create(['name' => 'Bermuda Slim com foto']);
+
+    $this->actingAs($user)
+        ->get(route('products.index', [
+            'search' => 'Calça Slim',
+            'category' => $category->id,
+            'line' => 'slim',
+            'image' => 'with',
+        ]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('products/index')
+            ->has('products.data', 1)
+            ->where('products.data.0.id', $matchingProduct->id)
+            ->where('filters.search', 'Calça Slim')
+            ->where('filters.category', $category->id)
+            ->where('filters.line', 'slim')
+            ->where('filters.image', 'with'));
+});
+
+test('product catalog paginates filtered products', function () {
+    $user = User::factory()->create();
+    Product::factory()->count(13)->create(['name' => 'Calça paginada']);
+
+    $this->actingAs($user)
+        ->get(route('products.index', ['search' => 'Calça paginada', 'page' => 2]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('products.data', 1)
+            ->where('products.meta.current_page', 2)
+            ->where('filters.search', 'Calça paginada'));
+});
+
+test('product catalog filters products by their latest stock offer type', function () {
+    $user = User::factory()->create();
+    $replenishmentProduct = Product::factory()->create();
+    $replenishmentProduct->offers()->create([
+        'type' => StockOfferType::Replenishment,
+        'is_active' => true,
+    ]);
+    $newGradeProduct = Product::factory()->create();
+    $newGradeProduct->offers()->create([
+        'type' => StockOfferType::NewGrade,
+        'is_active' => true,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('products.index', ['stock_offer_type' => 'replenishment']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('products/index')
+            ->has('products.data', 1)
+            ->where('products.data.0.id', $replenishmentProduct->id)
+            ->where('filters.stock_offer_type', 'replenishment'));
 });
 
 test('product catalog explains when a product is available for distribution', function () {

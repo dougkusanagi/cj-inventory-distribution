@@ -21,8 +21,10 @@ import type { PhotoEditorSource } from '@/components/products/product-photo-moda
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
+    DialogClose,
     DialogContent,
     DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
@@ -364,6 +366,9 @@ export function ProductPhotoManager({
     const [pickerOpen, setPickerOpen] = useState(false);
     const [organizerOpen, setOrganizerOpen] = useState(false);
     const [previewItem, setPreviewItem] = useState<PhotoItem | null>(null);
+    const [pendingRemoval, setPendingRemoval] = useState<PhotoItem | null>(
+        null,
+    );
     const [editor, setEditor] = useState<{
         source: PhotoEditorSource;
         queueProgress?: {
@@ -682,6 +687,19 @@ export function ProductPhotoManager({
         );
     };
 
+    const requestRemoval = (item: PhotoItem) => {
+        setPendingRemoval(item);
+    };
+
+    const confirmRemoval = () => {
+        if (!pendingRemoval) {
+            return;
+        }
+
+        handleRemove(pendingRemoval);
+        setPendingRemoval(null);
+    };
+
     const handleUndoRemove = (item: PhotoItem) => {
         dispatch({ type: 'undoRemove', key: item.key });
         setAnnouncement(
@@ -824,7 +842,7 @@ export function ProductPhotoManager({
                                     onPreview={() => setPreviewItem(item)}
                                     onEdit={() => handleEdit(item)}
                                     onSetCover={() => handleSetCover(item)}
-                                    onRemove={() => handleRemove(item)}
+                                    onRemove={() => requestRemoval(item)}
                                 />
                             );
                         })}
@@ -913,6 +931,37 @@ export function ProductPhotoManager({
                     onOpenChange={(open) => !open && setPreviewItem(null)}
                 />
             )}
+
+            <Dialog
+                open={pendingRemoval !== null}
+                onOpenChange={(open) => !open && setPendingRemoval(null)}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Remover foto?</DialogTitle>
+                        <DialogDescription>
+                            {pendingRemoval?.kind === 'existing'
+                                ? 'A remoção será aplicada ao salvar o produto. Você ainda poderá desfazê-la antes disso.'
+                                : 'A foto será descartada do formulário. Você ainda poderá desfazer essa ação antes de salvar.'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="ghost">
+                                Cancelar
+                            </Button>
+                        </DialogClose>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={confirmRemoval}
+                        >
+                            <Trash2 />
+                            Remover foto
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </section>
     );
 }
