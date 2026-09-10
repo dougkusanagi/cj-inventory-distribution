@@ -9,13 +9,17 @@ use Illuminate\Validation\ValidationException;
 
 class CompleteOrder
 {
-    public function handle(Order $order): Order
+    public function handle(Order $order, bool $whatsappOpened): Order
     {
-        return DB::transaction(function () use ($order): Order {
+        return DB::transaction(function () use ($order, $whatsappOpened): Order {
             $lockedOrder = Order::query()->whereKey($order->getKey())->lockForUpdate()->firstOrFail();
 
             if ($lockedOrder->status !== OrderStatus::Pending) {
                 throw ValidationException::withMessages(['order' => 'Somente pedidos pendentes podem ser finalizados.']);
+            }
+
+            if (! $whatsappOpened) {
+                throw ValidationException::withMessages(['whatsapp_opened' => 'Abra o WhatsApp do pedido antes de finalizá-lo.']);
             }
 
             $expectedVolumeIds = $lockedOrder->items()->pluck('stock_offer_volume_id');

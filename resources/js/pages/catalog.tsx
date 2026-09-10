@@ -344,6 +344,7 @@ function CatalogCheckout({
         orderCode: string;
         whatsappUrl: string;
     } | null>(null);
+    const [whatsappOpened, setWhatsappOpened] = useState(false);
     const form = useForm({
         store_name: '',
         requester_name: '',
@@ -367,6 +368,7 @@ function CatalogCheckout({
 
                 if (checkout) {
                     setCheckoutResult(checkout);
+                    setWhatsappOpened(false);
                 }
             },
         });
@@ -393,11 +395,21 @@ function CatalogCheckout({
                         target="_blank"
                         rel="noreferrer"
                         data-testid="finalizar-whatsapp"
+                        onClick={() => setWhatsappOpened(true)}
                     >
                         <MessageCircle />
                         Abrir WhatsApp e enviar pedido
                     </a>
                 </Button>
+                <p
+                    role="status"
+                    aria-live="polite"
+                    className="text-center text-xs leading-5 text-muted-foreground"
+                >
+                    {whatsappOpened
+                        ? 'Conversa aberta. Ainda é necessário tocar em enviar no WhatsApp.'
+                        : 'Abra a conversa para enviar o pedido à equipe.'}
+                </p>
             </div>
         );
     }
@@ -471,13 +483,11 @@ function CatalogCheckout({
                 disabled={form.processing || bag.length === 0 || !canPlaceOrder}
             >
                 <MessageCircle />
-                {form.processing
-                    ? 'Registrando pedido...'
-                    : 'Finalizar no WhatsApp'}
+                {form.processing ? 'Registrando pedido...' : 'Registrar pedido'}
             </Button>
             <p className="text-center text-xs leading-5 text-muted-foreground">
-                Seu pedido será registrado antes de abrir a conversa no
-                WhatsApp.
+                Depois de registrar, abra o WhatsApp e toque em enviar para
+                concluir o contato com a equipe.
             </p>
         </form>
     );

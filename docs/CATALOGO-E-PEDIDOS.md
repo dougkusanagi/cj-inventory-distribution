@@ -227,6 +227,9 @@ Separação e conferência são progresso dentro de Pendente, não novos status.
 - Listar por número, loja, data, status e progresso; prioridade para pendentes.
 - Criar pela lojista; equipe pode registrar em nome da loja usando as mesmas
   validações. Detalhar, cancelar e finalizar; não oferecer exclusão definitiva.
+- No painel, abrir o link `wa.me` do pedido é pré-requisito para finalizar. O
+  clique libera a ação apenas no navegador e não comprova que a mensagem foi
+  enviada ou entregue.
 - Alteração de contato/observação em Pendente com histórico. Na primeira versão,
   mudar os sacos exige cancelar e registrar novo pedido, evitando um editor
   complexo que invalide silenciosamente a separação.

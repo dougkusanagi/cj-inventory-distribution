@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Orders\BuildOrderWhatsAppUrl;
 use App\Actions\Orders\CancelOrder;
 use App\Actions\Orders\CompleteOrder;
 use App\Actions\Orders\CreateOrder;
@@ -9,8 +10,10 @@ use App\Actions\Orders\UpdateOrder;
 use App\Enums\OrderStatus;
 use App\Enums\StockOfferType;
 use App\Http\Requests\Orders\CancelOrderRequest;
+use App\Http\Requests\Orders\CompleteOrderRequest;
 use App\Http\Requests\Orders\StoreOrderRequest;
 use App\Http\Requests\Orders\UpdateOrderRequest;
+use App\Models\CatalogSetting;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\StockOfferVolume;
@@ -29,6 +32,7 @@ class OrderController extends Controller
         private readonly UpdateOrder $updateOrder,
         private readonly CancelOrder $cancelOrder,
         private readonly CompleteOrder $completeOrder,
+        private readonly BuildOrderWhatsAppUrl $buildOrderWhatsAppUrl,
     ) {}
 
     public function index(Request $request): Response
@@ -115,10 +119,10 @@ class OrderController extends Controller
         return to_route('orders.show', $order);
     }
 
-    public function complete(Order $order): RedirectResponse
+    public function complete(CompleteOrderRequest $request, Order $order): RedirectResponse
     {
         Gate::authorize('update', $order);
-        $this->completeOrder->handle($order);
+        $this->completeOrder->handle($order, $request->boolean('whatsapp_opened'));
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Pedido finalizado.']);
 
         return to_route('orders.show', $order);
@@ -174,9 +178,14 @@ class OrderController extends Controller
     /** @return array<string, mixed> */
     private function orderDetails(Order $order): array
     {
+        $destination = CatalogSetting::query()->value('whatsapp_number');
+
         return [
             ...$this->orderSummary($order->loadCount('items')->loadSum('items', 'total_quantity')),
             'whatsapp' => $order->whatsapp,
+            'whatsapp_url' => is_string($destination) && $destination !== ''
+                ? $this->buildOrderWhatsAppUrl->handle($order, $destination)
+                : null,
             'notes' => $order->notes,
             'cancellation_reason' => $order->cancellation_reason,
             'completed_at' => $order->completed_at?->toISOString(),

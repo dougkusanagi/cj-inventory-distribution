@@ -1,6 +1,7 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
-import { Ban, CheckCircle2, Pencil } from 'lucide-react';
+import { Head, Link, useForm } from '@inertiajs/react';
+import { Ban, CheckCircle2, MessageCircle, Pencil } from 'lucide-react';
 import type { FormEvent } from 'react';
+import { useState } from 'react';
 import {
     cancel,
     complete,
@@ -25,10 +26,25 @@ import { edit, index } from '@/routes/orders';
 import type { Order } from '@/types';
 
 export default function ShowOrder({ order }: { order: Order }) {
+    const [whatsappOpened, setWhatsappOpened] = useState(false);
     const cancelForm = useForm({ reason: '' });
+    const completeForm = useForm({ whatsapp_opened: false });
     const submitCancellation = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         cancelForm.post(cancel.url(order.id));
+    };
+    const submitCompletion = () => {
+        if (
+            !whatsappOpened ||
+            !window.confirm(
+                `Finalizar ${order.code}? Os sacos serão marcados como consumidos.`,
+            )
+        ) {
+            return;
+        }
+
+        completeForm.transform(() => ({ whatsapp_opened: whatsappOpened }));
+        completeForm.post(complete.url(order.id));
     };
 
     return (
@@ -160,77 +176,135 @@ export default function ShowOrder({ order }: { order: Order }) {
                     ))}
                 </section>
                 {order.status === 'pending' && (
-                    <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:justify-end">
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button variant="destructive">
-                                    <Ban />
-                                    Cancelar pedido
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <form onSubmit={submitCancellation}>
-                                    <DialogHeader>
-                                        <DialogTitle>
-                                            Cancelar {order.code}?
-                                        </DialogTitle>
-                                        <DialogDescription>
-                                            Os sacos serão liberados para novos
-                                            pedidos. O histórico será
-                                            preservado.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <div className="grid gap-2 py-5">
-                                        <Label htmlFor="cancel-reason">
-                                            Motivo
-                                        </Label>
-                                        <Textarea
-                                            id="cancel-reason"
-                                            value={cancelForm.data.reason}
-                                            onChange={(event) =>
-                                                cancelForm.setData(
-                                                    'reason',
-                                                    event.target.value,
-                                                )
-                                            }
-                                        />
-                                        <InputError
-                                            message={cancelForm.errors.reason}
-                                        />
-                                    </div>
-                                    <DialogFooter>
-                                        <DialogClose asChild>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                            >
-                                                Voltar
-                                            </Button>
-                                        </DialogClose>
-                                        <Button
-                                            type="submit"
-                                            variant="destructive"
-                                            disabled={cancelForm.processing}
-                                        >
-                                            Confirmar cancelamento
-                                        </Button>
-                                    </DialogFooter>
-                                </form>
-                            </DialogContent>
-                        </Dialog>
-                        <Button
-                            onClick={() => {
-                                if (
-                                    window.confirm(
-                                        `Finalizar ${order.code}? Os sacos serão marcados como consumidos.`,
-                                    )
-                                )
-                                    router.post(complete.url(order.id));
-                            }}
+                    <div className="grid gap-5 border-t border-border pt-5">
+                        <section
+                            className="grid gap-3"
+                            aria-labelledby="whatsapp-step-title"
                         >
-                            <CheckCircle2 />
-                            Finalizar pedido
-                        </Button>
+                            <div className="grid gap-1">
+                                <h2
+                                    id="whatsapp-step-title"
+                                    className="text-xl font-semibold"
+                                >
+                                    Envie o pedido pelo WhatsApp
+                                </h2>
+                                <p className="text-sm leading-6 text-muted-foreground">
+                                    Abra a conversa com o pedido preenchido
+                                    antes de finalizar. Abrir o link não
+                                    confirma que a mensagem foi enviada.
+                                </p>
+                            </div>
+                            {order.whatsapp_url ? (
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <Button asChild className="h-11 sm:w-fit">
+                                        <a
+                                            href={order.whatsapp_url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            data-testid="abrir-whatsapp-pedido"
+                                            onClick={() =>
+                                                setWhatsappOpened(true)
+                                            }
+                                        >
+                                            <MessageCircle />
+                                            Abrir WhatsApp com o pedido
+                                        </a>
+                                    </Button>
+                                    <p
+                                        role="status"
+                                        aria-live="polite"
+                                        className="text-sm text-muted-foreground"
+                                    >
+                                        {whatsappOpened
+                                            ? 'Conversa aberta neste navegador.'
+                                            : 'Abra a conversa para liberar a finalização.'}
+                                    </p>
+                                </div>
+                            ) : (
+                                <p
+                                    role="alert"
+                                    className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+                                >
+                                    O WhatsApp de atendimento não está
+                                    configurado. Configure-o antes de finalizar
+                                    este pedido.
+                                </p>
+                            )}
+                        </section>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="destructive">
+                                        <Ban />
+                                        Cancelar pedido
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <form onSubmit={submitCancellation}>
+                                        <DialogHeader>
+                                            <DialogTitle>
+                                                Cancelar {order.code}?
+                                            </DialogTitle>
+                                            <DialogDescription>
+                                                Os sacos serão liberados para
+                                                novos pedidos. O histórico será
+                                                preservado.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="grid gap-2 py-5">
+                                            <Label htmlFor="cancel-reason">
+                                                Motivo
+                                            </Label>
+                                            <Textarea
+                                                id="cancel-reason"
+                                                value={cancelForm.data.reason}
+                                                onChange={(event) =>
+                                                    cancelForm.setData(
+                                                        'reason',
+                                                        event.target.value,
+                                                    )
+                                                }
+                                            />
+                                            <InputError
+                                                message={
+                                                    cancelForm.errors.reason
+                                                }
+                                            />
+                                        </div>
+                                        <DialogFooter>
+                                            <DialogClose asChild>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                >
+                                                    Voltar
+                                                </Button>
+                                            </DialogClose>
+                                            <Button
+                                                type="submit"
+                                                variant="destructive"
+                                                disabled={cancelForm.processing}
+                                            >
+                                                Confirmar cancelamento
+                                            </Button>
+                                        </DialogFooter>
+                                    </form>
+                                </DialogContent>
+                            </Dialog>
+                            <InputError
+                                message={completeForm.errors.whatsapp_opened}
+                            />
+                            <Button
+                                data-testid="finalizar-pedido"
+                                onClick={submitCompletion}
+                                disabled={
+                                    !whatsappOpened || completeForm.processing
+                                }
+                            >
+                                <CheckCircle2 />
+                                Finalizar pedido
+                            </Button>
+                        </div>
                     </div>
                 )}
             </div>
