@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ProductLine;
 use App\Enums\StockOfferType;
 use App\Models\Category;
 use App\Models\Product;
@@ -18,7 +19,10 @@ test('guests are redirected to login when visiting products', function () {
 
 test('authenticated users can view the product catalog', function () {
     $user = User::factory()->create();
-    $product = Product::factory()->create(['name' => 'Calça Wide Leg']);
+    $product = Product::factory()->create([
+        'name' => 'Calça Wide Leg',
+        'line' => ProductLine::Slim,
+    ]);
     $offer = $product->offers()->create([
         'type' => StockOfferType::NewGrade,
         'is_active' => true,
@@ -39,6 +43,8 @@ test('authenticated users can view the product catalog', function () {
             ->component('products/index')
             ->where('products.data.0.id', $product->id)
             ->where('products.data.0.stock_volumes.0.items.0.size', '34')
+            ->where('products.data.0.stock_offer_type', 'new_grade')
+            ->where('products.data.0.line', 'slim')
             ->where('products.data.0.images', []),
         );
 });
