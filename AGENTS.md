@@ -100,7 +100,8 @@ o usuário solicitar deploy. Antes de executá-lo:
 
 1. Execute `composer ci:verify` no ambiente de desenvolvimento com dependências dev.
 2. Confirme que as alterações estão commitadas e disponíveis na branch de destino
-   no `origin`; o script exige uma árvore de trabalho limpa.
+   no `origin`; o script usa `git pull --ff-only`, e o Git interrompe a atualização
+   se alterações locais entrarem em conflito com o código remoto.
 3. Confira ferramentas, permissões dos serviços e a configuração do ambiente de destino.
 
 O arquivo de configuração define `master` como branch padrão
