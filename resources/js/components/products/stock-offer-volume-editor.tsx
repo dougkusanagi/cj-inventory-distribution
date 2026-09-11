@@ -79,18 +79,18 @@ type StockOfferVolumeEditorProps = {
     onChange: (volumes: StockOfferVolumeFormItem[]) => void;
 };
 
-function emptyItems(): StockOfferVolumeItemFormItem[] {
-    return sizePresets[0].sizes.map((size) => ({
+function emptyItems(sizes: string[]): StockOfferVolumeItemFormItem[] {
+    return sizes.map((size) => ({
         size,
         is_active: false,
         quantity: null,
     }));
 }
 
-function emptyVolume(): StockOfferVolumeFormItem {
+function emptyVolume(sizes: string[]): StockOfferVolumeFormItem {
     return {
         total_quantity: null,
-        items: emptyItems(),
+        items: emptyItems(sizes),
     };
 }
 
@@ -132,6 +132,10 @@ function detectPreset(items: StockOfferVolumeItemFormItem[]): SizePresetId {
 }
 
 function detectSharedPreset(volumes: StockOfferVolumeFormItem[]): SizePresetId {
+    if (volumes.length === 0) {
+        return 'numeric-female';
+    }
+
     const firstPreset = detectPreset(volumes[0]?.items ?? []);
 
     return volumes.every((volume) => detectPreset(volume.items) === firstPreset)
@@ -321,6 +325,9 @@ export function StockOfferVolumeEditor({
 
     const addVolume = () => {
         const template = volumes[volumes.length - 1];
+        const selectedSizes =
+            sizePresets.find((preset) => preset.id === selectedPreset)?.sizes ??
+            [];
         const nextVolume = template
             ? {
                   total_quantity: null,
@@ -330,7 +337,7 @@ export function StockOfferVolumeEditor({
                       quantity: null,
                   })),
               }
-            : emptyVolume();
+            : emptyVolume(selectedSizes);
 
         onChange([...volumes, nextVolume]);
     };

@@ -33,7 +33,6 @@ export type Product = {
     is_active: boolean;
     images: ProductImage[];
     notes: string | null;
-    has_stock_offer?: boolean;
     available_for_distribution?: boolean;
     distribution_status?: string;
     stock_offer_type?: StockOfferType | null;
@@ -88,7 +87,6 @@ export type Order = {
     store_name: string;
     requester_name: string;
     whatsapp?: string | null;
-    whatsapp_url?: string | null;
     notes?: string | null;
     cancellation_reason?: string | null;
     status: OrderStatus;
@@ -142,4 +140,6 @@ export type DashboardStats = {
     withSizes: number;
     activeOffers: number;
     stockUnits: number;
+    pendingOrders: number;
+    ordersWithDivergences: number;
 };

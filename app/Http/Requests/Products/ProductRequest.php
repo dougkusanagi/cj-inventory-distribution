@@ -28,23 +28,11 @@ abstract class ProductRequest extends FormRequest
         $name = $this->input('name');
         $model = $this->input('model');
         $isActive = $this->input('is_active');
-        $hasStockOffer = $this->input('has_stock_offer');
         $stockOfferType = $this->input('stock_offer_type');
         $stockVolumes = $this->input('stock_volumes');
 
         if ($isActive === null) {
             $isActive = true;
-        }
-
-        if ($hasStockOffer === null) {
-            $hasStockOffer = true;
-        }
-
-        if (
-            $stockOfferType === null
-            && filter_var($hasStockOffer, FILTER_VALIDATE_BOOLEAN)
-        ) {
-            $stockOfferType = StockOfferType::NewGrade->value;
         }
 
         if (is_array($stockVolumes)) {
@@ -53,11 +41,12 @@ abstract class ProductRequest extends FormRequest
             $stockVolumes = [];
         }
 
+        $normalizedModel = is_string($model) ? Str::squish($model) : $model;
+
         $this->merge([
             'name' => is_string($name) ? Str::squish($name) : $name,
-            'model' => is_string($model) ? Str::squish($model) ?: null : $model,
+            'model' => $normalizedModel === '' ? null : $normalizedModel,
             'is_active' => $isActive,
-            'has_stock_offer' => $hasStockOffer,
             'stock_offer_type' => $stockOfferType,
             'stock_volumes' => $stockVolumes,
         ]);
@@ -77,17 +66,15 @@ abstract class ProductRequest extends FormRequest
             'line' => ['nullable', Rule::enum(ProductLine::class)],
             'notes' => ['nullable', 'string', 'max:5000'],
             'is_active' => ['required', 'boolean'],
-            'has_stock_offer' => ['required', 'boolean'],
             'stock_offer_type' => [
                 'nullable',
-                Rule::requiredIf(fn (): bool => $this->boolean('has_stock_offer')),
+                Rule::requiredIf(fn (): bool => $this->input('stock_volumes', []) !== []),
                 Rule::enum(StockOfferType::class),
             ],
             'stock_volumes' => [
                 'nullable',
                 'array',
                 'max:50',
-                Rule::requiredIf(fn (): bool => $this->boolean('has_stock_offer')),
             ],
             'stock_volumes.*' => ['array:id,sort_order,total_quantity,items'],
             'stock_volumes.*.id' => ['nullable', 'integer', 'min:1', 'distinct'],
@@ -132,9 +119,8 @@ abstract class ProductRequest extends FormRequest
             'line.enum' => 'Selecione uma linha válida.',
             'notes.max' => 'A observação deve ter no máximo 5.000 caracteres.',
             'is_active.boolean' => 'Informe se o produto está ativo.',
-            'has_stock_offer.boolean' => 'Informe se o produto deve aparecer no catálogo.',
-            'stock_offer_type.required' => 'Informe o tipo do estoque.',
             'stock_offer_type.enum' => 'Selecione um tipo de estoque válido.',
+            'stock_offer_type.required' => 'Informe o tipo do estoque.',
             'stock_volumes.required' => 'Adicione pelo menos um saco ao estoque.',
             'stock_volumes.array' => 'Envie os sacos em uma lista válida.',
             'stock_volumes.max' => 'Cadastre no máximo 50 sacos por oferta.',
@@ -296,15 +282,6 @@ abstract class ProductRequest extends FormRequest
 
         $stockVolumes = $this->input('stock_volumes');
 
-        if ($this->boolean('has_stock_offer') && $stockVolumes === []) {
-            $validator->errors()->add(
-                'stock_volumes',
-                'Adicione pelo menos um saco ao estoque.',
-            );
-
-            return;
-        }
-
         foreach ($stockVolumes as $volumeIndex => $volume) {
             if (! is_array($volume)) {
                 continue;
@@ -346,8 +323,7 @@ abstract class ProductRequest extends FormRequest
             $totalQuantity = $volume['total_quantity'] ?? null;
 
             if (
-                $this->boolean('has_stock_offer')
-                && ! $hasKnownQuantity
+                ! $hasKnownQuantity
                 && ($totalQuantity === null || $totalQuantity === '')
             ) {
                 $validator->errors()->add(

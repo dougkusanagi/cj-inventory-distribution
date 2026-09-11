@@ -71,9 +71,9 @@ Um produto sem modelo continua plenamente utilizável.
 O produto inicia ativo, mas pode ser desativado independentemente das ofertas
 de estoque. Produtos inativos não aparecem no catálogo compartilhado.
 
-Um produto também pode ser salvo sem uma oferta de estoque ativa. A oferta é
-criada ou atualizada somente quando o cadastro informar explicitamente que há
-disponibilidade. Quando ativa, ela possui ao menos um saco.
+Um produto também pode ser salvo sem uma oferta de estoque. A oferta é criada
+ao adicionar o primeiro saco e removida ao encerrar o estoque. Toda oferta
+possui ao menos um saco.
 
 ## Tamanhos por saco
 
@@ -105,8 +105,8 @@ explícito.
 
 ## StockOffer
 
-Representa uma disponibilidade atual de estoque. A classificação e a ativação
-pertencem à oferta, não ao produto nem ao saco.
+Representa uma disponibilidade atual de estoque. A classificação pertence à
+oferta, não ao produto nem ao saco.
 
 Campos sugeridos:
 
@@ -114,7 +114,6 @@ Campos sugeridos:
 id
 product_id
 type
-is_active
 notes nullable
 created_at
 updated_at
@@ -136,17 +135,11 @@ Grade Nova
 Grade Furada
 ```
 
-O cadastro não infere o tipo a partir das quantidades. Quando a oferta está
-ativa, o tipo é informado explicitamente e existe pelo menos um
-`StockOfferVolume`.
-
-O estado ativo da oferta controla sua exibição no catálogo, desde que o produto
-também esteja ativo. Desativar uma oferta não zera seus sacos nem a
-disponibilidade por tamanho. O encerramento do estoque atual é uma ação
-explícita e separada.
+O cadastro não infere o tipo a partir das quantidades. Ao adicionar sacos, o
+tipo é informado explicitamente e existe pelo menos um `StockOfferVolume`.
 
 A disponibilidade usa a soma de `StockOfferVolume.total_quantity`: a oferta
-só aparece quando produto e oferta estão ativos, existe ao menos um saco e o
+só aparece quando o produto está ativo, existe ao menos um saco disponível e o
 total agregado é maior que zero.
 
 Além dessas condições, o catálogo para lojistas **nunca mostra Grade Nova**.
@@ -169,7 +162,7 @@ created_at
 updated_at
 ```
 
-Uma oferta ativa precisa de ao menos um saco. A posição define o nome exibido
+Uma oferta precisa de ao menos um saco. A posição define o nome exibido
 (`Saco 1`, `Saco 2`) e pode mudar sem trocar a identidade persistida.
 
 ## StockOfferVolumeItem
@@ -274,7 +267,7 @@ metadados mínimos.
 ```text
 Vendedora acessa tela compartilhada
         ↓
-Visualiza ofertas ativas
+Visualiza ofertas disponíveis
         ↓
 Seleciona produto/tamanho/quantidade
         ↓
@@ -358,7 +351,7 @@ Para o MVP, a tela deve priorizar simplicidade e uso mobile.
 
 Requisitos:
 
-- listar somente ofertas ativas;
+- listar somente ofertas disponíveis;
 - não listar ofertas sem saco físico ou com soma de sacos igual a zero;
 - mostrar a foto de capa, nome, modelo quando houver, tipo e estoque disponível;
 - permitir selecionar sacos físicos distintos, sem multiplicar um mesmo saco;

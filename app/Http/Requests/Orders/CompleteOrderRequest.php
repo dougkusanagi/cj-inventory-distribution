@@ -22,16 +22,6 @@ class CompleteOrderRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'whatsapp_opened' => ['accepted'],
-        ];
-    }
-
-    /** @return array<string, string> */
-    public function messages(): array
-    {
-        return [
-            'whatsapp_opened.accepted' => 'Abra o WhatsApp do pedido antes de finalizá-lo.',
-        ];
+        return [];
     }
 }

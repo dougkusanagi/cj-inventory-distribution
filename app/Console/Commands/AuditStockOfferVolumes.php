@@ -9,7 +9,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 
 #[Signature('stock-offers:audit-volumes {--json : Return the report as JSON}')]
-#[Description('Audit active stock offers for physical stock sacks')]
+#[Description('Audit stock offers for physical stock sacks')]
 class AuditStockOfferVolumes extends Command
 {
     /**
@@ -21,7 +21,6 @@ class AuditStockOfferVolumes extends Command
             'offer_count' => 0,
             'offers_with_physical_volumes' => 0,
             'offers_without_physical_volumes' => 0,
-            'active_offers_without_physical_volumes' => 0,
         ];
         $issues = [];
 
@@ -40,8 +39,7 @@ class AuditStockOfferVolumes extends Command
                         $summary['offers_with_physical_volumes']++;
                     }
 
-                    if ($offer->is_active && $volumeCount === 0) {
-                        $summary['active_offers_without_physical_volumes']++;
+                    if ($volumeCount === 0) {
                         $issues[] = [
                             'offer_id' => $offer->id,
                             'product_id' => $offer->product_id,
@@ -83,7 +81,7 @@ class AuditStockOfferVolumes extends Command
                 ['Ofertas auditadas', $summary['offer_count']],
                 ['Com sacos físicos', $summary['offers_with_physical_volumes']],
                 ['Sem sacos físicos', $summary['offers_without_physical_volumes']],
-                ['Ativas sem sacos físicos', $summary['active_offers_without_physical_volumes']],
+                ['Ofertas inválidas sem sacos físicos', $summary['offers_without_physical_volumes']],
             ],
         );
 
@@ -94,7 +92,7 @@ class AuditStockOfferVolumes extends Command
         }
 
         $this->newLine();
-        $this->warn('Ofertas ativas que precisam de correção:');
+        $this->warn('Ofertas que precisam de correção:');
         $this->table(
             ['Oferta', 'Produto', 'Problema', 'Sacos'],
             $issues,

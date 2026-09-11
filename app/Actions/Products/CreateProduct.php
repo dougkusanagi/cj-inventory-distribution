@@ -6,6 +6,7 @@ use App\Models\Product;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use RuntimeException;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Throwable;
 
@@ -31,10 +32,10 @@ class CreateProduct
                 $product = Product::create([
                     'code' => 'PENDING-'.Str::uuid(),
                     'name' => $data['name'],
-                    'model' => ($data['model'] ?? null) ?: null,
+                    'model' => $data['model'] ?? null,
                     'category_id' => $data['category_id'] ?? null,
                     'line' => $data['line'] ?? null,
-                    'notes' => ($data['notes'] ?? null) ?: null,
+                    'notes' => $data['notes'] ?? null,
                     'is_active' => $data['is_active'] ?? true,
                 ]);
 
@@ -44,9 +45,7 @@ class CreateProduct
 
                 $this->syncProductStockOffer->handle($product, $data);
                 $addedMedia = $this->storeImages($product, $data['images'] ?? []);
-                Media::setNewOrder(
-                    $product->getMedia(Product::MEDIA_COLLECTION)->pluck('id')->all(),
-                );
+                $this->reorderImages($product, $data['image_order'] ?? null, $addedMedia);
 
                 return $product->load([
                     'latestOffer.stockVolumes.items',
@@ -98,5 +97,50 @@ class CreateProduct
         }
 
         return $addedMedia;
+    }
+
+    /**
+     * Persist the order selected for newly uploaded images.
+     *
+     * @param  array<int, Media>  $addedMedia
+     */
+    private function reorderImages(Product $product, mixed $imageOrder, array $addedMedia): void
+    {
+        if (! is_array($imageOrder)) {
+            Media::setNewOrder(
+                $product->getMedia(Product::MEDIA_COLLECTION)->pluck('id')->all(),
+            );
+
+            return;
+        }
+
+        $mediaIdsByUploadIndex = collect($addedMedia)
+            ->mapWithKeys(fn (Media $media, int|string $index): array => [
+                (int) $index => (int) $media->getKey(),
+            ]);
+        $orderedMediaIds = [];
+
+        foreach ($imageOrder as $token) {
+            if (! is_string($token) || ! str_starts_with($token, 'new:')) {
+                throw new RuntimeException('The product image order is invalid.');
+            }
+
+            $uploadIndex = (int) substr($token, strlen('new:'));
+
+            if (! $mediaIdsByUploadIndex->has($uploadIndex)) {
+                throw new RuntimeException('The product image order references an unknown upload.');
+            }
+
+            $orderedMediaIds[] = $mediaIdsByUploadIndex->get($uploadIndex);
+        }
+
+        $expectedMediaIds = $mediaIdsByUploadIndex->values()->sort()->values()->all();
+        $actualMediaIds = collect($orderedMediaIds)->sort()->values()->all();
+
+        if ($actualMediaIds !== $expectedMediaIds || count($orderedMediaIds) !== $mediaIdsByUploadIndex->count()) {
+            throw new RuntimeException('The product image order changed during creation.');
+        }
+
+        Media::setNewOrder($orderedMediaIds);
     }
 }

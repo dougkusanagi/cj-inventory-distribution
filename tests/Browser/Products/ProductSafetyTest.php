@@ -19,7 +19,7 @@ it('shows validation feedback and does not save an invalid stock offer', functio
         ->wait(1)
         ->type('#product-name', '   ')
         ->click('#product-tab-stock')
-        ->click('#has-stock-offer');
+        ->press('Adicionar saco');
 
     $page->script('window.scrollTo(0, document.body.scrollHeight);');
     $page->submit()->wait(1);
@@ -42,7 +42,6 @@ it('keeps a second sack when its removal is cancelled', function () {
     $product = Product::factory()->create(['name' => 'Produto com dois sacos E2E']);
     $offer = $product->offers()->create([
         'type' => StockOfferType::NewGrade,
-        'is_active' => true,
     ]);
 
     foreach ([4, 3] as $sortOrder => $totalQuantity) {
@@ -92,7 +91,7 @@ it('opens the stock tab when saving from the details tab returns stock errors', 
     $page = visit(route('products.create', [], false))
         ->type('#product-name', 'Produto com estoque incompleto')
         ->click('#product-tab-stock')
-        ->click('#has-stock-offer')
+        ->press('Adicionar saco')
         ->click('#product-tab-details');
 
     $page->submit()->wait(1);
@@ -112,6 +111,7 @@ it('opens the details tab for native validation when saving from stock', functio
 
     $page = visit(route('products.create', [], false))
         ->click('#product-tab-stock')
+        ->press('Adicionar saco')
         ->type('#volume-total-0', '12');
 
     $page->submit();

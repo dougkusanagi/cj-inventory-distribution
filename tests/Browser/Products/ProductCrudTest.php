@@ -29,7 +29,6 @@ it('shows the grade type, commercial line, and category in product cards and tab
         ->create(['name' => 'Produto classificado E2E']);
     $offer = $product->offers()->create([
         'type' => StockOfferType::BrokenGrade,
-        'is_active' => true,
     ]);
     $offer->stockVolumes()->create(['total_quantity' => 3]);
 
@@ -163,11 +162,17 @@ it('renders the product creation form for an authenticated user', function () {
         ->assertPresent('#product-cover')
         ->click('#product-tab-photos')
         ->assertSee('Fotos do produto')
-        ->assertPresent('#has-stock-offer')
         ->click('#product-tab-stock')
-        ->assertSee('Oferta de estoque ativa')
+        ->assertSee('Estoque organizado por sacos')
         ->assertDontSee('Mostrar oferta no catálogo')
-        ->assertAttribute('#has-stock-offer', 'aria-checked', 'false')
+        ->assertDontSee('Oferta de estoque ativa')
+        ->assertAttribute(
+            '#stock-size-preset-numeric-female',
+            'aria-checked',
+            'true',
+        )
+        ->press('Adicionar saco')
+        ->assertPresent('#volume-0-active-0')
         ->assertNoJavaScriptErrors();
 });
 
@@ -210,11 +215,10 @@ it('keeps a stock quantity when disabling a size is cancelled', function () {
         ->wait(1)
         ->type('#product-name', 'Blusa com grade E2E')
         ->click('#product-tab-stock')
-        ->click('#has-stock-offer')
+        ->press('Adicionar saco')
         ->click('#stock-size-preset-letters')
         ->click('#volume-0-active-2')
         ->type('#volume-0-quantity-2', '7')
-        ->assertAttribute('#has-stock-offer', 'aria-checked', 'true')
         ->assertAttribute('#stock-size-preset-letters', 'aria-checked', 'true')
         ->assertAttribute('#volume-0-active-2', 'aria-checked', 'true')
         ->assertValue('#volume-0-quantity-2', '7')
@@ -264,7 +268,6 @@ it('edits a product, preserves its code, and adds a stock sack', function () {
     $originalCode = $product->code;
     $offer = $product->offers()->create([
         'type' => StockOfferType::NewGrade,
-        'is_active' => true,
     ]);
     $volume = $offer->stockVolumes()->create([
         'sort_order' => 0,
@@ -286,7 +289,6 @@ it('edits a product, preserves its code, and adds a stock sack', function () {
         ->assertValue('#product-name', 'Produto antigo E2E')
         ->assertValue('#product-model', 'MODELO-ANTIGO')
         ->assertSee($product->code)
-        ->assertAttribute('#has-stock-offer', 'aria-checked', 'true')
         ->assertValue('#volume-0-quantity-2', '4');
 
     $page->script('window.confirm = () => false;');
@@ -294,7 +296,6 @@ it('edits a product, preserves its code, and adds a stock sack', function () {
     $page
         ->click('#product-tab-stock')
         ->press('Encerrar estoque')
-        ->assertAttribute('#has-stock-offer', 'aria-checked', 'true')
         ->assertValue('#volume-0-quantity-2', '4')
         ->click('#product-tab-details')
         ->type('#product-name', 'Produto atualizado E2E')
@@ -327,6 +328,67 @@ it('edits a product, preserves its code, and adds a stock sack', function () {
     expect($product->latestOffer->type)->toBe(StockOfferType::BrokenGrade);
     expect($product->latestOffer->calculatedTotalQuantity())->toBe(7);
     expect($product->latestOffer->stockVolumes->pluck('total_quantity')->all())->toBe([4, 3]);
+});
+
+it('persists an edited quantity for an existing size', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create(['name' => 'Produto com tamanho editável E2E']);
+    $offer = $product->offers()->create([
+        'type' => StockOfferType::NewGrade,
+    ]);
+    $volume = $offer->stockVolumes()->create([
+        'sort_order' => 0,
+        'total_quantity' => 4,
+    ]);
+    $item = $volume->items()->create([
+        'size' => 'M',
+        'sort_order' => 0,
+        'is_active' => true,
+        'quantity' => 4,
+    ]);
+
+    $this->actingAs($user);
+
+    visit(route('products.edit', [$product->id], false))
+        ->wait(1)
+        ->click('#product-tab-stock')
+        ->clear('#volume-0-quantity-0')
+        ->fill('#volume-0-quantity-0', '7')
+        ->assertValue('#volume-0-quantity-0', '7')
+        ->assertValue('#volume-total-0', '7')
+        ->submit()
+        ->wait(1)
+        ->assertRoute('products.index')
+        ->assertNoJavaScriptErrors();
+
+    expect($item->fresh()->quantity)->toBe(7);
+    expect($volume->fresh()->total_quantity)->toBe(7);
+});
+
+it('allows ending an existing zero stock offer', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create(['name' => 'Produto sem saldo E2E']);
+    $offer = $product->offers()->create([
+        'type' => StockOfferType::Replenishment,
+    ]);
+    $volume = $offer->stockVolumes()->create([
+        'sort_order' => 0,
+        'total_quantity' => 0,
+    ]);
+    $volume->items()->create([
+        'size' => 'M',
+        'sort_order' => 0,
+        'is_active' => false,
+        'quantity' => null,
+    ]);
+
+    $this->actingAs($user);
+
+    visit(route('products.edit', [$product->id], false))
+        ->wait(1)
+        ->click('#product-tab-stock')
+        ->assertEnabled('[data-testid="end-current-stock"]')
+        ->assertNoJavaScriptErrors();
 });
 
 it('rejects an invalid image without adding it to the form', function () {
@@ -408,6 +470,7 @@ it('keeps the product form usable on a narrow mobile viewport', function () {
         ->assertSee('Furada')
         ->assertScript("(() => { const cards = [...document.querySelectorAll('label[for^=\"stock-offer-type-\"]')]; return cards.length === 3 && new Set(cards.map((card) => Math.round(card.getBoundingClientRect().top))).size === 1; })()")
         ->assertScript("(() => { const cards = [...document.querySelectorAll('label[for^=\"stock-offer-type-\"]')]; return cards.every((card) => { const radio = card.querySelector('[role=\"radio\"]'); const content = card.querySelector('span.grid'); if (!radio || !content) { return false; } const cardRect = card.getBoundingClientRect(); const radioRect = radio.getBoundingClientRect(); const contentRect = content.getBoundingClientRect(); const paddingLeft = Number.parseFloat(getComputedStyle(card).paddingLeft); return Math.abs((radioRect.left + radioRect.width / 2) - (cardRect.left + cardRect.width / 2)) <= 1 && contentRect.top >= radioRect.bottom && Math.abs(contentRect.left - (cardRect.left + paddingLeft)) <= 1 && getComputedStyle(content).textAlign === 'left'; }); })()")
+        ->press('Adicionar saco')
         ->type('#volume-total-0', '9')
         ->assertAttribute('#volume-total-0', 'type', 'number')
         ->assertScript("(() => { const up = document.querySelector('button[aria-label=\"Mover Saco 1 para cima\"]'); const down = document.querySelector('button[aria-label=\"Mover Saco 1 para baixo\"]'); const menu = document.querySelector('button[aria-label=\"Mais ações para o Saco 1\"]'); if (!up || !down || !menu) { return false; } return up.getBoundingClientRect().width > menu.getBoundingClientRect().width && down.getBoundingClientRect().width > menu.getBoundingClientRect().width; })()")

@@ -54,7 +54,6 @@ legados; as migrations atuais já criam somente o modelo de sacos.
 - [ ] tipo `Grade Furada`
 - [ ] estoque total obrigatório
 - [ ] quantidade opcional por tamanho
-- [ ] ativar/desativar oferta
 - [ ] listagem e filtros básicos
 
 ## Fase 3 — Tela das vendedoras

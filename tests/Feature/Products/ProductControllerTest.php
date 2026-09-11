@@ -3,6 +3,7 @@
 use App\Enums\ProductLine;
 use App\Enums\StockOfferType;
 use App\Models\Category;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
@@ -190,12 +191,11 @@ test('authenticated users can open the product forms', function () {
         );
 });
 
-test('editing a hidden product keeps its stock data available', function () {
+test('editing a product keeps its stock data available', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
     $offer = $product->offers()->create([
         'type' => StockOfferType::Replenishment,
-        'is_active' => false,
     ]);
     $volume = $offer->stockVolumes()->create(['total_quantity' => 10]);
     $volume->items()->create([
@@ -207,7 +207,6 @@ test('editing a hidden product keeps its stock data available', function () {
     $this->actingAs($user)
         ->get(route('products.edit', $product))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('product.has_stock_offer', false)
             ->where('product.stock_offer_type', StockOfferType::Replenishment->value)
             ->where('product.total_quantity', 10)
             ->where('product.stock_volume_count', 1)
@@ -223,7 +222,6 @@ test('authenticated users can create a product with optional model, ordered size
         'name' => '  Jaqueta Jeans Oversized  ',
         'model' => '  ',
         'notes' => 'Lavagem média',
-        'has_stock_offer' => true,
         'stock_offer_type' => StockOfferType::NewGrade->value,
         'stock_volumes' => [[
             'total_quantity' => 15,
@@ -254,11 +252,85 @@ test('authenticated users can create a product with optional model, ordered size
         ->toBe([5, 5, 5]);
 });
 
+test('product creation preserves valid text values that PHP treats as false', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->post(route('products.store'), [
+        'name' => 'Produto com referência zero',
+        'model' => '0',
+        'notes' => '0',
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $product = Product::query()->sole();
+
+    expect($product->model)->toBe('0');
+    expect($product->notes)->toBe('0');
+});
+
+test('stock entered while updating a product is persisted', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create(['name' => 'Teste Rafael']);
+
+    $response = $this->actingAs($user)->put(route('products.update', $product), [
+        'name' => $product->name,
+        'stock_offer_type' => StockOfferType::NewGrade->value,
+        'stock_volumes' => [[
+            'total_quantity' => 15,
+            'items' => [
+                ['size' => '34', 'is_active' => true, 'quantity' => 5],
+                ['size' => '36', 'is_active' => true, 'quantity' => 10],
+                ['size' => '38', 'is_active' => false, 'quantity' => null],
+            ],
+        ]],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $product->load('latestOffer.stockVolumes.items');
+
+    expect($product->latestOffer->stockVolumes->sole()->total_quantity)->toBe(15);
+    expect($product->latestOffer->stockVolumes->sole()->items->pluck('quantity')->all())
+        ->toBe([5, 10, null]);
+});
+
+test('product creation preserves the selected image order', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->post(route('products.store'), [
+        'name' => 'Produto com capa escolhida',
+        'images' => [
+            UploadedFile::fake()->image('primeira.jpg'),
+            UploadedFile::fake()->image('segunda.jpg'),
+        ],
+        'image_order' => ['new:1', 'new:0'],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $product = Product::query()->sole();
+
+    $orderedMedia = $product->getMedia(Product::MEDIA_COLLECTION);
+
+    expect($orderedMedia->pluck('order_column')->all())->toBe([1, 2]);
+    expect($orderedMedia->first()->id)->toBeGreaterThan($orderedMedia->last()->id);
+});
+
 test('stock total is calculated from active size quantities', function () {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->post(route('products.store'), [
         'name' => 'Calça com estoque por tamanho',
+        'stock_offer_type' => StockOfferType::NewGrade->value,
         'stock_volumes' => [[
             'total_quantity' => 999,
             'items' => [
@@ -287,7 +359,6 @@ test('authenticated users can save a product without creating a stock offer', fu
 
     $response = $this->actingAs($user)->post(route('products.store'), [
         'name' => 'Produto sem estoque inicial',
-        'has_stock_offer' => false,
     ]);
 
     $response
@@ -320,7 +391,6 @@ test('product activation is independent from its stock offer', function () {
     $response = $this->actingAs($user)->put(route('products.update', $product), [
         'name' => $product->name,
         'is_active' => false,
-        'has_stock_offer' => true,
         'stock_offer_type' => StockOfferType::NewGrade->value,
         'stock_volumes' => [[
             'id' => $volume->id,
@@ -340,7 +410,7 @@ test('product activation is independent from its stock offer', function () {
         ->assertRedirect(route('products.index'));
 
     expect($product->fresh()->is_active)->toBeFalse();
-    expect($offer->fresh()->is_active)->toBeTrue();
+    expect($offer->fresh()->type)->toBe(StockOfferType::NewGrade);
 });
 
 test('stock offer type is persisted from the explicit request value', function () {
@@ -348,7 +418,6 @@ test('stock offer type is persisted from the explicit request value', function (
 
     $response = $this->actingAs($user)->post(route('products.store'), [
         'name' => 'Reposição de referência',
-        'has_stock_offer' => true,
         'stock_offer_type' => StockOfferType::Replenishment->value,
         'stock_volumes' => [[
             'total_quantity' => 12,
@@ -366,29 +435,20 @@ test('stock offer type is persisted from the explicit request value', function (
     expect($product->latestOffer->stockVolumes()->count())->toBe(1);
 });
 
-test('active stock offers require at least one physical sack', function (string $type) {
+test('a product without sacks does not create a stock offer', function () {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)
-        ->from(route('products.create'))
         ->post(route('products.store'), [
-            'name' => 'Oferta em sacos',
-            'has_stock_offer' => true,
-            'stock_offer_type' => $type,
+            'name' => 'Produto sem estoque',
         ]);
 
     $response
-        ->assertSessionHasErrors([
-            'stock_volumes' => 'Adicione pelo menos um saco ao estoque.',
-        ])
-        ->assertRedirect(route('products.create'));
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
 
-    expect(Product::query()->count())->toBe(0);
-})->with([
-    'new grade' => StockOfferType::NewGrade->value,
-    'replenishment' => StockOfferType::Replenishment->value,
-    'broken grade' => StockOfferType::BrokenGrade->value,
-]);
+    expect(Product::query()->sole()->latestOffer)->toBeNull();
+});
 
 test('the shared catalog excludes offers without physical stock', function () {
     $product = Product::factory()->create();
@@ -402,11 +462,10 @@ test('the shared catalog excludes offers without physical stock', function () {
         'is_active' => true,
     ]);
     $exhaustedOffer->stockVolumes()->create(['total_quantity' => 0]);
-    $inactiveOffer = $product->offers()->create([
+    $availableBrokenGradeOffer = $product->offers()->create([
         'type' => StockOfferType::BrokenGrade,
-        'is_active' => false,
     ]);
-    $inactiveOffer->stockVolumes()->create(['total_quantity' => 12]);
+    $availableBrokenGradeOffer->stockVolumes()->create(['total_quantity' => 12]);
     $newGradeOffer = $product->offers()->create([
         'type' => StockOfferType::NewGrade,
         'is_active' => true,
@@ -431,9 +490,8 @@ test('the shared catalog excludes offers without physical stock', function () {
         ->pluck('id')
         ->all();
 
-    expect($availableOfferIds)->toBe([$availableOffer->id]);
+    expect($availableOfferIds)->toBe([$availableOffer->id, $availableBrokenGradeOffer->id]);
     expect($availableOfferIds)->not->toContain($exhaustedOffer->id);
-    expect($availableOfferIds)->not->toContain($inactiveOffer->id);
     expect($availableOfferIds)->not->toContain($newGradeOffer->id);
     expect($availableOfferIds)->not->toContain($zeroStockOffer->id);
     expect(
@@ -442,7 +500,7 @@ test('the shared catalog excludes offers without physical stock', function () {
             ->whereKey($inactiveProductOffer->getKey())
             ->exists(),
     )->toBeFalse();
-    expect($product->fresh()->latestAvailableOffer->is($availableOffer))->toBeTrue();
+    expect($product->fresh()->latestAvailableOffer->is($availableBrokenGradeOffer))->toBeTrue();
 });
 
 test('product creation stores up to five images with thumbnails', function () {
@@ -455,7 +513,6 @@ test('product creation stores up to five images with thumbnails', function () {
 
     $response = $this->actingAs($user)->post(route('products.store'), [
         'name' => 'Produto com galeria',
-        'has_stock_offer' => false,
         'images' => $images,
     ]);
 
@@ -481,7 +538,6 @@ test('product creation normalizes the saved image to a bounded WebP', function (
 
     $response = $this->actingAs($user)->post(route('products.store'), [
         'name' => 'Produto com foto normalizada',
-        'has_stock_offer' => false,
         'images' => [$image],
     ]);
 
@@ -507,7 +563,6 @@ test('product creation accepts source images above five megabytes', function () 
 
     $response = $this->actingAs($user)->post(route('products.store'), [
         'name' => 'Produto com foto grande',
-        'has_stock_offer' => false,
         'images' => [$image],
     ]);
 
@@ -527,7 +582,6 @@ test('product creation rejects source images above the technical limit', functio
         ->from(route('products.create'))
         ->post(route('products.store'), [
             'name' => 'Produto com foto muito grande',
-            'has_stock_offer' => false,
             'images' => [$image],
         ]);
 
@@ -547,7 +601,6 @@ test('product creation requires a total for a sack with unknown quantities', fun
         ->from(route('products.create'))
         ->post(route('products.store'), [
             'name' => 'Calça Mom Básica',
-            'has_stock_offer' => true,
             'stock_offer_type' => StockOfferType::NewGrade->value,
             'stock_volumes' => [[
                 'total_quantity' => null,
@@ -572,7 +625,6 @@ test('authenticated users can save which sizes are present without quantities', 
 
     $response = $this->actingAs($user)->post(route('products.store'), [
         'name' => 'Blusa de malha',
-        'has_stock_offer' => true,
         'stock_offer_type' => StockOfferType::NewGrade->value,
         'stock_volumes' => [[
             'total_quantity' => 0,
@@ -602,7 +654,6 @@ test('product creation returns validation errors and does not persist invalid da
 
     $response = $this->actingAs($user)->from(route('products.create'))->post(route('products.store'), [
         'name' => '   ',
-        'has_stock_offer' => true,
         'stock_offer_type' => StockOfferType::NewGrade->value,
         'stock_volumes' => [[
             'total_quantity' => -5,
@@ -630,7 +681,6 @@ test('product creation rejects non-image uploads', function () {
 
     $response = $this->actingAs($user)->from(route('products.create'))->post(route('products.store'), [
         'name' => 'Produto com arquivo inválido',
-        'has_stock_offer' => false,
         'images' => [
             UploadedFile::fake()->create('manual.txt', 10, 'text/plain'),
         ],
@@ -655,7 +705,6 @@ test('authenticated users can update product details, sizes and stock without ch
         'name' => 'Short Mom',
         'model' => '3002',
         'notes' => 'Nova observação',
-        'has_stock_offer' => true,
         'stock_offer_type' => StockOfferType::NewGrade->value,
         'stock_volumes' => [[
             'total_quantity' => 999,
@@ -681,7 +730,30 @@ test('authenticated users can update product details, sizes and stock without ch
         ->toBe([10, null]);
 });
 
-test('hiding a product from the catalog preserves its stock data', function () {
+test('product updates preserve valid text values that PHP treats as false', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create([
+        'model' => '2451',
+        'notes' => 'Observação anterior',
+    ]);
+
+    $response = $this->actingAs($user)->put(route('products.update', $product), [
+        'name' => $product->name,
+        'model' => '0',
+        'notes' => '0',
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $product->refresh();
+
+    expect($product->model)->toBe('0');
+    expect($product->notes)->toBe('0');
+});
+
+test('updating a product preserves its stock data', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
     $offer = $product->offers()->create([
@@ -697,7 +769,6 @@ test('hiding a product from the catalog preserves its stock data', function () {
 
     $response = $this->actingAs($user)->put(route('products.update', $product), [
         'name' => $product->name,
-        'has_stock_offer' => false,
         'stock_offer_type' => StockOfferType::Replenishment->value,
         'stock_volumes' => [[
             'id' => $volume->id,
@@ -716,13 +787,12 @@ test('hiding a product from the catalog preserves its stock data', function () {
         ->assertRedirect(route('products.index'));
 
     $offer->refresh();
-    expect($offer->is_active)->toBeFalse();
     expect($offer->stockVolumes()->sole()->total_quantity)->toBe(10);
     expect($offer->stockVolumes()->sole()->items()->sole()->is_active)->toBeTrue();
     expect($offer->stockVolumes()->sole()->items()->sole()->quantity)->toBe(10);
 });
 
-test('ending the current stock clears the lot and hides it from the catalog', function () {
+test('ending the current stock removes its offer and sacks', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
     $offer = $product->offers()->create([
@@ -738,29 +808,43 @@ test('ending the current stock clears the lot and hides it from the catalog', fu
 
     $response = $this->actingAs($user)->put(route('products.update', $product), [
         'name' => $product->name,
-        'has_stock_offer' => false,
-        'stock_offer_type' => StockOfferType::Replenishment->value,
-        'stock_volumes' => [[
-            'id' => $volume->id,
-            'total_quantity' => 0,
-            'items' => [[
-                'id' => $item->id,
-                'size' => 'M',
-                'quantity' => null,
-                'is_active' => false,
-            ]],
-        ]],
+        'stock_volumes' => [],
     ]);
 
     $response
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('products.index'));
 
-    $offer->refresh();
-    expect($offer->is_active)->toBeFalse();
-    expect($offer->stockVolumes()->sole()->total_quantity)->toBe(0);
-    expect($offer->stockVolumes()->sole()->items()->sole()->is_active)->toBeFalse();
-    expect($offer->stockVolumes()->sole()->items()->sole()->quantity)->toBeNull();
+    $this->assertModelMissing($offer);
+    $this->assertModelMissing($volume);
+    $this->assertModelMissing($item);
+});
+
+test('ending stock is rejected when a sack has been referenced by an order', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $offer = StockOffer::factory()->for($product)->replenishment()->create();
+    $volume = StockOfferVolume::factory()->for($offer)->withTotal(10)->create();
+    OrderItem::factory()
+        ->for($volume, 'stockVolume')
+        ->for($product)
+        ->create();
+
+    $response = $this->actingAs($user)
+        ->from(route('products.edit', $product))
+        ->put(route('products.update', $product), [
+            'name' => $product->name,
+            'stock_volumes' => [],
+        ]);
+
+    $response
+        ->assertSessionHasErrors([
+            'stock_volumes' => 'Sacos vinculados a pedidos não podem ser removidos.',
+        ])
+        ->assertRedirect(route('products.edit', $product));
+
+    $this->assertModelExists($offer);
+    $this->assertModelExists($volume);
 });
 
 test('zero stock remains editable but is excluded from the shared catalog', function () {
@@ -779,7 +863,6 @@ test('zero stock remains editable but is excluded from the shared catalog', func
 
     $response = $this->actingAs($user)->put(route('products.update', $product), [
         'name' => $product->name,
-        'has_stock_offer' => true,
         'stock_offer_type' => StockOfferType::NewGrade->value,
         'stock_volumes' => [[
             'id' => $volume->id,
@@ -798,7 +881,6 @@ test('zero stock remains editable but is excluded from the shared catalog', func
         ->assertRedirect(route('products.index'));
 
     $offer->refresh();
-    expect($offer->is_active)->toBeTrue();
     expect($offer->stockVolumes()->sole()->total_quantity)->toBe(0);
     expect($offer->stockVolumes()->sole()->items()->sole()->is_active)->toBeFalse();
     expect($offer->stockVolumes()->sole()->items()->sole()->quantity)->toBeNull();
@@ -823,7 +905,6 @@ test('product images can be replaced and removed from the media collection', fun
     $replaceResponse = $this->actingAs($user)->post(route('products.update', $product), [
         '_method' => 'PUT',
         'name' => $product->name,
-        'has_stock_offer' => false,
         'remove_media_ids' => [$oldMedia->id],
         'images' => [UploadedFile::fake()->image('new.jpg')],
     ]);
@@ -844,7 +925,6 @@ test('product images can be replaced and removed from the media collection', fun
     $removeResponse = $this->actingAs($user)->post(route('products.update', $product), [
         '_method' => 'PUT',
         'name' => $product->name,
-        'has_stock_offer' => false,
         'remove_media_ids' => [$newMedia->id],
     ]);
 
@@ -875,7 +955,6 @@ test('replacing one image in a full gallery removes only the selected image', fu
     $response = $this->actingAs($user)->post(route('products.update', $product), [
         '_method' => 'PUT',
         'name' => $product->name,
-        'has_stock_offer' => false,
         'remove_media_ids' => [$removedMedia->id],
         'images' => [UploadedFile::fake()->image('replacement.jpg')],
         'image_order' => [
@@ -931,7 +1010,6 @@ test('replacing any position in a full gallery preserves every other image', fun
     $response = $this->actingAs($user)->post(route('products.update', $product), [
         '_method' => 'PUT',
         'name' => $product->name,
-        'has_stock_offer' => false,
         'remove_media_ids' => [$removedMedia->id],
         'images' => [UploadedFile::fake()->image('replacement.jpg')],
         'image_order' => $expectedOrder,
@@ -990,7 +1068,6 @@ test('invalid stock sack payload cannot erase existing product sizes', function 
         ->post(route('products.update', $product), [
             '_method' => 'PUT',
             'name' => $product->name,
-            'has_stock_offer' => true,
             'stock_offer_type' => StockOfferType::NewGrade->value,
             'stock_volumes' => 'invalid-payload',
         ]);
@@ -1016,7 +1093,6 @@ test('product images can be reordered with a new image as the principal photo', 
     $response = $this->actingAs($user)->post(route('products.update', $product), [
         '_method' => 'PUT',
         'name' => $product->name,
-        'has_stock_offer' => false,
         'images' => [UploadedFile::fake()->image('principal.jpg')],
         'image_order' => [
             'new:0',
@@ -1062,7 +1138,6 @@ test('product image order cannot reference media from another product', function
         ->post(route('products.update', $product), [
             '_method' => 'PUT',
             'name' => $product->name,
-            'has_stock_offer' => false,
             'image_order' => [
                 'media:'.$otherMedia->id,
                 'media:'.$productMedia->id,
@@ -1111,7 +1186,6 @@ test('authenticated users can create a product with independent stock sacks', fu
 
     $response = $this->actingAs($user)->post(route('products.store'), [
         'name' => 'Calça com dois sacos',
-        'has_stock_offer' => true,
         'stock_offer_type' => StockOfferType::NewGrade->value,
         'stock_volumes' => [
             [
@@ -1163,7 +1237,6 @@ test('a sack keeps its manual total when its active quantities are unknown', fun
 
     $response = $this->actingAs($user)->post(route('products.store'), [
         'name' => 'Saco com contagem manual',
-        'has_stock_offer' => true,
         'stock_offer_type' => StockOfferType::Replenishment->value,
         'stock_volumes' => [[
             'total_quantity' => 7,
@@ -1189,7 +1262,6 @@ test('an active sack requires a manual total when no size quantity is known', fu
         ->from(route('products.create'))
         ->post(route('products.store'), [
             'name' => 'Saco sem total',
-            'has_stock_offer' => true,
             'stock_offer_type' => StockOfferType::NewGrade->value,
             'stock_volumes' => [[
                 'total_quantity' => null,
@@ -1215,7 +1287,6 @@ test('the same size is allowed in different sacks but not twice in one sack', fu
         ->from(route('products.create'))
         ->post(route('products.store'), [
             'name' => 'Grades repetidas',
-            'has_stock_offer' => true,
             'stock_offer_type' => StockOfferType::NewGrade->value,
             'stock_volumes' => [[
                 'total_quantity' => 2,
@@ -1236,7 +1307,6 @@ test('the same size is allowed in different sacks but not twice in one sack', fu
 
     $validResponse = $this->actingAs($user)->post(route('products.store'), [
         'name' => 'M em dois sacos',
-        'has_stock_offer' => true,
         'stock_offer_type' => StockOfferType::NewGrade->value,
         'stock_volumes' => [
             [
@@ -1280,7 +1350,6 @@ test('updating sacks preserves their IDs while reordering and removing them', fu
     $reorderResponse = $this->actingAs($user)->put(route('products.update', $product), [
         'name' => $product->name,
         'is_active' => true,
-        'has_stock_offer' => true,
         'stock_offer_type' => StockOfferType::NewGrade->value,
         'stock_volumes' => [
             [
@@ -1313,7 +1382,6 @@ test('updating sacks preserves their IDs while reordering and removing them', fu
     $removeResponse = $this->actingAs($user)->put(route('products.update', $product), [
         'name' => $product->name,
         'is_active' => true,
-        'has_stock_offer' => true,
         'stock_offer_type' => StockOfferType::NewGrade->value,
         'stock_volumes' => [[
             'id' => $secondVolume->id,

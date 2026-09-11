@@ -56,6 +56,16 @@ class StockOfferVolume extends Model
             ->orderBy('id');
     }
 
+    /**
+     * Get every order item that has referenced this sack.
+     *
+     * @return HasMany<OrderItem, $this>
+     */
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
     /** @return BelongsTo<Order, $this> */
     public function currentOrder(): BelongsTo
     {

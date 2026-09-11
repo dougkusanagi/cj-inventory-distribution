@@ -98,7 +98,8 @@ criar um novo ADR.
 ## 3. Experiência da lojista
 
 Fluxo: catálogo → escolher sacos → revisar sacola → identificar loja e
-responsável → registrar pedido → abrir WhatsApp.
+responsável → registrar e reservar o pedido → abrir WhatsApp → confirmar e
+limpar a sacola.
 
 - Cabeçalho pequeno com marca e sacola; produtos aparecem sem um grande banner.
 - Busca tolerante a maiúsculas/acentos, por nome, referência e código interno.
@@ -123,12 +124,14 @@ responsável → registrar pedido → abrir WhatsApp.
   ao recuperar e novamente no servidor ao confirmar.
 - Confirmação real retorna número do pedido; repetir a abertura do WhatsApp
   não cria outro pedido. Sem chamar “Enviado” apenas porque abriu um link.
+- Na sacola, “Confirmar pedido” fica desabilitado até o clique no link `wa.me`.
+  Essa trava é visual e transitória; não afirma que a mensagem foi enviada.
 
 ## 4. Regra do catálogo real
 
 Aplicar no servidor, antes de paginação, contagem, filtros e serialização:
 
-1. Produto ativo e oferta ativa.
+1. Produto ativo e oferta existente.
 2. Oferta **não é Grade Nova** (`new_grade`).
 3. Existe saco com total positivo e disponível para pedido.
 4. Sacos reservados/baixados não participam de opções nem totais públicos.
@@ -216,7 +219,7 @@ de peças; não sobrecarregar `quantity` com significados diferentes.
   pendentes para equipe revisar. Definir prazo operacional antes de automatizar.
 - Revisar a edição atual: `SyncProductStockOffer` apaga sacos omitidos e itens
   removidos. Bloquear exclusão/alteração do conteúdo de sacos reservados ou
-  consumidos. Desativar produto/oferta pode ocultar disponibilidade sem apagar
+  consumidos. Desativar produto pode ocultar disponibilidade sem apagar
   pedidos; encerrar estoque deve bloquear quando existirem reservas.
 - Produtos/sacos referenciados por pedidos não podem ser apagados em cascata.
   Usar restrição de exclusão e arquivamento quando necessário.
@@ -231,9 +234,10 @@ Separação e conferência são progresso dentro de Pendente, não novos status.
 - Listar por número, loja, data, status e progresso; prioridade para pendentes.
 - Criar pela lojista; equipe pode registrar em nome da loja usando as mesmas
   validações. Detalhar, cancelar e finalizar; não oferecer exclusão definitiva.
-- No painel, abrir o link `wa.me` do pedido é pré-requisito para finalizar. O
-  clique libera a ação apenas no navegador e não comprova que a mensagem foi
-  enviada ou entregue.
+- No catálogo público, o link `wa.me` é apresentado depois que o pedido é
+  registrado e reservado para que a lojista possa enviá-lo à equipe. No painel
+  interno, o WhatsApp não é pré-requisito: a equipe finaliza após separar e
+  conferir todos os sacos, sem divergências.
 - Alteração de contato/observação em Pendente com histórico. Na primeira versão,
   mudar os sacos exige cancelar e registrar novo pedido, evitando um editor
   complexo que invalide silenciosamente a separação.
@@ -342,7 +346,7 @@ continua marcada como demonstração até conexão real e validação operaciona
 - Linha: enum válido, legado sem classificação, modelos opcionais, nenhuma
   interferência nos tamanhos numéricos/alfabéticos.
 - Catálogo: nunca revelar Grade Nova mesmo por busca, detalhe ou URL manipulada;
-  produto/oferta inativos, saco vazio/reservado/baixado, total correto e paginação.
+  produto inativo, saco vazio/reservado/baixado, total correto e paginação.
 - Pedido: saco duplicado, total adulterado, saco de Grade Nova, indisponibilidade,
   duas lojas concorrendo, retry idempotente e falha com rollback completo.
 - Conferência: ordem das ações, divergência bloqueante, desfazer, concorrência,

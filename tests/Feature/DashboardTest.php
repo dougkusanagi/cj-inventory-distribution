@@ -1,6 +1,8 @@
 <?php
 
 use App\Enums\StockOfferType;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -22,6 +24,13 @@ test('authenticated users can visit the dashboard', function () {
     ]);
     $volume = $offer->stockVolumes()->create(['total_quantity' => 12]);
     $volume->items()->create(['size' => 'M', 'is_active' => true]);
+    $pendingOrder = Order::factory()->create();
+    OrderItem::factory()->for($pendingOrder)->create([
+        'stock_offer_volume_id' => $volume->id,
+        'product_id' => $product->id,
+        'divergence_note' => 'Etiqueta diferente',
+        'divergence_resolved_at' => null,
+    ]);
     $this->actingAs($user);
 
     $this->get(route('dashboard'))
@@ -32,7 +41,9 @@ test('authenticated users can visit the dashboard', function () {
             ->where('stats.withPhotos', 1)
             ->where('stats.withSizes', 1)
             ->where('stats.activeOffers', 1)
-            ->where('stats.stockUnits', 12),
+            ->where('stats.stockUnits', 12)
+            ->where('stats.pendingOrders', 1)
+            ->where('stats.ordersWithDivergences', 1),
         );
 });
 

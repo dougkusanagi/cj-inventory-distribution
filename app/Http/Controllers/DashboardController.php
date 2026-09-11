@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\OrderStatus;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\StockOffer;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,7 +21,6 @@ class DashboardController extends Controller
         Gate::authorize('viewAny', Product::class);
 
         $activeStockOffers = StockOffer::query()
-            ->where('is_active', true)
             ->whereHas('product', fn (Builder $query) => $query->where('is_active', true))
             ->whereHas('stockVolumes', fn (Builder $query) => $query
                 ->where('total_quantity', '>', 0)
@@ -43,6 +44,13 @@ class DashboardController extends Controller
                 'stockUnits' => (int) $activeStockOffersForStats->sum(
                     fn (StockOffer $offer): int => (int) $offer->stockVolumes->sum('total_quantity'),
                 ),
+                'pendingOrders' => Order::query()->where('status', OrderStatus::Pending)->count(),
+                'ordersWithDivergences' => Order::query()
+                    ->where('status', OrderStatus::Pending)
+                    ->whereHas('items', fn (Builder $query) => $query
+                        ->whereNotNull('divergence_note')
+                        ->whereNull('divergence_resolved_at'))
+                    ->count(),
             ],
         ]);
     }

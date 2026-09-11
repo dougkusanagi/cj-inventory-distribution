@@ -190,7 +190,6 @@ class CatalogDemoSeeder extends Seeder
             $offer->product()->associate($product);
             $offer->fill([
                 'type' => $definition['type'],
-                'is_active' => true,
                 'notes' => 'Oferta de demonstração para testes.',
             ]);
             $offer->save();
