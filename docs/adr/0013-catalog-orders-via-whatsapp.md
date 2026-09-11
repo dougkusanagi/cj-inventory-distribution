@@ -29,5 +29,5 @@ altera o status do pedido e não comprova o envio da mensagem.
 - falhas ou abandono no WhatsApp deixam um pedido pendente para revisão;
 - no painel, a finalização exige a abertura do link `wa.me`; essa confirmação é
   transitória e não representa envio ou entrega da mensagem;
-- repetir a confirmação ainda exige uma estratégia própria de idempotência em
-  uma evolução futura.
+- repetir a confirmação com a mesma chave de idempotência retorna o pedido já
+  registrado; reutilizar a chave com outro payload é rejeitado.

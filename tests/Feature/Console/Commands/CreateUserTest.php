@@ -14,5 +14,6 @@ it('creates a user through interactive prompts', function () {
 
     expect($user->name)->toBe('Ana Souza')
         ->and($user->email)->toBe('ana@example.com')
+        ->and($user->is_staff)->toBeTrue()
         ->and(password_verify('password', $user->password))->toBeTrue();
 });

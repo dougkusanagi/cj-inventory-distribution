@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureUserIsStaff;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\VerifyCsrfToken;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         __DIR__.'/../app/Console/Commands',
     ])
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->alias(['staff' => EnsureUserIsStaff::class]);
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(

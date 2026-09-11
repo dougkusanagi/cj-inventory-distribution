@@ -29,7 +29,7 @@ test('seeds a repeatable catalog demo with classified products and physical sack
         ->and($product->latestOffer->calculatedTotalQuantity())->toBe(38)
         ->and($product->latestOffer->stockVolumes->pluck('total_quantity')->all())->toBe([20, 18])
         ->and($product->latestOffer->stockVolumes->first()->items->pluck('quantity')->all())->toBe([4, 4, 4, 4, 4])
-        ->and($product->getMedia(Product::MEDIA_COLLECTION))->toHaveCount(1)
+        ->and($product->getMedia(Product::MEDIA_COLLECTION))->toHaveCount(2)
         ->and($product->getFirstMedia(Product::MEDIA_COLLECTION)?->file_name)->toBe('calca-wide-leg.png');
 
     $newGrade = Product::query()

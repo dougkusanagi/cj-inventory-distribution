@@ -57,6 +57,7 @@ class CreateUser extends Command
             'password' => $userPassword,
             'password_confirmation' => $userPassword,
         ]);
+        $user->forceFill(['is_staff' => true])->save();
 
         outro("Usuário {$user->email} criado com sucesso.");
 

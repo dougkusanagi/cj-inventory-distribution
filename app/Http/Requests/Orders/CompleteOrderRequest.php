@@ -12,7 +12,7 @@ class CompleteOrderRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        return $this->user()?->isStaff() ?? false;
     }
 
     /**

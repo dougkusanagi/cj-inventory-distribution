@@ -7,14 +7,15 @@ O roadmap descreve direção, não compromisso de implementação imediata.
 O [plano de catálogo e pedidos](CATALOGO-E-PEDIDOS.md) detalha a sequência atual,
 CRUD de categorias, Slim/Plus, reserva de sacos, separação/conferência e WhatsApp.
 O catálogo conectado ao banco substitui a home em `/` e também está em
-`/catalog`. A persistência da sacola pública já está implementada; contatos de
-WhatsApp ainda não estão implementados. O CRUD de categorias e a gestão interna
-de pedidos com reserva de sacos já estão disponíveis. As fases históricas
-abaixo não significam conclusão desses módulos.
+`/catalog`. A persistência da sacola pública, o contato único de WhatsApp e a
+gestão interna de pedidos com reserva de sacos já estão implementados. Dois
+contatos ou envio automático continuam fora do MVP. As fases históricas abaixo
+não significam conclusão desses módulos.
 
 Regra definitiva: Grade Nova nunca aparece no catálogo; não há filtro por tipo.
 Busca, categoria e linha Slim/Plus são os filtros da interface. Pedidos por saco
-inteiro e reserva ao registrar são propostas aguardando validação operacional.
+inteiro, reserva transacional e conferência da equipe são as regras vigentes do
+fluxo implementado.
 
 ## Refatoração de estoque por saco
 
@@ -69,6 +70,7 @@ legados; as migrations atuais já criam somente o modelo de sacos.
 - [x] identificação da solicitante
 - [x] envio do pedido
 - [x] geração de mensagem para WhatsApp
+- [x] idempotência no registro público
 
 ## Fase 4 — Gestão de pedidos
 
@@ -77,6 +79,9 @@ legados; as migrations atuais já criam somente o modelo de sacos.
 - [x] status `Pendente`
 - [x] finalizar pedido
 - [x] cancelar pedido
+- [x] separação e conferência dos sacos
+- [x] registro e resolução de divergências
+- [x] histórico auditável das alterações
 - [x] filtros básicos por status e busca
 
 ## Depois do MVP

@@ -75,3 +75,24 @@ test('catalog uses the configured public URL for product images', function () {
             ->where('products.0.image', $media->getUrl('thumb')),
         );
 });
+
+test('catalog exposes every product image in display order', function () {
+    Storage::fake('public');
+
+    $product = Product::factory()->create(['name' => 'Produto com galeria']);
+    $offer = StockOffer::factory()->replenishment()->for($product)->create();
+    StockOfferVolume::factory()->for($offer)->withTotal(12)->create();
+    $firstMedia = $product->addMedia(UploadedFile::fake()->image('first.jpg'))
+        ->toMediaCollection(Product::MEDIA_COLLECTION);
+    $secondMedia = $product->addMedia(UploadedFile::fake()->image('second.jpg'))
+        ->toMediaCollection(Product::MEDIA_COLLECTION);
+
+    $this->get(route('catalog'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('products.0.image', $firstMedia->getUrl('thumb'))
+            ->where('products.0.images', [
+                $firstMedia->getUrl('thumb'),
+                $secondMedia->getUrl('thumb'),
+            ]),
+        );
+});

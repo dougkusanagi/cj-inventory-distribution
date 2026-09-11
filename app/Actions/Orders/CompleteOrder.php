@@ -2,16 +2,23 @@
 
 namespace App\Actions\Orders;
 
+use App\Enums\OrderEventType;
 use App\Enums\OrderStatus;
 use App\Models\Order;
+use App\Models\StockOfferVolume;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CompleteOrder
 {
-    public function handle(Order $order, bool $whatsappOpened): Order
+    public function __construct(
+        private readonly RecordOrderEvent $recordOrderEvent,
+    ) {}
+
+    public function handle(Order $order, bool $whatsappOpened, ?User $actor = null): Order
     {
-        return DB::transaction(function () use ($order, $whatsappOpened): Order {
+        return DB::transaction(function () use ($order, $whatsappOpened, $actor): Order {
             $lockedOrder = Order::query()->whereKey($order->getKey())->lockForUpdate()->firstOrFail();
 
             if ($lockedOrder->status !== OrderStatus::Pending) {
@@ -22,15 +29,39 @@ class CompleteOrder
                 throw ValidationException::withMessages(['whatsapp_opened' => 'Abra o WhatsApp do pedido antes de finalizá-lo.']);
             }
 
-            $expectedVolumeIds = $lockedOrder->items()->pluck('stock_offer_volume_id');
-            $reservedVolumes = $lockedOrder->reservedVolumes()->whereKey($expectedVolumeIds)->lockForUpdate()->get();
+            $orderItems = $lockedOrder->items()->orderBy('id')->lockForUpdate()->get();
 
-            if ($reservedVolumes->count() !== $expectedVolumeIds->count()) {
+            if ($orderItems->isEmpty() || $orderItems->contains(fn ($item): bool => $item->separated_at === null
+                || $item->checked_at === null
+                || ($item->divergence_note !== null && $item->divergence_resolved_at === null))) {
+                throw ValidationException::withMessages([
+                    'order' => 'Todos os sacos precisam estar separados, conferidos e sem divergências antes da finalização.',
+                ]);
+            }
+
+            $expectedVolumeIds = $orderItems
+                ->pluck('stock_offer_volume_id')
+                ->map(fn (mixed $id): int => (int) $id)
+                ->sort()
+                ->values()
+                ->all();
+            $reservedVolumes = $lockedOrder->reservedVolumes()->orderBy('id')->lockForUpdate()->get();
+            $reservedVolumeIds = array_map('intval', $reservedVolumes->modelKeys());
+
+            if ($reservedVolumeIds !== $expectedVolumeIds || $reservedVolumes->contains(fn (StockOfferVolume $volume): bool => $volume->consumed_at !== null)) {
                 throw ValidationException::withMessages(['order' => 'A reserva dos sacos mudou. Revise o pedido antes de finalizar.']);
             }
 
             $reservedVolumes->each->update(['current_order_id' => null, 'consumed_at' => now()]);
             $lockedOrder->update(['status' => OrderStatus::Completed, 'completed_at' => now()]);
+
+            $this->recordOrderEvent->handle(
+                $lockedOrder,
+                OrderEventType::Completed,
+                $actor,
+                null,
+                ['consumed_volume_ids' => $reservedVolumeIds],
+            );
 
             return $lockedOrder;
         });

@@ -7,10 +7,15 @@ use App\Actions\Orders\CancelOrder;
 use App\Actions\Orders\CompleteOrder;
 use App\Actions\Orders\CreateOrder;
 use App\Actions\Orders\UpdateOrder;
+use App\Actions\Orders\UpdateOrderItemProgress;
+use App\Enums\OrderItemProgress;
 use App\Enums\OrderStatus;
 use App\Enums\StockOfferType;
 use App\Http\Requests\Orders\CancelOrderRequest;
 use App\Http\Requests\Orders\CompleteOrderRequest;
+use App\Http\Requests\Orders\OrderItemProgressRequest;
+use App\Http\Requests\Orders\ReportOrderItemDivergenceRequest;
+use App\Http\Requests\Orders\ResolveOrderItemDivergenceRequest;
 use App\Http\Requests\Orders\StoreOrderRequest;
 use App\Http\Requests\Orders\UpdateOrderRequest;
 use App\Models\CatalogSetting;
@@ -33,6 +38,7 @@ class OrderController extends Controller
         private readonly CancelOrder $cancelOrder,
         private readonly CompleteOrder $completeOrder,
         private readonly BuildOrderWhatsAppUrl $buildOrderWhatsAppUrl,
+        private readonly UpdateOrderItemProgress $updateOrderItemProgress,
     ) {}
 
     public function index(Request $request): Response
@@ -43,6 +49,13 @@ class OrderController extends Controller
 
         $orders = Order::query()
             ->withCount('items')
+            ->withCount([
+                'items as separated_items_count' => fn (Builder $query) => $query->whereNotNull('separated_at'),
+                'items as checked_items_count' => fn (Builder $query) => $query->whereNotNull('checked_at'),
+                'items as open_divergences_count' => fn (Builder $query) => $query
+                    ->whereNotNull('divergence_note')
+                    ->whereNull('divergence_resolved_at'),
+            ])
             ->withSum('items', 'total_quantity')
             ->when($search !== '', fn (Builder $query) => $query->where(function (Builder $query) use ($search): void {
                 $query->where('code', 'like', "%{$search}%")
@@ -75,7 +88,7 @@ class OrderController extends Controller
     public function store(StoreOrderRequest $request): RedirectResponse
     {
         Gate::authorize('create', Order::class);
-        $order = $this->createOrder->handle($request->validated());
+        $order = $this->createOrder->handle($request->validated(), $request->user());
         Inertia::flash('toast', ['type' => 'success', 'message' => "Pedido {$order->code} registrado."]);
 
         return to_route('orders.show', $order);
@@ -84,7 +97,7 @@ class OrderController extends Controller
     public function show(Order $order): Response
     {
         Gate::authorize('view', $order);
-        $order->load('items');
+        $order->load(['items', 'events.actor']);
 
         return Inertia::render('orders/show', [
             'order' => $this->orderDetails($order),
@@ -94,7 +107,7 @@ class OrderController extends Controller
     public function edit(Order $order): Response
     {
         Gate::authorize('update', $order);
-        $order->load('items');
+        $order->load(['items', 'events.actor']);
 
         return Inertia::render('orders/edit', [
             'order' => $this->orderDetails($order),
@@ -104,7 +117,7 @@ class OrderController extends Controller
     public function update(UpdateOrderRequest $request, Order $order): RedirectResponse
     {
         Gate::authorize('update', $order);
-        $this->updateOrder->handle($order, $request->validated());
+        $this->updateOrder->handle($order, $request->validated(), $request->user());
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Pedido atualizado.']);
 
         return to_route('orders.show', $order);
@@ -113,7 +126,7 @@ class OrderController extends Controller
     public function cancel(CancelOrderRequest $request, Order $order): RedirectResponse
     {
         Gate::authorize('update', $order);
-        $this->cancelOrder->handle($order, $request->validated('reason'));
+        $this->cancelOrder->handle($order, $request->string('reason')->toString(), $request->user());
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Pedido cancelado e sacos liberados.']);
 
         return to_route('orders.show', $order);
@@ -122,10 +135,70 @@ class OrderController extends Controller
     public function complete(CompleteOrderRequest $request, Order $order): RedirectResponse
     {
         Gate::authorize('update', $order);
-        $this->completeOrder->handle($order, $request->boolean('whatsapp_opened'));
+        $this->completeOrder->handle($order, $request->boolean('whatsapp_opened'), $request->user());
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Pedido finalizado.']);
 
         return to_route('orders.show', $order);
+    }
+
+    public function separate(
+        OrderItemProgressRequest $request,
+        Order $order,
+        OrderItem $item,
+    ): RedirectResponse {
+        return $this->updateProgress($request, $order, $item, OrderItemProgress::Separate);
+    }
+
+    public function undoSeparation(
+        OrderItemProgressRequest $request,
+        Order $order,
+        OrderItem $item,
+    ): RedirectResponse {
+        return $this->updateProgress($request, $order, $item, OrderItemProgress::UndoSeparation);
+    }
+
+    public function check(
+        OrderItemProgressRequest $request,
+        Order $order,
+        OrderItem $item,
+    ): RedirectResponse {
+        return $this->updateProgress($request, $order, $item, OrderItemProgress::Check);
+    }
+
+    public function undoCheck(
+        OrderItemProgressRequest $request,
+        Order $order,
+        OrderItem $item,
+    ): RedirectResponse {
+        return $this->updateProgress($request, $order, $item, OrderItemProgress::UndoCheck);
+    }
+
+    public function reportDivergence(
+        ReportOrderItemDivergenceRequest $request,
+        Order $order,
+        OrderItem $item,
+    ): RedirectResponse {
+        return $this->updateProgress(
+            $request,
+            $order,
+            $item,
+            OrderItemProgress::ReportDivergence,
+            $request->string('reason')->toString(),
+        );
+    }
+
+    public function resolveDivergence(
+        ResolveOrderItemDivergenceRequest $request,
+        Order $order,
+        OrderItem $item,
+    ): RedirectResponse {
+        return $this->updateProgress(
+            $request,
+            $order,
+            $item,
+            OrderItemProgress::ResolveDivergence,
+            $request->string('reason')->toString(),
+        );
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -162,6 +235,8 @@ class OrderController extends Controller
     /** @return array<string, mixed> */
     private function orderSummary(Order $order): array
     {
+        $items = $order->relationLoaded('items') ? $order->items : null;
+
         return [
             'id' => $order->id,
             'code' => $order->code,
@@ -171,6 +246,18 @@ class OrderController extends Controller
             'status_label' => $order->status->label(),
             'items_count' => $order->items_count,
             'total_quantity' => (int) ($order->items_sum_total_quantity ?? 0),
+            'progress' => [
+                'separated' => $items !== null
+                    ? $items->whereNotNull('separated_at')->count()
+                    : (int) ($order->separated_items_count ?? 0),
+                'checked' => $items !== null
+                    ? $items->whereNotNull('checked_at')->count()
+                    : (int) ($order->checked_items_count ?? 0),
+                'divergences' => $items !== null
+                    ? $items->filter(fn (OrderItem $item): bool => $item->divergence_note !== null
+                        && $item->divergence_resolved_at === null)->count()
+                    : (int) ($order->open_divergences_count ?? 0),
+            ],
             'submitted_at' => $order->submitted_at->toISOString(),
         ];
     }
@@ -201,8 +288,34 @@ class OrderController extends Controller
                 'volume_code' => $item->volume_code_snapshot,
                 'total_quantity' => $item->total_quantity,
                 'sizes' => $item->size_grid,
+                'separated_at' => $item->separated_at?->toISOString(),
+                'checked_at' => $item->checked_at?->toISOString(),
+                'divergence_note' => $item->divergence_note,
+                'divergence_resolved_at' => $item->divergence_resolved_at?->toISOString(),
+            ])->values()->all(),
+            'events' => $order->events->map(fn ($event): array => [
+                'id' => $event->id,
+                'event' => $event->event->value,
+                'event_label' => $event->event->label(),
+                'reason' => $event->reason,
+                'actor' => $event->actor?->name,
+                'created_at' => $event->created_at->toISOString(),
             ])->values()->all(),
         ];
+    }
+
+    private function updateProgress(
+        OrderItemProgressRequest|ReportOrderItemDivergenceRequest|ResolveOrderItemDivergenceRequest $request,
+        Order $order,
+        OrderItem $item,
+        OrderItemProgress $progress,
+        ?string $reason = null,
+    ): RedirectResponse {
+        Gate::authorize('update', $order);
+        $this->updateOrderItemProgress->handle($order, $item, $progress, $request->user(), $reason);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Progresso do pedido atualizado.']);
+
+        return back();
     }
 
     /** @return array<int, array{value: string, label: string}> */

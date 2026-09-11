@@ -1,6 +1,6 @@
 # Catálogo para lojistas e operação de pedidos
 
-Plano atualizado em 09/09/2026. Este documento distingue o frontend entregue
+Plano atualizado em 10/09/2026. Este documento distingue o frontend entregue
 das etapas futuras. O CRUD de categorias e a gestão interna de pedidos estão
 disponíveis. O checkout público registra e reserva os sacos antes de abrir a
 mensagem do pedido no WhatsApp configurado pela equipe.
@@ -51,13 +51,15 @@ StockOfferVolumeItem e CRUD de produtos já existem. Categorias e a linha
 Slim/Plus já têm model, migration, enum, factories e seeder demonstrativo;
 O CRUD de categorias está conectado ao cadastro de produtos. A gestão interna
 de pedidos permite registrar pedidos por saco inteiro, consultar, editar os
-dados enquanto pendente, cancelar e finalizar, com reserva transacional. O
-catálogo público usa os dados persistidos e ainda não registra pedidos. O scope
+dados enquanto pendente, separar e conferir sacos, registrar e resolver
+divergências, cancelar e finalizar, com reserva transacional e trilha de
+eventos. O catálogo público usa os dados persistidos, registra pedidos com
+chave idempotente e abre o WhatsApp somente depois da persistência. O scope
 `StockOffer::availableForCatalog` exclui Grade Nova e sacos reservados ou já
 consumidos; o dashboard usa uma consulta interna própria para continuar
 mostrando Grade Nova na operação.
 
-## 2. Decisões confirmadas e propostas
+## 2. Decisões implementadas
 
 ### Confirmadas pelo usuário
 
@@ -69,12 +71,12 @@ mostrando Grade Nova na operação.
 - Pedidos terão seção de separação e conferência dos sacos.
 - WhatsApp usa `wa.me`, com um número de destino configurável no sistema.
 
-### Propostas para validar antes da implementação do domínio
+### Regras operacionais implementadas
 
 1. **Pedir sacos inteiros.** Cada item aponta para um saco físico único,
    escolhido uma única vez. Os tamanhos informam o conteúdo; não fracionam
-   o saco. O frontend demonstra essa proposta. Se a fábrica permitir abrir
-   sacos e retirar peças, será necessário outro modelo de reserva e baixa.
+   o saco. Se a fábrica permitir abrir sacos e retirar peças, será necessário
+   outro modelo de reserva e baixa.
 2. **“Linha: Slim / Plus”.** Tratar como classificação comercial do produto,
    independente do tamanho. Confirmar que “Slim” significa a linha oposta a
    Plus na operação; em outros contextos também significa corte ajustado.
@@ -83,15 +85,15 @@ mostrando Grade Nova na operação.
    o WhatsApp. Liberação no cancelamento; baixa na finalização. Impede que
    duas lojas recebam confirmação para o mesmo saco.
 4. **Catálogo sem login para lojistas**, identificação curta na confirmação;
-   painel restrito à equipe. Não usar o cadastro público atual como forma de
-   conceder acesso interno. Definir a distinção equipe/lojista antes de abrir
-   pedidos reais.
+   painel restrito a usuários marcados como equipe (`is_staff`). O cadastro
+   público não concede acesso interno.
 5. **Finalizado significa separado, conferido e liberado para expedição**,
    não confirmação de recebimento pela loja. Recebimento e rastreamento de
    transportadora ficam fora da primeira versão.
 
-Nenhuma dessas propostas altera as regras persistidas nesta etapa. O ADR
-0012 as registra como propostas; somente a exclusão de Grade Nova é definitiva.
+Essas regras estão persistidas nas migrations, actions e policies do fluxo de
+pedidos. Mudanças futuras que alterem reserva, baixa ou fracionamento devem
+criar um novo ADR.
 
 ## 3. Experiência da lojista
 
@@ -112,7 +114,7 @@ responsável → registrar pedido → abrir WhatsApp.
   um saco físico. Remoção fica na revisão. Sem selecionar todos por padrão.
 - Sacola com total e ação fixa; áreas de toque de pelo menos 44 px,
   teclado adequado, foco visível e mensagens objetivas.
-- Futuro checkout: loja, nome do responsável, WhatsApp e observação opcional.
+- Checkout: loja, nome do responsável, WhatsApp e observação opcional.
   Confirmar se código de cliente já identifica destino; pedir endereço apenas
   se necessário para expedição. Não criar cadastro longo por antecipação.
 - Ao perder disponibilidade, manter a sacola e informar quais sacos precisam
@@ -308,9 +310,10 @@ outras regras operacionais; não faz parte da solução `wa.me` solicitada.
 ## 9. Acesso e proteção operacional
 
 - Catálogo pode ser público; pedidos completos e conferência são privados.
-- A aplicação tem autenticação e cadastro público do starter kit. Antes de
-  pedidos reais, restringir admissão da equipe ou aplicar autorização explícita;
-  `auth` sozinho não distingue funcionário de lojista recém-cadastrado.
+- O painel exige autenticação, verificação de e-mail e o marcador explícito
+  `is_staff`. Usuários recém-cadastrados não recebem acesso interno; somente
+  contas existentes migradas para a equipe ou marcadas por um administrador
+  podem operar pedidos.
 - Token público de alta entropia, revogável, sem IDs sequenciais como segredo;
   não listar todos os pedidos por telefone informado. Evitar dados pessoais
   no catálogo e em logs. Checkout com validação e limitação de tentativas.
@@ -354,10 +357,11 @@ continua marcada como demonstração até conexão real e validação operaciona
 
 ## 12. Melhorias recomendadas antes de liberar
 
-Prioridade alta: código físico do saco, reserva sem duplicação, proteção contra
-exclusão do estoque vinculado, distinção de equipe/lojista e clareza entre
-“pedido registrado” e “mensagem enviada”. São condições para uma operação
-confiável, não funcionalidades cosméticas.
+Antes do piloto, validar em operação o código físico do saco, a proteção contra
+exclusão do estoque vinculado e a clareza entre “pedido registrado” e
+“mensagem enviada”. A reserva sem duplicação, a distinção de equipe/lojista e a
+trilha de conferência já estão implementadas; continuam sendo condições para
+uma operação confiável, não funcionalidades cosméticas.
 
 Também revisar a clareza da contagem antes do piloto: pela regra vigente,
 preencher uma única quantidade por tamanho já substitui o total manual pela
