@@ -21,7 +21,6 @@ class DashboardController extends Controller
         Gate::authorize('viewAny', Product::class);
 
         $activeStockOffers = StockOffer::query()
-            ->where('is_active', true)
             ->whereHas('product', fn (Builder $query) => $query->where('is_active', true))
             ->whereHas('stockVolumes', fn (Builder $query) => $query
                 ->where('total_quantity', '>', 0)

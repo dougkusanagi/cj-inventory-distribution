@@ -50,7 +50,6 @@ type ProductFormData = {
     line: ProductLine | '';
     notes: string;
     is_active: boolean;
-    has_stock_offer: boolean;
     stock_offer_type: StockOfferType | '';
     stock_volumes: StockOfferVolumeFormItem[];
     images: File[];
@@ -84,9 +83,7 @@ function tabForError(field: string): ProductFormTab {
         return 'photos';
     }
 
-    return field === 'has_stock_offer' || field.startsWith('stock_')
-        ? 'stock'
-        : 'details';
+    return field.startsWith('stock_') ? 'stock' : 'details';
 }
 
 type ProductErrorField =
@@ -117,8 +114,6 @@ const stockOfferTypes: Array<{
     },
 ];
 
-const defaultSizes = ['34', '36', '38', '40', '42', '44', '46'];
-
 function initialStockVolumes(product?: Product): StockOfferVolumeFormItem[] {
     if (product?.stock_volumes?.length) {
         return product.stock_volumes.map((volume) => ({
@@ -135,16 +130,7 @@ function initialStockVolumes(product?: Product): StockOfferVolumeFormItem[] {
         }));
     }
 
-    return [
-        {
-            total_quantity: null,
-            items: defaultSizes.map((size) => ({
-                size,
-                is_active: false,
-                quantity: null,
-            })),
-        },
-    ];
+    return [];
 }
 
 function hasKnownVolumeQuantity(volume: StockOfferVolumeFormItem): boolean {
@@ -199,7 +185,6 @@ export function ProductForm({ product, categories }: ProductFormProps) {
         line: product?.line ?? '',
         notes: product?.notes ?? '',
         is_active: product?.is_active ?? true,
-        has_stock_offer: product?.has_stock_offer ?? false,
         stock_offer_type: product?.stock_offer_type ?? 'new_grade',
         stock_volumes: initialStockVolumes(product),
         images: [],
@@ -292,14 +277,9 @@ export function ProductForm({ product, categories }: ProductFormProps) {
         (volume) => volumeTotal(volume) > 0,
     );
     const hasAvailableVolumes = form.data.stock_volumes.length > 0;
-    const hasCurrentStockData = form.data.stock_volumes.some(
-        (volume) =>
-            volumeTotal(volume) > 0 ||
-            volume.items.some((item) => item.is_active),
-    );
     const distributionStatus = !form.data.is_active
         ? 'Não aparece para as vendedoras: produto oculto.'
-        : !form.data.has_stock_offer
+        : !hasAvailableVolumes
           ? 'Não aparece para as vendedoras: sem estoque disponível.'
           : form.data.stock_offer_type === 'new_grade'
             ? 'Não aparece para as vendedoras: Grade Nova é somente para uso interno.'
@@ -311,7 +291,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
 
     const clearCurrentStock = () => {
         const confirmed = window.confirm(
-            'Isso retirará a oferta de estoque do catálogo, zerará o estoque e os sacos disponíveis e limpará as quantidades deste lote. Deseja continuar?',
+            'Isso removerá a oferta de estoque e os sacos deste produto. Deseja continuar?',
         );
 
         if (!confirmed) {
@@ -320,16 +300,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
 
         form.setData((previousData) => ({
             ...previousData,
-            has_stock_offer: false,
-            stock_volumes: previousData.stock_volumes.map((volume) => ({
-                ...volume,
-                total_quantity: 0,
-                items: volume.items.map((item) => ({
-                    ...item,
-                    is_active: false,
-                    quantity: null,
-                })),
-            })),
+            stock_volumes: [],
         }));
     };
 
@@ -850,35 +821,6 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                         </div>
                     </CardHeader>
                     <CardContent className="grid gap-6 p-5 pt-0 sm:p-6 sm:pt-0">
-                        <label
-                            htmlFor="has-stock-offer"
-                            className="flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-2xl border border-border/80 bg-muted/20 p-4 select-none"
-                        >
-                            <div className="grid gap-1">
-                                <p className="text-sm font-semibold text-foreground">
-                                    Oferta de estoque ativa
-                                </p>
-                                <p className="text-sm leading-5 text-muted-foreground">
-                                    {form.data.has_stock_offer
-                                        ? 'Este lote está disponível para distribuição. A exibição também depende do produto, do tipo da grade e do total em estoque.'
-                                        : 'Este lote está pausado, mas os dados dos sacos ficam preservados para uma próxima ativação.'}
-                                </p>
-                            </div>
-                            <Switch
-                                id="has-stock-offer"
-                                checked={form.data.has_stock_offer}
-                                onCheckedChange={(checked) =>
-                                    form.setData('has_stock_offer', checked)
-                                }
-                                aria-label={
-                                    form.data.has_stock_offer
-                                        ? 'Pausar oferta de estoque'
-                                        : 'Ativar oferta de estoque'
-                                }
-                            />
-                        </label>
-                        <InputError message={error('has_stock_offer')} />
-
                         <fieldset className="grid gap-3">
                             <legend
                                 id={radioGroupId}
@@ -951,15 +893,16 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                             Encerrar estoque atual
                         </p>
                         <p className="text-sm leading-5 text-muted-foreground">
-                            Oculta a oferta, zera os sacos e desativa os
-                            tamanhos deste lote ao salvar.
+                            Remove a oferta e seus sacos deste produto ao
+                            salvar.
                         </p>
                     </div>
                     <Button
                         type="button"
                         variant="destructive"
+                        data-testid="end-current-stock"
                         onClick={clearCurrentStock}
-                        disabled={!hasCurrentStockData}
+                        disabled={form.data.stock_volumes.length === 0}
                         className="h-11 shrink-0"
                     >
                         <PackageX />

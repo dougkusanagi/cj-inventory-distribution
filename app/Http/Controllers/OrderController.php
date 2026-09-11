@@ -206,7 +206,6 @@ class OrderController extends Controller
             ->whereNull('consumed_at')
             ->where('total_quantity', '>', 0)
             ->whereHas('offer', fn (Builder $query) => $query
-                ->where('is_active', true)
                 ->where('type', '!=', StockOfferType::NewGrade->value)
                 ->whereHas('product', fn (Builder $query) => $query->where('is_active', true)))
             ->with(['items', 'offer.product.category'])

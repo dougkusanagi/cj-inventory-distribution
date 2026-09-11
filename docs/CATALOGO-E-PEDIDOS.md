@@ -131,7 +131,7 @@ limpar a sacola.
 
 Aplicar no servidor, antes de paginação, contagem, filtros e serialização:
 
-1. Produto ativo e oferta ativa.
+1. Produto ativo e oferta existente.
 2. Oferta **não é Grade Nova** (`new_grade`).
 3. Existe saco com total positivo e disponível para pedido.
 4. Sacos reservados/baixados não participam de opções nem totais públicos.
@@ -219,7 +219,7 @@ de peças; não sobrecarregar `quantity` com significados diferentes.
   pendentes para equipe revisar. Definir prazo operacional antes de automatizar.
 - Revisar a edição atual: `SyncProductStockOffer` apaga sacos omitidos e itens
   removidos. Bloquear exclusão/alteração do conteúdo de sacos reservados ou
-  consumidos. Desativar produto/oferta pode ocultar disponibilidade sem apagar
+  consumidos. Desativar produto pode ocultar disponibilidade sem apagar
   pedidos; encerrar estoque deve bloquear quando existirem reservas.
 - Produtos/sacos referenciados por pedidos não podem ser apagados em cascata.
   Usar restrição de exclusão e arquivamento quando necessário.
@@ -346,7 +346,7 @@ continua marcada como demonstração até conexão real e validação operaciona
 - Linha: enum válido, legado sem classificação, modelos opcionais, nenhuma
   interferência nos tamanhos numéricos/alfabéticos.
 - Catálogo: nunca revelar Grade Nova mesmo por busca, detalhe ou URL manipulada;
-  produto/oferta inativos, saco vazio/reservado/baixado, total correto e paginação.
+  produto inativo, saco vazio/reservado/baixado, total correto e paginação.
 - Pedido: saco duplicado, total adulterado, saco de Grade Nova, indisponibilidade,
   duas lojas concorrendo, retry idempotente e falha com rollback completo.
 - Conferência: ordem das ações, divergência bloqueante, desfazer, concorrência,

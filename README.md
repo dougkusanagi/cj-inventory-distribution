@@ -63,7 +63,7 @@ em sacos diferentes e possui quantidade opcional em cada saco.
 
 ### Saco de estoque
 
-Cada oferta ativa é composta por pelo menos um saco. Cada saco guarda:
+Cada oferta é composta por pelo menos um saco. Cada saco guarda:
 
 - sua ordem de exibição;
 - seu total de peças;
@@ -81,20 +81,17 @@ Representa uma disponibilidade atual de um produto.
 Ela guarda:
 
 - tipo: `Reposição`, `Grade Nova` ou `Grade Furada`
-- um ou mais sacos quando houver oferta ativa
+- um ou mais sacos
 - total agregado calculado pela soma dos sacos
-- status ativo/inativo
 
 O tipo pertence à oferta de estoque, e não ao produto.
 Ativar ou desativar o produto não altera os dados da oferta de estoque.
-Desativar a exibição de uma oferta no catálogo também preserva seus dados para
-edição ou reativação posterior.
-Todos os tipos usam sacos físicos. Para aparecer no catálogo, produto e oferta
-precisam estar ativos, existir ao menos um saco com total positivo e a oferta
+Todos os tipos usam sacos físicos. Para aparecer no catálogo, o produto precisa
+estar ativo, existir ao menos um saco disponível com total positivo e a oferta
 não pode ser Grade Nova.
 
 **Regra atualizada do catálogo para lojistas:** Grade Nova nunca aparece,
-mesmo com produto/oferta ativos e estoque positivo. A exclusão é aplicada
+mesmo com produto ativo e estoque positivo. A exclusão é aplicada
 na consulta real do backend. Veja o
 [plano de catálogo e pedidos](docs/CATALOGO-E-PEDIDOS.md), que também documenta
 categorias, Slim/Plus, pedidos, conferência e WhatsApp. A home lista o estoque

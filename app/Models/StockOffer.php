@@ -16,12 +16,11 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $product_id
  * @property StockOfferType $type
- * @property bool $is_active
  * @property string|null $notes
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['product_id', 'type', 'is_active', 'notes'])]
+#[Fillable(['product_id', 'type', 'notes'])]
 class StockOffer extends Model
 {
     /** @use HasFactory<StockOfferFactory> */
@@ -70,7 +69,6 @@ class StockOffer extends Model
     public static function applyAvailableForCatalog(Builder $query): void
     {
         $query
-            ->where('is_active', true)
             ->where('type', '!=', StockOfferType::NewGrade->value)
             ->whereHas('product', function (Builder $query): void {
                 $query->where('is_active', true);
@@ -115,7 +113,6 @@ class StockOffer extends Model
     {
         return [
             'type' => StockOfferType::class,
-            'is_active' => 'boolean',
         ];
     }
 }

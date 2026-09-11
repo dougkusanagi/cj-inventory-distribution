@@ -96,35 +96,32 @@ name: obrigatório
 model: opcional
 images: opcional, até cinco imagens
 notes: opcional
-stock_volumes: zero ou mais durante rascunho; ao ativar a oferta, pelo menos um
-saco
+stock_volumes: zero ou mais; quando informados, ao menos um saco
 ```
 
 Um produto pode existir sem oferta de estoque inicialmente; a grade é definida
 por saco quando uma oferta é cadastrada.
 
-Um produto pode ser salvo sem oferta de estoque. Quando a oferta for ativada,
-o tipo deve ser informado explicitamente, deve existir ao menos um saco e cada
-saco precisa de total manual ou calculado.
+Um produto pode ser salvo sem oferta de estoque. Ao informar sacos, o tipo deve
+ser informado explicitamente e cada saco precisa de total manual ou calculado.
 
 ## Validação de oferta
 
 ```text
 product: obrigatório
-type: obrigatório quando a oferta está ativa
-stock_volumes: ao menos um saco quando a oferta está ativa
+type: obrigatório quando houver sacos
+stock_volumes: ao menos um saco quando houver oferta
 stock_volumes.*.total_quantity: inteiro >= 0; manual ou calculado por saco
 stock_volumes.*.items.*.size: string, distinto dentro do saco
 stock_volumes.*.items.*.quantity: inteiro >= 0 ou null
 ```
 
-O tipo não deve ser deduzido das quantidades por tamanho. A ausência de oferta
-é representada separadamente e não cria uma `StockOffer` ativa.
+O tipo não deve ser deduzido das quantidades por tamanho. A ausência de sacos
+não cria uma `StockOffer`.
 
-Todos os tipos usam sacos físicos. O switch do formulário controla a oferta de
-estoque; desativá-lo não desativa nem remove o produto e preserva os sacos para
-reativação posterior. O catálogo usa a existência de sacos e a soma dos seus
-totais, não um contador agregado legado.
+Todos os tipos usam sacos físicos. O catálogo usa a existência de sacos e a
+soma dos seus totais, não um contador agregado legado. Encerrar o estoque
+remove a oferta e seus sacos.
 
 Em cada saco, o modo por tamanho é inferido quando houver pelo menos uma
 quantidade definida em um tamanho ativo, inclusive zero. Nesse modo, o total é
@@ -135,14 +132,14 @@ representam zero conhecido.
 Sem quantidades por tamanho, o operador informa o total manualmente de cada
 saco. O total público da oferta é a soma dos totais persistidos dos sacos.
 
-Para verificar a integridade das ofertas ativas, execute:
+Para verificar a integridade das ofertas, execute:
 
 ```bash
 php artisan stock-offers:audit-volumes
 php artisan stock-offers:audit-volumes --json
 ```
 
-O comando retorna código de falha e lista as ofertas ativas sem saco físico.
+O comando retorna código de falha e lista as ofertas sem saco físico.
 
 ## Pedido
 
