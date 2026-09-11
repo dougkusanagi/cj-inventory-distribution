@@ -53,9 +53,11 @@ abstract class ProductRequest extends FormRequest
             $stockVolumes = [];
         }
 
+        $normalizedModel = is_string($model) ? Str::squish($model) : $model;
+
         $this->merge([
             'name' => is_string($name) ? Str::squish($name) : $name,
-            'model' => is_string($model) ? Str::squish($model) ?: null : $model,
+            'model' => $normalizedModel === '' ? null : $normalizedModel,
             'is_active' => $isActive,
             'has_stock_offer' => $hasStockOffer,
             'stock_offer_type' => $stockOfferType,

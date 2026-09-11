@@ -329,6 +329,42 @@ it('edits a product, preserves its code, and adds a stock sack', function () {
     expect($product->latestOffer->stockVolumes->pluck('total_quantity')->all())->toBe([4, 3]);
 });
 
+it('persists an edited quantity for an existing size', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create(['name' => 'Produto com tamanho editável E2E']);
+    $offer = $product->offers()->create([
+        'type' => StockOfferType::NewGrade,
+        'is_active' => true,
+    ]);
+    $volume = $offer->stockVolumes()->create([
+        'sort_order' => 0,
+        'total_quantity' => 4,
+    ]);
+    $item = $volume->items()->create([
+        'size' => 'M',
+        'sort_order' => 0,
+        'is_active' => true,
+        'quantity' => 4,
+    ]);
+
+    $this->actingAs($user);
+
+    visit(route('products.edit', [$product->id], false))
+        ->wait(1)
+        ->click('#product-tab-stock')
+        ->clear('#volume-0-quantity-0')
+        ->fill('#volume-0-quantity-0', '7')
+        ->assertValue('#volume-0-quantity-0', '7')
+        ->assertValue('#volume-total-0', '7')
+        ->submit()
+        ->wait(1)
+        ->assertRoute('products.index')
+        ->assertNoJavaScriptErrors();
+
+    expect($item->fresh()->quantity)->toBe(7);
+    expect($volume->fresh()->total_quantity)->toBe(7);
+});
+
 it('rejects an invalid image without adding it to the form', function () {
     $user = User::factory()->create();
 

@@ -34,7 +34,7 @@ class SyncProductStockOffer
                 ?? StockOfferType::NewGrade;
             $rawVolumes = $this->normalizeVolumes($data['stock_volumes'] ?? []);
 
-            if ($offer === null && (! $isVisibleInCatalog || $rawVolumes->isEmpty())) {
+            if ($offer === null && ! $this->hasStockData($rawVolumes)) {
                 return null;
             }
 
@@ -139,6 +139,22 @@ class SyncProductStockOffer
         return collect($volumes)
             ->filter(fn (mixed $volume): bool => is_array($volume))
             ->values();
+    }
+
+    /** @param Collection<int, mixed[]> $volumes */
+    private function hasStockData(Collection $volumes): bool
+    {
+        return $volumes->contains(function (array $volume): bool {
+            if (is_numeric($volume['total_quantity'] ?? null)) {
+                return true;
+            }
+
+            $items = $volume['items'] ?? [];
+
+            return is_array($items) && collect($items)->contains(
+                fn (mixed $item): bool => is_array($item) && $this->isActive($item),
+            );
+        });
     }
 
     /**

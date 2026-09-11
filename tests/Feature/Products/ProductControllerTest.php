@@ -254,6 +254,83 @@ test('authenticated users can create a product with optional model, ordered size
         ->toBe([5, 5, 5]);
 });
 
+test('product creation preserves valid text values that PHP treats as false', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->post(route('products.store'), [
+        'name' => 'Produto com referência zero',
+        'model' => '0',
+        'notes' => '0',
+        'has_stock_offer' => false,
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $product = Product::query()->sole();
+
+    expect($product->model)->toBe('0');
+    expect($product->notes)->toBe('0');
+});
+
+test('stock entered while adding a paused offer to a product is persisted', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create(['name' => 'Teste Rafael']);
+
+    $response = $this->actingAs($user)->put(route('products.update', $product), [
+        'name' => $product->name,
+        'has_stock_offer' => false,
+        'stock_offer_type' => StockOfferType::NewGrade->value,
+        'stock_volumes' => [[
+            'total_quantity' => 15,
+            'items' => [
+                ['size' => '34', 'is_active' => true, 'quantity' => 5],
+                ['size' => '36', 'is_active' => true, 'quantity' => 10],
+                ['size' => '38', 'is_active' => false, 'quantity' => null],
+            ],
+        ]],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $product->load('latestOffer.stockVolumes.items');
+
+    expect($product->latestOffer->is_active)->toBeFalse();
+    expect($product->latestOffer->stockVolumes->sole()->total_quantity)->toBe(15);
+    expect($product->latestOffer->stockVolumes->sole()->items->pluck('quantity')->all())
+        ->toBe([5, 10, null]);
+});
+
+test('product creation preserves the selected image order', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->post(route('products.store'), [
+        'name' => 'Produto com capa escolhida',
+        'has_stock_offer' => false,
+        'images' => [
+            UploadedFile::fake()->image('primeira.jpg'),
+            UploadedFile::fake()->image('segunda.jpg'),
+        ],
+        'image_order' => ['new:1', 'new:0'],
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $product = Product::query()->sole();
+
+    $orderedMedia = $product->getMedia(Product::MEDIA_COLLECTION);
+
+    expect($orderedMedia->pluck('order_column')->all())->toBe([1, 2]);
+    expect($orderedMedia->first()->id)->toBeGreaterThan($orderedMedia->last()->id);
+});
+
 test('stock total is calculated from active size quantities', function () {
     $user = User::factory()->create();
 
@@ -679,6 +756,30 @@ test('authenticated users can update product details, sizes and stock without ch
         ->toBe([true, false]);
     expect($product->latestOffer->stockVolumes->sole()->items->pluck('quantity')->all())
         ->toBe([10, null]);
+});
+
+test('product updates preserve valid text values that PHP treats as false', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create([
+        'model' => '2451',
+        'notes' => 'Observação anterior',
+    ]);
+
+    $response = $this->actingAs($user)->put(route('products.update', $product), [
+        'name' => $product->name,
+        'model' => '0',
+        'notes' => '0',
+        'has_stock_offer' => false,
+    ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('products.index'));
+
+    $product->refresh();
+
+    expect($product->model)->toBe('0');
+    expect($product->notes)->toBe('0');
 });
 
 test('hiding a product from the catalog preserves its stock data', function () {
