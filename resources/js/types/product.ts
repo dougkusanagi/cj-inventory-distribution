@@ -67,6 +67,19 @@ export type OrderItem = {
     volume_code: string;
     total_quantity: number;
     sizes: Array<{ size: string; quantity: number | null }>;
+    separated_at: string | null;
+    checked_at: string | null;
+    divergence_note: string | null;
+    divergence_resolved_at: string | null;
+};
+
+export type OrderEvent = {
+    id: number;
+    event: string;
+    event_label: string;
+    reason: string | null;
+    actor: string | null;
+    created_at: string;
 };
 
 export type Order = {
@@ -82,10 +95,16 @@ export type Order = {
     status_label: string;
     items_count: number;
     total_quantity: number;
+    progress?: {
+        separated: number;
+        checked: number;
+        divergences: number;
+    };
     submitted_at: string;
     completed_at?: string | null;
     canceled_at?: string | null;
     items?: OrderItem[];
+    events?: OrderEvent[];
 };
 
 export type AvailableOrderVolume = {

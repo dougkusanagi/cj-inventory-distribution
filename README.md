@@ -98,7 +98,8 @@ mesmo com produto/oferta ativos e estoque positivo. A exclusão é aplicada
 na consulta real do backend. Veja o
 [plano de catálogo e pedidos](docs/CATALOGO-E-PEDIDOS.md), que também documenta
 categorias, Slim/Plus, pedidos, conferência e WhatsApp. A home lista o estoque
-persistido disponível e ainda não registra pedidos.
+persistido disponível, registra pedidos com reserva dos sacos e só então gera o
+link para abertura da mensagem no WhatsApp.
 
 ### Pedido
 

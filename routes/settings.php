@@ -13,7 +13,7 @@ Route::middleware(['auth'])->prefix('painel')->group(function () {
     Route::patch('configuracoes/perfil', [ProfileController::class, 'update'])->name('profile.update');
 });
 
-Route::middleware(['auth', 'verified'])->prefix('painel')->group(function () {
+Route::middleware(['auth', 'verified', 'staff'])->prefix('painel')->group(function () {
     Route::delete('configuracoes/perfil', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('configuracoes/seguranca', [SecurityController::class, 'edit'])

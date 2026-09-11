@@ -13,6 +13,8 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property string $code
+ * @property string|null $idempotency_key
+ * @property string|null $idempotency_payload_hash
  * @property string $store_name
  * @property string $requester_name
  * @property string|null $whatsapp
@@ -23,7 +25,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $completed_at
  * @property Carbon|null $canceled_at
  */
-#[Fillable(['code', 'store_name', 'requester_name', 'whatsapp', 'notes', 'status', 'cancellation_reason', 'submitted_at', 'completed_at', 'canceled_at'])]
+#[Fillable(['code', 'idempotency_key', 'idempotency_payload_hash', 'store_name', 'requester_name', 'whatsapp', 'notes', 'status', 'cancellation_reason', 'submitted_at', 'completed_at', 'canceled_at'])]
 class Order extends Model
 {
     /** @use HasFactory<OrderFactory> */
@@ -39,6 +41,12 @@ class Order extends Model
     public function reservedVolumes(): HasMany
     {
         return $this->hasMany(StockOfferVolume::class, 'current_order_id');
+    }
+
+    /** @return HasMany<OrderEvent, $this> */
+    public function events(): HasMany
+    {
+        return $this->hasMany(OrderEvent::class)->latest('id');
     }
 
     /** @return array<string, string> */

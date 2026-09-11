@@ -15,7 +15,7 @@ Route::post('catalog/pedidos', CatalogOrderController::class)
     ->name('catalog-orders.store');
 Route::inertia('design-system', 'design-system')->name('design-system');
 
-Route::middleware(['auth', 'verified'])->prefix('painel')->group(function () {
+Route::middleware(['auth', 'verified', 'staff'])->prefix('painel')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::resource('produtos', ProductController::class)
         ->names('products')
@@ -31,6 +31,24 @@ Route::middleware(['auth', 'verified'])->prefix('painel')->group(function () {
         ->except('destroy');
     Route::post('pedidos/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
     Route::post('pedidos/{order}/complete', [OrderController::class, 'complete'])->name('orders.complete');
+    Route::post('pedidos/{order}/itens/{item}/separate', [OrderController::class, 'separate'])
+        ->scopeBindings()
+        ->name('orders.items.separate');
+    Route::post('pedidos/{order}/itens/{item}/undo-separation', [OrderController::class, 'undoSeparation'])
+        ->scopeBindings()
+        ->name('orders.items.undo-separation');
+    Route::post('pedidos/{order}/itens/{item}/check', [OrderController::class, 'check'])
+        ->scopeBindings()
+        ->name('orders.items.check');
+    Route::post('pedidos/{order}/itens/{item}/undo-check', [OrderController::class, 'undoCheck'])
+        ->scopeBindings()
+        ->name('orders.items.undo-check');
+    Route::post('pedidos/{order}/itens/{item}/divergence', [OrderController::class, 'reportDivergence'])
+        ->scopeBindings()
+        ->name('orders.items.report-divergence');
+    Route::post('pedidos/{order}/itens/{item}/resolve-divergence', [OrderController::class, 'resolveDivergence'])
+        ->scopeBindings()
+        ->name('orders.items.resolve-divergence');
 });
 
 require __DIR__.'/settings.php';

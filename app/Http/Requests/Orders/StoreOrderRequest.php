@@ -12,7 +12,7 @@ class StoreOrderRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        return $this->user()?->isStaff() ?? false;
     }
 
     /**
@@ -29,6 +29,7 @@ class StoreOrderRequest extends FormRequest
             'notes' => ['nullable', 'string', 'max:5000'],
             'volume_ids' => ['required', 'array', 'min:1', 'max:50'],
             'volume_ids.*' => ['required', 'integer', 'distinct', 'exists:stock_offer_volumes,id'],
+            'idempotency_key' => ['nullable', 'string', 'max:64', 'regex:/^[A-Za-z0-9._:-]+$/'],
         ];
     }
 
@@ -39,6 +40,7 @@ class StoreOrderRequest extends FormRequest
             'requester_name' => $this->squish('requester_name'),
             'whatsapp' => $this->squish('whatsapp') ?: null,
             'notes' => $this->squish('notes') ?: null,
+            'idempotency_key' => $this->squish('idempotency_key') ?: null,
         ]);
     }
 

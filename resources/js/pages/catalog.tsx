@@ -390,6 +390,13 @@ function CatalogCheckout({
         whatsappUrl: string;
     } | null>(null);
     const [whatsappOpened, setWhatsappOpened] = useState(false);
+    const [idempotencyKey] = useState(() => {
+        if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+            return crypto.randomUUID();
+        }
+
+        return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+    });
     const form = useForm({
         store_name: '',
         requester_name: '',
@@ -397,6 +404,7 @@ function CatalogCheckout({
         notes: '',
         order: '',
         volume_ids: [] as number[],
+        idempotency_key: idempotencyKey,
     });
 
     function submit(event: FormEvent<HTMLFormElement>) {
@@ -514,6 +522,7 @@ function CatalogCheckout({
 
             <InputError message={form.errors.volume_ids} />
             <InputError message={form.errors.order} />
+            <InputError message={form.errors.idempotency_key} />
 
             {!canPlaceOrder && (
                 <p className="rounded-xl bg-muted p-3 text-sm leading-6 text-muted-foreground">

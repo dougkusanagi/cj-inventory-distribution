@@ -35,6 +35,12 @@ test('requires opening the WhatsApp link before enabling order completion', func
         ->assertDisabled('[data-testid="finalizar-pedido"]')
         ->assertSee('Abra a conversa para liberar a finalização.');
 
+    $item = $order->items()->firstOrFail();
+    $page
+        ->click("[data-testid=separar-saco-{$item->id}]")
+        ->click("[data-testid=conferir-saco-{$item->id}]")
+        ->assertDisabled('[data-testid="finalizar-pedido"]');
+
     $page->script("document.querySelector('[data-testid=\"abrir-whatsapp-pedido\"]')?.click()");
 
     $page

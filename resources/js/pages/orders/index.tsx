@@ -130,6 +130,17 @@ export default function OrdersIndex({
                                     {order.items_count === 1 ? 'saco' : 'sacos'}{' '}
                                     · {order.total_quantity} peças
                                 </p>
+                                {order.progress &&
+                                    order.status === 'pending' && (
+                                        <p className="text-xs text-muted-foreground">
+                                            {order.progress.separated}/
+                                            {order.items_count} separados ·{' '}
+                                            {order.progress.checked}/
+                                            {order.items_count} conferidos
+                                            {order.progress.divergences > 0 &&
+                                                ` · ${order.progress.divergences} divergência${order.progress.divergences === 1 ? '' : 's'}`}
+                                        </p>
+                                    )}
                                 <time className="text-xs text-muted-foreground">
                                     {new Date(
                                         order.submitted_at,

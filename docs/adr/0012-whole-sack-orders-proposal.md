@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed — validar decisões operacionais antes da implementação do backend.
+Accepted — implemented in the order workflow.
 
 ## Contexto
 
@@ -10,7 +10,7 @@ Lojistas precisam solicitar estoque e a equipe precisa separar/conferir os
 sacos. O modelo atual identifica sacos reais, enquanto a prévia anterior
 permitia multiplicar o mesmo saco e escolher tamanhos sem representar baixas.
 
-## Proposta
+## Decisão
 
 Pedir unidades físicas inteiras, uma linha por saco. Registrar e reservar em
 transação com bloqueio e idempotência; cancelar libera, finalizar baixa.
@@ -28,6 +28,8 @@ Impede reservar o mesmo saco para duas lojas. Exige proteger edição e exclusã
 de sacos vinculados, ajustar disponibilidade pública e distinguir perfis de
 acesso. Não atende fracionamento de sacos nem recebimento pela loja.
 
-Frontend atual demonstra a seleção única, sem persistência ou reserva.
-Detalhes, alternativas e pendências estão no
-[plano de catálogo e pedidos](../CATALOGO-E-PEDIDOS.md).
+O fluxo registra e reserva os sacos físicos transacionalmente, mantém separação
+e conferência como progresso dentro de `Pendente` e grava um evento de auditoria
+para cada mudança operacional. Chaves de idempotência protegem as tentativas
+repetidas do checkout público. Detalhes e validações operacionais restantes
+estão no [plano de catálogo e pedidos](../CATALOGO-E-PEDIDOS.md).

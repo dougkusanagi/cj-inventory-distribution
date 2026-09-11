@@ -6,13 +6,12 @@ O sistema começa como uma aplicação Laravel monolítica.
 
 O objetivo inicial é manter produto, disponibilidade de estoque e pedido como conceitos separados para permitir evolução posterior sem antecipar um PCP completo.
 
-### Atualização de catálogo e pedidos (09/09/2026)
+### Atualização de catálogo e pedidos (10/09/2026)
 
-O [plano de catálogo e pedidos](CATALOGO-E-PEDIDOS.md) distingue o frontend
-demonstrativo entregue do backend futuro, incluindo categorias, Slim/Plus,
-reserva e conferência. Os campos de pedidos descritos abaixo são sugestões
-históricas, não entidades já implementadas. A proposta de sacos inteiros está
-no ADR 0012; a exclusão definitiva de Grade Nova está no ADR 0011.
+O [plano de catálogo e pedidos](CATALOGO-E-PEDIDOS.md) descreve o catálogo,
+reserva e operação de pedidos atualmente implementados, incluindo separação,
+conferência, divergências e auditoria. A proposta de sacos inteiros foi
+aceita no ADR 0012; a exclusão definitiva de Grade Nova está no ADR 0011.
 
 ## Modelo de domínio
 
@@ -24,6 +23,7 @@ Product
 
 Order
   └── OrderItem -> StockOfferVolume
+  └── OrderEvent -> User (actor)
 ```
 
 ## Product
@@ -225,6 +225,8 @@ notes nullable
 submitted_at
 completed_at nullable
 canceled_at nullable
+idempotency_key nullable (unique)
+idempotency_payload_hash nullable
 created_at
 updated_at
 ```
@@ -246,10 +248,13 @@ id
 order_id
 stock_offer_volume_id
 product_id
-quantity
+total_quantity
 product_name_snapshot
 product_model_snapshot nullable
-size_snapshot nullable
+size_grid
+separated_at/by nullable
+checked_at/by nullable
+divergence note and resolution nullable
 created_at
 updated_at
 ```
@@ -257,6 +262,14 @@ updated_at
 Os snapshots preservam o texto original do pedido mesmo que o cadastro do produto seja alterado depois.
 
 ## Fluxo de pedido
+
+O registro público exige uma chave de idempotência. A criação, reserva e
+snapshot acontecem em uma transação; repetir a mesma chave com o mesmo payload
+retorna o pedido original e usar a chave com outro payload é rejeitado.
+Separação, conferência e divergência são progresso do status `Pendente`.
+Finalizar exige todos os sacos conferidos, sem divergência aberta e ainda
+reservados. Cada mudança relevante grava um `OrderEvent` com autor, motivo e
+metadados mínimos.
 
 ```text
 Vendedora acessa tela compartilhada
@@ -348,7 +361,7 @@ Requisitos:
 - listar somente ofertas ativas;
 - não listar ofertas sem saco físico ou com soma de sacos igual a zero;
 - mostrar a foto de capa, nome, modelo quando houver, tipo e estoque disponível;
-- permitir selecionar quantidades;
+- permitir selecionar sacos físicos distintos, sem multiplicar um mesmo saco;
 - manter uma sacola;
 - revisar antes de enviar.
 
