@@ -1,7 +1,9 @@
 import { Head, Link } from '@inertiajs/react';
 import {
+    AlertTriangle,
     ArrowRight,
     Camera,
+    ClipboardList,
     Layers3,
     Package,
     Plus,
@@ -20,6 +22,7 @@ import {
     create as productCreate,
     index as productsIndex,
 } from '@/routes/products';
+import { index as ordersIndex } from '@/routes/orders';
 import type { DashboardStats } from '@/types';
 
 type DashboardProps = {
@@ -215,6 +218,46 @@ export default function Dashboard({ stats }: DashboardProps) {
                                     unidades disponíveis para distribuição
                                 </span>
                             </div>
+                        </CardContent>
+                    </Card>
+                </section>
+
+                <section aria-labelledby="orders-summary-title">
+                    <Card className="overflow-hidden rounded-[1.75rem] border-border/80 shadow-sm">
+                        <CardContent className="grid gap-6 p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                            <div className="grid min-w-0 gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start">
+                                <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+                                    <ClipboardList className="size-6" />
+                                </span>
+                                <div className="grid min-w-0 gap-2">
+                                    <h2
+                                        id="orders-summary-title"
+                                        className="text-2xl font-semibold tracking-tight"
+                                    >
+                                        Pedidos para preparar
+                                    </h2>
+                                    <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+                                        {stats.pendingOrders === 0
+                                            ? 'Não há pedidos pendentes neste momento.'
+                                            : `${stats.pendingOrders} ${stats.pendingOrders === 1 ? 'pedido aguarda' : 'pedidos aguardam'} separação e conferência.`}
+                                    </p>
+                                    {stats.ordersWithDivergences > 0 && (
+                                        <p className="flex items-center gap-2 text-sm font-medium text-destructive">
+                                            <AlertTriangle className="size-4 shrink-0" />
+                                            {stats.ordersWithDivergences}{' '}
+                                            {stats.ordersWithDivergences === 1
+                                                ? 'pedido tem divergência aberta.'
+                                                : 'pedidos têm divergências abertas.'}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                            <Button asChild className="w-full lg:w-fit">
+                                <Link href={ordersIndex()}>
+                                    Abrir pedidos
+                                    <ArrowRight />
+                                </Link>
+                            </Button>
                         </CardContent>
                     </Card>
                 </section>

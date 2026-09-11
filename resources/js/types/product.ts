@@ -142,4 +142,6 @@ export type DashboardStats = {
     withSizes: number;
     activeOffers: number;
     stockUnits: number;
+    pendingOrders: number;
+    ordersWithDivergences: number;
 };
