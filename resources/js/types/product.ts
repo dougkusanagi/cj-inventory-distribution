@@ -88,7 +88,6 @@ export type Order = {
     store_name: string;
     requester_name: string;
     whatsapp?: string | null;
-    whatsapp_url?: string | null;
     notes?: string | null;
     cancellation_reason?: string | null;
     status: OrderStatus;

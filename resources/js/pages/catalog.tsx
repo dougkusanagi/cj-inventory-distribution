@@ -402,9 +402,11 @@ function BagItems({
 function CatalogCheckout({
     bag,
     canPlaceOrder,
+    onOrderConfirmed,
 }: {
     bag: CatalogBagItem[];
     canPlaceOrder: boolean;
+    onOrderConfirmed: () => void;
 }) {
     const [checkoutResult, setCheckoutResult] = useState<{
         orderCode: string;
@@ -456,14 +458,18 @@ function CatalogCheckout({
                 </div>
                 <div className="grid gap-2">
                     <h3 className="text-lg font-semibold">
-                        Pedido {checkoutResult.orderCode} registrado
+                        Pedido {checkoutResult.orderCode} pronto para envio
                     </h3>
                     <p className="text-sm leading-6 text-muted-foreground">
                         Clique abaixo e envie os detalhes pelo WhatsApp. Nossa
                         equipe está pronta para atender você.
                     </p>
                 </div>
-                <Button asChild className="h-12 w-full">
+                <Button
+                    asChild
+                    variant={whatsappOpened ? 'outline' : 'default'}
+                    className="h-12 w-full"
+                >
                     <a
                         href={checkoutResult.whatsappUrl}
                         target="_blank"
@@ -484,6 +490,20 @@ function CatalogCheckout({
                         ? 'Conversa aberta. Ainda é necessário tocar em enviar no WhatsApp.'
                         : 'Abra a conversa para enviar o pedido à equipe.'}
                 </p>
+                <Button
+                    type="button"
+                    className="h-12 w-full"
+                    disabled={!whatsappOpened}
+                    data-testid="confirmar-pedido"
+                    onClick={onOrderConfirmed}
+                >
+                    Confirmar pedido
+                </Button>
+                {!whatsappOpened && (
+                    <p className="text-center text-xs leading-5 text-muted-foreground">
+                        O botão será liberado depois que você abrir o WhatsApp.
+                    </p>
+                )}
             </div>
         );
     }
@@ -655,6 +675,12 @@ export default function Catalog({
             current.filter((item) => item !== id),
         );
         setFeedback('Saco removido da sacola.');
+    }
+
+    function confirmOrder() {
+        setSelectedVolumeIds([]);
+        setBagOpen(false);
+        setFeedback('Pedido confirmado. A conversa do WhatsApp foi aberta.');
     }
 
     return (
@@ -1084,6 +1110,7 @@ export default function Catalog({
                             <CatalogCheckout
                                 bag={bag}
                                 canPlaceOrder={canPlaceOrder}
+                                onOrderConfirmed={confirmOrder}
                             />
                         </DrawerContent>
                     </Drawer>
@@ -1109,6 +1136,7 @@ export default function Catalog({
                             <CatalogCheckout
                                 bag={bag}
                                 canPlaceOrder={canPlaceOrder}
+                                onOrderConfirmed={confirmOrder}
                             />
                         </SheetContent>
                     </Sheet>

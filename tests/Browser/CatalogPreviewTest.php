@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\CatalogSetting;
 use Database\Seeders\CatalogDemoSeeder;
 use Illuminate\Support\Facades\Vite;
 
@@ -129,6 +130,35 @@ it('opens the bag in a side panel on desktop', function () {
         ->assertSee('Sua sacola')
         ->assertSee('1 saco · 20 peças no total')
         ->assertScript("(() => { const panel = document.querySelector('[data-slot=\"sheet-content\"][data-state=\"open\"]'); return panel !== null && panel.getBoundingClientRect().left > window.innerWidth / 2 && panel.getBoundingClientRect().right <= window.innerWidth; })()");
+});
+
+it('requires opening WhatsApp before confirming a catalog order', function () {
+    CatalogSetting::factory()->create(['whatsapp_number' => '5511988887777']);
+
+    $page = visit(route('catalog', [], false))
+        ->resize(1280, 900)
+        ->click('button[aria-label="Escolher sacos de Calça Wide Leg"]')
+        ->click('button[aria-label="Adicionar Saco 01"]')
+        ->click('button:has-text("Revisar sacola (1)")')
+        ->type('#catalog-store-name', 'Loja Centro')
+        ->type('#catalog-requester-name', 'Ana')
+        ->click('button:has-text("Registrar pedido")')
+        ->assertVisible('[data-testid="finalizar-whatsapp"]')
+        ->assertDisabled('[data-testid="confirmar-pedido"]')
+        ->assertSee('O botão será liberado depois que você abrir o WhatsApp.');
+
+    $page->script("document.querySelector('[data-testid=\"finalizar-whatsapp\"]')?.click()");
+
+    $page
+        ->assertEnabled('[data-testid="confirmar-pedido"]')
+        ->click('[data-testid="confirmar-pedido"]')
+        ->assertMissing('[data-slot="sheet-content"][data-state="open"]')
+        ->assertAttribute(
+            'button[aria-label^="Ver sacola"]',
+            'aria-label',
+            'Ver sacola, 0 sacos',
+        )
+        ->assertNoJavaScriptErrors();
 });
 
 it('removes a selected sack from the product panel without closing it', function () {
