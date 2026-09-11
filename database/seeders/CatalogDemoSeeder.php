@@ -48,6 +48,7 @@ class CatalogDemoSeeder extends Seeder
          *     name: string,
          *     category: string,
          *     image: string|null,
+         *     additional_images?: list<string>,
          *     line: ProductLine,
          *     type: StockOfferType,
          *     volumes: list<array{total: int, sizes: array<string, int>}>
@@ -60,6 +61,7 @@ class CatalogDemoSeeder extends Seeder
                 'name' => 'Calça Wide Leg',
                 'category' => 'calca',
                 'image' => 'calca-wide-leg.png',
+                'additional_images' => ['calca-reta.png'],
                 'line' => ProductLine::Slim,
                 'type' => StockOfferType::Replenishment,
                 'volumes' => [
@@ -168,9 +170,18 @@ class CatalogDemoSeeder extends Seeder
                 ],
             );
 
-            if ($definition['image'] !== null && ! $product->hasMedia(Product::MEDIA_COLLECTION)) {
+            $imageNames = array_filter([
+                $definition['image'],
+                ...($definition['additional_images'] ?? []),
+            ]);
+
+            foreach ($imageNames as $imageName) {
+                if ($product->getMedia(Product::MEDIA_COLLECTION)->contains('file_name', $imageName)) {
+                    continue;
+                }
+
                 $product
-                    ->addMedia(public_path('images/products/'.$definition['image']))
+                    ->addMedia(public_path('images/products/'.$imageName))
                     ->preservingOriginal()
                     ->toMediaCollection(Product::MEDIA_COLLECTION);
             }

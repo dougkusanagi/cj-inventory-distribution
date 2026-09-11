@@ -31,7 +31,7 @@ it('replaces the starter home with a searchable catalog and never shows new grad
 it('renders a generated photo for each visible product card', function () {
     visit(route('catalog', [], false))
         ->resize(1280, 900)
-        ->assertCount('img[data-testid^="catalog-product-image-"]', 7)
+        ->assertCount('img[data-testid^="catalog-product-image-"]', 8)
         ->assertScript("(() => Array.from(document.querySelectorAll('img[data-testid^=\"catalog-product-image-\"]')).every((image) => image.getAttribute('src')?.includes('/storage/')))()")
         ->assertAttributeContains(
             'img[data-testid="catalog-product-image-1"]',
@@ -41,7 +41,29 @@ it('renders a generated photo for each visible product card', function () {
         ->assertAttribute(
             'img[data-testid="catalog-product-image-1"]',
             'alt',
-            'Calça Wide Leg',
+            'Calça Wide Leg - Imagem 1',
+        )
+        ->assertNoJavaScriptErrors();
+});
+
+it('navigates through all product images in the card carousel', function () {
+    visit(route('catalog', [], false))
+        ->resize(390, 844)
+        ->assertCount(
+            'button[aria-label^="Ir para a imagem"]',
+            2,
+        )
+        ->assertVisible('button[aria-label="Próxima imagem de Calça Wide Leg"]')
+        ->click('button[aria-label="Próxima imagem de Calça Wide Leg"]')
+        ->assertAttribute(
+            '[role="group"][aria-label="Imagem 2 de 2"]',
+            'aria-label',
+            'Imagem 2 de 2',
+        )
+        ->assertAttribute(
+            'img[alt="Calça Wide Leg - Imagem 2"]',
+            'alt',
+            'Calça Wide Leg - Imagem 2',
         )
         ->assertNoJavaScriptErrors();
 });

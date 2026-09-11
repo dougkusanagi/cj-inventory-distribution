@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import CatalogOrderController from '@/actions/App/Http/Controllers/CatalogOrderController';
 import AppearanceToggleTab from '@/components/appearance-tabs';
+import ImageCarousel from '@/components/image-carousel';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -135,21 +136,41 @@ function CatalogFilter({
     );
 }
 
-function ProductPhoto({ product }: { product: CatalogPreviewProduct }) {
+function ProductPhoto({
+    product,
+    onOpenSelection,
+}: {
+    product: CatalogPreviewProduct;
+    onOpenSelection: () => void;
+}) {
+    const images =
+        product.images.length > 0
+            ? product.images
+            : product.image === null
+              ? []
+              : [product.image];
+
     return (
         <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-t-2xl bg-muted/60">
-            {product.image ? (
-                <img
-                    src={product.image}
+            {images.length > 0 ? (
+                <ImageCarousel
+                    images={images}
                     alt={product.name}
-                    loading="lazy"
-                    data-testid={`catalog-product-image-${product.id}`}
-                    className="size-full object-cover"
+                    fallbackImage={images[0]}
+                    previousTestId={`catalog-product-image-previous-${product.id}`}
+                    nextTestId={`catalog-product-image-next-${product.id}`}
+                    imageTestId={`catalog-product-image-${product.id}`}
+                    onImageClick={onOpenSelection}
                 />
             ) : (
-                <span className="px-6 text-center text-sm text-muted-foreground">
+                <button
+                    type="button"
+                    className="size-full px-6 text-center text-sm text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                    onClick={onOpenSelection}
+                    aria-label={`Ver sacos de ${product.name}`}
+                >
                     Produto sem foto
-                </span>
+                </button>
             )}
             <Badge
                 variant="secondary"
@@ -849,15 +870,12 @@ export default function Catalog({
                                                 : 'border-border hover:border-input',
                                         )}
                                     >
-                                        <button
-                                            className="rounded-t-2xl text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                                            onClick={() =>
+                                        <ProductPhoto
+                                            product={product}
+                                            onOpenSelection={() =>
                                                 setSelectedProduct(product)
                                             }
-                                            aria-label={`Ver sacos de ${product.name}`}
-                                        >
-                                            <ProductPhoto product={product} />
-                                        </button>
+                                        />
                                         <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
                                             <div>
                                                 <p className="font-mono text-xs text-muted-foreground">

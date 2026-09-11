@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Inertia\Inertia;
 use Inertia\Response;
 use LogicException;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class CatalogController extends Controller
 {
@@ -39,19 +40,24 @@ class CatalogController extends Controller
                 if ($offer === null) {
                     throw new LogicException('Catalog product loaded without an available offer.');
                 }
-                $cover = $product->getFirstMedia(Product::MEDIA_COLLECTION);
-                $imageConversion = $cover?->hasGeneratedConversion('thumb') === true
-                    ? 'thumb'
-                    : null;
+                $images = $product->media
+                    ->where('collection_name', Product::MEDIA_COLLECTION)
+                    ->sortBy('order_column')
+                    ->map(function (Media $media): string {
+                        return $media->hasGeneratedConversion('thumb')
+                            ? $media->getUrl('thumb')
+                            : $media->getUrl();
+                    })
+                    ->values()
+                    ->all();
 
                 return [
                     'id' => $product->id,
                     'name' => $product->name,
                     'code' => $product->code,
                     'model' => $product->model,
-                    'image' => $cover === null
-                        ? null
-                        : ($imageConversion === null ? $cover->getUrl() : $cover->getUrl($imageConversion)),
+                    'image' => $images[0] ?? null,
+                    'images' => $images,
                     'category' => $product->category_id === null
                         ? 'Sem categoria'
                         : $product->category->name,

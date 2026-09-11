@@ -271,11 +271,13 @@ function ProductImage({
 function ProductImageButton({
     product,
     onOpenGallery,
+    showImageCount = true,
     className,
     iconClassName,
 }: {
     product: Product;
     onOpenGallery: (product: Product) => void;
+    showImageCount?: boolean;
     className?: string;
     iconClassName?: string;
 }) {
@@ -303,7 +305,7 @@ function ProductImageButton({
             )}
         >
             <ProductImage product={product} />
-            {product.images.length > 1 && (
+            {showImageCount && product.images.length > 1 && (
                 <span className="pointer-events-none absolute right-2 bottom-2 inline-flex items-center gap-1 rounded-full bg-foreground/75 px-2 py-1 text-[10px] font-semibold text-background tabular-nums backdrop-blur-sm">
                     {product.images.length} fotos
                 </span>
@@ -525,6 +527,7 @@ function ProductTable({
                                         <ProductImageButton
                                             product={product}
                                             onOpenGallery={onOpenGallery}
+                                            showImageCount={false}
                                         />
                                     </div>
                                     <div className="min-w-0 flex-1">

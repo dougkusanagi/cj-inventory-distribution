@@ -4,6 +4,7 @@ export type CatalogPreviewProduct = {
     code: string;
     model: string | null;
     image: string | null;
+    images: string[];
     category: string;
     line: string;
     type: string;
