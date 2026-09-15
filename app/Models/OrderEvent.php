@@ -6,6 +6,7 @@ use App\Enums\OrderEventType;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -20,16 +21,18 @@ use Illuminate\Support\Carbon;
 #[Fillable(['order_id', 'actor_id', 'event', 'reason', 'metadata'])]
 class OrderEvent extends Model
 {
+    use SoftDeletes;
+
     /** @return BelongsTo<Order, $this> */
     public function order(): BelongsTo
     {
-        return $this->belongsTo(Order::class);
+        return $this->belongsTo(Order::class)->withTrashed();
     }
 
     /** @return BelongsTo<User, $this> */
     public function actor(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'actor_id');
+        return $this->belongsTo(User::class, 'actor_id')->withTrashed();
     }
 
     /** @return array<string, string> */

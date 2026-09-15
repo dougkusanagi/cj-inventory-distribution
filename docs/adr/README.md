@@ -42,3 +42,4 @@ ADRs iniciais:
 - [0012 — Pedidos de sacos inteiros com reserva e conferência](0012-whole-sack-orders-proposal.md)
 - [0013 — Pedidos do catálogo enviados via WhatsApp](0013-catalog-orders-via-whatsapp.md)
 - [0014 — Remover a ativação independente da oferta](0014-remove-stock-offer-activation.md)
+- [0015 — Soft deletes para entidades da aplicação](0015-soft-deletes-for-application-entities.md)

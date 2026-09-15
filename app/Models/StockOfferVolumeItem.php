@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -23,7 +24,7 @@ use Illuminate\Support\Carbon;
 class StockOfferVolumeItem extends Model
 {
     /** @use HasFactory<StockOfferVolumeItemFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     /**
      * Get the sack that contains this size.
@@ -32,7 +33,7 @@ class StockOfferVolumeItem extends Model
      */
     public function volume(): BelongsTo
     {
-        return $this->belongsTo(StockOfferVolume::class, 'stock_offer_volume_id');
+        return $this->belongsTo(StockOfferVolume::class, 'stock_offer_volume_id')->withTrashed();
     }
 
     /**

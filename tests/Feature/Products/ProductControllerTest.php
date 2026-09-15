@@ -815,9 +815,9 @@ test('ending the current stock removes its offer and sacks', function () {
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('products.index'));
 
-    $this->assertModelMissing($offer);
-    $this->assertModelMissing($volume);
-    $this->assertModelMissing($item);
+    $this->assertSoftDeleted('stock_offers', ['id' => $offer->id]);
+    $this->assertSoftDeleted('stock_offer_volumes', ['id' => $volume->id]);
+    $this->assertSoftDeleted('stock_offer_volume_items', ['id' => $item->id]);
 });
 
 test('ending stock is rejected when a sack has been referenced by an order', function () {
@@ -1152,7 +1152,7 @@ test('product image order cannot reference media from another product', function
         ->toBe([$productMedia->id]);
 });
 
-test('authenticated users can delete a product with its stock sacks and media', function () {
+test('authenticated users can move a product and its stock sacks to the trash', function () {
     Storage::fake('public');
 
     $user = User::factory()->create();
@@ -1174,11 +1174,13 @@ test('authenticated users can delete a product with its stock sacks and media', 
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('products.index'));
 
-    $this->assertModelMissing($product);
-    $this->assertModelMissing($media);
-    expect(StockOffer::query()->where('product_id', $product->id)->exists())->toBeFalse();
-    Storage::disk('public')->assertMissing($imagePath);
-    Storage::disk('public')->assertMissing($thumbPath);
+    $this->assertSoftDeleted('products', ['id' => $product->id]);
+    $this->assertSoftDeleted('stock_offers', ['id' => $offer->id]);
+    $this->assertSoftDeleted('stock_offer_volumes', ['id' => $volume->id]);
+    $this->assertSoftDeleted('stock_offer_volume_items', ['stock_offer_volume_id' => $volume->id]);
+    $this->assertModelExists($media);
+    Storage::disk('public')->assertExists($imagePath);
+    Storage::disk('public')->assertExists($thumbPath);
 });
 
 test('authenticated users can create a product with independent stock sacks', function () {

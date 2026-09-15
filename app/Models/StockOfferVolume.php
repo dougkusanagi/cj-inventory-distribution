@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -22,7 +23,16 @@ use Illuminate\Support\Carbon;
 class StockOfferVolume extends Model
 {
     /** @use HasFactory<StockOfferVolumeFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
+
+    protected static function booted(): void
+    {
+        static::deleting(function (self $volume): void {
+            $volume->items()->withTrashed()->get()
+                ->filter(fn (StockOfferVolumeItem $item): bool => ! $item->trashed())
+                ->each->delete();
+        });
+    }
 
     /**
      * Get the stock offer that owns the sack.
@@ -31,7 +41,7 @@ class StockOfferVolume extends Model
      */
     public function offer(): BelongsTo
     {
-        return $this->belongsTo(StockOffer::class, 'stock_offer_id');
+        return $this->belongsTo(StockOffer::class, 'stock_offer_id')->withTrashed();
     }
 
     /**
@@ -69,7 +79,7 @@ class StockOfferVolume extends Model
     /** @return BelongsTo<Order, $this> */
     public function currentOrder(): BelongsTo
     {
-        return $this->belongsTo(Order::class, 'current_order_id');
+        return $this->belongsTo(Order::class, 'current_order_id')->withTrashed();
     }
 
     /**

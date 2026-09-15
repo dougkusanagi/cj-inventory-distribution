@@ -59,7 +59,7 @@ test('categories without products can be deleted', function () {
         ->delete(route('categories.destroy', $category))
         ->assertRedirect(route('categories.index'));
 
-    $this->assertModelMissing($category);
+    $this->assertSoftDeleted('categories', ['id' => $category->id]);
 });
 
 test('categories in use cannot be deleted', function () {

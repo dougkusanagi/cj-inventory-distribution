@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -29,7 +30,23 @@ use Illuminate\Support\Carbon;
 class Order extends Model
 {
     /** @use HasFactory<OrderFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
+
+    protected static function booted(): void
+    {
+        static::deleting(function (self $order): void {
+            $order->items()->withTrashed()->get()
+                ->filter(fn (OrderItem $item): bool => ! $item->trashed())
+                ->each(fn (OrderItem $item): ?bool => $order->isForceDeleting()
+                    ? $item->forceDelete()
+                    : $item->delete());
+            $order->events()->withTrashed()->get()
+                ->filter(fn (OrderEvent $event): bool => ! $event->trashed())
+                ->each(fn (OrderEvent $event): ?bool => $order->isForceDeleting()
+                    ? $event->forceDelete()
+                    : $event->delete());
+        });
+    }
 
     /** @return HasMany<OrderItem, $this> */
     public function items(): HasMany

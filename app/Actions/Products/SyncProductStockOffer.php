@@ -104,7 +104,10 @@ class SyncProductStockOffer
                 ]);
             }
 
-            $offer->stockVolumes()->whereNotIn('id', $usedVolumeIds)->delete();
+            $offer->stockVolumes()
+                ->whereNotIn('id', $usedVolumeIds)
+                ->get()
+                ->each->delete();
 
             return $offer->fresh(['stockVolumes.items']);
         });
@@ -244,7 +247,8 @@ class SyncProductStockOffer
 
         $volume->items()
             ->whereNotIn('id', $usedItemIds)
-            ->delete();
+            ->get()
+            ->each->delete();
     }
 
     /**

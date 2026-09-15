@@ -161,7 +161,7 @@ it('requires confirmation before deleting a product and allows cancellation', fu
     $page
         ->click('button[aria-label="Excluir Produto removível E2E"]')
         ->assertSee('Excluir produto?')
-        ->assertSee('suas fotos, tamanhos e estoque serão removidos permanentemente.');
+        ->assertSee('será movido para a lixeira, junto com suas fotos, tamanhos e estoque.');
 
     $page
         ->press('Cancelar')

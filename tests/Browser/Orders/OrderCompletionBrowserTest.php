@@ -98,3 +98,61 @@ test('provides return and cancellation actions while editing an order', function
         ->assertSee('Loja para editar')
         ->assertNoJavaScriptErrors();
 });
+
+test('creates, reads, updates, and cancels an order through the interface', function () {
+    $product = Product::factory()->create(['name' => 'Produto pedido CRUD E2E']);
+    $offer = $product->offers()->create(['type' => StockOfferType::Replenishment]);
+    $volume = $offer->stockVolumes()->create(['total_quantity' => 8]);
+    $volume->items()->create(['size' => 'M', 'is_active' => true, 'quantity' => 8]);
+    $volume->refresh();
+    $this->actingAs(User::factory()->create());
+
+    $page = visit(route('orders.create', [], false))
+        ->assertRoute('orders.create')
+        ->type('#store-name', 'Loja CRUD E2E')
+        ->type('#requester-name', 'Ana E2E')
+        ->click('[data-slot="checkbox"]')
+        ->assertAttribute('[data-slot="checkbox"]', 'data-state', 'checked')
+        ->press('Registrar pedido')
+        ->assertSee('Produto pedido CRUD E2E');
+
+    $order = Order::query()->sole();
+
+    $page
+        ->assertRoute('orders.show', [$order->id])
+        ->assertSee('Loja CRUD E2E')
+        ->assertSee('Ana E2E')
+        ->assertSee('Produto pedido CRUD E2E')
+        ->assertNoJavaScriptErrors();
+
+    expect($volume->refresh()->current_order_id)->toBe($order->id);
+
+    $page
+        ->click('[data-testid="menu-acoes-pedido"]')
+        ->click('[data-testid="editar-pedido"]')
+        ->assertRoute('orders.edit', [$order->id])
+        ->clear('#store-name')
+        ->fill('#store-name', 'Loja Atualizada E2E')
+        ->fill('#order-notes', 'Observação atualizada pelo E2E.')
+        ->press('Salvar alterações')
+        ->assertRoute('orders.show', [$order->id])
+        ->assertSee('Loja Atualizada E2E')
+        ->assertSee('Observação atualizada pelo E2E.')
+        ->assertNoJavaScriptErrors();
+
+    expect($order->refresh()->store_name)->toBe('Loja Atualizada E2E')
+        ->and($order->notes)->toBe('Observação atualizada pelo E2E.');
+
+    $page
+        ->click('[data-testid="menu-acoes-pedido"]')
+        ->click('[data-testid="cancelar-pedido"]')
+        ->fill('#cancel-reason', 'Pedido cancelado pelo teste E2E.')
+        ->press('Confirmar cancelamento')
+        ->assertRoute('orders.show', [$order->id])
+        ->assertSee('Cancelado')
+        ->assertSee('Pedido cancelado pelo teste E2E.')
+        ->assertNoJavaScriptErrors();
+
+    expect($order->refresh()->status->value)->toBe('canceled')
+        ->and($volume->refresh()->current_order_id)->toBeNull();
+});

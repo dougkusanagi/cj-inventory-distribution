@@ -48,8 +48,8 @@ export default function DeleteUser() {
                             Tem certeza de que deseja excluir sua conta?
                         </DialogTitle>
                         <DialogDescription>
-                            Depois que sua conta for excluída, todos os seus
-                            dados também serão removidos permanentemente.
+                            Depois que sua conta for excluída, ela será movida
+                            para a lixeira e não poderá mais ser acessada.
                             Informe sua senha para confirmar a exclusão.
                         </DialogDescription>
 
