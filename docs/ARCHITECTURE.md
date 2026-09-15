@@ -2,16 +2,18 @@
 
 ## Visão geral
 
-O sistema começa como uma aplicação Laravel monolítica.
+O sistema é uma aplicação Laravel monolítica.
 
 O objetivo inicial é manter produto, disponibilidade de estoque e pedido como conceitos separados para permitir evolução posterior sem antecipar um PCP completo.
 
-### Atualização de catálogo e pedidos (10/09/2026)
+### Atualização de catálogo, pedidos e estoque (15/09/2026)
 
 O [plano de catálogo e pedidos](CATALOGO-E-PEDIDOS.md) descreve o catálogo,
 reserva e operação de pedidos atualmente implementados, incluindo separação,
 conferência, divergências e auditoria. A proposta de sacos inteiros foi
 aceita no ADR 0012; a exclusão definitiva de Grade Nova está no ADR 0011.
+As movimentações imutáveis do estoque físico e a trilha transversal de
+auditoria foram adicionadas nos ADRs 0016 e 0017.
 
 ## Modelo de domínio
 
@@ -24,6 +26,12 @@ Product
 Order
   └── OrderItem -> StockOfferVolume
   └── OrderEvent -> User (actor)
+
+StockMovement
+  └── StockMovementItem -> StockOfferVolume
+
+AuditLog
+  └── auditable -> entidade administrativa
 ```
 
 ## Product
@@ -203,6 +211,31 @@ O modelo vigente nasce diretamente com `StockOfferVolume` e
 `StockOfferVolumeItem`. Não há tabelas, colunas ou contratos de compatibilidade
 para a estrutura anterior; o total agregado é sempre calculado a partir dos
 sacos persistidos.
+
+## Movimentações de estoque
+
+`StockOfferVolume` continua sendo a fonte canônica do estado físico atual.
+`StockMovement` e `StockMovementItem` registram entradas, saídas e estornos de
+sacos inteiros, com snapshots do produto, oferta, saco, grade e estados
+anterior/posterior. As duas entidades são imutáveis e não usam `SoftDeletes`.
+
+Entradas e saídas manuais exigem usuário da equipe, motivo e chave de
+idempotência. A finalização de pedido cria uma única saída na mesma transação
+que consome os sacos e conclui o pedido; cancelamento apenas libera a reserva.
+O catálogo e o dashboard consultam os sacos disponíveis e reservados, nunca
+somam o histórico para derivar saldo.
+
+Depois que um saco possui movimentação, o CRUD de produto o exibe em modo de
+leitura e não pode alterar total, grade ou quantidades. Ajustes passam pelas
+actions de estoque e são representados por estornos vinculados.
+
+## Auditoria administrativa
+
+`AuditLog` registra criação, alteração, exclusão lógica, restauração e exclusão
+definitiva de produtos, categorias, ofertas, sacos, tamanhos, configurações e
+usuários. O registro é imutável, não usa `SoftDeletes` e remove atributos de
+autenticação dos snapshots. Ele não substitui `OrderEvent` nem participa do
+cálculo de estoque.
 
 ## Order
 

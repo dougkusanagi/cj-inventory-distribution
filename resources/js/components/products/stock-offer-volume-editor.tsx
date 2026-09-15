@@ -77,6 +77,7 @@ type StockOfferVolumeEditorProps = {
     volumes: StockOfferVolumeFormItem[];
     errors: Record<string, string | undefined>;
     onChange: (volumes: StockOfferVolumeFormItem[]) => void;
+    lockedVolumeIds?: number[];
 };
 
 function emptyItems(sizes: string[]): StockOfferVolumeItemFormItem[] {
@@ -212,6 +213,7 @@ export function StockOfferVolumeEditor({
     volumes,
     errors,
     onChange,
+    lockedVolumeIds = [],
 }: StockOfferVolumeEditorProps) {
     const isHydrated = useSyncExternalStore(
         () => () => {},
@@ -224,6 +226,11 @@ export function StockOfferVolumeEditor({
     const [isCustomEditorOpen, setIsCustomEditorOpen] = useState(
         () => detectSharedPreset(volumes) === 'custom',
     );
+    const lockedVolumeIdSet = new Set(lockedVolumeIds);
+    const isVolumeLocked = (
+        volume: StockOfferVolumeFormItem | undefined,
+    ): boolean => volume?.id !== undefined && lockedVolumeIdSet.has(volume.id);
+    const hasLockedVolumes = volumes.some(isVolumeLocked);
 
     const error = (field: string): string | undefined => errors[field];
 
@@ -231,6 +238,10 @@ export function StockOfferVolumeEditor({
         volumeIndex: number,
         updater: (volume: StockOfferVolumeFormItem) => StockOfferVolumeFormItem,
     ) => {
+        if (isVolumeLocked(volumes[volumeIndex])) {
+            return;
+        }
+
         onChange(
             volumes.map((volume, index) =>
                 index === volumeIndex ? updater(volume) : volume,
@@ -254,6 +265,10 @@ export function StockOfferVolumeEditor({
     };
 
     const applyPreset = (presetId: string) => {
+        if (hasLockedVolumes) {
+            return;
+        }
+
         const preset = sizePresets.find(
             (candidate) => candidate.id === presetId,
         );
@@ -276,6 +291,10 @@ export function StockOfferVolumeEditor({
     };
 
     const addSize = () => {
+        if (hasLockedVolumes) {
+            return;
+        }
+
         setSelectedPreset('custom');
         setIsCustomEditorOpen(true);
         onChange(
@@ -284,6 +303,10 @@ export function StockOfferVolumeEditor({
     };
 
     const updateSharedSize = (itemIndex: number, size: string) => {
+        if (hasLockedVolumes) {
+            return;
+        }
+
         const sizes = sharedSizes(volumes);
 
         sizes[itemIndex] = size;
@@ -291,6 +314,10 @@ export function StockOfferVolumeEditor({
     };
 
     const removeSize = (itemIndex: number) => {
+        if (hasLockedVolumes) {
+            return;
+        }
+
         const sizes = sharedSizes(volumes);
         const sizeToRemove = sizes[itemIndex];
         const hasData = volumes.some((volume) => {
@@ -345,7 +372,7 @@ export function StockOfferVolumeEditor({
     const duplicateVolume = (volumeIndex: number) => {
         const source = volumes[volumeIndex];
 
-        if (!source) {
+        if (!source || isVolumeLocked(source)) {
             return;
         }
 
@@ -363,7 +390,11 @@ export function StockOfferVolumeEditor({
     };
 
     const removeVolume = (volumeIndex: number) => {
-        if (volumes.length <= 1 || !volumes[volumeIndex]) {
+        if (
+            volumes.length <= 1 ||
+            !volumes[volumeIndex] ||
+            isVolumeLocked(volumes[volumeIndex])
+        ) {
             return;
         }
 
@@ -394,6 +425,10 @@ export function StockOfferVolumeEditor({
     ) => {
         const item = volumes[volumeIndex]?.items[itemIndex];
 
+        if (isVolumeLocked(volumes[volumeIndex])) {
+            return;
+        }
+
         if (
             item &&
             !isActive &&
@@ -415,6 +450,10 @@ export function StockOfferVolumeEditor({
 
     const setAllItemsActive = (volumeIndex: number, isActive: boolean) => {
         const volume = volumes[volumeIndex];
+
+        if (!volume || isVolumeLocked(volume)) {
+            return;
+        }
 
         if (
             volume &&
@@ -485,6 +524,7 @@ export function StockOfferVolumeEditor({
                 <RadioGroup
                     value={selectedPreset}
                     onValueChange={applyPreset}
+                    disabled={hasLockedVolumes}
                     className="grid grid-cols-1 gap-2 sm:grid-cols-3"
                     aria-label="Modelo de grade"
                 >
@@ -568,6 +608,7 @@ export function StockOfferVolumeEditor({
                                                     event.target.value,
                                                 )
                                             }
+                                            readOnly={hasLockedVolumes}
                                             placeholder="Ex.: 3G ou 42"
                                             className="h-10 text-base sm:text-sm"
                                             aria-invalid={
@@ -585,6 +626,7 @@ export function StockOfferVolumeEditor({
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => removeSize(itemIndex)}
+                                        disabled={hasLockedVolumes}
                                         className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                                         aria-label={`Remover tamanho ${itemIndex + 1} de todos os sacos`}
                                     >
@@ -596,6 +638,7 @@ export function StockOfferVolumeEditor({
                                 type="button"
                                 variant="outline"
                                 onClick={addSize}
+                                disabled={hasLockedVolumes}
                                 className="w-full sm:w-fit"
                             >
                                 <Plus />
@@ -626,6 +669,7 @@ export function StockOfferVolumeEditor({
             <div className="grid gap-5">
                 {volumes.map((volume, volumeIndex) => {
                     const knownQuantities = hasKnownItemQuantity(volume);
+                    const isLocked = isVolumeLocked(volume);
                     const volumeError = error(
                         `stock_volumes.${volumeIndex}.total_quantity`,
                     );
@@ -648,8 +692,9 @@ export function StockOfferVolumeEditor({
                                         Saco {volumeIndex + 1}
                                     </h3>
                                     <p className="text-sm text-muted-foreground">
-                                        Escolha os tamanhos encontrados neste
-                                        saco.
+                                        {isLocked
+                                            ? 'Saco já movimentado. Ajustes físicos devem ser feitos em Movimentações.'
+                                            : 'Escolha os tamanhos encontrados neste saco.'}
                                     </p>
                                 </div>
                             </div>
@@ -675,7 +720,7 @@ export function StockOfferVolumeEditor({
                                                 ? volumeTotal(volume)
                                                 : (volume.total_quantity ?? '')
                                         }
-                                        readOnly={knownQuantities}
+                                        readOnly={knownQuantities || isLocked}
                                         onKeyDown={(event) => {
                                             if (
                                                 preventsNonNumericKey(
@@ -700,7 +745,9 @@ export function StockOfferVolumeEditor({
                                             )
                                         }
                                         aria-readonly={
-                                            knownQuantities ? true : undefined
+                                            knownQuantities || isLocked
+                                                ? true
+                                                : undefined
                                         }
                                         aria-invalid={
                                             volumeError ? true : undefined
@@ -708,6 +755,8 @@ export function StockOfferVolumeEditor({
                                         className={cn(
                                             'h-11 text-base sm:h-10 sm:text-sm',
                                             knownQuantities &&
+                                                'cursor-not-allowed bg-muted/40 text-muted-foreground',
+                                            isLocked &&
                                                 'cursor-not-allowed bg-muted/40 text-muted-foreground',
                                         )}
                                         placeholder="Ex.: 20"
@@ -729,7 +778,9 @@ export function StockOfferVolumeEditor({
                                             moveVolume(volumeIndex, -1)
                                         }
                                         disabled={
-                                            !isHydrated || volumeIndex === 0
+                                            !isHydrated ||
+                                            volumeIndex === 0 ||
+                                            isLocked
                                         }
                                         aria-label={`Mover Saco ${volumeIndex + 1} para cima`}
                                     >
@@ -745,7 +796,9 @@ export function StockOfferVolumeEditor({
                                         }
                                         disabled={
                                             !isHydrated ||
-                                            volumeIndex === volumes.length - 1
+                                            volumeIndex ===
+                                                volumes.length - 1 ||
+                                            isLocked
                                         }
                                         aria-label={`Mover Saco ${volumeIndex + 1} para baixo`}
                                     >
@@ -758,6 +811,7 @@ export function StockOfferVolumeEditor({
                                                 variant="ghost"
                                                 size="icon"
                                                 className="size-11 sm:size-9"
+                                                disabled={isLocked}
                                                 aria-label={`Mais ações para o Saco ${volumeIndex + 1}`}
                                             >
                                                 <Ellipsis />
@@ -814,6 +868,7 @@ export function StockOfferVolumeEditor({
                                                         true,
                                                     )
                                                 }
+                                                disabled={isLocked}
                                             >
                                                 <ListCheck />
                                                 Marcar todos
@@ -828,6 +883,7 @@ export function StockOfferVolumeEditor({
                                                         false,
                                                     )
                                                 }
+                                                disabled={isLocked}
                                             >
                                                 <ListX />
                                                 Desmarcar todos
@@ -870,6 +926,7 @@ export function StockOfferVolumeEditor({
                                                 <Switch
                                                     id={activeId}
                                                     checked={item.is_active}
+                                                    disabled={isLocked}
                                                     onCheckedChange={(
                                                         checked,
                                                     ) =>
@@ -895,7 +952,10 @@ export function StockOfferVolumeEditor({
                                                     type="number"
                                                     min="0"
                                                     inputMode="numeric"
-                                                    disabled={!item.is_active}
+                                                    disabled={
+                                                        !item.is_active ||
+                                                        isLocked
+                                                    }
                                                     value={
                                                         item.is_active
                                                             ? (item.quantity ??

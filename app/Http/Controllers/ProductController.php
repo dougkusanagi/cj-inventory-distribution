@@ -13,6 +13,7 @@ use App\Http\Resources\ProductResource;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -44,7 +45,19 @@ class ProductController extends Controller
             ->select(['id', 'code', 'model', 'name', 'category_id', 'line', 'notes', 'is_active', 'created_at', 'updated_at'])
             ->with([
                 'category:id,name,is_active',
-                'latestOffer.stockVolumes:id,stock_offer_id,sort_order,total_quantity,current_order_id,consumed_at',
+                'latestOffer.stockVolumes' => function (Relation $query): void {
+                    $query->select([
+                        'id',
+                        'stock_offer_id',
+                        'sort_order',
+                        'total_quantity',
+                        'current_order_id',
+                        'consumed_at',
+                    ])->withExists([
+                        'orderItems as has_order_items',
+                        'stockMovementItems as has_stock_movements',
+                    ]);
+                },
                 'latestOffer.stockVolumes.items:id,stock_offer_volume_id,size,sort_order,is_active,quantity',
                 'media',
             ])
@@ -117,6 +130,12 @@ class ProductController extends Controller
 
         return Inertia::render('products/edit', [
             'product' => ProductResource::make($product->load([
+                'latestOffer.stockVolumes' => function (Relation $query): void {
+                    $query->withExists([
+                        'orderItems as has_order_items',
+                        'stockMovementItems as has_stock_movements',
+                    ]);
+                },
                 'latestOffer.stockVolumes.items',
                 'category:id,name,is_active',
                 'media',
@@ -155,8 +174,13 @@ class ProductController extends Controller
     private function categoryOptions(?int $includeCategoryId = null): array
     {
         return Category::query()
-            ->where('is_active', true)
-            ->when($includeCategoryId !== null, fn ($query) => $query->orWhereKey($includeCategoryId))
+            ->where(function (Builder $query) use ($includeCategoryId): void {
+                $query->where('is_active', true);
+
+                if ($includeCategoryId !== null) {
+                    $query->orWhereKey($includeCategoryId);
+                }
+            })
             ->orderBy('name')
             ->get(['id', 'name', 'is_active'])
             ->toArray();

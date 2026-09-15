@@ -30,7 +30,7 @@ class CategoryRequest extends FormRequest
                 'required',
                 'string',
                 'max:120',
-                Rule::unique(Category::class)->ignore(
+                Rule::unique(Category::class)->whereNull('deleted_at')->ignore(
                     $this->route('category') instanceof Category
                         ? $this->route('category')->id
                         : null,

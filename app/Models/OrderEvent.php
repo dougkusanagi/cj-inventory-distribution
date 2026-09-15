@@ -6,8 +6,8 @@ use App\Enums\OrderEventType;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use LogicException;
 
 /**
  * @property int $id
@@ -21,7 +21,11 @@ use Illuminate\Support\Carbon;
 #[Fillable(['order_id', 'actor_id', 'event', 'reason', 'metadata'])]
 class OrderEvent extends Model
 {
-    use SoftDeletes;
+    protected static function booted(): void
+    {
+        static::updating(fn (): never => throw new LogicException('Eventos de pedido são imutáveis.'));
+        static::deleting(fn (): never => throw new LogicException('Eventos de pedido não podem ser apagados.'));
+    }
 
     /** @return BelongsTo<Order, $this> */
     public function order(): BelongsTo

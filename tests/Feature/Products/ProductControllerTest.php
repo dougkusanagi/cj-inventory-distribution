@@ -792,7 +792,7 @@ test('updating a product preserves its stock data', function () {
     expect($offer->stockVolumes()->sole()->items()->sole()->quantity)->toBe(10);
 });
 
-test('ending the current stock removes its offer and sacks', function () {
+test('ending the current stock is rejected while a sack still has stock', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
     $offer = $product->offers()->create([
@@ -806,18 +806,22 @@ test('ending the current stock removes its offer and sacks', function () {
         'is_active' => true,
     ]);
 
-    $response = $this->actingAs($user)->put(route('products.update', $product), [
-        'name' => $product->name,
-        'stock_volumes' => [],
-    ]);
+    $response = $this->actingAs($user)
+        ->from(route('products.edit', $product))
+        ->put(route('products.update', $product), [
+            'name' => $product->name,
+            'stock_volumes' => [],
+        ]);
 
     $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect(route('products.index'));
+        ->assertSessionHasErrors([
+            'stock_volumes' => 'Sacos com estoque disponível ou reservado não podem ser excluídos. Registre uma saída ou zere o saco pelo fluxo de estoque.',
+        ])
+        ->assertRedirect(route('products.edit', $product));
 
-    $this->assertSoftDeleted('stock_offers', ['id' => $offer->id]);
-    $this->assertSoftDeleted('stock_offer_volumes', ['id' => $volume->id]);
-    $this->assertSoftDeleted('stock_offer_volume_items', ['id' => $item->id]);
+    expect($offer->fresh())->not->toBeNull()
+        ->and($volume->fresh())->not->toBeNull()
+        ->and($item->fresh())->not->toBeNull();
 });
 
 test('ending stock is rejected when a sack has been referenced by an order', function () {
@@ -1165,8 +1169,8 @@ test('authenticated users can move a product and its stock sacks to the trash', 
         'type' => StockOfferType::NewGrade,
         'is_active' => true,
     ]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 10]);
-    $volume->items()->create(['size' => 'M', 'quantity' => 10, 'is_active' => true]);
+    $volume = $offer->stockVolumes()->create(['total_quantity' => 0]);
+    $volume->items()->create(['size' => 'M', 'quantity' => null, 'is_active' => false]);
 
     $response = $this->actingAs($user)->delete(route('products.destroy', $product));
 
@@ -1334,13 +1338,13 @@ test('updating sacks preserves their IDs while reordering and removing them', fu
         'type' => StockOfferType::NewGrade,
         'is_active' => true,
     ]);
-    $firstVolume = $offer->stockVolumes()->create(['sort_order' => 0, 'total_quantity' => 5]);
+    $firstVolume = $offer->stockVolumes()->create(['sort_order' => 0, 'total_quantity' => 0]);
     $secondVolume = $offer->stockVolumes()->create(['sort_order' => 1, 'total_quantity' => 7]);
     $firstItem = $firstVolume->items()->create([
         'size' => 'P',
         'sort_order' => 0,
-        'is_active' => true,
-        'quantity' => 5,
+        'is_active' => false,
+        'quantity' => null,
     ]);
     $secondItem = $secondVolume->items()->create([
         'size' => 'M',
@@ -1366,12 +1370,12 @@ test('updating sacks preserves their IDs while reordering and removing them', fu
             ],
             [
                 'id' => $firstVolume->id,
-                'total_quantity' => 5,
+                'total_quantity' => 0,
                 'items' => [[
                     'id' => $firstItem->id,
                     'size' => 'P',
-                    'is_active' => true,
-                    'quantity' => 5,
+                    'is_active' => false,
+                    'quantity' => null,
                 ]],
             ],
         ],

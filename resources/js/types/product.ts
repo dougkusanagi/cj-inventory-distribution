@@ -19,6 +19,7 @@ export type StockOfferVolume = {
     id: number;
     sort_order: number;
     total_quantity: number;
+    is_locked?: boolean;
     items: StockOfferVolumeItem[];
 };
 
@@ -140,6 +141,7 @@ export type DashboardStats = {
     withSizes: number;
     activeOffers: number;
     stockUnits: number;
+    reservedStockUnits: number;
     pendingOrders: number;
     ordersWithDivergences: number;
 };

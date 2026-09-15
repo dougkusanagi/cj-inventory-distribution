@@ -46,6 +46,12 @@ class Product extends Model implements HasMedia
                 ->filter(fn (StockOffer $offer): bool => ! $offer->trashed())
                 ->each->delete();
         });
+
+        static::restored(function (self $product): void {
+            $product->offers()->withTrashed()->get()
+                ->filter(fn (StockOffer $offer): bool => $offer->trashed())
+                ->each->restore();
+        });
     }
 
     public const MEDIA_COLLECTION = 'product-images';

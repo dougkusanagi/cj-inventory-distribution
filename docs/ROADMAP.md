@@ -106,6 +106,10 @@ Cada evolução deve ser avaliada separadamente antes de entrar no escopo.
 
 ### Correções de integridade antes das próximas evoluções
 
+Status: concluída em 15/09/2026. Os índices ativos, validações, tolerância a
+relações históricas, política de exclusão/restauração e retenção dos históricos
+operacionais foram implementados e cobertos por testes funcionais.
+
 Antes de implementar auditoria geral ou movimentações de estoque, concluir uma
 etapa de estabilização das exclusões lógicas e das regras de integridade. Essa
 etapa é pré-requisito para que o histórico futuro não seja construído sobre
@@ -168,7 +172,9 @@ referências ambíguas ou estados que não podem ser recuperados com segurança.
 - migrations devem ser testadas no mesmo mecanismo de banco usado em produção,
   especialmente para semântica de `NULL`, índices únicos e locks.
 
-### Auditoria geral — planejada
+### Auditoria geral — implementada
+
+Status: concluída em 15/09/2026, conforme o ADR 0017.
 
 Complementar o `OrderEvent`, que permanece como histórico operacional dos
 pedidos, com uma trilha transversal para produtos, categorias, ofertas, sacos,
@@ -185,7 +191,135 @@ Como essa implementação afeta várias partes da aplicação e estabelece uma
 política durável de retenção de dados, ela deve receber um ADR próprio antes da
 implementação.
 
-### Gerenciamento de estoque e movimentações — planejado
+### Gerenciamento de estoque e movimentações — em estabilização
+
+Status: implementação principal concluída em 15/09/2026, conforme o ADR 0016,
+mas ainda não pronta para encerramento. Uma revisão pós-implementação encontrou
+pendências de integridade, concorrência, transição do editor legado e cobertura
+que precisam ser resolvidas antes de considerar o módulo concluído. A abertura
+inicial está disponível pelo comando `stock:open-initial`.
+
+#### Correções obrigatórias encontradas na revisão pós-implementação
+
+1. **Eliminar gravações físicas pelo CRUD de produto.** O cadastro e a edição
+   ainda conseguem criar um saco novo diretamente por
+   `SyncProductStockOffer`, inclusive em uma oferta que já contém sacos
+   confirmados. Depois da ativação das movimentações, criar produto com estoque,
+   adicionar saco, alterar grade ou quantidade e encerrar disponibilidade devem
+   passar por entrada, saída ou estorno. O formulário de produto deve manter
+   somente identidade, classificação, fotos, observações e ativação comercial;
+   estoque existente fica em leitura, acompanhado de atalhos para as operações
+   canônicas. Se a criação de produto oferecer estoque inicial, ela deve abrir
+   uma entrada em rascunho e somente publicar os sacos depois da confirmação
+   transacional da movimentação.
+2. **Tornar a idempotência segura sob concorrência.** A chave deve ser adquirida
+   ou reservada antes de qualquer criação ou alteração de saco. Duas requisições
+   simultâneas com a mesma chave e o mesmo payload devem retornar exatamente a
+   mesma movimentação sem criar sacos extras; com payload diferente, uma delas
+   deve receber conflito de domínio. A solução não pode depender somente do
+   índice único inserido depois dos efeitos físicos. Validar o comportamento no
+   banco usado em produção, incluindo isolamento transacional, espera por locks,
+   deadlock/retry e rollback integral.
+3. **Restaurar somente dependentes pertencentes à mesma exclusão.** A restauração
+   de produto, oferta ou saco não pode recuperar indiscriminadamente todos os
+   filhos que estiverem na lixeira. É necessário distinguir os dependentes
+   excluídos em cascata daqueles que já estavam excluídos antes, bloquear
+   conflitos de chaves de negócio e revalidar reserva, consumo e movimentações
+   posteriores antes de qualquer republicação. A operação deve ser transacional
+   e apresentar erro de domínio compreensível, sem expor exceção de índice.
+4. **Implementar busca e carregamento limitado na saída manual.** A seleção deve
+   pesquisar no servidor por produto, modelo, código interno e código do saco,
+   retornar somente sacos disponíveis e limitar/paginar os resultados. Os sacos
+   já selecionados devem permanecer visíveis ao alterar a consulta. A tela não
+   pode serializar todo o estoque disponível em uma única resposta nem perder a
+   seleção durante busca, paginação ou erro de validação.
+5. **Completar a cobertura de aceitação e concorrência.** Adicionar testes no
+   banco de produção para entradas simultâneas com chave igual e payload igual ou
+   divergente, além de concorrência entre saída e pedido. Cobrir tentativa
+   manipulada de criar ou alterar estoque pelo CRUD após a abertura, restauração
+   seletiva e conflitos de unicidade. Acrescentar testes de navegador para
+   entrada, saída com busca e seleção persistente, histórico responsivo,
+   estorno, bloqueio visual do editor legado e mensagens de conflito. Cada teste
+   de escrita deve afirmar resposta, estoque persistido, número de sacos,
+   movimentações e ausência de efeitos parciais.
+
+Critério de encerramento desta estabilização: nenhuma escrita física ocorre fora
+das actions de estoque; retries simultâneos são idempotentes; restauração não
+ressuscita dependentes indevidos; a saída manual funciona com grande volume de
+dados; e `composer ci:verify`, os testes no banco de produção e os fluxos de
+navegador acima passam integralmente.
+
+#### Correções de interface encontradas na auditoria visual
+
+A auditoria de 15/09/2026 capturou todas as páginas React ligadas a rotas: 27
+páginas e estados em desktop, 10 superfícies operacionais em `390x844` e quatro
+superfícies representativas no tema escuro. Foram verificados catálogo,
+autenticação, painel, produtos, categorias, pedidos, movimentações e
+configurações. As páginas abriram sem erro de JavaScript e o detector mecânico
+do design system não encontrou violações; os itens abaixo vieram da inspeção da
+composição renderizada e dos fluxos reais.
+
+1. **P1 — Eliminar overflow horizontal do histórico de movimentações no
+   desktop.** A grade atual reserva larguras fixas para busca, quatro selects,
+   duas datas, ordenação e botão na mesma linha. Em `1280x800`, filtros,
+   contadores e ações ultrapassam a área útil do painel e ficam cortados, tanto
+   no tema claro quanto no escuro. Reorganizar filtros em linhas responsivas ou
+   em painel recolhível, mantendo busca e ação principal prioritárias. Nenhum
+   conteúdo ou controle pode ficar fora da viewport entre 320 e 1440 px; testar
+   também zoom de 200%, textos maiores e opções com rótulos longos.
+2. **P1 — Impedir que a barra fixa de salvamento cubra o formulário de
+   produto.** Em `390x844`, a barra “Cadastrar produto” atravessa o cartão de
+   informações e oculta título, descrição e campos durante a rolagem; no
+   desktop ela também sobrepõe o conteúdo inferior. Reservar no fluxo da página
+   espaço igual à altura real da barra e `safe-area`, ou limitar o sticky ao
+   contêiner apropriado. Todos os campos, erros, títulos e ações destrutivas
+   precisam poder ser rolados para uma posição totalmente visível acima da
+   barra, inclusive com teclado virtual aberto.
+3. **P1 — Remover detalhes técnicos da experiência operacional.** As telas de
+   entrada e saída expõem uma “Chave da operação” editável, transferindo ao
+   usuário a responsabilidade pela idempotência. Gerar e manter a chave
+   internamente durante retries, sem campo visível, e oferecer uma mensagem de
+   recuperação compreensível quando houver conflito. No detalhe da movimentação,
+   traduzir valores como `replenishment` e substituir os blocos de JSON bruto
+   `{}` de estado anterior/posterior por diferenças legíveis: disponibilidade,
+   reserva/consumo, total e grade. Estados ausentes devem aparecer como “Não se
+   aplica”, nunca como objeto técnico vazio.
+4. **P1 — Localizar completamente autenticação e passkeys.** O login mistura
+   português com “Sign in with a passkey” e “Or continue with email”, e o estado
+   de carregamento padrão também está em inglês. Todos os rótulos, mensagens,
+   erros e estados de autenticação, confirmação de senha, recuperação, 2FA e
+   passkeys devem estar em português consistente. Adicionar teste de navegador
+   que habilite suporte a passkey e afirme os textos renderizados, pois o botão
+   não existe quando a API não é suportada.
+5. **P2 — Aumentar a densidade informacional dos resumos no celular.** O painel
+   usa um cartão alto para cada uma das quatro métricas e o histórico usa sete
+   cartões de largura inteira, fazendo as ações e os lançamentos começarem
+   somente após várias telas de rolagem. No mobile, agrupar métricas relacionadas
+   em grade compacta de duas colunas ou resumo progressivo, mantendo legibilidade
+   e alvos de toque de pelo menos 44 px. No histórico, ações, busca e lançamentos
+   recentes devem aparecer antes das métricas secundárias ou estas devem poder
+   ser expandidas.
+6. **P2 — Melhorar estados sem conteúdo e ações indisponíveis.** Pedido pendente
+   sem sacos mostra instrução para separar/conferir e um botão “Finalizar pedido”
+   desabilitado, mas não oferece o próximo passo correto. Exibir estado vazio
+   específico com ação para editar/adicionar sacos ou cancelar. No catálogo e
+   nos cards internos, “Produto sem foto” ocupa grande área vazia; usar fallback
+   visual compacto e informativo, preservando a proporção fotográfica apenas
+   quando houver imagem real. Botões desabilitados devem manter contraste
+   suficiente e explicar junto ao controle o requisito que falta.
+7. **P2 — Revisar localização de datas e consistência entre páginas de acesso.**
+   Os filtros de data podem aparecer como `mm/dd/yyyy` apesar de toda a interface
+   estar em português. Usar controle ou indicação inequívoca no formato
+   `dd/mm/aaaa`, com nome acessível para início e fim. Padronizar recuperação de
+   senha, redefinição, confirmação de e-mail e confirmação de senha com a mesma
+   estrutura de marca, espaçamento e navegação de retorno do login, evitando que
+   algumas páginas pareçam pertencer a outro sistema.
+
+Critérios gerais da correção visual: repetir capturas em desktop, `390x844`,
+tema claro e escuro; não permitir overflow horizontal; validar navegação por
+teclado, foco visível, zoom de 200%, áreas de toque, contraste WCAG AA, estados
+vazio/carregando/erro/desabilitado e ausência de erros no console. Os testes de
+navegador devem comprovar comportamento e não apenas presença de texto.
 
 #### Objetivo
 
@@ -311,7 +445,7 @@ StockMovement
 ```text
 id
 type: in | out
-source: manual | order
+source: manual | order | opening
 actor_id nullable
 order_id nullable
 reversal_of_id nullable

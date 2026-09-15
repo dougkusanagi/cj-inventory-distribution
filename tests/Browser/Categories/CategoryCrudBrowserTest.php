@@ -51,5 +51,5 @@ it('creates, lists, updates, and deletes a category through the interface', func
         ->assertSee('Categoria excluída.')
         ->assertNoJavaScriptErrors();
 
-    $this->assertModelMissing($category);
+    $this->assertSoftDeleted($category);
 });

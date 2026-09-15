@@ -30,5 +30,6 @@ class DatabaseSeeder extends Seeder
         $testUser->save();
 
         $this->call(CatalogDemoSeeder::class);
+        $this->call(OperationalDemoSeeder::class);
     }
 }

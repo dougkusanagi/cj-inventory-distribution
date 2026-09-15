@@ -10,12 +10,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 
 /**
  * @property int $id
  * @property int $stock_offer_id
  * @property int $sort_order
  * @property int $total_quantity
+ * @property string|null $code
+ * @property int|null $current_order_id
+ * @property Carbon|null $consumed_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -28,9 +32,25 @@ class StockOfferVolume extends Model
     protected static function booted(): void
     {
         static::deleting(function (self $volume): void {
+            if (! $volume->isForceDeleting()
+                && ($volume->current_order_id !== null
+                    || ($volume->total_quantity > 0 && $volume->consumed_at === null))) {
+                throw ValidationException::withMessages([
+                    'stock_volumes' => 'Sacos com estoque disponível ou reservado não podem ser excluídos. Registre uma saída ou zere o saco pelo fluxo de estoque.',
+                ]);
+            }
+
             $volume->items()->withTrashed()->get()
                 ->filter(fn (StockOfferVolumeItem $item): bool => ! $item->trashed())
-                ->each->delete();
+                ->each(fn (StockOfferVolumeItem $item): ?bool => $volume->isForceDeleting()
+                    ? $item->forceDelete()
+                    : $item->delete());
+        });
+
+        static::restored(function (self $volume): void {
+            $volume->items()->withTrashed()->get()
+                ->filter(fn (StockOfferVolumeItem $item): bool => $item->trashed())
+                ->each->restore();
         });
     }
 
@@ -74,6 +94,12 @@ class StockOfferVolume extends Model
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /** @return HasMany<StockMovementItem, $this> */
+    public function stockMovementItems(): HasMany
+    {
+        return $this->hasMany(StockMovementItem::class, 'stock_offer_volume_id');
     }
 
     /** @return BelongsTo<Order, $this> */

@@ -50,6 +50,7 @@ class CatalogController extends Controller
                     })
                     ->values()
                     ->all();
+                $category = $product->category;
 
                 return [
                     'id' => $product->id,
@@ -60,7 +61,7 @@ class CatalogController extends Controller
                     'images' => $images,
                     'category' => $product->category_id === null
                         ? 'Sem categoria'
-                        : $product->category->name,
+                        : ($category === null ? 'Sem categoria' : $category->name),
                     'line' => $product->line?->label() ?? 'Não informada',
                     'type' => $offer->type->label(),
                     'volumes' => $offer->stockVolumes->map(fn (StockOfferVolume $volume): array => [

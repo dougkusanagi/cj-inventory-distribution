@@ -276,6 +276,11 @@ export function ProductForm({ product, categories }: ProductFormProps) {
     const hasPositiveTotal = form.data.stock_volumes.some(
         (volume) => volumeTotal(volume) > 0,
     );
+    const lockedVolumeIds =
+        product?.stock_volumes
+            .filter((volume) => volume.is_locked)
+            .map((volume) => volume.id) ?? [];
+    const hasLockedVolumes = lockedVolumeIds.length > 0;
     const hasAvailableVolumes = form.data.stock_volumes.length > 0;
     const distributionStatus = !form.data.is_active
         ? 'Não aparece para as vendedoras: produto oculto.'
@@ -290,6 +295,10 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                 : 'Aparece para as vendedoras.';
 
     const clearCurrentStock = () => {
+        if (hasLockedVolumes) {
+            return;
+        }
+
         const confirmed = window.confirm(
             'Isso removerá a oferta de estoque e os sacos deste produto. Deseja continuar?',
         );
@@ -835,6 +844,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                             <RadioGroup
                                 value={form.data.stock_offer_type}
                                 onValueChange={selectStockOfferType}
+                                disabled={hasLockedVolumes}
                                 className="grid grid-cols-3 gap-2"
                                 aria-labelledby={radioGroupId}
                                 aria-invalid={
@@ -882,6 +892,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                 <StockOfferVolumeEditor
                     volumes={form.data.stock_volumes}
                     errors={form.errors as Record<string, string>}
+                    lockedVolumeIds={lockedVolumeIds}
                     onChange={(volumes) =>
                         form.setData('stock_volumes', volumes)
                     }
@@ -893,8 +904,9 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                             Encerrar estoque atual
                         </p>
                         <p className="text-sm leading-5 text-muted-foreground">
-                            Remove a oferta e seus sacos deste produto ao
-                            salvar.
+                            {hasLockedVolumes
+                                ? 'Sacos já movimentados precisam permanecer no histórico. Use Movimentações para novas entradas, saídas ou estornos.'
+                                : 'Remove a oferta e seus sacos deste produto ao salvar.'}
                         </p>
                     </div>
                     <Button
@@ -902,7 +914,10 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                         variant="destructive"
                         data-testid="end-current-stock"
                         onClick={clearCurrentStock}
-                        disabled={form.data.stock_volumes.length === 0}
+                        disabled={
+                            form.data.stock_volumes.length === 0 ||
+                            hasLockedVolumes
+                        }
                         className="h-11 shrink-0"
                     >
                         <PackageX />

@@ -94,6 +94,10 @@ class ProductResource extends JsonResource
             'id' => $volume->id,
             'sort_order' => $volume->sort_order,
             'total_quantity' => $volume->total_quantity,
+            'is_locked' => $volume->current_order_id !== null
+                || $volume->consumed_at !== null
+                || (bool) $volume->getAttribute('has_order_items')
+                || (bool) $volume->getAttribute('has_stock_movements'),
             'items' => $volume->relationLoaded('items')
                 ? $volume->items->map(fn (StockOfferVolumeItem $item): array => [
                     'id' => $item->id,

@@ -1,5 +1,11 @@
 import { Link } from '@inertiajs/react';
-import { LayoutGrid, Package, ShoppingCart, Tags } from 'lucide-react';
+import {
+    ArrowLeftRight,
+    LayoutGrid,
+    Package,
+    ShoppingCart,
+    Tags,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import AppearanceToggleTab from '@/components/appearance-tabs';
 import { NavMain } from '@/components/nav-main';
@@ -18,6 +24,7 @@ import { dashboard } from '@/routes';
 import { index as productsIndex } from '@/routes/products';
 import { index as categoriesIndex } from '@/routes/categories';
 import { index as ordersIndex } from '@/routes/orders';
+import { index as stockMovementsIndex } from '@/routes/stock-movements';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -40,6 +47,11 @@ const mainNavItems: NavItem[] = [
         title: 'Pedidos',
         href: ordersIndex(),
         icon: ShoppingCart,
+    },
+    {
+        title: 'Movimentações',
+        href: stockMovementsIndex(),
+        icon: ArrowLeftRight,
     },
 ];
 

@@ -43,3 +43,5 @@ ADRs iniciais:
 - [0013 — Pedidos do catálogo enviados via WhatsApp](0013-catalog-orders-via-whatsapp.md)
 - [0014 — Remover a ativação independente da oferta](0014-remove-stock-offer-activation.md)
 - [0015 — Soft deletes para entidades da aplicação](0015-soft-deletes-for-application-entities.md)
+- [0016 — Movimentações imutáveis para o estoque físico](0016-stock-movements.md)
+- [0017 — Trilha de auditoria administrativa](0017-application-audit-log.md)

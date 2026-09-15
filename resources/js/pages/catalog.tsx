@@ -14,6 +14,7 @@ import CatalogOrderController from '@/actions/App/Http/Controllers/CatalogOrderC
 import AppearanceToggleTab from '@/components/appearance-tabs';
 import ImageCarousel from '@/components/image-carousel';
 import InputError from '@/components/input-error';
+import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -201,53 +202,6 @@ function sizeComposition(
         .join(' · ');
 }
 
-function SizeBreakdown({
-    sizes,
-}: {
-    sizes: CatalogPreviewProduct['volumes'][number]['sizes'];
-}) {
-    if (!sizes.some(({ quantity }) => quantity !== null)) {
-        return (
-            <div className="grid gap-1 text-muted-foreground">
-                <p className="text-sm">
-                    Tamanhos: {sizes.map(({ size }) => size).join(' · ')}
-                </p>
-                <p className="text-xs">Quantidade por tamanho não informada.</p>
-            </div>
-        );
-    }
-
-    return (
-        <div className="grid gap-2">
-            <p className="text-xs font-medium text-muted-foreground">
-                Conteúdo por tamanho
-            </p>
-            <dl className="flex flex-wrap gap-2">
-                {sizes.map(({ size, quantity }) => (
-                    <div
-                        key={size}
-                        className="grid min-w-16 justify-items-center gap-0.5 rounded-lg bg-muted px-3 py-2 tabular-nums"
-                        aria-label={
-                            quantity === null
-                                ? `Tamanho ${size}, quantidade não informada`
-                                : `Tamanho ${size}, ${quantity} ${quantity === 1 ? 'peça' : 'peças'}`
-                        }
-                    >
-                        <dt className="text-base leading-5 font-semibold text-foreground">
-                            {size}
-                        </dt>
-                        <dd className="text-xs leading-4 text-muted-foreground">
-                            {quantity === null
-                                ? 'Não informada'
-                                : `${quantity} ${quantity === 1 ? 'pç' : 'pçs'}`}
-                        </dd>
-                    </div>
-                ))}
-            </dl>
-        </div>
-    );
-}
-
 function ProductVolumeOptions({
     product,
     selectedVolumeIds,
@@ -288,7 +242,7 @@ function ProductVolumeOptions({
                                     {volume.pieces} peças
                                 </strong>
                             </div>
-                            <SizeBreakdown sizes={volume.sizes} />
+                            <StockSizeBreakdown sizes={volume.sizes} />
                             <Button
                                 variant={selected ? 'secondary' : 'default'}
                                 className="h-11 w-full"

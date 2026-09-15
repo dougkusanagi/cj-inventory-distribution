@@ -35,7 +35,10 @@ class SyncProductStockOffer
             $existingVolumes = $offer === null
                 ? collect()
                 : $offer->stockVolumes()
-                    ->withExists(['orderItems as has_order_items'])
+                    ->withExists([
+                        'orderItems as has_order_items',
+                        'stockMovementItems as has_stock_movements',
+                    ])
                     ->lockForUpdate()
                     ->get()
                     ->keyBy('id');
@@ -44,12 +47,16 @@ class SyncProductStockOffer
                 return null;
             }
 
+            if ($offer !== null
+                && $existingVolumes->contains(fn (StockOfferVolume $volume): bool => (bool) $volume->getAttribute('has_stock_movements'))
+                && $offer->type !== $type) {
+                throw ValidationException::withMessages([
+                    'stock_offer_type' => 'A classificação de uma oferta já movimentada não pode ser alterada pelo cadastro do produto.',
+                ]);
+            }
+
             if ($offer !== null && $rawVolumes->isEmpty()) {
-                if ($existingVolumes->contains(fn (StockOfferVolume $volume): bool => $this->isProtected($volume))) {
-                    throw ValidationException::withMessages([
-                        'stock_volumes' => 'Sacos vinculados a pedidos não podem ser removidos.',
-                    ]);
-                }
+                $this->ensureVolumesMayBeRemoved($existingVolumes);
 
                 $offer->delete();
 
@@ -94,15 +101,7 @@ class SyncProductStockOffer
                 throw new InvalidArgumentException('An offer must contain at least one stock volume.');
             }
 
-            $protectedVolumeWasRemoved = $existingVolumes
-                ->except($usedVolumeIds)
-                ->contains(fn (StockOfferVolume $volume): bool => $this->isProtected($volume));
-
-            if ($protectedVolumeWasRemoved) {
-                throw ValidationException::withMessages([
-                    'stock_volumes' => 'Sacos vinculados a pedidos não podem ser removidos.',
-                ]);
-            }
+            $this->ensureVolumesMayBeRemoved($existingVolumes->except($usedVolumeIds));
 
             $offer->stockVolumes()
                 ->whereNotIn('id', $usedVolumeIds)
@@ -289,7 +288,9 @@ class SyncProductStockOffer
 
         if ($volume->sort_order !== $sortOrder || $volume->total_quantity !== $totalQuantity || $storedItems !== $submittedItems) {
             throw ValidationException::withMessages([
-                'stock_volumes' => 'Sacos vinculados a pedidos não podem ser alterados.',
+                'stock_volumes' => (bool) $volume->getAttribute('has_stock_movements')
+                    ? 'Sacos já confirmados em movimentações não podem ser alterados pelo cadastro do produto.'
+                    : 'Sacos vinculados a pedidos não podem ser alterados.',
             ]);
         }
     }
@@ -298,6 +299,28 @@ class SyncProductStockOffer
     {
         return $volume->current_order_id !== null
             || $volume->consumed_at !== null
-            || (bool) $volume->getAttribute('has_order_items');
+            || (bool) $volume->getAttribute('has_order_items')
+            || (bool) $volume->getAttribute('has_stock_movements');
+    }
+
+    /** @param Collection<int, StockOfferVolume> $volumes */
+    private function ensureVolumesMayBeRemoved(Collection $volumes): void
+    {
+        $blockedVolume = $volumes->first(fn (StockOfferVolume $volume): bool => $this->isProtected($volume));
+
+        if ($blockedVolume !== null) {
+            throw ValidationException::withMessages([
+                'stock_volumes' => (bool) $blockedVolume->getAttribute('has_stock_movements')
+                    ? 'Sacos que já possuem movimentações não podem ser removidos.'
+                    : 'Sacos vinculados a pedidos não podem ser removidos.',
+            ]);
+        }
+
+        if ($volumes->contains(fn (StockOfferVolume $volume): bool => $volume->total_quantity > 0
+            && $volume->consumed_at === null)) {
+            throw ValidationException::withMessages([
+                'stock_volumes' => 'Sacos com estoque disponível ou reservado não podem ser excluídos. Registre uma saída ou zere o saco pelo fluxo de estoque.',
+            ]);
+        }
     }
 }

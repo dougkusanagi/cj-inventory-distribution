@@ -52,7 +52,7 @@ function MetricCard({
                     : 'rounded-[1.75rem] border-border/80 bg-card shadow-sm'
             }
         >
-            <CardContent className="flex min-h-40 flex-col justify-between gap-6 p-5 sm:p-6">
+            <CardContent className="flex min-h-32 flex-col justify-between gap-4 p-4 sm:min-h-40 sm:gap-6 sm:p-6">
                 <div className="flex items-start justify-between gap-4">
                     <span
                         className={
@@ -145,7 +145,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                 </header>
 
                 <section
-                    className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+                    className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
                     aria-label="Resumo da operação"
                 >
                     <MetricCard
@@ -217,6 +217,14 @@ export default function Dashboard({ stats }: DashboardProps) {
                                 <span className="text-sm text-muted-foreground">
                                     unidades disponíveis para distribuição
                                 </span>
+                                {stats.reservedStockUnits > 0 && (
+                                    <span className="text-xs text-muted-foreground">
+                                        {stats.reservedStockUnits}{' '}
+                                        {stats.reservedStockUnits === 1
+                                            ? 'unidade reservada em pedido'
+                                            : 'unidades reservadas em pedidos'}
+                                    </span>
+                                )}
                             </div>
                         </CardContent>
                     </Card>

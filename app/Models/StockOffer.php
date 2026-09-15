@@ -34,6 +34,12 @@ class StockOffer extends Model
                 ->filter(fn (StockOfferVolume $volume): bool => ! $volume->trashed())
                 ->each->delete();
         });
+
+        static::restored(function (self $offer): void {
+            $offer->stockVolumes()->withTrashed()->get()
+                ->filter(fn (StockOfferVolume $volume): bool => $volume->trashed())
+                ->each->restore();
+        });
     }
 
     /**

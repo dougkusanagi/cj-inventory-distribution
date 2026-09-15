@@ -6,6 +6,10 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\StockEntryController;
+use App\Http\Controllers\StockExitController;
+use App\Http\Controllers\StockMovementController;
+use App\Http\Controllers\StockMovementReversalController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', CatalogController::class)->name('home');
@@ -49,6 +53,14 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('painel')->group(functi
     Route::post('pedidos/{order}/itens/{item}/resolve-divergence', [OrderController::class, 'resolveDivergence'])
         ->scopeBindings()
         ->name('orders.items.resolve-divergence');
+    Route::get('movimentacoes', [StockMovementController::class, 'index'])->name('stock-movements.index');
+    Route::get('movimentacoes/{movement}', [StockMovementController::class, 'show'])->name('stock-movements.show');
+    Route::get('estoque/entradas/nova', [StockEntryController::class, 'create'])->name('stock-entries.create');
+    Route::post('estoque/entradas', [StockEntryController::class, 'store'])->name('stock-entries.store');
+    Route::get('estoque/saidas/nova', [StockExitController::class, 'create'])->name('stock-exits.create');
+    Route::post('estoque/saidas', [StockExitController::class, 'store'])->name('stock-exits.store');
+    Route::post('movimentacoes/{movement}/estornar', [StockMovementReversalController::class, 'store'])
+        ->name('stock-movements.reverse');
 });
 
 require __DIR__.'/settings.php';

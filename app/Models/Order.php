@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 
 /**
  * @property int $id
@@ -35,16 +36,23 @@ class Order extends Model
     protected static function booted(): void
     {
         static::deleting(function (self $order): void {
+            if (! $order->isForceDeleting() && $order->status === OrderStatus::Pending) {
+                throw ValidationException::withMessages([
+                    'order' => 'Pedidos pendentes não podem ser excluídos enquanto mantêm uma reserva.',
+                ]);
+            }
+
             $order->items()->withTrashed()->get()
                 ->filter(fn (OrderItem $item): bool => ! $item->trashed())
                 ->each(fn (OrderItem $item): ?bool => $order->isForceDeleting()
                     ? $item->forceDelete()
                     : $item->delete());
-            $order->events()->withTrashed()->get()
-                ->filter(fn (OrderEvent $event): bool => ! $event->trashed())
-                ->each(fn (OrderEvent $event): ?bool => $order->isForceDeleting()
-                    ? $event->forceDelete()
-                    : $event->delete());
+        });
+
+        static::restored(function (self $order): void {
+            $order->items()->withTrashed()->get()
+                ->filter(fn (OrderItem $item): bool => $item->trashed())
+                ->each->restore();
         });
     }
 

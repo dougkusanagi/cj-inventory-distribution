@@ -62,7 +62,11 @@ abstract class ProductRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'model' => ['nullable', 'string', 'max:100'],
-            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'category_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('categories', 'id')->whereNull('deleted_at'),
+            ],
             'line' => ['nullable', Rule::enum(ProductLine::class)],
             'notes' => ['nullable', 'string', 'max:5000'],
             'is_active' => ['required', 'boolean'],

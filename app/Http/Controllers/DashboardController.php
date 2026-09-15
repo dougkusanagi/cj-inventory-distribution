@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\StockOffer;
+use App\Models\StockOfferVolume;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -24,12 +25,18 @@ class DashboardController extends Controller
             ->whereHas('product', fn (Builder $query) => $query->where('is_active', true))
             ->whereHas('stockVolumes', fn (Builder $query) => $query
                 ->where('total_quantity', '>', 0)
+                ->whereNull('current_order_id')
                 ->whereNull('consumed_at'));
         $activeStockOffersForStats = (clone $activeStockOffers)
             ->with(['stockVolumes' => fn ($query) => $query
                 ->select(['id', 'stock_offer_id', 'total_quantity'])
+                ->whereNull('current_order_id')
                 ->whereNull('consumed_at')])
             ->get();
+        $trackedPhysicalStock = StockOfferVolume::query()
+            ->where('total_quantity', '>', 0)
+            ->whereNull('consumed_at')
+            ->whereHas('offer.product', fn (Builder $query) => $query->where('is_active', true));
 
         return Inertia::render('dashboard', [
             'stats' => [
@@ -44,6 +51,9 @@ class DashboardController extends Controller
                 'stockUnits' => (int) $activeStockOffersForStats->sum(
                     fn (StockOffer $offer): int => (int) $offer->stockVolumes->sum('total_quantity'),
                 ),
+                'reservedStockUnits' => (int) (clone $trackedPhysicalStock)
+                    ->whereNotNull('current_order_id')
+                    ->sum('total_quantity'),
                 'pendingOrders' => Order::query()->where('status', OrderStatus::Pending)->count(),
                 'ordersWithDivergences' => Order::query()
                     ->where('status', OrderStatus::Pending)

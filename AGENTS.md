@@ -48,6 +48,11 @@ Priorize uso simples em celular, poucos passos, estados visuais claros, feedback
 
 No frontend, prefira componentes shadcn existentes ou bibliotecas React maduras e leves a implementações próprias. Crie uma solução customizada somente quando as opções existentes não atenderem ao requisito ou adicionarem complexidade desnecessária.
 
+- Antes de criar markup visual para dados que já aparecem em outra tela, procure
+  componentes reutilizáveis no projeto. Em especial, represente grades e
+  quantidades de estoque por tamanho com o componente compartilhado de mini
+  cards, preservando o mesmo padrão no catálogo, formulários e históricos.
+
 - Para estados booleanos, reutilize `@/components/ui/switch`, baseado no
   componente Switch do shadcn/Radix. Não reimplemente um switch usando
   `TogglePrimitive` ou markup visual próprio.

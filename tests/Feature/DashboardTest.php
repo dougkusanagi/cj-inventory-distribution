@@ -81,3 +81,25 @@ test('dashboard stock units are summed from physical sacks', function () {
             ->where('stats.stockUnits', 10),
         );
 });
+
+test('dashboard separates available and reserved stock units', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $offer = $product->offers()->create([
+        'type' => StockOfferType::Replenishment,
+        'is_active' => true,
+    ]);
+    $offer->stockVolumes()->create(['total_quantity' => 4]);
+    $reservedOrder = Order::factory()->create();
+    $offer->stockVolumes()->create([
+        'total_quantity' => 6,
+        'current_order_id' => $reservedOrder->id,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('stats.activeOffers', 1)
+            ->where('stats.stockUnits', 4)
+            ->where('stats.reservedStockUnits', 6));
+});
