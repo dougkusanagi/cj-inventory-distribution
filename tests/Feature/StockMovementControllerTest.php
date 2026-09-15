@@ -81,6 +81,201 @@ test('staff can register a manual exit only for an available sack', function () 
     expect(StockMovement::query()->count())->toBe(1);
 });
 
+test('stock entry preselects the product sent from its page', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('stock-entries.create', ['product' => $product->id]))
+        ->assertInertia(fn ($page) => $page
+            ->component('stock-movements/entry')
+            ->where('selectedProductId', $product->id));
+});
+
+test('stock exit lists only the selected product available sacks', function () {
+    $user = User::factory()->create();
+    $selectedVolume = movementVolume();
+    $otherVolume = movementVolume();
+
+    $this->actingAs($user)
+        ->get(route('stock-exits.create', [
+            'product' => $selectedVolume->offer->product_id,
+        ]))
+        ->assertInertia(fn ($page) => $page
+            ->component('stock-movements/exit')
+            ->where('selectedProductId', $selectedVolume->offer->product_id)
+            ->has('volumes', 1)
+            ->where('volumes.0.id', $selectedVolume->id));
+
+    expect($otherVolume->id)->not->toBe($selectedVolume->id);
+});
+
+test('staff can recount known sizes from the product and records the difference', function () {
+    $user = User::factory()->create();
+    $volume = movementVolume();
+    $item = $volume->items->sole();
+
+    $this->actingAs($user)
+        ->post(route('products.stock-adjustments.store', $volume->offer->product), [
+            'volume_id' => $volume->id,
+            'items' => [[
+                'id' => $item->id,
+                'is_active' => true,
+                'quantity' => 9,
+            ]],
+            'reason' => 'Contagem física',
+            'idempotency_key' => 'adjustment-size-001',
+        ])
+        ->assertRedirect(route('products.edit', $volume->offer->product));
+
+    $movement = StockMovement::query()->sole();
+
+    expect($movement->type)->toBe(StockMovementType::Out)
+        ->and($movement->source)->toBe(StockMovementSource::Adjustment)
+        ->and($volume->refresh()->total_quantity)->toBe(9)
+        ->and($item->refresh()->quantity)->toBe(9)
+        ->and($movement->items->sole()->previous_state['total_quantity'])->toBe(12)
+        ->and($movement->items->sole()->resulting_state['total_quantity'])->toBe(9);
+
+    $this->actingAs($user)
+        ->get(route('stock-movements.show', $movement))
+        ->assertInertia(fn ($page) => $page
+            ->where('movement.items.0.previous_state.total_quantity', 12)
+            ->where('movement.items.0.resulting_state.total_quantity', 9)
+            ->where('movement.items.0.previous_state.sizes.0', [
+                'size' => 'M',
+                'quantity' => 12,
+            ])
+            ->where('movement.items.0.resulting_state.sizes.0', [
+                'size' => 'M',
+                'quantity' => 9,
+            ]));
+});
+
+test('staff can redistribute a sack between sizes without changing its total', function () {
+    $user = User::factory()->create();
+    $volume = movementVolume();
+    $secondItem = $volume->items()->create(['size' => 'G', 'quantity' => 0, 'is_active' => true]);
+
+    $this->actingAs($user)
+        ->post(route('products.stock-adjustments.store', $volume->offer->product), [
+            'volume_id' => $volume->id,
+            'items' => [
+                ['id' => $volume->items->sole()->id, 'is_active' => true, 'quantity' => 10],
+                ['id' => $secondItem->id, 'is_active' => true, 'quantity' => 2],
+            ],
+            'reason' => 'Recontagem de tamanhos',
+            'idempotency_key' => 'recount-sizes-001',
+        ])
+        ->assertRedirect();
+
+    expect(StockMovement::query()->sole()->type)->toBe(StockMovementType::Adjustment)
+        ->and($volume->refresh()->total_quantity)->toBe(12)
+        ->and($secondItem->refresh()->quantity)->toBe(2);
+});
+
+test('non-staff cannot adjust product stock', function () {
+    $user = User::factory()->nonStaff()->create();
+    $volume = movementVolume();
+    $item = $volume->items->sole();
+
+    $this->actingAs($user)
+        ->post(route('products.stock-adjustments.store', $volume->offer->product), [
+            'volume_id' => $volume->id,
+            'items' => [[
+                'id' => $item->id,
+                'is_active' => true,
+                'quantity' => 9,
+            ]],
+            'reason' => 'Contagem física',
+            'idempotency_key' => 'adjustment-non-staff-001',
+        ])
+        ->assertForbidden();
+
+    expect(StockMovement::query()->count())->toBe(0)
+        ->and($volume->refresh()->total_quantity)->toBe(12)
+        ->and($item->refresh()->quantity)->toBe(12);
+});
+
+test('adjustments reject reserved sacks without changing stock', function () {
+    $user = User::factory()->create();
+    $volume = movementVolume();
+    $item = $volume->items->sole();
+    $order = Order::factory()->create();
+    $volume->update(['current_order_id' => $order->id]);
+
+    $this->actingAs($user)
+        ->post(route('products.stock-adjustments.store', $volume->offer->product), [
+            'volume_id' => $volume->id,
+            'items' => [[
+                'id' => $item->id,
+                'is_active' => true,
+                'quantity' => 9,
+            ]],
+            'reason' => 'Contagem física',
+            'idempotency_key' => 'adjustment-reserved-001',
+        ])
+        ->assertInvalid([
+            'volume_id' => 'Selecione um saco disponível, sem reserva ou consumo.',
+        ]);
+
+    expect(StockMovement::query()->count())->toBe(0)
+        ->and($volume->refresh()->total_quantity)->toBe(12)
+        ->and($item->refresh()->quantity)->toBe(12);
+});
+
+test('adjustments reject a recount that does not change the sack', function () {
+    $user = User::factory()->create();
+    $volume = movementVolume();
+    $item = $volume->items->sole();
+
+    $this->actingAs($user)
+        ->post(route('products.stock-adjustments.store', $volume->offer->product), [
+            'volume_id' => $volume->id,
+            'items' => [[
+                'id' => $item->id,
+                'is_active' => true,
+                'quantity' => 12,
+            ]],
+            'reason' => 'Contagem física',
+            'idempotency_key' => 'adjustment-unchanged-001',
+        ])
+        ->assertInvalid([
+            'items' => 'Informe ao menos uma alteração na recontagem.',
+        ]);
+
+    expect(StockMovement::query()->count())->toBe(0)
+        ->and($volume->refresh()->total_quantity)->toBe(12)
+        ->and($item->refresh()->quantity)->toBe(12);
+});
+
+test('adjustments are idempotent', function () {
+    $user = User::factory()->create();
+    $volume = movementVolume();
+    $item = $volume->items->sole();
+    $payload = [
+        'volume_id' => $volume->id,
+        'items' => [[
+            'id' => $item->id,
+            'is_active' => true,
+            'quantity' => 9,
+        ]],
+        'reason' => 'Contagem física',
+        'idempotency_key' => 'adjustment-retry-001',
+    ];
+
+    $this->actingAs($user)
+        ->post(route('products.stock-adjustments.store', $volume->offer->product), $payload)
+        ->assertRedirect();
+    $this->actingAs($user)
+        ->post(route('products.stock-adjustments.store', $volume->offer->product), $payload)
+        ->assertRedirect();
+
+    expect(StockMovement::query()->count())->toBe(1)
+        ->and($volume->refresh()->total_quantity)->toBe(9)
+        ->and($item->refresh()->quantity)->toBe(9);
+});
+
 test('manual exits cannot consume a reserved sack', function () {
     $user = User::factory()->create();
     $volume = movementVolume();

@@ -9,15 +9,21 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\StockMovement;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class StockEntryController extends Controller
 {
-    public function create(): Response
+    public function create(Request $request): Response
     {
         Gate::authorize('create', StockMovement::class);
+
+        $selectedProductId = $request->integer('product');
+        $selectedProductId = Product::query()->whereKey($selectedProductId)->exists()
+            ? $selectedProductId
+            : null;
 
         return Inertia::render('stock-movements/entry', [
             'products' => Product::query()
@@ -36,6 +42,7 @@ class StockEntryController extends Controller
                 'label' => $type->label(),
             ], StockOfferType::cases()),
             'categories' => Category::query()->orderBy('name')->get(['id', 'name'])->toArray(),
+            'selectedProductId' => $selectedProductId,
         ]);
     }
 

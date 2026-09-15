@@ -6,6 +6,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductStockAdjustmentController;
 use App\Http\Controllers\StockEntryController;
 use App\Http\Controllers\StockExitController;
 use App\Http\Controllers\StockMovementController;
@@ -25,6 +26,8 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('painel')->group(functi
         ->names('products')
         ->parameters(['produtos' => 'product'])
         ->except('show');
+    Route::post('produtos/{product}/ajustes-estoque', ProductStockAdjustmentController::class)
+        ->name('products.stock-adjustments.store');
     Route::resource('categorias', CategoryController::class)
         ->names('categories')
         ->parameters(['categorias' => 'category'])

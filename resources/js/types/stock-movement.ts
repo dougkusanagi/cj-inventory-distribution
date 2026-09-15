@@ -1,6 +1,6 @@
-export type StockMovementType = 'in' | 'out';
+export type StockMovementType = 'in' | 'out' | 'adjustment';
 
-export type StockMovementSource = 'manual' | 'order' | 'opening';
+export type StockMovementSource = 'manual' | 'adjustment' | 'order' | 'opening';
 
 export type StockMovementSummary = {
     id: number;

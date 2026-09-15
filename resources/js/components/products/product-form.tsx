@@ -20,6 +20,7 @@ import type { ProductCoverPreview } from '@/components/products/product-photo-ma
 import { StockOfferVolumeEditor } from '@/components/products/stock-offer-volume-editor';
 import type { StockOfferVolumeFormItem } from '@/components/products/stock-offer-volume-editor';
 import { Button } from '@/components/ui/button';
+import { CompactTabs } from '@/components/ui/compact-tabs';
 import {
     Card,
     CardContent,
@@ -61,6 +62,7 @@ type ProductFormData = {
 type ProductFormProps = {
     product?: Product;
     categories: Category[];
+    onAdjustStock?: () => void;
 };
 
 type ProductFormTab = 'details' | 'photos' | 'stock';
@@ -157,7 +159,11 @@ function volumeTotal(volume: StockOfferVolumeFormItem): number {
     return Number(volume.total_quantity) || 0;
 }
 
-export function ProductForm({ product, categories }: ProductFormProps) {
+export function ProductForm({
+    product,
+    categories,
+    onAdjustStock,
+}: ProductFormProps) {
     const isEditing = product !== undefined;
     const [processingImages, setProcessingImages] = useState(false);
     const [activeTab, setActiveTab] = useState<ProductFormTab>('details');
@@ -459,78 +465,17 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                 </div>
             </section>
 
-            <div
-                role="tablist"
-                aria-label="Seções do cadastro"
-                className="sticky top-0 z-20 grid grid-cols-3 gap-1.5 rounded-2xl border border-border bg-muted/95 p-1.5 backdrop-blur"
-            >
-                {formTabs.map(({ id, label, icon: Icon }, index) => {
-                    const errorCount = errorEntries.filter(
-                        ([field]) => tabForError(field) === id,
-                    ).length;
-
-                    return (
-                        <button
-                            key={id}
-                            id={`product-tab-${id}`}
-                            type="button"
-                            role="tab"
-                            aria-selected={activeTab === id}
-                            aria-controls={`product-panel-${id}`}
-                            tabIndex={activeTab === id ? 0 : -1}
-                            onClick={() => changeTab(id)}
-                            onKeyDown={(event) => {
-                                if (
-                                    ![
-                                        'ArrowLeft',
-                                        'ArrowRight',
-                                        'Home',
-                                        'End',
-                                    ].includes(event.key)
-                                ) {
-                                    return;
-                                }
-
-                                event.preventDefault();
-                                const nextIndex =
-                                    event.key === 'Home'
-                                        ? 0
-                                        : event.key === 'End'
-                                          ? formTabs.length - 1
-                                          : (index +
-                                                (event.key === 'ArrowLeft'
-                                                    ? -1
-                                                    : 1) +
-                                                formTabs.length) %
-                                            formTabs.length;
-                                const nextTab = formTabs[nextIndex].id;
-                                changeTab(nextTab);
-                                document
-                                    .getElementById(`product-tab-${nextTab}`)
-                                    ?.focus();
-                            }}
-                            className={cn(
-                                'flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-                                activeTab === id
-                                    ? 'bg-card text-foreground shadow-sm'
-                                    : 'text-muted-foreground hover:bg-card/60 hover:text-foreground',
-                            )}
-                        >
-                            <Icon className="size-5" aria-hidden="true" />
-                            {label}
-                            {errorCount > 0 && (
-                                <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs text-destructive">
-                                    {errorCount}
-                                    <span className="sr-only">
-                                        {' '}
-                                        erros para revisar
-                                    </span>
-                                </span>
-                            )}
-                        </button>
-                    );
-                })}
-            </div>
+            <CompactTabs
+                tabs={formTabs}
+                activeTab={activeTab}
+                onChange={changeTab}
+                idPrefix="product-tab"
+                panelIdPrefix="product-panel"
+                errorCount={(tab) =>
+                    errorEntries.filter(([field]) => tabForError(field) === tab)
+                        .length
+                }
+            />
 
             <section
                 id="product-panel-details"
@@ -827,6 +772,15 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                             <p className="text-sm font-medium text-foreground">
                                 {distributionStatus}
                             </p>
+                            {product && onAdjustStock && (
+                                <Button
+                                    type="button"
+                                    onClick={onAdjustStock}
+                                    className="mt-2 h-11 w-full sm:w-fit"
+                                >
+                                    Ajustar estoque por tamanho
+                                </Button>
+                            )}
                         </div>
                     </CardHeader>
                     <CardContent className="grid gap-6 p-5 pt-0 sm:p-6 sm:pt-0">

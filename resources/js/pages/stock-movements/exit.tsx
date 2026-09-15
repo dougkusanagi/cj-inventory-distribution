@@ -4,6 +4,10 @@ import type { FormEvent } from 'react';
 import { useId } from 'react';
 import { store as storeExit } from '@/actions/App/Http/Controllers/StockExitController';
 import InputError from '@/components/input-error';
+import {
+    StockMovementReasonField,
+    stockExitReasons,
+} from '@/components/stock-movement-reason-field';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,7 +18,6 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { index } from '@/routes/stock-movements';
@@ -27,7 +30,13 @@ type ExitFormData = {
     idempotency_key: string;
 };
 
-export default function StockExit({ volumes }: { volumes: StockExitVolume[] }) {
+export default function StockExit({
+    volumes,
+    selectedProductId,
+}: {
+    volumes: StockExitVolume[];
+    selectedProductId: number | null;
+}) {
     const formId = useId().replace(/[^a-zA-Z0-9]/g, '');
     const form = useForm<ExitFormData>({
         volume_ids: [],
@@ -124,8 +133,9 @@ export default function StockExit({ volumes }: { volumes: StockExitVolume[] }) {
                             })}
                             {volumes.length === 0 && (
                                 <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-                                    Não há sacos disponíveis para uma saída
-                                    manual.
+                                    {selectedProductId === null
+                                        ? 'Não há sacos disponíveis para uma saída manual.'
+                                        : 'Este produto não possui sacos disponíveis para retirada.'}
                                 </div>
                             )}
                             <InputError message={form.errors.volume_ids} />
@@ -137,23 +147,16 @@ export default function StockExit({ volumes }: { volumes: StockExitVolume[] }) {
                             <CardTitle>Motivo da saída</CardTitle>
                         </CardHeader>
                         <CardContent className="grid gap-5 sm:grid-cols-2">
-                            <div className="grid gap-2 sm:col-span-2">
-                                <Label htmlFor="exit-reason">
-                                    Motivo{' '}
-                                    <span className="text-destructive">*</span>
-                                </Label>
-                                <Input
+                            <div className="sm:col-span-2">
+                                <StockMovementReasonField
                                     id="exit-reason"
                                     value={form.data.reason}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'reason',
-                                            event.target.value,
-                                        )
+                                    options={stockExitReasons}
+                                    onChange={(reason) =>
+                                        form.setData('reason', reason)
                                     }
-                                    placeholder="Ex.: avaria, doação ou ajuste físico"
+                                    error={form.errors.reason}
                                 />
-                                <InputError message={form.errors.reason} />
                             </div>
                             <div className="grid gap-2 sm:col-span-2">
                                 <Label htmlFor="exit-notes">

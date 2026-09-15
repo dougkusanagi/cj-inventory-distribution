@@ -6,6 +6,10 @@ import { store as storeEntry } from '@/actions/App/Http/Controllers/StockEntryCo
 import InputError from '@/components/input-error';
 import { StockOfferVolumeEditor } from '@/components/products/stock-offer-volume-editor';
 import type { StockOfferVolumeFormItem } from '@/components/products/stock-offer-volume-editor';
+import {
+    StockMovementReasonField,
+    stockEntryReasons,
+} from '@/components/stock-movement-reason-field';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -14,7 +18,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Select,
@@ -39,6 +42,7 @@ type EntryFormData = {
 export default function StockEntry({
     products,
     stockOfferTypes,
+    selectedProductId,
 }: {
     products: Array<{
         id: number;
@@ -48,10 +52,11 @@ export default function StockEntry({
         category: string | null;
     }>;
     stockOfferTypes: Array<{ value: StockOfferType; label: string }>;
+    selectedProductId: number | null;
 }) {
     const formId = useId().replace(/[^a-zA-Z0-9]/g, '');
     const form = useForm<EntryFormData>({
-        product_id: null,
+        product_id: selectedProductId,
         stock_offer_type: stockOfferTypes[0]?.value ?? 'replenishment',
         reason: '',
         notes: '',
@@ -168,23 +173,16 @@ export default function StockEntry({
                                     message={form.errors.stock_offer_type}
                                 />
                             </div>
-                            <div className="grid gap-2 sm:col-span-2">
-                                <Label htmlFor="entry-reason">
-                                    Motivo{' '}
-                                    <span className="text-destructive">*</span>
-                                </Label>
-                                <Input
+                            <div className="sm:col-span-2">
+                                <StockMovementReasonField
                                     id="entry-reason"
                                     value={form.data.reason}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'reason',
-                                            event.target.value,
-                                        )
+                                    options={stockEntryReasons}
+                                    onChange={(reason) =>
+                                        form.setData('reason', reason)
                                     }
-                                    placeholder="Ex.: recebimento da fábrica"
+                                    error={form.errors.reason}
                                 />
-                                <InputError message={form.errors.reason} />
                             </div>
                             <div className="grid gap-2 sm:col-span-2">
                                 <Label htmlFor="entry-notes">

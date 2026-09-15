@@ -1,10 +1,18 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowDownToLine, ArrowUpFromLine, RotateCcw } from 'lucide-react';
+import {
+    ArrowDownToLine,
+    ArrowLeftRight,
+    ArrowRight,
+    ArrowUpFromLine,
+    RotateCcw,
+} from 'lucide-react';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { store as reverseMovement } from '@/actions/App/Http/Controllers/StockMovementReversalController';
-import InputError from '@/components/input-error';
-import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
+import {
+    StockMovementReasonField,
+    stockReversalReasons,
+} from '@/components/stock-movement-reason-field';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,8 +23,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { index, show } from '@/routes/stock-movements';
 import { show as showOrder } from '@/routes/orders';
 import { edit as editProduct } from '@/routes/products';
@@ -36,22 +42,72 @@ function offerTypeLabel(value: string | null): string | null {
     );
 }
 
-function stateLabel(
-    state: StockMovement['items'][number]['previous_state'],
-): string {
-    if (state === null) {
-        return 'Não se aplica';
+function quantityLabel(quantity: number | null): string {
+    if (quantity === null) {
+        return '—';
     }
 
-    if (state.consumed_at !== null) {
-        return 'Consumido';
+    return `${quantity} ${quantity === 1 ? 'peça' : 'peças'}`;
+}
+
+function totalBefore(item: StockMovement['items'][number]): number | null {
+    if (item.previous_state === null) {
+        return 0;
     }
 
-    if (state.current_order_id !== null) {
-        return `Reservado no pedido #${state.current_order_id}`;
+    return item.previous_state.total_quantity ?? null;
+}
+
+function totalAfter(item: StockMovement['items'][number]): number | null {
+    if (item.resulting_state === null) {
+        return item.total_quantity;
     }
 
-    return `Disponível · ${state.total_quantity} peças`;
+    return item.resulting_state.total_quantity ?? null;
+}
+
+function quantityTone(before: number | null, after: number | null): string {
+    if (before === null || after === null || before === after) {
+        return 'text-foreground';
+    }
+
+    return after > before
+        ? 'text-emerald-700 dark:text-emerald-400'
+        : 'text-destructive';
+}
+
+function snapshotQuantity(
+    sizes: Map<string, number | null>,
+    size: string,
+): number | null {
+    return sizes.has(size) ? (sizes.get(size) ?? null) : 0;
+}
+
+function sizeTransitions(item: StockMovement['items'][number]): Array<{
+    size: string;
+    before: number | null;
+    after: number | null;
+}> {
+    const previousSizes = item.previous_state?.sizes ?? [];
+    const resultingSizes = item.resulting_state?.sizes ?? item.sizes;
+    const sizes = new Set([
+        ...previousSizes.map((size) => size.size),
+        ...resultingSizes.map((size) => size.size),
+        ...item.sizes.map((size) => size.size),
+    ]);
+
+    const previousBySize = new Map(
+        previousSizes.map((size) => [size.size, size.quantity]),
+    );
+    const resultingBySize = new Map(
+        resultingSizes.map((size) => [size.size, size.quantity]),
+    );
+
+    return [...sizes].map((size) => ({
+        size,
+        before: snapshotQuantity(previousBySize, size),
+        after: snapshotQuantity(resultingBySize, size),
+    }));
 }
 
 export default function StockMovementShow({
@@ -61,7 +117,12 @@ export default function StockMovementShow({
 }) {
     const [showReverse, setShowReverse] = useState(false);
     const form = useForm({ reason: '' });
-    const Icon = movement.type === 'in' ? ArrowDownToLine : ArrowUpFromLine;
+    const Icon =
+        movement.type === 'in'
+            ? ArrowDownToLine
+            : movement.type === 'out'
+              ? ArrowUpFromLine
+              : ArrowLeftRight;
     const canReverse =
         movement.source === 'manual' && movement.reversal_id === null;
 
@@ -150,12 +211,20 @@ export default function StockMovementShow({
                                                             'Produto removido'}
                                                     </h2>
                                                 )}
-                                                <p className="font-mono text-xs text-muted-foreground">
-                                                    {item.volume_code} ·{' '}
-                                                    {item.product_code ??
-                                                        'sem código'}{' '}
-                                                    · {item.total_quantity}{' '}
-                                                    peças
+                                                <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                                    <span>
+                                                        Saco:{' '}
+                                                        <span className="font-mono">
+                                                            {item.volume_code}
+                                                        </span>
+                                                    </span>
+                                                    <span>
+                                                        Código do produto:{' '}
+                                                        <span className="font-mono">
+                                                            {item.product_code ??
+                                                                'não informado'}
+                                                        </span>
+                                                    </span>
                                                 </p>
                                             </div>
                                             {offerTypeLabel(
@@ -168,30 +237,73 @@ export default function StockMovementShow({
                                                 </Badge>
                                             )}
                                         </div>
-                                        <StockSizeBreakdown
-                                            sizes={item.sizes}
-                                        />
-                                        <div className="grid gap-3 text-sm sm:grid-cols-2">
-                                            <div className="rounded-xl bg-muted/50 p-3">
-                                                <p className="mb-1 font-semibold uppercase">
-                                                    Estado anterior
-                                                </p>
-                                                <p className="text-muted-foreground">
-                                                    {stateLabel(
-                                                        item.previous_state,
+                                        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-xl bg-muted/50 p-3 tabular-nums">
+                                            <div className="grid gap-0.5">
+                                                <span className="text-xs font-medium text-muted-foreground">
+                                                    Total antes
+                                                </span>
+                                                <strong>
+                                                    {quantityLabel(
+                                                        totalBefore(item),
                                                     )}
-                                                </p>
+                                                </strong>
                                             </div>
-                                            <div className="rounded-xl bg-muted/50 p-3">
-                                                <p className="mb-1 font-semibold uppercase">
-                                                    Estado posterior
-                                                </p>
-                                                <p className="text-muted-foreground">
-                                                    {stateLabel(
-                                                        item.resulting_state,
+                                            <ArrowRight
+                                                className="size-4 text-muted-foreground"
+                                                aria-hidden="true"
+                                            />
+                                            <div className="grid justify-items-end gap-0.5 text-right">
+                                                <span className="text-xs font-medium text-muted-foreground">
+                                                    Total depois
+                                                </span>
+                                                <strong
+                                                    className={quantityTone(
+                                                        totalBefore(item),
+                                                        totalAfter(item),
                                                     )}
-                                                </p>
+                                                >
+                                                    {quantityLabel(
+                                                        totalAfter(item),
+                                                    )}
+                                                </strong>
                                             </div>
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <p className="text-xs font-medium text-muted-foreground">
+                                                Conteúdo por tamanho
+                                            </p>
+                                            <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                                {sizeTransitions(item).map(
+                                                    (size) => (
+                                                        <div
+                                                            key={size.size}
+                                                            className="grid gap-1 rounded-xl bg-muted/50 p-3 tabular-nums"
+                                                        >
+                                                            <dt className="text-base leading-5 font-semibold text-foreground">
+                                                                {size.size}
+                                                            </dt>
+                                                            <dd className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1 text-xs">
+                                                                <span className="text-muted-foreground">
+                                                                    {quantityLabel(
+                                                                        size.before,
+                                                                    )}
+                                                                </span>
+                                                                <ArrowRight
+                                                                    className="size-3 text-muted-foreground"
+                                                                    aria-hidden="true"
+                                                                />
+                                                                <span
+                                                                    className={`text-right font-semibold ${quantityTone(size.before, size.after)}`}
+                                                                >
+                                                                    {quantityLabel(
+                                                                        size.after,
+                                                                    )}
+                                                                </span>
+                                                            </dd>
+                                                        </div>
+                                                    ),
+                                                )}
+                                            </dl>
                                         </div>
                                     </article>
                                 ))}
@@ -302,27 +414,15 @@ export default function StockMovementShow({
                                         onSubmit={submitReverse}
                                         className="grid gap-3"
                                     >
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="reverse-reason">
-                                                Motivo{' '}
-                                                <span className="text-destructive">
-                                                    *
-                                                </span>
-                                            </Label>
-                                            <Textarea
-                                                id="reverse-reason"
-                                                value={form.data.reason}
-                                                onChange={(event) =>
-                                                    form.setData(
-                                                        'reason',
-                                                        event.target.value,
-                                                    )
-                                                }
-                                            />
-                                            <InputError
-                                                message={form.errors.reason}
-                                            />
-                                        </div>
+                                        <StockMovementReasonField
+                                            id="reverse-reason"
+                                            value={form.data.reason}
+                                            options={stockReversalReasons}
+                                            onChange={(reason) =>
+                                                form.setData('reason', reason)
+                                            }
+                                            error={form.errors.reason}
+                                        />
                                         <Alert variant="destructive">
                                             <RotateCcw />
                                             <AlertTitle>Atenção</AlertTitle>

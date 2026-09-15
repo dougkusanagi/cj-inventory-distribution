@@ -32,7 +32,11 @@ import type {
 } from '@/types';
 
 function movementIcon(type: StockMovementType) {
-    return type === 'in' ? ArrowDownToLine : ArrowUpFromLine;
+    return type === 'in'
+        ? ArrowDownToLine
+        : type === 'out'
+          ? ArrowUpFromLine
+          : ArrowLeftRight;
 }
 
 function dateLabel(value: string): string {

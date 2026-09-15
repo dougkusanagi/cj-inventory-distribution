@@ -473,7 +473,7 @@ it('keeps the product form usable on a narrow mobile viewport', function () {
         ->press('Adicionar saco')
         ->type('#volume-total-0', '9')
         ->assertAttribute('#volume-total-0', 'type', 'number')
-        ->assertScript("(() => { const up = document.querySelector('button[aria-label=\"Mover Saco 1 para cima\"]'); const down = document.querySelector('button[aria-label=\"Mover Saco 1 para baixo\"]'); const menu = document.querySelector('button[aria-label=\"Mais ações para o Saco 1\"]'); if (!up || !down || !menu) { return false; } return up.getBoundingClientRect().width > menu.getBoundingClientRect().width && down.getBoundingClientRect().width > menu.getBoundingClientRect().width; })()")
+        ->assertScript("(() => { const controls = ['Mover Saco 1 para cima', 'Mover Saco 1 para baixo', 'Mais ações para o Saco 1'].map((label) => document.querySelector('button[aria-label=\"' + label + '\"]')); return controls.every((control) => control && control.getBoundingClientRect().width >= 36 && control.getBoundingClientRect().height >= 36); })()")
         ->assertScript('document.querySelector("#volume-total-0").closest("[data-slot=card]").parentElement.closest("[data-slot=card]") === null')
         ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
         ->click('#product-tab-details')
