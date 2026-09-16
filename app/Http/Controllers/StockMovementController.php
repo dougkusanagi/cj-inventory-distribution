@@ -126,7 +126,7 @@ class StockMovementController extends Controller
                 'reversals' => (clone $query)->whereNotNull('reversal_of_id')->count(),
                 'quantity' => (int) StockMovementItem::query()
                     ->whereIn('stock_movement_id', $movementIds)
-                    ->sum('total_quantity'),
+                    ->sum('movement_quantity'),
             ],
         ]);
     }
@@ -192,7 +192,7 @@ class StockMovementController extends Controller
         return StockMovement::query()
             ->with(['actor:id,name', 'order:id,code'])
             ->withCount('items')
-            ->withSum('items', 'total_quantity')
+            ->withSum('items', 'movement_quantity')
             ->when(in_array($type, array_column(StockMovementType::cases(), 'value'), true), fn (Builder $query) => $query->where('type', $type))
             ->when(in_array($source, array_column(StockMovementSource::cases(), 'value'), true), fn (Builder $query) => $query->where('source', $source))
             ->when($actorId !== null, fn (Builder $query) => $query->where('actor_id', $actorId))
@@ -225,7 +225,7 @@ class StockMovementController extends Controller
             'order_code' => $movement->order?->code,
             'order_id' => $movement->order_id,
             'items_count' => (int) ($movement->items_count ?? $movement->items->count()),
-            'total_quantity' => (int) ($movement->items_sum_total_quantity ?? ($movement->relationLoaded('items') ? $movement->items->sum('total_quantity') : 0)),
+            'total_quantity' => (int) ($movement->items_sum_movement_quantity ?? ($movement->relationLoaded('items') ? $movement->items->sum('movement_quantity') : 0)),
             'occurred_at' => $movement->occurred_at->toISOString(),
         ];
     }

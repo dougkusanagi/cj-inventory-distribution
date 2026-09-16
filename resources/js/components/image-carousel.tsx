@@ -29,9 +29,9 @@ export default function ImageCarousel({
         loop: images.length > 1,
     });
     const [selectedIndex, setSelectedIndex] = useState(0);
-    const [failedImages, setFailedImages] = useState<Record<string, string>>(
-        {},
-    );
+    const [failedImages, setFailedImages] = useState<
+        Record<string, string | null>
+    >({});
 
     const scrollTo = useCallback(
         (index: number) => {
@@ -66,6 +66,22 @@ export default function ImageCarousel({
     const renderImage = (src: string, index: number) => {
         const failedImageKey = `${src}|${fallbackImage ?? ''}`;
         const fallbackSrc = failedImages[failedImageKey];
+        const imageHasFailed = Object.prototype.hasOwnProperty.call(
+            failedImages,
+            failedImageKey,
+        );
+
+        if (imageHasFailed && fallbackSrc === null) {
+            return (
+                <div
+                    role="img"
+                    aria-label={`${alt} - Produto sem foto`}
+                    className="flex size-full items-center justify-center px-6 text-center text-sm text-muted-foreground"
+                >
+                    Produto sem foto
+                </div>
+            );
+        }
 
         return (
             <img
@@ -82,17 +98,14 @@ export default function ImageCarousel({
                           : `${imageTestId}-${index}`
                 }
                 onError={() => {
-                    if (
-                        !fallbackImage ||
-                        fallbackImage === src ||
-                        fallbackSrc === fallbackImage
-                    ) {
-                        return;
-                    }
-
                     setFailedImages((current) => ({
                         ...current,
-                        [failedImageKey]: fallbackImage,
+                        [failedImageKey]:
+                            !fallbackImage ||
+                            fallbackImage === src ||
+                            fallbackSrc === fallbackImage
+                                ? null
+                                : fallbackImage,
                     }));
                 }}
                 className="size-full object-cover select-none"

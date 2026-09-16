@@ -2,6 +2,7 @@
 
 namespace App\Actions\Orders;
 
+use App\Actions\Stock\StockMutation;
 use App\Enums\OrderEventType;
 use App\Enums\OrderStatus;
 use App\Enums\StockOfferType;
@@ -10,7 +11,6 @@ use App\Models\StockOfferVolume;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -27,7 +27,7 @@ class CreateOrder
         $payloadHash = $this->payloadHash($data);
 
         try {
-            return DB::transaction(function () use ($data, $actor, $idempotencyKey, $payloadHash): Order {
+            return StockMutation::run(function () use ($data, $actor, $idempotencyKey, $payloadHash): Order {
                 if ($idempotencyKey !== null) {
                     $existingOrder = Order::query()
                         ->where('idempotency_key', $idempotencyKey)

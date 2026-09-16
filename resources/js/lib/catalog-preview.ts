@@ -6,7 +6,8 @@ export type CatalogPreviewProduct = {
     image: string | null;
     images: string[];
     category: string;
-    line: string;
+    category_id: number | null;
+    line: string | null;
     type: string;
     volumes: {
         id: number;
@@ -14,4 +15,24 @@ export type CatalogPreviewProduct = {
         pieces: number;
         sizes: { size: string; quantity: number | null }[];
     }[];
+};
+
+export type CatalogPagination = {
+    data: CatalogPreviewProduct[];
+    links: Array<{
+        url: string | null;
+        label: string;
+        active: boolean;
+    }>;
+    meta: {
+        current_page: number;
+        last_page: number;
+        next_page_url: string | null;
+        total: number;
+    };
+};
+
+export type CatalogBagStatus = {
+    unavailable_volume_ids: number[];
+    products: CatalogPreviewProduct[];
 };

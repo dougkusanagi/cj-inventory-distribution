@@ -106,8 +106,8 @@ test('the catalog tolerates a historically deleted category', function () {
     $this->get(route('home'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->where('products.0.id', $product->id)
-            ->where('products.0.category', 'Sem categoria'));
+            ->where('products.data.0.id', $product->id)
+            ->where('products.data.0.category', 'Sem categoria'));
 });
 
 test('a pending order cannot be soft-deleted while it reserves a sack', function () {

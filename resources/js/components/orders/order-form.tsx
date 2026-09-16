@@ -3,6 +3,7 @@ import { PackageCheck, Save, X } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { store, update } from '@/actions/App/Http/Controllers/OrderController';
 import InputError from '@/components/input-error';
+import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -110,6 +111,50 @@ export function OrderForm({
                     </div>
                 </CardContent>
             </Card>
+
+            {order && (
+                <Card className="rounded-[1.75rem] border-border/80 shadow-sm">
+                    <CardHeader>
+                        <CardTitle>Sacos reservados</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid gap-3">
+                        {(order.items ?? []).map((item) => (
+                            <article
+                                key={item.id}
+                                className="flex items-start gap-3 rounded-2xl border border-border p-4"
+                            >
+                                <div className="size-14 shrink-0 overflow-hidden rounded-xl border border-border bg-muted">
+                                    {item.image ? (
+                                        <img
+                                            src={item.image}
+                                            alt={item.product_name}
+                                            loading="lazy"
+                                            className="size-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="flex size-full items-center justify-center px-1 text-center text-[10px] text-muted-foreground">
+                                            Sem foto
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="grid min-w-0 gap-2">
+                                    <div>
+                                        <p className="font-semibold">
+                                            {item.product_name}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {item.product_code} ·{' '}
+                                            {item.volume_code} ·{' '}
+                                            {item.total_quantity} peças
+                                        </p>
+                                    </div>
+                                    <StockSizeBreakdown sizes={item.sizes} />
+                                </div>
+                            </article>
+                        ))}
+                    </CardContent>
+                </Card>
+            )}
 
             {!order && (
                 <Card className="rounded-[1.75rem] border-border/80 shadow-sm">

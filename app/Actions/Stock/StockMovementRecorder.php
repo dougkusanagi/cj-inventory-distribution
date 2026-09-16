@@ -67,6 +67,7 @@ class StockMovementRecorder
                 $volume,
                 $previousStates[$volume->getKey()] ?? null,
                 $resultingStates[$volume->getKey()] ?? null,
+                $source,
             ));
         }
 
@@ -140,6 +141,7 @@ class StockMovementRecorder
         StockOfferVolume $volume,
         ?array $previousState,
         ?array $resultingState,
+        StockMovementSource $source,
     ): array {
         $offer = $volume->offer;
         $product = $offer?->product;
@@ -156,6 +158,9 @@ class StockMovementRecorder
             'line_snapshot' => $product?->line?->value,
             'offer_type_snapshot' => $offer?->type?->value,
             'total_quantity' => (int) $volume->total_quantity,
+            'movement_quantity' => $source === StockMovementSource::Adjustment
+                ? abs((int) ($resultingState['total_quantity'] ?? 0) - (int) ($previousState['total_quantity'] ?? 0))
+                : (int) $volume->total_quantity,
             'size_grid_snapshot' => $volume->items
                 ->where('is_active', true)
                 ->map(fn (StockOfferVolumeItem $item): array => [

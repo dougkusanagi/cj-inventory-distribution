@@ -43,7 +43,6 @@ test('enables order completion after all sacks are checked without WhatsApp', fu
         )
         ->assertSee('Ações do pedido')
         ->assertVisible('[data-testid="editar-pedido"]')
-        ->assertVisible('[data-testid="finalizar-pedido-menu"]')
         ->assertSee('Editar pedido')
         ->assertSee('Cancelar pedido')
         ->click('[data-testid="cancelar-pedido"]')
@@ -57,8 +56,22 @@ test('enables order completion after all sacks are checked without WhatsApp', fu
         ->click("[data-testid=separar-saco-{$item->id}]")
         ->click("[data-testid=conferir-saco-{$item->id}]")
         ->assertEnabled('[data-testid="finalizar-pedido"]')
-        ->assertDontSee('Separe e confira todos os sacos e resolva as divergências antes de finalizar.')
+        ->assertDontSee('Separe e confira todos os sacos e resolva as divergências antes de finalizar.');
+
+    $page->script("document.querySelector('[data-testid=finalizar-pedido]')?.click()");
+
+    $page
+        ->wait(0.5)
+        ->assertVisible('[role="dialog"]')
+        ->assertSee('Finalizar pedido?')
+        ->assertSee('serão marcados como consumidos e sairão do estoque')
+        ->click('Confirmar finalização')
+        ->assertSee('Finalizado')
         ->assertNoJavaScriptErrors();
+
+    expect($order->refresh()->status->value)->toBe('completed')
+        ->and($volume->refresh()->current_order_id)->toBeNull()
+        ->and($volume->consumed_at)->not->toBeNull();
 });
 
 test('provides return and cancellation actions while editing an order', function () {
@@ -81,6 +94,9 @@ test('provides return and cancellation actions while editing an order', function
     visit(route('orders.edit', $order, false))
         ->assertRoute('orders.edit', [$order->id])
         ->assertSee('Editar pedido')
+        ->assertSee('Sacos reservados')
+        ->assertSee($product->name)
+        ->assertSee($volume->refresh()->code)
         ->assertVisible('[data-testid="voltar-pedido"]')
         ->assertVisible('[data-testid="cancelar-edicao"]')
         ->assertVisible('nav[aria-label="breadcrumb"] a[href$="/painel/pedidos/'.$order->id.'"]')

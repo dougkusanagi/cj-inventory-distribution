@@ -2,11 +2,11 @@
 
 namespace App\Actions\Orders;
 
+use App\Actions\Stock\StockMutation;
 use App\Enums\OrderEventType;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CancelOrder
@@ -17,7 +17,7 @@ class CancelOrder
 
     public function handle(Order $order, string $reason, ?User $actor = null): Order
     {
-        return DB::transaction(function () use ($order, $reason, $actor): Order {
+        return StockMutation::run(function () use ($order, $reason, $actor): Order {
             $lockedOrder = Order::query()->whereKey($order->getKey())->lockForUpdate()->firstOrFail();
 
             if ($lockedOrder->status !== OrderStatus::Pending) {

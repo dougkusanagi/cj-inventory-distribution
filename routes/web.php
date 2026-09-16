@@ -4,6 +4,7 @@ use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CatalogOrderController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InventoryCountController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductStockAdjustmentController;
@@ -21,6 +22,13 @@ Route::post('catalog/pedidos', CatalogOrderController::class)
 Route::inertia('design-system', 'design-system')->name('design-system');
 
 Route::middleware(['auth', 'verified', 'staff'])->prefix('painel')->group(function () {
+    Route::get('estoque/balancos', [InventoryCountController::class, 'index'])->name('inventory.index');
+    Route::post('estoque/balancos', [InventoryCountController::class, 'store'])->name('inventory.store');
+    Route::get('estoque/balancos/{inventory}', [InventoryCountController::class, 'show'])->name('inventory.show');
+    Route::put('estoque/balancos/{inventory}/sacos/{item}', [InventoryCountController::class, 'update'])->name('inventory.update');
+    Route::post('estoque/balancos/{inventory}/sacos/{item}/atualizar', [InventoryCountController::class, 'refreshItem'])->name('inventory.refresh-item');
+    Route::post('estoque/balancos/{inventory}/confirmar', [InventoryCountController::class, 'confirm'])->name('inventory.confirm');
+    Route::post('estoque/balancos/{inventory}/cancelar', [InventoryCountController::class, 'cancel'])->name('inventory.cancel');
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::resource('produtos', ProductController::class)
         ->names('products')

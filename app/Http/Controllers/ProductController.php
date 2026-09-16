@@ -12,6 +12,7 @@ use App\Http\Requests\Products\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Category;
 use App\Models\Product;
+use App\Support\NormalizedSearch;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\RedirectResponse;
@@ -45,26 +46,28 @@ class ProductController extends Controller
             ->select(['id', 'code', 'model', 'name', 'category_id', 'line', 'notes', 'is_active', 'created_at', 'updated_at'])
             ->with([
                 'category:id,name,is_active',
-                'latestOffer.stockVolumes' => function (Relation $query): void {
+                'offers.stockVolumes' => function (Relation $query): void {
                     $query->select([
                         'id',
                         'stock_offer_id',
                         'sort_order',
                         'total_quantity',
                         'current_order_id',
-                        'consumed_at',
+                        'consumed_at', 'code', 'stock_version',
                     ])->withExists([
                         'orderItems as has_order_items',
                         'stockMovementItems as has_stock_movements',
                     ]);
                 },
-                'latestOffer.stockVolumes.items:id,stock_offer_volume_id,size,sort_order,is_active,quantity',
+                'offers.stockVolumes.items:id,stock_offer_volume_id,size,sort_order,is_active,quantity',
                 'media',
             ])
-            ->when($search !== '', fn (Builder $query) => $query->where('name', 'like', $search.'%'))
+            ->when($search !== '', function (Builder $query) use ($search): void {
+                NormalizedSearch::apply($query, $search, ['name', 'model', 'code']);
+            })
             ->when($categoryId > 0, fn (Builder $query) => $query->where('category_id', $categoryId))
             ->when(in_array($line, array_column(ProductLine::cases(), 'value'), true), fn (Builder $query) => $query->where('line', $line))
-            ->when(in_array($stockOfferType, array_column(StockOfferType::cases(), 'value'), true), fn (Builder $query) => $query->whereHas('latestOffer', fn (Builder $query) => $query->where('type', $stockOfferType)))
+            ->when(in_array($stockOfferType, array_column(StockOfferType::cases(), 'value'), true), fn (Builder $query) => $query->whereHas('offers', fn (Builder $query) => $query->where('type', $stockOfferType)))
             ->when($image === 'with', fn (Builder $query) => $query->whereHas('media', fn (Builder $query) => $query->where('collection_name', Product::MEDIA_COLLECTION)))
             ->when($image === 'without', fn (Builder $query) => $query->whereDoesntHave('media', fn (Builder $query) => $query->where('collection_name', Product::MEDIA_COLLECTION)))
             ->latest()
@@ -130,13 +133,13 @@ class ProductController extends Controller
 
         return Inertia::render('products/edit', [
             'product' => ProductResource::make($product->load([
-                'latestOffer.stockVolumes' => function (Relation $query): void {
+                'offers.stockVolumes' => function (Relation $query): void {
                     $query->withExists([
                         'orderItems as has_order_items',
                         'stockMovementItems as has_stock_movements',
                     ]);
                 },
-                'latestOffer.stockVolumes.items',
+                'offers.stockVolumes.items',
                 'category:id,name,is_active',
                 'media',
             ]))->resolve(),

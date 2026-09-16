@@ -1,7 +1,8 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowDownToLine, Save } from 'lucide-react';
 import type { FormEvent } from 'react';
-import { useId } from 'react';
+import { useState } from 'react';
+import { idempotencyKey } from '@/lib/idempotency-key';
 import { store as storeEntry } from '@/actions/App/Http/Controllers/StockEntryController';
 import InputError from '@/components/input-error';
 import { StockOfferVolumeEditor } from '@/components/products/stock-offer-volume-editor';
@@ -54,7 +55,7 @@ export default function StockEntry({
     stockOfferTypes: Array<{ value: StockOfferType; label: string }>;
     selectedProductId: number | null;
 }) {
-    const formId = useId().replace(/[^a-zA-Z0-9]/g, '');
+    const [formId] = useState(idempotencyKey);
     const form = useForm<EntryFormData>({
         product_id: selectedProductId,
         stock_offer_type: stockOfferTypes[0]?.value ?? 'replenishment',

@@ -9,7 +9,6 @@ use App\Models\StockMovementItem;
 use App\Models\StockOfferVolume;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -37,7 +36,7 @@ class ReverseStockMovement
             'reason' => $reason,
         ], JSON_THROW_ON_ERROR));
 
-        return DB::transaction(function () use ($movement, $reason, $actor, $idempotencyKey, $payloadHash): StockMovement {
+        return StockMutation::run(function () use ($movement, $reason, $actor, $idempotencyKey, $payloadHash): StockMovement {
             $original = StockMovement::query()
                 ->whereKey($movement->getKey())
                 ->with('items')

@@ -1,6 +1,10 @@
 <?php
 
 use App\Models\CatalogSetting;
+use App\Models\Order;
+use App\Models\Product;
+use App\Models\StockOffer;
+use App\Models\StockOfferVolume;
 use Database\Seeders\CatalogDemoSeeder;
 use Illuminate\Support\Facades\Vite;
 
@@ -26,6 +30,25 @@ it('replaces the starter home with a searchable catalog and never shows new grad
         ->click('Ver todos os produtos')
         ->assertSee('7 produtos encontrados')
         ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
+        ->assertNoJavaScriptErrors();
+});
+
+it('loads the next product batch without depending on translated pagination labels', function () {
+    foreach (range(1, 13) as $index) {
+        $product = Product::factory()->create([
+            'name' => sprintf('ZZ Produto adicional %02d', $index),
+        ]);
+        $offer = StockOffer::factory()->replenishment()->for($product)->create();
+        StockOfferVolume::factory()->for($offer)->withTotal(4)->create();
+    }
+
+    visit(route('catalog', [], false))
+        ->resize(1280, 900)
+        ->assertCount('[data-testid="catalog-product"]', 12)
+        ->click('Carregar mais produtos')
+        ->wait(1)
+        ->assertCount('[data-testid="catalog-product"]', 20)
+        ->assertSee('ZZ Produto adicional 13')
         ->assertNoJavaScriptErrors();
 });
 
@@ -205,6 +228,31 @@ it('restores the selected sacks after reloading the catalog', function () {
         )
         ->click('button[aria-label="Ver sacola, 1 sacos"]')
         ->assertSee('1 saco · 20 peças no total')
+        ->assertNoJavaScriptErrors();
+});
+
+it('identifies a selected sack that became unavailable', function () {
+    $product = Product::query()->where('name', 'Calça Wide Leg')->firstOrFail();
+    $volume = $product->latestOffer->stockVolumes->sortBy('sort_order')->firstOrFail();
+
+    $page = visit(route('catalog', [], false))->resize(390, 844);
+    $page->script('localStorage.removeItem("catalog-bag");');
+
+    $page
+        ->click('button[aria-label="Escolher sacos de Calça Wide Leg"]')
+        ->click('button[aria-label="Adicionar Saco 01"]')
+        ->click('button:has-text("Continuar escolhendo")');
+
+    $volume->update(['current_order_id' => Order::factory()->create()->id]);
+
+    $page
+        ->refresh()
+        ->wait(1)
+        ->click('button[aria-label="Ver sacola, 1 sacos"]')
+        ->assertSee('Calça Wide Leg')
+        ->assertSee($product->code)
+        ->assertSee('Saco 01')
+        ->assertSee('Este saco deixou de estar disponível.')
         ->assertNoJavaScriptErrors();
 });
 

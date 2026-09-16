@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
+use App\Concerns\RestoresStockSafely;
 use Database\Factories\StockOfferVolumeFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -17,6 +17,7 @@ use Illuminate\Validation\ValidationException;
  * @property int $stock_offer_id
  * @property int $sort_order
  * @property int $total_quantity
+ * @property int $stock_version
  * @property string|null $code
  * @property int|null $current_order_id
  * @property Carbon|null $consumed_at
@@ -27,10 +28,13 @@ use Illuminate\Validation\ValidationException;
 class StockOfferVolume extends Model
 {
     /** @use HasFactory<StockOfferVolumeFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, RestoresStockSafely;
 
     protected static function booted(): void
     {
+        static::updating(function (self $volume): void {
+            $volume->stock_version = ((int) $volume->stock_version) + 1;
+        });
         static::deleting(function (self $volume): void {
             if (! $volume->isForceDeleting()
                 && ($volume->current_order_id !== null
@@ -40,15 +44,16 @@ class StockOfferVolume extends Model
                 ]);
             }
 
-            $volume->items()->withTrashed()->get()
-                ->filter(fn (StockOfferVolumeItem $item): bool => ! $item->trashed())
+            $children = $volume->items()->get();
+            $volume->forceFill(['deleted_child_ids' => $children->modelKeys()])->saveQuietly();
+            $children
                 ->each(fn (StockOfferVolumeItem $item): ?bool => $volume->isForceDeleting()
                     ? $item->forceDelete()
                     : $item->delete());
         });
 
         static::restored(function (self $volume): void {
-            $volume->items()->withTrashed()->get()
+            $volume->items()->withTrashed()->whereIn('id', $volume->deleted_child_ids ?? [])->get()
                 ->filter(fn (StockOfferVolumeItem $item): bool => $item->trashed())
                 ->each->restore();
         });
@@ -119,6 +124,8 @@ class StockOfferVolume extends Model
             'sort_order' => 'integer',
             'total_quantity' => 'integer',
             'consumed_at' => 'datetime',
+            'stock_version' => 'integer',
+            'deleted_child_ids' => 'array',
         ];
     }
 }

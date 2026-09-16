@@ -48,7 +48,7 @@ abstract class ProductRequest extends FormRequest
             'model' => $normalizedModel === '' ? null : $normalizedModel,
             'is_active' => $isActive,
             'stock_offer_type' => $stockOfferType,
-            'stock_volumes' => $stockVolumes,
+            ...($this->exists('stock_volumes') ? ['stock_volumes' => $stockVolumes] : []),
         ]);
     }
 
@@ -126,33 +126,33 @@ abstract class ProductRequest extends FormRequest
             'stock_offer_type.enum' => 'Selecione um tipo de estoque válido.',
             'stock_offer_type.required' => 'Informe o tipo do estoque.',
             'stock_volumes.required' => 'Adicione pelo menos um saco ao estoque.',
-            'stock_volumes.array' => 'Revise os sacos cadastrados e tente novamente.',
-            'stock_volumes.max' => 'Cadastre no máximo 50 sacos neste estoque.',
-            'stock_volumes.*.array' => 'Revise os dados deste saco e tente novamente.',
-            'stock_volumes.*.id' => 'Este saco não pertence ao estoque deste produto.',
+            'stock_volumes.array' => 'Envie os sacos em uma lista válida.',
+            'stock_volumes.max' => 'Cadastre no máximo 50 sacos por oferta.',
+            'stock_volumes.*.array' => 'Envie cada saco em um formato válido.',
+            'stock_volumes.*.id' => 'O saco informado não pertence a este produto.',
             'stock_volumes.*.total_quantity.integer' => 'O total do saco deve ser um número.',
             'stock_volumes.*.total_quantity.min' => 'O total do saco não pode ser negativo.',
-            'stock_volumes.*.items.array' => 'Revise os tamanhos deste saco e tente novamente.',
+            'stock_volumes.*.items.array' => 'Envie os tamanhos do saco em uma lista válida.',
             'stock_volumes.*.items.max' => 'Cadastre no máximo 50 tamanhos por saco.',
-            'stock_volumes.*.items.*.array' => 'Revise os dados deste tamanho e tente novamente.',
-            'stock_volumes.*.items.*.id' => 'Este tamanho não pertence ao saco selecionado.',
+            'stock_volumes.*.items.*.array' => 'Envie cada tamanho do saco em um formato válido.',
+            'stock_volumes.*.items.*.id' => 'O tamanho informado não pertence a este saco.',
             'stock_volumes.*.items.*.size.required' => 'Informe o tamanho ou remova esta linha.',
             'stock_volumes.*.items.*.size.max' => 'O tamanho deve ter no máximo 30 caracteres.',
             'stock_volumes.*.items.*.size.distinct' => 'Os tamanhos precisam ser diferentes dentro do saco.',
             'stock_volumes.*.items.*.is_active.boolean' => 'Informe se o tamanho está disponível neste saco.',
             'stock_volumes.*.items.*.quantity.integer' => 'A quantidade do tamanho deve ser um número.',
             'stock_volumes.*.items.*.quantity.min' => 'A quantidade do tamanho não pode ser negativa.',
-            'images.array' => 'Revise as fotos selecionadas e tente novamente.',
+            'images.array' => 'Envie as fotos em uma lista válida.',
             'images.max' => 'Adicione no máximo 5 fotos por produto.',
             'images.*.image' => 'Envie imagens válidas.',
             'images.*.mimes' => 'As fotos devem estar em JPG, PNG ou WebP.',
             'images.*.max' => 'Cada foto deve ter no máximo '.Product::MAX_IMAGE_UPLOAD_SIZE_MB.' MB.',
-            'image_order.array' => 'Revise a ordem das fotos e tente novamente.',
+            'image_order.array' => 'Envie a ordem das fotos em uma lista válida.',
             'image_order.max' => 'Ordene no máximo 5 fotos por produto.',
             'image_order.*.required' => 'A ordem das fotos está incompleta.',
             'image_order.*.distinct' => 'Cada foto deve aparecer uma única vez na ordem.',
             'image_order.*.regex' => 'A ordem das fotos enviada é inválida.',
-            'remove_media_ids.array' => 'Revise as fotos removidas e tente novamente.',
+            'remove_media_ids.array' => 'Envie as fotos removidas em uma lista válida.',
             'remove_media_ids.*.integer' => 'A foto selecionada para remoção é inválida.',
             'remove_media_ids.*.distinct' => 'Cada foto deve ser removida uma única vez.',
             'remove_media_ids.*.exists' => 'A foto selecionada para remoção não existe.',
@@ -349,8 +349,11 @@ abstract class ProductRequest extends FormRequest
             return;
         }
 
-        $offer = $product->latestOffer()->with('stockVolumes.items')->first();
-        $existingVolumes = $offer?->stockVolumes->keyBy('id') ?? collect();
+        $existingVolumes = $product->offers()
+            ->with('stockVolumes.items')
+            ->get()
+            ->flatMap(fn ($offer) => $offer->stockVolumes)
+            ->keyBy('id');
         $stockVolumes = $this->input('stock_volumes', []);
 
         if (! is_array($stockVolumes)) {
@@ -370,7 +373,7 @@ abstract class ProductRequest extends FormRequest
             if ($volumeId !== null && $existingVolume === null) {
                 $validator->errors()->add(
                     "stock_volumes.{$volumeIndex}.id",
-                    'Este saco não pertence ao estoque deste produto.',
+                    'O saco informado não pertence a este produto.',
                 );
             }
 
