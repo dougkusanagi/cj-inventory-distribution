@@ -1,8 +1,13 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { ArrowUpFromLine, Save } from 'lucide-react';
 import type { FormEvent } from 'react';
-import { useId } from 'react';
-import { store as storeExit } from '@/actions/App/Http/Controllers/StockExitController';
+import { useState } from 'react';
+import { idempotencyKey } from '@/lib/idempotency-key';
+import {
+    create,
+    store as storeExit,
+} from '@/actions/App/Http/Controllers/StockExitController';
+import { Input } from '@/components/ui/input';
 import InputError from '@/components/input-error';
 import {
     StockMovementReasonField,
@@ -33,11 +38,16 @@ type ExitFormData = {
 export default function StockExit({
     volumes,
     selectedProductId,
+    search,
+    pagination,
 }: {
     volumes: StockExitVolume[];
     selectedProductId: number | null;
+    search: string;
+    pagination: { current_page: number; last_page: number };
 }) {
-    const formId = useId().replace(/[^a-zA-Z0-9]/g, '');
+    const [query, setQuery] = useState(search);
+    const [formId] = useState(idempotencyKey);
     const form = useForm<ExitFormData>({
         volume_ids: [],
         reason: '',
@@ -53,6 +63,17 @@ export default function StockExit({
                 : form.data.volume_ids.filter((volumeId) => volumeId !== id),
         );
     };
+    const browse = (page: number) =>
+        router.get(
+            create.url(),
+            {
+                product: selectedProductId,
+                search: query,
+                page,
+                selected: form.data.volume_ids,
+            },
+            { preserveState: true, preserveScroll: true },
+        );
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -88,6 +109,31 @@ export default function StockExit({
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-3">
+                            <div className="grid gap-2">
+                                <Label htmlFor="exit-search">
+                                    Buscar produto, modelo ou código do saco
+                                </Label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        id="exit-search"
+                                        value={query}
+                                        onChange={(event) =>
+                                            setQuery(event.target.value)
+                                        }
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => browse(1)}
+                                    >
+                                        Buscar
+                                    </Button>
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                    {form.data.volume_ids.length} sacos
+                                    selecionados. A seleção permanece ao buscar.
+                                </p>
+                            </div>
                             {volumes.map((volume) => {
                                 const selected = form.data.volume_ids.includes(
                                     volume.id,
@@ -139,6 +185,35 @@ export default function StockExit({
                                 </div>
                             )}
                             <InputError message={form.errors.volume_ids} />
+                            <div className="flex items-center justify-between gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    disabled={pagination.current_page <= 1}
+                                    onClick={() =>
+                                        browse(pagination.current_page - 1)
+                                    }
+                                >
+                                    Anterior
+                                </Button>
+                                <span className="text-sm">
+                                    {pagination.current_page} /{' '}
+                                    {pagination.last_page}
+                                </span>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    disabled={
+                                        pagination.current_page >=
+                                        pagination.last_page
+                                    }
+                                    onClick={() =>
+                                        browse(pagination.current_page + 1)
+                                    }
+                                >
+                                    Próxima
+                                </Button>
+                            </div>
                         </CardContent>
                     </Card>
 

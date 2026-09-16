@@ -3,12 +3,12 @@
 namespace App\Actions\Orders;
 
 use App\Actions\Stock\RecordOrderStockMovement;
+use App\Actions\Stock\StockMutation;
 use App\Enums\OrderEventType;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\StockOfferVolume;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CompleteOrder
@@ -20,7 +20,7 @@ class CompleteOrder
 
     public function handle(Order $order, ?User $actor = null): Order
     {
-        return DB::transaction(function () use ($order, $actor): Order {
+        return StockMutation::run(function () use ($order, $actor): Order {
             $lockedOrder = Order::query()->whereKey($order->getKey())->lockForUpdate()->firstOrFail();
 
             if ($lockedOrder->status !== OrderStatus::Pending) {

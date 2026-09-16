@@ -27,6 +27,10 @@ class ProductResource extends JsonResource
         $stockVolumes = $offer && $offer->relationLoaded('stockVolumes')
             ? $offer->stockVolumes
             : collect();
+        if ($this->relationLoaded('offers')) {
+            $offer = $this->offers->sortByDesc('id')->first();
+            $stockVolumes = $this->offers->flatMap(fn (StockOffer $stockOffer) => $stockOffer->stockVolumes);
+        }
         $totalQuantity = $offer === null
             ? null
             : (int) $stockVolumes->sum('total_quantity');
@@ -47,11 +51,9 @@ class ProductResource extends JsonResource
         $hasPositiveStock = ($totalQuantity ?? 0) > 0;
         $hasAvailableVolumes = $availableVolumes->isNotEmpty();
 
-        $availableForDistribution = $this->is_active
-            && $offer !== null
-            && $offer->type !== StockOfferType::NewGrade
-            && $hasPositiveStock
-            && $hasAvailableVolumes;
+        $availableForDistribution = $this->is_active && $availableVolumes->contains(
+            fn (StockOfferVolume $volume): bool => $volume->offer->type !== StockOfferType::NewGrade,
+        );
 
         return [
             'id' => $this->id,
@@ -83,7 +85,7 @@ class ProductResource extends JsonResource
                 ->all()),
             'notes' => $this->notes,
             'available_for_distribution' => $availableForDistribution,
-            'distribution_status' => $this->distributionStatus($offer, $hasPositiveStock, $hasAvailableVolumes),
+            'distribution_status' => $availableForDistribution ? 'Disponível para distribuição' : $this->distributionStatus($offer, $hasPositiveStock, $hasAvailableVolumes),
             'stock_offer_type' => $offer?->type?->value,
             'total_quantity' => $totalQuantity,
             'physical_quantity' => $physicalQuantity,
@@ -113,10 +115,12 @@ class ProductResource extends JsonResource
             'id' => $volume->id,
             'sort_order' => $volume->sort_order,
             'total_quantity' => $volume->total_quantity,
-            'is_locked' => $volume->current_order_id !== null
-                || $volume->consumed_at !== null
-                || (bool) $volume->getAttribute('has_order_items')
-                || (bool) $volume->getAttribute('has_stock_movements'),
+            'is_locked' => true,
+            'code' => $volume->code ?? 'SC-'.str_pad((string) $volume->id, 6, '0', STR_PAD_LEFT),
+            'stock_version' => $volume->stock_version,
+            'can_recount' => $volume->current_order_id === null && $volume->consumed_at === null,
+            'status' => $volume->consumed_at !== null ? 'Consumido' : ($volume->current_order_id !== null ? 'Reservado' : 'Disponível'),
+            'offer_type' => $volume->offer->type->label(),
             'items' => $volume->relationLoaded('items')
                 ? $volume->items->map(fn (StockOfferVolumeItem $item): array => [
                     'id' => $item->id,

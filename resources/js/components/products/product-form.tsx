@@ -1,4 +1,4 @@
-import { router, useForm } from '@inertiajs/react';
+import { Link, router, useForm } from '@inertiajs/react';
 import {
     FileText,
     ImagePlus,
@@ -15,6 +15,10 @@ import {
     store,
 } from '@/actions/App/Http/Controllers/ProductController';
 import InputError from '@/components/input-error';
+import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
+import { create as stockEntry } from '@/routes/stock-entries';
+import { create as stockExit } from '@/routes/stock-exits';
+import { index as inventoryIndex } from '@/routes/inventory';
 import { ProductPhotoManager } from '@/components/products/product-photo-manager';
 import type { ProductCoverPreview } from '@/components/products/product-photo-manager';
 import { StockOfferVolumeEditor } from '@/components/products/stock-offer-volume-editor';
@@ -342,6 +346,14 @@ export function ProductForm({
         }
 
         submittingRef.current = true;
+
+        form.transform((data) => {
+            if (!isEditing) return data;
+            const payload: Partial<ProductFormData> = { ...data };
+            delete payload.stock_volumes;
+            delete payload.stock_offer_type;
+            return payload;
+        });
 
         form.post(isEditing ? update.url(product.id) : store.url(), {
             forceFormData: form.data.images.length > 0,
@@ -749,135 +761,227 @@ export function ProductForm({
                     activeTab === 'stock' ? 'grid' : 'hidden',
                 )}
             >
-                {/* 3. Disponibilidade do lote */}
-                <Card className="gap-0 rounded-2xl border-border p-0 shadow-none">
-                    <CardHeader className="p-5 sm:p-6">
-                        <div className="grid gap-1.5">
-                            <div className="flex items-center gap-2">
-                                <span className="flex size-7 items-center justify-center rounded-lg bg-accent text-highlight">
-                                    <Layers className="size-4" />
-                                </span>
-                                <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
-                                    Disponibilidade em estoque
+                {product ? (
+                    <div className="grid gap-5">
+                        <div className="grid gap-2">
+                            <h2 className="text-xl font-semibold">
+                                Estoque do produto
+                            </h2>
+                            <p className="text-sm text-muted-foreground">
+                                Todos os sacos e ofertas. Entradas, saídas e
+                                recontagens ficam registradas no histórico.
+                            </p>
+                            <p className="text-sm">
+                                Disponível: {product.available_quantity ?? 0}{' '}
+                                peças · Reservado:{' '}
+                                {product.reserved_quantity ?? 0} peças
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            <Button asChild>
+                                <Link
+                                    href={stockEntry({
+                                        query: { product: product.id },
+                                    })}
+                                >
+                                    Registrar entrada
+                                </Link>
+                            </Button>
+                            <Button asChild variant="outline">
+                                <Link
+                                    href={stockExit({
+                                        query: { product: product.id },
+                                    })}
+                                >
+                                    Registrar saída
+                                </Link>
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={onAdjustStock}
+                            >
+                                Ajustar estoque por tamanho
+                            </Button>
+                            <Button asChild variant="ghost">
+                                <Link href={inventoryIndex()}>
+                                    Balanço de estoque
+                                </Link>
+                            </Button>
+                        </div>
+                        {product.stock_volumes.map((volume) => (
+                            <div
+                                key={volume.id}
+                                className="grid gap-3 rounded-xl border p-4"
+                            >
+                                <div className="flex flex-wrap justify-between gap-2">
+                                    <h3 className="font-semibold">
+                                        Saco {volume.sort_order + 1} ·{' '}
+                                        {volume.code}
+                                    </h3>
+                                    <span>
+                                        {volume.total_quantity} peças ·{' '}
+                                        {volume.status}
+                                    </span>
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                    {volume.offer_type}
+                                </p>
+                                <StockSizeBreakdown
+                                    sizes={volume.items.filter(
+                                        (item) => item.is_active,
+                                    )}
+                                />
+                            </div>
+                        ))}
+                        {product.stock_volumes.length === 0 && (
+                            <p className="text-sm text-muted-foreground">
+                                Nenhum saco cadastrado. Registre uma entrada
+                                para disponibilizar estoque.
+                            </p>
+                        )}
+                    </div>
+                ) : (
+                    <>
+                        <Card className="gap-0 rounded-2xl border-border p-0 shadow-none">
+                            <CardHeader className="p-5 sm:p-6">
+                                <div className="grid gap-1.5">
+                                    <div className="flex items-center gap-2">
+                                        <span className="flex size-7 items-center justify-center rounded-lg bg-accent text-highlight">
+                                            <Layers className="size-4" />
+                                        </span>
+                                        <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
+                                            Disponibilidade em estoque
+                                        </p>
+                                    </div>
+                                    <h2 className="text-xl font-semibold tracking-tight">
+                                        Estoque organizado por sacos
+                                    </h2>
+                                    <CardDescription className="text-sm leading-6">
+                                        Cada saco tem sua própria grade e total.
+                                        O total da oferta é a soma dos sacos e é
+                                        recalculado no servidor.
+                                    </CardDescription>
+                                    <p className="text-sm font-medium text-foreground">
+                                        {distributionStatus}
+                                    </p>
+                                    {product && onAdjustStock && (
+                                        <Button
+                                            type="button"
+                                            onClick={onAdjustStock}
+                                            className="mt-2 h-11 w-full sm:w-fit"
+                                        >
+                                            Ajustar estoque por tamanho
+                                        </Button>
+                                    )}
+                                </div>
+                            </CardHeader>
+                            <CardContent className="grid gap-6 p-5 pt-0 sm:p-6 sm:pt-0">
+                                <fieldset className="grid gap-3">
+                                    <legend
+                                        id={radioGroupId}
+                                        className="text-sm font-semibold text-foreground"
+                                    >
+                                        Tipo de Grade
+                                    </legend>
+                                    <p className="text-sm leading-5 text-muted-foreground">
+                                        Todos os tipos usam pelo menos um saco;
+                                        a diferença está na classificação da
+                                        oferta.
+                                    </p>
+                                    <RadioGroup
+                                        value={form.data.stock_offer_type}
+                                        onValueChange={selectStockOfferType}
+                                        disabled={hasLockedVolumes}
+                                        className="grid grid-cols-3 gap-2"
+                                        aria-labelledby={radioGroupId}
+                                        aria-invalid={
+                                            error('stock_offer_type')
+                                                ? true
+                                                : undefined
+                                        }
+                                    >
+                                        {stockOfferTypes.map((offerType) => {
+                                            const optionId =
+                                                'stock-offer-type-' +
+                                                offerType.id;
+
+                                            return (
+                                                <label
+                                                    key={offerType.id}
+                                                    htmlFor={optionId}
+                                                    className={cn(
+                                                        'flex min-h-16 min-w-0 cursor-pointer flex-col items-stretch gap-1.5 rounded-xl border px-2.5 py-2.5 text-sm font-medium transition-colors select-none',
+                                                        form.data
+                                                            .stock_offer_type ===
+                                                            offerType.id
+                                                            ? 'border-highlight bg-accent/50'
+                                                            : 'border-border hover:bg-muted/30',
+                                                    )}
+                                                >
+                                                    <RadioGroupItem
+                                                        id={optionId}
+                                                        value={offerType.id}
+                                                        className="shrink-0 self-center"
+                                                    />
+                                                    <span className="grid w-full min-w-0 gap-0.5 text-left">
+                                                        <span className="text-xs leading-4 break-words sm:text-sm">
+                                                            {offerType.label}
+                                                        </span>
+                                                        <span className="text-xs leading-4 font-normal break-words text-muted-foreground">
+                                                            {
+                                                                offerType.description
+                                                            }
+                                                        </span>
+                                                    </span>
+                                                </label>
+                                            );
+                                        })}
+                                    </RadioGroup>
+                                    <InputError
+                                        message={error('stock_offer_type')}
+                                    />
+                                </fieldset>
+                            </CardContent>
+                        </Card>
+
+                        <StockOfferVolumeEditor
+                            volumes={form.data.stock_volumes}
+                            errors={form.errors as Record<string, string>}
+                            lockedVolumeIds={lockedVolumeIds}
+                            onChange={(volumes) =>
+                                form.setData('stock_volumes', volumes)
+                            }
+                        />
+
+                        <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="grid gap-1">
+                                <p className="text-sm font-semibold text-foreground">
+                                    Encerrar estoque atual
+                                </p>
+                                <p className="text-sm leading-5 text-muted-foreground">
+                                    {hasLockedVolumes
+                                        ? 'Sacos já movimentados precisam permanecer no histórico. Use Movimentações para novas entradas, saídas ou estornos.'
+                                        : 'Remove a oferta e seus sacos deste produto ao salvar.'}
                                 </p>
                             </div>
-                            <h2 className="text-xl font-semibold tracking-tight">
-                                Estoque organizado por sacos
-                            </h2>
-                            <CardDescription className="text-sm leading-6">
-                                Cada saco tem sua própria grade e total. O total
-                                da oferta é a soma dos sacos e é recalculado no
-                                servidor.
-                            </CardDescription>
-                            <p className="text-sm font-medium text-foreground">
-                                {distributionStatus}
-                            </p>
-                            {product && onAdjustStock && (
-                                <Button
-                                    type="button"
-                                    onClick={onAdjustStock}
-                                    className="mt-2 h-11 w-full sm:w-fit"
-                                >
-                                    Ajustar estoque por tamanho
-                                </Button>
-                            )}
-                        </div>
-                    </CardHeader>
-                    <CardContent className="grid gap-6 p-5 pt-0 sm:p-6 sm:pt-0">
-                        <fieldset className="grid gap-3">
-                            <legend
-                                id={radioGroupId}
-                                className="text-sm font-semibold text-foreground"
-                            >
-                                Tipo de Grade
-                            </legend>
-                            <p className="text-sm leading-5 text-muted-foreground">
-                                Todos os tipos usam pelo menos um saco; a
-                                diferença está na classificação da oferta.
-                            </p>
-                            <RadioGroup
-                                value={form.data.stock_offer_type}
-                                onValueChange={selectStockOfferType}
-                                disabled={hasLockedVolumes}
-                                className="grid grid-cols-3 gap-2"
-                                aria-labelledby={radioGroupId}
-                                aria-invalid={
-                                    error('stock_offer_type') ? true : undefined
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                data-testid="end-current-stock"
+                                onClick={clearCurrentStock}
+                                disabled={
+                                    form.data.stock_volumes.length === 0 ||
+                                    hasLockedVolumes
                                 }
+                                className="h-11 shrink-0"
                             >
-                                {stockOfferTypes.map((offerType) => {
-                                    const optionId =
-                                        'stock-offer-type-' + offerType.id;
-
-                                    return (
-                                        <label
-                                            key={offerType.id}
-                                            htmlFor={optionId}
-                                            className={cn(
-                                                'flex min-h-16 min-w-0 cursor-pointer flex-col items-stretch gap-1.5 rounded-xl border px-2.5 py-2.5 text-sm font-medium transition-colors select-none',
-                                                form.data.stock_offer_type ===
-                                                    offerType.id
-                                                    ? 'border-highlight bg-accent/50'
-                                                    : 'border-border hover:bg-muted/30',
-                                            )}
-                                        >
-                                            <RadioGroupItem
-                                                id={optionId}
-                                                value={offerType.id}
-                                                className="shrink-0 self-center"
-                                            />
-                                            <span className="grid w-full min-w-0 gap-0.5 text-left">
-                                                <span className="text-xs leading-4 break-words sm:text-sm">
-                                                    {offerType.label}
-                                                </span>
-                                                <span className="text-xs leading-4 font-normal break-words text-muted-foreground">
-                                                    {offerType.description}
-                                                </span>
-                                            </span>
-                                        </label>
-                                    );
-                                })}
-                            </RadioGroup>
-                            <InputError message={error('stock_offer_type')} />
-                        </fieldset>
-                    </CardContent>
-                </Card>
-
-                <StockOfferVolumeEditor
-                    volumes={form.data.stock_volumes}
-                    errors={form.errors as Record<string, string>}
-                    lockedVolumeIds={lockedVolumeIds}
-                    onChange={(volumes) =>
-                        form.setData('stock_volumes', volumes)
-                    }
-                />
-
-                <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="grid gap-1">
-                        <p className="text-sm font-semibold text-foreground">
-                            Encerrar estoque atual
-                        </p>
-                        <p className="text-sm leading-5 text-muted-foreground">
-                            {hasLockedVolumes
-                                ? 'Sacos já movimentados precisam permanecer no histórico. Use Movimentações para novas entradas, saídas ou estornos.'
-                                : 'Remove a oferta e seus sacos deste produto ao salvar.'}
-                        </p>
-                    </div>
-                    <Button
-                        type="button"
-                        variant="destructive"
-                        data-testid="end-current-stock"
-                        onClick={clearCurrentStock}
-                        disabled={
-                            form.data.stock_volumes.length === 0 ||
-                            hasLockedVolumes
-                        }
-                        className="h-11 shrink-0"
-                    >
-                        <PackageX />
-                        Encerrar estoque
-                    </Button>
-                </div>
+                                <PackageX />
+                                Encerrar estoque
+                            </Button>
+                        </div>
+                    </>
+                )}
             </section>
 
             {/* 5. Ações inferiores (Mobile-First) */}

@@ -27,7 +27,7 @@ use LogicException;
  * @property array<string, mixed>|null $previous_state
  * @property array<string, mixed>|null $resulting_state
  */
-#[Fillable(['stock_movement_id', 'stock_offer_volume_id', 'product_id', 'stock_offer_id', 'volume_code_snapshot', 'product_code_snapshot', 'product_name_snapshot', 'product_model_snapshot', 'category_snapshot', 'line_snapshot', 'offer_type_snapshot', 'total_quantity', 'size_grid_snapshot', 'previous_state', 'resulting_state'])]
+#[Fillable(['stock_movement_id', 'stock_offer_volume_id', 'product_id', 'stock_offer_id', 'volume_code_snapshot', 'product_code_snapshot', 'product_name_snapshot', 'product_model_snapshot', 'category_snapshot', 'line_snapshot', 'offer_type_snapshot', 'movement_quantity', 'total_quantity', 'size_grid_snapshot', 'previous_state', 'resulting_state'])]
 class StockMovementItem extends Model
 {
     /** @use HasFactory<StockMovementItemFactory> */
@@ -70,6 +70,7 @@ class StockMovementItem extends Model
     {
         return [
             'total_quantity' => 'integer',
+            'movement_quantity' => 'integer',
             'size_grid_snapshot' => 'array',
             'previous_state' => 'array',
             'resulting_state' => 'array',

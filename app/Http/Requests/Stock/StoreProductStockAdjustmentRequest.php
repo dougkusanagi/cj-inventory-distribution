@@ -25,10 +25,12 @@ class StoreProductStockAdjustmentRequest extends FormRequest
     {
         return [
             'volume_id' => ['required', 'integer', Rule::exists(StockOfferVolume::class, 'id')->whereNull('deleted_at')],
+            'expected_version' => ['required', 'integer', 'min:1'],
             'total_quantity' => ['nullable', 'integer', 'min:0'],
-            'items' => ['required', 'array', 'min:1', 'max:50'],
-            'items.*' => ['required', 'array:id,is_active,quantity'],
-            'items.*.id' => ['required', 'integer', 'distinct'],
+            'items' => ['present', 'array', 'max:50'],
+            'items.*' => ['required', 'array:id,size,is_active,quantity'],
+            'items.*.id' => ['nullable', 'integer'],
+            'items.*.size' => ['nullable', 'string', 'max:30'],
             'items.*.is_active' => ['required', 'boolean'],
             'items.*.quantity' => ['nullable', 'integer', 'min:0'],
             'reason' => ['required', 'string', 'max:5000'],

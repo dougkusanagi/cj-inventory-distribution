@@ -2,9 +2,9 @@
 
 namespace App\Actions\Products;
 
+use App\Actions\Stock\StockMutation;
 use App\Models\Product;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -28,7 +28,7 @@ class CreateProduct
         $addedMedia = [];
 
         try {
-            return DB::transaction(function () use ($data, &$product, &$addedMedia): Product {
+            return StockMutation::run(function () use ($data, &$product, &$addedMedia): Product {
                 $product = Product::create([
                     'code' => 'PENDING-'.Str::uuid(),
                     'name' => $data['name'],

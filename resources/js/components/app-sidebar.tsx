@@ -25,9 +25,11 @@ import { index as productsIndex } from '@/routes/products';
 import { index as categoriesIndex } from '@/routes/categories';
 import { index as ordersIndex } from '@/routes/orders';
 import { index as stockMovementsIndex } from '@/routes/stock-movements';
+import { index as inventoryIndex } from '@/routes/inventory';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
+    { title: 'Balanço de estoque', href: inventoryIndex(), icon: Package },
     {
         title: 'Painel',
         href: dashboard(),

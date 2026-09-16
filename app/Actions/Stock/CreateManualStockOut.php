@@ -8,7 +8,6 @@ use App\Models\StockMovement;
 use App\Models\StockOfferVolume;
 use App\Models\User;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -48,7 +47,7 @@ class CreateManualStockOut
             'notes' => $notes,
         ], JSON_THROW_ON_ERROR));
 
-        return DB::transaction(function () use ($volumeIds, $reason, $notes, $idempotencyKey, $payloadHash, $actor): StockMovement {
+        return StockMutation::run(function () use ($volumeIds, $reason, $notes, $idempotencyKey, $payloadHash, $actor): StockMovement {
             $existing = $this->recorder->findIdempotent($idempotencyKey, $payloadHash);
 
             if ($existing !== null) {

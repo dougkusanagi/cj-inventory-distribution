@@ -8,13 +8,12 @@ use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\StockOfferVolume;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AdjustProductStock
 {
-    public function __construct(private readonly StockMovementRecorder $recorder) {}
+    public function __construct(private readonly StockMovementRecorder $recorder, private readonly StockRecount $recount) {}
 
     /** @param array<string, mixed> $data */
     public function handle(Product $product, array $data, ?User $actor = null): StockMovement
@@ -45,9 +44,10 @@ class AdjustProductStock
             'total_quantity' => $totalQuantity,
             'reason' => $reason,
             'notes' => $notes,
+            'expected_version' => $data['expected_version'] ?? null,
         ], JSON_THROW_ON_ERROR));
 
-        return DB::transaction(function () use ($product, $volumeId, $items, $totalQuantity, $reason, $notes, $idempotencyKey, $payloadHash, $actor): StockMovement {
+        return StockMutation::run(function () use ($product, $volumeId, $items, $totalQuantity, $reason, $notes, $idempotencyKey, $payloadHash, $actor, $data): StockMovement {
             $existing = $this->recorder->findIdempotent($idempotencyKey, $payloadHash);
 
             if ($existing !== null) {
@@ -64,31 +64,21 @@ class AdjustProductStock
             if ($volume === null || $volume->current_order_id !== null || $volume->consumed_at !== null) {
                 throw ValidationException::withMessages(['volume_id' => 'Selecione um saco disponível, sem reserva ou consumo.']);
             }
+            if ($volume->stock_version !== (int) ($data['expected_version'] ?? 0)) {
+                throw ValidationException::withMessages(['volume_id' => 'Este saco mudou desde o início da contagem. Atualize a página e confira novamente.']);
+            }
 
             $previousStates = [$volume->getKey() => $this->recorder->snapshot($volume)];
-            $itemsById = collect($items)->keyBy(fn (array $item): int => (int) $item['id']);
-
-            if ($itemsById->count() !== $volume->items->count() || $volume->items->contains(fn ($item): bool => ! $itemsById->has($item->getKey()))) {
-                throw ValidationException::withMessages(['items' => 'Os tamanhos informados não pertencem a este saco.']);
+            $normalized = $this->recount->normalize($volume, $items, $totalQuantity);
+            foreach ($normalized['items'] as $index => $item) {
+                $attributes = ['size' => $item['size'], 'is_active' => $item['is_active'], 'quantity' => $item['quantity']];
+                if ($item['id'] === null) {
+                    $volume->items()->create([...$attributes, 'sort_order' => $index]);
+                } else {
+                    $volume->items->firstWhere('id', $item['id'])->update($attributes);
+                }
             }
-
-            foreach ($volume->items as $item) {
-                /** @var array{id: int, is_active: bool, quantity: int|null} $updatedItem */
-                $updatedItem = $itemsById->get($item->getKey());
-                $isActive = filter_var($updatedItem['is_active'], FILTER_VALIDATE_BOOLEAN);
-                $quantity = $isActive && $updatedItem['quantity'] !== null ? (int) $updatedItem['quantity'] : null;
-                $item->update(['is_active' => $isActive, 'quantity' => $quantity]);
-            }
-
-            $hasKnownQuantity = $volume->items->contains(fn ($item): bool => $item->is_active && $item->quantity !== null);
-            $nextTotalQuantity = $hasKnownQuantity
-                ? (int) $volume->items->where('is_active', true)->sum('quantity')
-                : (is_numeric($totalQuantity) ? (int) $totalQuantity : null);
-
-            if ($nextTotalQuantity === null) {
-                throw ValidationException::withMessages(['total_quantity' => 'Informe o total quando não houver quantidades por tamanho.']);
-            }
-
+            $nextTotalQuantity = $normalized['total_quantity'];
             $volume->update(['total_quantity' => $nextTotalQuantity]);
             $volume->load(['items', 'offer.product.category']);
             $resultingStates = [$volume->getKey() => $this->recorder->snapshot($volume)];

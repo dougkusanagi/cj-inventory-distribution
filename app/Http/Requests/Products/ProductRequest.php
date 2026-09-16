@@ -48,7 +48,7 @@ abstract class ProductRequest extends FormRequest
             'model' => $normalizedModel === '' ? null : $normalizedModel,
             'is_active' => $isActive,
             'stock_offer_type' => $stockOfferType,
-            'stock_volumes' => $stockVolumes,
+            ...($this->exists('stock_volumes') ? ['stock_volumes' => $stockVolumes] : []),
         ]);
     }
 
@@ -129,7 +129,7 @@ abstract class ProductRequest extends FormRequest
             'stock_volumes.array' => 'Envie os sacos em uma lista válida.',
             'stock_volumes.max' => 'Cadastre no máximo 50 sacos por oferta.',
             'stock_volumes.*.array' => 'Envie cada saco em um formato válido.',
-            'stock_volumes.*.id' => 'O saco informado não pertence a esta oferta.',
+            'stock_volumes.*.id' => 'O saco informado não pertence a este produto.',
             'stock_volumes.*.total_quantity.integer' => 'O total do saco deve ser um número.',
             'stock_volumes.*.total_quantity.min' => 'O total do saco não pode ser negativo.',
             'stock_volumes.*.items.array' => 'Envie os tamanhos do saco em uma lista válida.',
@@ -349,8 +349,11 @@ abstract class ProductRequest extends FormRequest
             return;
         }
 
-        $offer = $product->latestOffer()->with('stockVolumes.items')->first();
-        $existingVolumes = $offer?->stockVolumes->keyBy('id') ?? collect();
+        $existingVolumes = $product->offers()
+            ->with('stockVolumes.items')
+            ->get()
+            ->flatMap(fn ($offer) => $offer->stockVolumes)
+            ->keyBy('id');
         $stockVolumes = $this->input('stock_volumes', []);
 
         if (! is_array($stockVolumes)) {
@@ -370,7 +373,7 @@ abstract class ProductRequest extends FormRequest
             if ($volumeId !== null && $existingVolume === null) {
                 $validator->errors()->add(
                     "stock_volumes.{$volumeIndex}.id",
-                    'O saco informado não pertence a esta oferta.',
+                    'O saco informado não pertence a este produto.',
                 );
             }
 

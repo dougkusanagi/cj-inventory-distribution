@@ -12,7 +12,6 @@ use App\Models\StockOfferVolume;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -23,7 +22,7 @@ class CreateStockEntry
     ) {}
 
     /** @param array<string, mixed> $data */
-    public function handle(Product $product, array $data, ?User $actor = null): StockMovement
+    public function handle(Product $product, array $data, ?User $actor = null, bool $allowZero = false): StockMovement
     {
         if ($actor === null) {
             throw ValidationException::withMessages([
@@ -51,7 +50,7 @@ class CreateStockEntry
 
         $payloadHash = $this->payloadHash($product, $type, $volumes, $notes, $reason);
 
-        return DB::transaction(function () use ($product, $type, $volumes, $notes, $reason, $idempotencyKey, $payloadHash, $actor): StockMovement {
+        return StockMutation::run(function () use ($product, $type, $volumes, $notes, $reason, $idempotencyKey, $payloadHash, $actor, $allowZero): StockMovement {
             $existing = $this->recorder->findIdempotent($idempotencyKey, $payloadHash);
 
             if ($existing !== null) {
@@ -95,7 +94,7 @@ class CreateStockEntry
                 $this->ensureValidItems($items, $offset);
                 $totalQuantity = $this->totalQuantity($rawVolume, $items);
 
-                if ($totalQuantity <= 0) {
+                if ($totalQuantity <= 0 && ! $allowZero) {
                     throw ValidationException::withMessages([
                         "stock_volumes.{$offset}.total_quantity" => 'A entrada precisa ter estoque físico maior que zero.',
                     ]);

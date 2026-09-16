@@ -20,6 +20,11 @@ export type StockOfferVolume = {
     sort_order: number;
     total_quantity: number;
     is_locked?: boolean;
+    code?: string;
+    stock_version?: number;
+    can_recount?: boolean;
+    status?: string;
+    offer_type?: string;
     items: StockOfferVolumeItem[];
 };
 

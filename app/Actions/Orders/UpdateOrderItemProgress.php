@@ -2,13 +2,13 @@
 
 namespace App\Actions\Orders;
 
+use App\Actions\Stock\StockMutation;
 use App\Enums\OrderEventType;
 use App\Enums\OrderItemProgress;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class UpdateOrderItemProgress
@@ -24,7 +24,7 @@ class UpdateOrderItemProgress
         ?User $actor = null,
         ?string $reason = null,
     ): OrderItem {
-        return DB::transaction(function () use ($order, $item, $progress, $actor, $reason): OrderItem {
+        return StockMutation::run(function () use ($order, $item, $progress, $actor, $reason): OrderItem {
             $lockedOrder = Order::query()
                 ->whereKey($order->getKey())
                 ->lockForUpdate()

@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
+use App\Concerns\RestoresStockSafely;
 use Database\Factories\StockOfferVolumeItemFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -24,7 +24,7 @@ use Illuminate\Support\Carbon;
 class StockOfferVolumeItem extends Model
 {
     /** @use HasFactory<StockOfferVolumeItemFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, RestoresStockSafely;
 
     /**
      * Get the sack that contains this size.

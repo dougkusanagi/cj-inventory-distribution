@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\RestoresStockSafely;
 use App\Enums\StockOfferType;
 use Database\Factories\StockOfferFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -10,7 +11,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -25,18 +25,18 @@ use Illuminate\Support\Carbon;
 class StockOffer extends Model
 {
     /** @use HasFactory<StockOfferFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, RestoresStockSafely;
 
     protected static function booted(): void
     {
         static::deleting(function (self $offer): void {
-            $offer->stockVolumes()->withTrashed()->get()
-                ->filter(fn (StockOfferVolume $volume): bool => ! $volume->trashed())
-                ->each->delete();
+            $children = $offer->stockVolumes()->get();
+            $offer->forceFill(['deleted_child_ids' => $children->modelKeys()])->saveQuietly();
+            $children->each->delete();
         });
 
         static::restored(function (self $offer): void {
-            $offer->stockVolumes()->withTrashed()->get()
+            $offer->stockVolumes()->withTrashed()->whereIn('id', $offer->deleted_child_ids ?? [])->get()
                 ->filter(fn (StockOfferVolume $volume): bool => $volume->trashed())
                 ->each->restore();
         });
@@ -129,6 +129,7 @@ class StockOffer extends Model
     {
         return [
             'type' => StockOfferType::class,
+            'deleted_child_ids' => 'array',
         ];
     }
 }

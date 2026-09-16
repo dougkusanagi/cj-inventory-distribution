@@ -2,325 +2,95 @@
 
 namespace App\Actions\Products;
 
-use App\Enums\StockOfferType;
+use App\Actions\Stock\CreateStockEntry;
+use App\Actions\Stock\StockMutation;
 use App\Models\Product;
 use App\Models\StockOffer;
-use App\Models\StockOfferVolume;
-use App\Models\StockOfferVolumeItem;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
 
 class SyncProductStockOffer
 {
-    /**
-     * Synchronize the product's stock offer and its physical sacks atomically.
-     *
-     * @param  array<string, mixed>  $data
-     */
+    /** @param array<string, mixed> $data */
     public function handle(Product $product, array $data): ?StockOffer
     {
-        return DB::transaction(function () use ($product, $data): ?StockOffer {
-            $offer = $product->offers()->latest('id')->lockForUpdate()->first();
-            $typeInput = $data['stock_offer_type'] ?? $offer?->type->value;
-
-            if ($typeInput === null && ! $this->hasStockData($this->normalizeVolumes($data['stock_volumes'] ?? []))) {
-                return null;
+        return StockMutation::run(function () use ($product, $data): ?StockOffer {
+            $offer = $product->offers()->latest('id')->first();
+            if (! array_key_exists('stock_volumes', $data)) {
+                return $offer;
             }
+            $submitted = $data['stock_volumes'] ?? [];
+            if ($product->wasRecentlyCreated) {
+                if ($submitted === []) {
+                    return null;
+                }
+                $movement = app(CreateStockEntry::class)->handle($product, [
+                    ...$data, 'notes' => null, 'reason' => 'Estoque inicial confirmado no cadastro do produto',
+                    'idempotency_key' => 'product-opening:'.Str::uuid(),
+                ], Auth::user(), allowZero: true);
 
-            $type = StockOfferType::tryFrom((string) $typeInput)
-                ?? StockOfferType::NewGrade;
-            $rawVolumes = $this->normalizeVolumes($data['stock_volumes'] ?? []);
-            $existingVolumes = $offer === null
-                ? collect()
-                : $offer->stockVolumes()
-                    ->withExists([
-                        'orderItems as has_order_items',
-                        'stockMovementItems as has_stock_movements',
-                    ])
-                    ->lockForUpdate()
-                    ->get()
-                    ->keyBy('id');
-
-            if ($offer === null && ! $this->hasStockData($rawVolumes)) {
-                return null;
+                return $product->offers()->find($movement->items->first()->stock_offer_id);
             }
-
-            if ($offer !== null
-                && $existingVolumes->contains(fn (StockOfferVolume $volume): bool => (bool) $volume->getAttribute('has_stock_movements'))
-                && $offer->type !== $type) {
-                throw ValidationException::withMessages([
-                    'stock_offer_type' => 'A classificação de uma oferta já movimentada não pode ser alterada pelo cadastro do produto.',
-                ]);
+            // A product can have physical sacks from more than one offer. The
+            // product form renders all of them in read-only mode, so compare
+            // against the complete persisted set instead of only the latest
+            // offer. Otherwise merely editing product information would reject
+            // older sacks as if they had been created in the form.
+            $stored = $product->offers()
+                ->with('stockVolumes.items')
+                ->get()
+                ->flatMap(fn (StockOffer $stockOffer) => $stockOffer->stockVolumes)
+                ->keyBy('id');
+            if ($submitted === [] && $stored->isNotEmpty()) {
+                if ($stored->contains(fn ($volume) => $volume->orderItems()->exists())) {
+                    throw ValidationException::withMessages(['stock_volumes' => 'Sacos vinculados a pedidos não podem ser removidos.']);
+                }
+                throw ValidationException::withMessages(['stock_volumes' => 'Sacos com estoque disponível ou reservado não podem ser excluídos. Registre uma saída ou zere o saco pelo fluxo de estoque.']);
             }
-
-            if ($offer !== null && $rawVolumes->isEmpty()) {
-                $this->ensureVolumesMayBeRemoved($existingVolumes);
-
-                $offer->delete();
-
-                return null;
-            }
-
-            if ($offer === null) {
-                $offer = $product->offers()->create([
-                    'type' => $type,
-                ]);
-            } else {
-                $offer->update([
-                    'type' => $type,
-                ]);
-            }
-
-            $usedVolumeIds = [];
-
-            foreach ($rawVolumes as $index => $rawVolume) {
-                $items = $this->normalizeVolumeItems($rawVolume['items'] ?? []);
-                $volumeTotal = $this->calculateVolumeTotal($rawVolume, $items);
-                $volume = $this->findVolume($existingVolumes, $rawVolume);
-
-                if ($volume === null) {
-                    $volume = $offer->stockVolumes()->create([
-                        'sort_order' => $index,
-                        'total_quantity' => $volumeTotal,
-                    ]);
-                } else {
-                    $this->ensureProtectedVolumeIsUnchanged($volume, $index, $volumeTotal, $items);
-                    $volume->update([
-                        'sort_order' => $index,
-                        'total_quantity' => $volumeTotal,
-                    ]);
+            foreach ($submitted as $raw) {
+                if (! is_array($raw)) {
+                    throw ValidationException::withMessages(['stock_volumes' => 'Envie os sacos em uma lista válida.']);
                 }
 
-                $usedVolumeIds[] = $volume->getKey();
-                $this->syncVolumeItems($volume, $items);
+                $volume = $stored->get($raw['id'] ?? null);
+                if ($volume === null) {
+                    throw ValidationException::withMessages(['stock_volumes' => 'Registre novos sacos pela entrada de estoque.']);
+                }
+                $rawItems = $raw['items'] ?? [];
+                if (! is_array($rawItems)) {
+                    throw ValidationException::withMessages(['stock_volumes' => 'Envie os tamanhos do saco em uma lista válida.']);
+                }
+                $items = [];
+                foreach ($rawItems as $rawItem) {
+                    if (! is_array($rawItem)) {
+                        throw ValidationException::withMessages(['stock_volumes' => 'Envie os tamanhos do saco em uma lista válida.']);
+                    }
+                    $isActive = (bool) ($rawItem['is_active'] ?? false);
+                    $items[] = [
+                        'size' => trim((string) ($rawItem['size'] ?? '')),
+                        'is_active' => $isActive,
+                        'quantity' => $isActive && isset($rawItem['quantity']) ? (int) $rawItem['quantity'] : null,
+                    ];
+                }
+                $items = collect($items);
+                $known = $items->filter(fn (array $item): bool => $item['is_active'] && $item['quantity'] !== null);
+                $total = $known->isEmpty() ? (int) ($raw['total_quantity'] ?? 0) : (int) $known->sum('quantity');
+                $original = $volume->items->map(fn ($item): array => $item->only(['size', 'is_active', 'quantity']))->values();
+                if ($volume->total_quantity !== $total || $original->all() !== $items->all()) {
+                    throw ValidationException::withMessages(['stock_volumes' => $volume->stockMovementItems()->exists()
+                        ? 'Sacos já confirmados em movimentações não podem ser alterados pelo cadastro do produto.'
+                        : 'Use a recontagem para alterar o conteúdo dos sacos.']);
+                }
+            }
+            if (count($submitted) !== $stored->count()) {
+                throw ValidationException::withMessages(['stock_volumes' => 'Use a saída ou a recontagem para alterar o estoque.']);
+            }
+            if ($offer && isset($data['stock_offer_type']) && $offer->type->value !== $data['stock_offer_type']) {
+                throw ValidationException::withMessages(['stock_offer_type' => 'A classificação do estoque é definida na entrada.']);
             }
 
-            if ($usedVolumeIds === []) {
-                throw new InvalidArgumentException('An offer must contain at least one stock volume.');
-            }
-
-            $this->ensureVolumesMayBeRemoved($existingVolumes->except($usedVolumeIds));
-
-            $offer->stockVolumes()
-                ->whereNotIn('id', $usedVolumeIds)
-                ->get()
-                ->each->delete();
-
-            return $offer->fresh(['stockVolumes.items']);
+            return $offer;
         });
-    }
-
-    /**
-     * Calculate a sack total from active known quantities or its manual value.
-     *
-     * @param  array<string, mixed>  $volume
-     * @param  Collection<int, mixed[]>  $items
-     */
-    private function calculateVolumeTotal(array $volume, Collection $items): int
-    {
-        $activeItems = $items->filter(
-            fn (array $item): bool => $this->isActive($item),
-        );
-        $hasKnownQuantity = $activeItems->contains(
-            fn (array $item): bool => is_numeric($item['quantity'] ?? null),
-        );
-
-        if ($hasKnownQuantity) {
-            return (int) $activeItems->sum(
-                fn (array $item): int => max(0, (int) ($item['quantity'] ?? 0)),
-            );
-        }
-
-        return max(0, (int) ($volume['total_quantity'] ?? 0));
-    }
-
-    /**
-     * Normalize the submitted sack payload.
-     *
-     * @return Collection<int, mixed[]>
-     */
-    private function normalizeVolumes(mixed $volumes): Collection
-    {
-        if (! is_array($volumes)) {
-            return collect();
-        }
-
-        return collect($volumes)
-            ->filter(fn (mixed $volume): bool => is_array($volume))
-            ->values();
-    }
-
-    /** @param Collection<int, mixed[]> $volumes */
-    private function hasStockData(Collection $volumes): bool
-    {
-        return $volumes->contains(function (array $volume): bool {
-            if (is_numeric($volume['total_quantity'] ?? null)) {
-                return true;
-            }
-
-            $items = $volume['items'] ?? [];
-
-            return is_array($items) && collect($items)->contains(
-                fn (mixed $item): bool => is_array($item) && $this->isActive($item),
-            );
-        });
-    }
-
-    /**
-     * Normalize the submitted size payload inside one sack.
-     *
-     * @return Collection<int, mixed[]>
-     */
-    private function normalizeVolumeItems(mixed $items): Collection
-    {
-        if (! is_array($items)) {
-            return collect();
-        }
-
-        return collect($items)
-            ->filter(fn (mixed $item): bool => is_array($item))
-            ->values();
-    }
-
-    /**
-     * Locate a submitted sack among the current offer's sacks.
-     *
-     * @param  Collection<int, StockOfferVolume>  $existingVolumes
-     * @param  array<string, mixed>  $rawVolume
-     */
-    private function findVolume(Collection $existingVolumes, array $rawVolume): ?StockOfferVolume
-    {
-        $submittedId = $rawVolume['id'] ?? null;
-
-        if (is_numeric($submittedId) && $existingVolumes->has((int) $submittedId)) {
-            return $existingVolumes->get((int) $submittedId);
-        }
-
-        return null;
-    }
-
-    /**
-     * Synchronize the sizes in a sack while retaining existing IDs.
-     *
-     * @param  Collection<int, mixed[]>  $items
-     */
-    private function syncVolumeItems(StockOfferVolume $volume, Collection $items): void
-    {
-        $existingItems = $volume->items()->get()->keyBy('id');
-        $usedItemIds = [];
-
-        foreach ($items as $index => $rawItem) {
-            $isActive = $this->isActive($rawItem);
-            $size = trim((string) ($rawItem['size'] ?? ''));
-            $item = null;
-            $submittedId = $rawItem['id'] ?? null;
-
-            if (is_numeric($submittedId) && $existingItems->has((int) $submittedId)) {
-                $item = $existingItems->get((int) $submittedId);
-            } elseif ($size !== '') {
-                $item = $existingItems->first(
-                    fn (StockOfferVolumeItem $candidate): bool => $candidate->size === $size
-                        && ! in_array($candidate->getKey(), $usedItemIds, true),
-                );
-            }
-
-            $attributes = [
-                'size' => $size,
-                'sort_order' => $index,
-                'is_active' => $isActive,
-                'quantity' => $isActive && is_numeric($rawItem['quantity'] ?? null)
-                    ? max(0, (int) $rawItem['quantity'])
-                    : null,
-            ];
-
-            if ($item === null) {
-                $item = $volume->items()->create($attributes);
-            } else {
-                $item->update($attributes);
-            }
-
-            $usedItemIds[] = $item->getKey();
-        }
-
-        $volume->items()
-            ->whereNotIn('id', $usedItemIds)
-            ->get()
-            ->each->delete();
-    }
-
-    /**
-     * Determine whether a size is present in its sack.
-     *
-     * @param  array<string, mixed>  $item
-     */
-    private function isActive(array $item): bool
-    {
-        return filter_var($item['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN);
-    }
-
-    /** @param Collection<int, mixed[]> $items */
-    private function ensureProtectedVolumeIsUnchanged(
-        StockOfferVolume $volume,
-        int $sortOrder,
-        int $totalQuantity,
-        Collection $items,
-    ): void {
-        if (! $this->isProtected($volume)) {
-            return;
-        }
-
-        $storedItems = $volume->items()->get()->map(fn (StockOfferVolumeItem $item): array => [
-            'size' => $item->size,
-            'sort_order' => $item->sort_order,
-            'is_active' => $item->is_active,
-            'quantity' => $item->quantity,
-        ])->values()->all();
-        $submittedItems = $items->map(fn (array $item, int $index): array => [
-            'size' => trim((string) ($item['size'] ?? '')),
-            'sort_order' => $index,
-            'is_active' => $this->isActive($item),
-            'quantity' => $this->isActive($item) && is_numeric($item['quantity'] ?? null)
-                ? max(0, (int) $item['quantity'])
-                : null,
-        ])->values()->all();
-
-        if ($volume->sort_order !== $sortOrder || $volume->total_quantity !== $totalQuantity || $storedItems !== $submittedItems) {
-            throw ValidationException::withMessages([
-                'stock_volumes' => (bool) $volume->getAttribute('has_stock_movements')
-                    ? 'Sacos já confirmados em movimentações não podem ser alterados pelo cadastro do produto.'
-                    : 'Sacos vinculados a pedidos não podem ser alterados.',
-            ]);
-        }
-    }
-
-    private function isProtected(StockOfferVolume $volume): bool
-    {
-        return $volume->current_order_id !== null
-            || $volume->consumed_at !== null
-            || (bool) $volume->getAttribute('has_order_items')
-            || (bool) $volume->getAttribute('has_stock_movements');
-    }
-
-    /** @param Collection<int, StockOfferVolume> $volumes */
-    private function ensureVolumesMayBeRemoved(Collection $volumes): void
-    {
-        $blockedVolume = $volumes->first(fn (StockOfferVolume $volume): bool => $this->isProtected($volume));
-
-        if ($blockedVolume !== null) {
-            throw ValidationException::withMessages([
-                'stock_volumes' => (bool) $blockedVolume->getAttribute('has_stock_movements')
-                    ? 'Sacos que já possuem movimentações não podem ser removidos.'
-                    : 'Sacos vinculados a pedidos não podem ser removidos.',
-            ]);
-        }
-
-        if ($volumes->contains(fn (StockOfferVolume $volume): bool => $volume->total_quantity > 0
-            && $volume->consumed_at === null)) {
-            throw ValidationException::withMessages([
-                'stock_volumes' => 'Sacos com estoque disponível ou reservado não podem ser excluídos. Registre uma saída ou zere o saco pelo fluxo de estoque.',
-            ]);
-        }
     }
 }

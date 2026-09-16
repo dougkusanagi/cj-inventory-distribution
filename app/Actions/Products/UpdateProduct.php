@@ -2,9 +2,9 @@
 
 namespace App\Actions\Products;
 
+use App\Actions\Stock\StockMutation;
 use App\Models\Product;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -29,7 +29,7 @@ class UpdateProduct
         $mediaBackups = [];
 
         try {
-            $updatedProduct = DB::transaction(function () use ($product, $data, &$addedMedia, &$mediaBackups): Product {
+            $updatedProduct = StockMutation::run(function () use ($product, $data, &$addedMedia, &$mediaBackups): Product {
                 $lockedProduct = Product::query()
                     ->whereKey($product->getKey())
                     ->lockForUpdate()

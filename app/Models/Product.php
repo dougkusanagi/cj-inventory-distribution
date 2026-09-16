@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\RestoresStockSafely;
 use App\Enums\ProductLine;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -11,7 +12,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
@@ -35,20 +35,20 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 class Product extends Model implements HasMedia
 {
     /** @use HasFactory<ProductFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, RestoresStockSafely;
 
     use InteractsWithMedia;
 
     protected static function booted(): void
     {
         static::deleting(function (self $product): void {
-            $product->offers()->withTrashed()->get()
-                ->filter(fn (StockOffer $offer): bool => ! $offer->trashed())
-                ->each->delete();
+            $children = $product->offers()->get();
+            $product->forceFill(['deleted_child_ids' => $children->modelKeys()])->saveQuietly();
+            $children->each->delete();
         });
 
         static::restored(function (self $product): void {
-            $product->offers()->withTrashed()->get()
+            $product->offers()->withTrashed()->whereIn('id', $product->deleted_child_ids ?? [])->get()
                 ->filter(fn (StockOffer $offer): bool => $offer->trashed())
                 ->each->restore();
         });
@@ -136,6 +136,7 @@ class Product extends Model implements HasMedia
         return [
             'is_active' => 'boolean',
             'line' => ProductLine::class,
+            'deleted_child_ids' => 'array',
         ];
     }
 

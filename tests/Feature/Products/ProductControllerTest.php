@@ -326,7 +326,7 @@ test('product creation preserves valid text values that PHP treats as false', fu
     expect($product->notes)->toBe('0');
 });
 
-test('stock entered while updating a product is persisted', function () {
+test('stock entered while updating a product must use the stock entry flow', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create(['name' => 'Teste Rafael']);
 
@@ -343,15 +343,8 @@ test('stock entered while updating a product is persisted', function () {
         ]],
     ]);
 
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect(route('products.index'));
-
-    $product->load('latestOffer.stockVolumes.items');
-
-    expect($product->latestOffer->stockVolumes->sole()->total_quantity)->toBe(15);
-    expect($product->latestOffer->stockVolumes->sole()->items->pluck('quantity')->all())
-        ->toBe([5, 10, null]);
+    $response->assertInvalid(['stock_volumes']);
+    expect($product->offers()->count())->toBe(0);
 });
 
 test('product creation preserves the selected image order', function () {
@@ -748,7 +741,7 @@ test('product creation rejects non-image uploads', function () {
     expect(Product::query()->count())->toBe(0);
 });
 
-test('authenticated users can update product details, sizes and stock without changing its code', function () {
+test('authenticated users can update product details without changing its code', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create([
         'name' => 'Nome anterior',
@@ -760,14 +753,6 @@ test('authenticated users can update product details, sizes and stock without ch
         'name' => 'Short Mom',
         'model' => '3002',
         'notes' => 'Nova observação',
-        'stock_offer_type' => StockOfferType::NewGrade->value,
-        'stock_volumes' => [[
-            'total_quantity' => 999,
-            'items' => [
-                ['size' => '36', 'quantity' => 10, 'is_active' => true],
-                ['size' => '38', 'quantity' => null, 'is_active' => false],
-            ],
-        ]],
     ]);
 
     $response
@@ -778,11 +763,7 @@ test('authenticated users can update product details, sizes and stock without ch
     expect($product->code)->toBe($originalCode);
     expect($product->name)->toBe('Short Mom');
     expect($product->model)->toBe('3002');
-    expect($product->latestOffer->calculatedTotalQuantity())->toBe(10);
-    expect($product->latestOffer->stockVolumes->sole()->items->pluck('is_active')->all())
-        ->toBe([true, false]);
-    expect($product->latestOffer->stockVolumes->sole()->items->pluck('quantity')->all())
-        ->toBe([10, null]);
+    expect($product->offers()->count())->toBe(0);
 });
 
 test('product updates preserve valid text values that PHP treats as false', function () {
@@ -906,7 +887,7 @@ test('ending stock is rejected when a sack has been referenced by an order', fun
     $this->assertModelExists($volume);
 });
 
-test('zero stock remains editable but is excluded from the shared catalog', function () {
+test('a recount can zero stock and remove it from the shared catalog', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
     $offer = $product->offers()->create([
@@ -920,24 +901,15 @@ test('zero stock remains editable but is excluded from the shared catalog', func
         'is_active' => true,
     ]);
 
-    $response = $this->actingAs($user)->put(route('products.update', $product), [
-        'name' => $product->name,
-        'stock_offer_type' => StockOfferType::NewGrade->value,
-        'stock_volumes' => [[
-            'id' => $volume->id,
-            'total_quantity' => 0,
-            'items' => [[
-                'id' => $item->id,
-                'size' => 'M',
-                'quantity' => null,
-                'is_active' => false,
-            ]],
-        ]],
+    $response = $this->actingAs($user)->post(route('products.stock-adjustments.store', $product), [
+        'volume_id' => $volume->id, 'expected_version' => $volume->fresh()->stock_version,
+        'total_quantity' => 0, 'reason' => 'Saco não encontrado', 'idempotency_key' => 'zero-stock',
+        'items' => [['id' => $item->id, 'quantity' => null, 'is_active' => false]],
     ]);
 
     $response
         ->assertSessionHasNoErrors()
-        ->assertRedirect(route('products.index'));
+        ->assertRedirect(route('products.edit', $product));
 
     $offer->refresh();
     expect($offer->stockVolumes()->sole()->total_quantity)->toBe(0);
@@ -1386,7 +1358,7 @@ test('the same size is allowed in different sacks but not twice in one sack', fu
     expect(StockOfferVolume::query()->count())->toBe(2);
 });
 
-test('updating sacks preserves their IDs while reordering and removing them', function () {
+test('the product editor cannot reorder or remove physical sacks', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
     $offer = $product->offers()->create([
@@ -1438,7 +1410,7 @@ test('updating sacks preserves their IDs while reordering and removing them', fu
 
     $reorderResponse->assertSessionHasNoErrors();
     expect($offer->fresh()->stockVolumes()->pluck('id')->all())
-        ->toBe([$secondVolume->id, $firstVolume->id]);
+        ->toBe([$firstVolume->id, $secondVolume->id]);
 
     $removeResponse = $this->actingAs($user)->put(route('products.update', $product), [
         'name' => $product->name,
@@ -1456,8 +1428,8 @@ test('updating sacks preserves their IDs while reordering and removing them', fu
         ]],
     ]);
 
-    $removeResponse->assertSessionHasNoErrors();
-    expect(StockOfferVolume::query()->whereKey($firstVolume->id)->exists())->toBeFalse();
+    $removeResponse->assertInvalid(['stock_volumes']);
+    expect(StockOfferVolume::query()->whereKey($firstVolume->id)->exists())->toBeTrue();
     expect(StockOfferVolume::query()->whereKey($secondVolume->id)->exists())->toBeTrue();
     expect($offer->fresh()->calculatedTotalQuantity())->toBe(7);
 });
@@ -1479,4 +1451,48 @@ test('catalog availability uses physical sack totals', function () {
             ->whereKey($offer->id)
             ->exists(),
     )->toBeFalse();
+});
+
+test('product updates preserve sacks from every stock offer', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $olderOffer = $product->offers()->create(['type' => StockOfferType::Replenishment]);
+    $olderVolume = $olderOffer->stockVolumes()->create(['sort_order' => 0, 'total_quantity' => 9]);
+    $olderItem = $olderVolume->items()->create(['size' => '36', 'sort_order' => 0, 'is_active' => true, 'quantity' => 9]);
+    $latestOffer = $product->offers()->create(['type' => StockOfferType::BrokenGrade]);
+    $latestVolume = $latestOffer->stockVolumes()->create(['sort_order' => 0, 'total_quantity' => 4]);
+    $latestItem = $latestVolume->items()->create(['size' => 'M', 'sort_order' => 0, 'is_active' => true, 'quantity' => 4]);
+
+    $this->actingAs($user)->put(route('products.update', $product), [
+        'name' => 'Produto renomeado',
+        'is_active' => true,
+        'stock_offer_type' => StockOfferType::BrokenGrade->value,
+        'stock_volumes' => [
+            ['id' => $olderVolume->id, 'total_quantity' => 9, 'items' => [[
+                'id' => $olderItem->id, 'size' => '36', 'is_active' => true, 'quantity' => 9,
+            ]]],
+            ['id' => $latestVolume->id, 'total_quantity' => 4, 'items' => [[
+                'id' => $latestItem->id, 'size' => 'M', 'is_active' => true, 'quantity' => 4,
+            ]]],
+        ],
+    ])->assertRedirect(route('products.index'));
+
+    expect($product->refresh()->name)->toBe('Produto renomeado')
+        ->and($olderVolume->refresh()->total_quantity)->toBe(9)
+        ->and($latestVolume->refresh()->total_quantity)->toBe(4);
+});
+
+test('restoring a product does not restore a size deleted before the product', function () {
+    $product = Product::factory()->create();
+    $offer = $product->offers()->create(['type' => StockOfferType::NewGrade]);
+    $volume = $offer->stockVolumes()->create(['total_quantity' => 0]);
+    $previouslyDeletedItem = $volume->items()->create(['size' => 'P', 'sort_order' => 0, 'is_active' => false]);
+    $cascadedItem = $volume->items()->create(['size' => 'M', 'sort_order' => 1, 'is_active' => false]);
+
+    $previouslyDeletedItem->delete();
+    $product->delete();
+    $product->restore();
+
+    expect($previouslyDeletedItem->fresh()->trashed())->toBeTrue()
+        ->and($cascadedItem->fresh()->trashed())->toBeFalse();
 });

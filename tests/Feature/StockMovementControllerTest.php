@@ -118,6 +118,7 @@ test('staff can recount known sizes from the product and records the difference'
     $this->actingAs($user)
         ->post(route('products.stock-adjustments.store', $volume->offer->product), [
             'volume_id' => $volume->id,
+            'expected_version' => $volume->fresh()->stock_version,
             'items' => [[
                 'id' => $item->id,
                 'is_active' => true,
@@ -135,7 +136,8 @@ test('staff can recount known sizes from the product and records the difference'
         ->and($volume->refresh()->total_quantity)->toBe(9)
         ->and($item->refresh()->quantity)->toBe(9)
         ->and($movement->items->sole()->previous_state['total_quantity'])->toBe(12)
-        ->and($movement->items->sole()->resulting_state['total_quantity'])->toBe(9);
+        ->and($movement->items->sole()->resulting_state['total_quantity'])->toBe(9)
+        ->and($movement->items->sole()->movement_quantity)->toBe(3);
 
     $this->actingAs($user)
         ->get(route('stock-movements.show', $movement))
@@ -152,6 +154,34 @@ test('staff can recount known sizes from the product and records the difference'
             ]));
 });
 
+test('adjustments reject a stale sack version without overwriting a newer recount', function () {
+    $user = User::factory()->create();
+    $volume = movementVolume();
+    $item = $volume->items->sole();
+    $expectedVersion = $volume->fresh()->stock_version;
+
+    $this->actingAs($user)->post(route('products.stock-adjustments.store', $volume->offer->product), [
+        'volume_id' => $volume->id,
+        'expected_version' => $expectedVersion,
+        'items' => [['id' => $item->id, 'is_active' => true, 'quantity' => 8]],
+        'reason' => 'Primeira contagem',
+        'idempotency_key' => 'adjustment-first-count-001',
+    ])->assertRedirect();
+
+    $this->actingAs($user)->post(route('products.stock-adjustments.store', $volume->offer->product), [
+        'volume_id' => $volume->id,
+        'expected_version' => $expectedVersion,
+        'items' => [['id' => $item->id, 'is_active' => true, 'quantity' => 9]],
+        'reason' => 'Contagem desatualizada',
+        'idempotency_key' => 'adjustment-stale-count-001',
+    ])->assertInvalid([
+        'volume_id' => 'Este saco mudou desde o início da contagem. Atualize a página e confira novamente.',
+    ]);
+
+    expect($volume->refresh()->total_quantity)->toBe(8)
+        ->and(StockMovement::query()->count())->toBe(1);
+});
+
 test('staff can redistribute a sack between sizes without changing its total', function () {
     $user = User::factory()->create();
     $volume = movementVolume();
@@ -160,6 +190,7 @@ test('staff can redistribute a sack between sizes without changing its total', f
     $this->actingAs($user)
         ->post(route('products.stock-adjustments.store', $volume->offer->product), [
             'volume_id' => $volume->id,
+            'expected_version' => $volume->fresh()->stock_version,
             'items' => [
                 ['id' => $volume->items->sole()->id, 'is_active' => true, 'quantity' => 10],
                 ['id' => $secondItem->id, 'is_active' => true, 'quantity' => 2],
@@ -182,6 +213,7 @@ test('non-staff cannot adjust product stock', function () {
     $this->actingAs($user)
         ->post(route('products.stock-adjustments.store', $volume->offer->product), [
             'volume_id' => $volume->id,
+            'expected_version' => $volume->fresh()->stock_version,
             'items' => [[
                 'id' => $item->id,
                 'is_active' => true,
@@ -207,6 +239,7 @@ test('adjustments reject reserved sacks without changing stock', function () {
     $this->actingAs($user)
         ->post(route('products.stock-adjustments.store', $volume->offer->product), [
             'volume_id' => $volume->id,
+            'expected_version' => $volume->fresh()->stock_version,
             'items' => [[
                 'id' => $item->id,
                 'is_active' => true,
@@ -232,6 +265,7 @@ test('adjustments reject a recount that does not change the sack', function () {
     $this->actingAs($user)
         ->post(route('products.stock-adjustments.store', $volume->offer->product), [
             'volume_id' => $volume->id,
+            'expected_version' => $volume->fresh()->stock_version,
             'items' => [[
                 'id' => $item->id,
                 'is_active' => true,
@@ -255,6 +289,7 @@ test('adjustments are idempotent', function () {
     $item = $volume->items->sole();
     $payload = [
         'volume_id' => $volume->id,
+        'expected_version' => $volume->fresh()->stock_version,
         'items' => [[
             'id' => $item->id,
             'is_active' => true,
