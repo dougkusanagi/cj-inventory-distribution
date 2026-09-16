@@ -102,11 +102,19 @@ function formValue(data: FormData, name: string): string {
 }
 
 function paginationLabel(label: string): string {
-    if (label.includes('Previous') || label.includes('laquo')) {
+    if (
+        label === 'pagination.previous' ||
+        label.includes('Previous') ||
+        label.includes('laquo')
+    ) {
         return 'Anterior';
     }
 
-    if (label.includes('Next') || label.includes('raquo')) {
+    if (
+        label === 'pagination.next' ||
+        label.includes('Next') ||
+        label.includes('raquo')
+    ) {
         return 'Próxima';
     }
 
@@ -361,6 +369,7 @@ function ProductClassification({ product }: { product: Product }) {
     const productLine = product.line;
 
     const classifications = [
+        product.is_active ? 'Ativo' : 'Inativo',
         `Grade: ${stockOfferType ? stockOfferTypeLabels[stockOfferType] : 'Sem oferta'}`,
         productLine ? productLineLabels[productLine] : null,
         product.category?.name ?? null,
@@ -443,19 +452,21 @@ function ProductCard({
                     <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
                         {product.notes ?? 'Nenhuma observação registrada.'}
                     </p>
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-card-foreground">
-                            {product.total_quantity ?? 0} peças
+                    <div className="grid gap-1 text-sm">
+                        <span className="font-semibold text-card-foreground">
+                            {product.available_quantity ?? 0} peças disponíveis
                         </span>
-                        {product.stock_volume_count !== undefined &&
-                        product.stock_volume_count > 0 ? (
-                            <span className="text-xs text-muted-foreground">
-                                · {product.stock_volume_count}{' '}
-                                {product.stock_volume_count === 1
-                                    ? 'saco'
-                                    : 'sacos'}
-                            </span>
-                        ) : null}
+                        <span className="text-xs text-muted-foreground">
+                            Físico: {product.physical_quantity ?? 0} peças ·{' '}
+                            {product.physical_stock_volume_count ?? 0}{' '}
+                            {(product.physical_stock_volume_count ?? 0) === 1
+                                ? 'saco'
+                                : 'sacos'}
+                            {(product.reserved_quantity ?? 0) > 0 &&
+                                ` · Reservado: ${product.reserved_quantity}`}
+                            {(product.consumed_quantity ?? 0) > 0 &&
+                                ` · Baixado: ${product.consumed_quantity}`}
+                        </span>
                         <Button
                             variant="ghost"
                             size="icon"
@@ -508,7 +519,7 @@ function ProductTable({
                             scope="col"
                             className="h-12 px-5 text-left text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase"
                         >
-                            Estoque total
+                            Estoque físico e disponível
                         </th>
                         <th scope="col" className="h-12 px-5">
                             <span className="sr-only">Ações</span>
@@ -569,20 +580,29 @@ function ProductTable({
                             </td>
                             <td className="block p-0 lg:table-cell lg:px-5 lg:py-4 lg:align-middle">
                                 <span className="mb-1 block text-[10px] font-semibold tracking-[0.16em] text-muted-foreground uppercase lg:hidden">
-                                    Estoque total
+                                    Estoque físico e disponível
                                 </span>
-                                {product.total_quantity !== null &&
-                                product.total_quantity !== undefined ? (
+                                {product.physical_quantity !== undefined ? (
                                     <>
                                         <p className="font-semibold text-card-foreground">
-                                            {product.total_quantity}
+                                            {product.available_quantity ?? 0}{' '}
+                                            disponíveis
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            {product.stock_volume_count !==
-                                                undefined &&
-                                            product.stock_volume_count > 0
-                                                ? `${product.stock_volume_count} ${product.stock_volume_count === 1 ? 'saco' : 'sacos'}`
-                                                : 'unidades'}
+                                            Físico: {product.physical_quantity}{' '}
+                                            peças ·{' '}
+                                            {product.available_stock_volume_count ??
+                                                0}{' '}
+                                            {(product.available_stock_volume_count ??
+                                                0) === 1
+                                                ? 'saco disponível'
+                                                : 'sacos disponíveis'}
+                                            {(product.reserved_quantity ?? 0) >
+                                                0 &&
+                                                ` · Reservado: ${product.reserved_quantity}`}
+                                            {(product.consumed_quantity ?? 0) >
+                                                0 &&
+                                                ` · Baixado: ${product.consumed_quantity}`}
                                         </p>
                                     </>
                                 ) : (
@@ -889,6 +909,16 @@ export default function ProductsIndex({
                         <Search />
                         Filtrar
                     </Button>
+                    {hasAppliedFilters && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={clearFilters}
+                        >
+                            <X />
+                            Limpar filtros
+                        </Button>
+                    )}
                 </form>
 
                 {products.data.length > 0 ? (
@@ -999,9 +1029,11 @@ export default function ProductsIndex({
                     >
                         {products.links.map((link) => {
                             const isPrevious =
+                                link.label === 'pagination.previous' ||
                                 link.label.includes('Previous') ||
                                 link.label.includes('laquo');
                             const isNext =
+                                link.label === 'pagination.next' ||
                                 link.label.includes('Next') ||
                                 link.label.includes('raquo');
 

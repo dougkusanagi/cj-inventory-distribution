@@ -3,6 +3,7 @@
 use App\Enums\ProductLine;
 use App\Enums\StockOfferType;
 use App\Models\Category;
+use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\StockOffer;
@@ -50,7 +51,7 @@ test('authenticated users can view the product catalog', function () {
         );
 });
 
-test('product catalog filters names by prefix, category, line, and image presence', function () {
+test('product catalog filters names, category, line, and image presence', function () {
     Storage::fake('public');
     $user = User::factory()->create();
     $category = Category::factory()->create(['name' => 'Calça']);
@@ -79,6 +80,60 @@ test('product catalog filters names by prefix, category, line, and image presenc
             ->where('filters.category', $category->id)
             ->where('filters.line', 'slim')
             ->where('filters.image', 'with'));
+});
+
+test('product catalog searches by name, model, and internal code', function () {
+    $user = User::factory()->create();
+    $nameMatch = Product::factory()->create(['name' => 'CALÇA pesquisável']);
+    $modelMatch = Product::factory()->create(['name' => 'Outra peça', 'model' => '2451']);
+    $codeMatch = Product::factory()->create(['name' => 'Mais uma peça', 'code' => 'CJ-000123']);
+    Product::factory()->create(['name' => 'Sem correspondência']);
+
+    $this->actingAs($user)
+        ->get(route('products.index', ['search' => '2451']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('products.data', 1)
+            ->where('products.data.0.id', $modelMatch->id));
+
+    $this->actingAs($user)
+        ->get(route('products.index', ['search' => 'CJ-000123']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('products.data', 1)
+            ->where('products.data.0.id', $codeMatch->id));
+
+    $this->actingAs($user)
+        ->get(route('products.index', ['search' => 'calca']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('products.data', 1)
+            ->where('products.data.0.id', $nameMatch->id));
+});
+
+test('product catalog labels physical, reserved, consumed, and available stock separately', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $offer = StockOffer::factory()->replenishment()->for($product)->create();
+    $offer->stockVolumes()->create(['total_quantity' => 10]);
+    $offer->stockVolumes()->create([
+        'total_quantity' => 5,
+        'current_order_id' => Order::factory()->create()->id,
+    ]);
+    $offer->stockVolumes()->create([
+        'total_quantity' => 7,
+        'consumed_at' => now(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('products.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('products.data.0.id', $product->id)
+            ->where('products.data.0.total_quantity', 22)
+            ->where('products.data.0.physical_quantity', 15)
+            ->where('products.data.0.available_quantity', 10)
+            ->where('products.data.0.reserved_quantity', 5)
+            ->where('products.data.0.consumed_quantity', 7)
+            ->where('products.data.0.stock_volume_count', 3)
+            ->where('products.data.0.physical_stock_volume_count', 2)
+            ->where('products.data.0.available_stock_volume_count', 1));
 });
 
 test('product catalog paginates filtered products', function () {

@@ -19,6 +19,7 @@ use App\Http\Requests\Orders\StoreOrderRequest;
 use App\Http\Requests\Orders\UpdateOrderRequest;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Product;
 use App\Models\StockOfferVolume;
 use App\Models\StockOfferVolumeItem;
 use Illuminate\Database\Eloquent\Builder;
@@ -94,7 +95,7 @@ class OrderController extends Controller
     public function show(Order $order): Response
     {
         Gate::authorize('view', $order);
-        $order->load(['items', 'events.actor']);
+        $order->load(['items.product.media', 'events.actor']);
 
         return Inertia::render('orders/show', [
             'order' => $this->orderDetails($order),
@@ -104,7 +105,7 @@ class OrderController extends Controller
     public function edit(Order $order): Response
     {
         Gate::authorize('update', $order);
-        $order->load(['items', 'events.actor']);
+        $order->load(['items.product.media', 'events.actor']);
 
         return Inertia::render('orders/edit', [
             'order' => $this->orderDetails($order),
@@ -273,6 +274,7 @@ class OrderController extends Controller
                 'product_code' => $item->product_code_snapshot,
                 'product_name' => $item->product_name_snapshot,
                 'product_model' => $item->product_model_snapshot,
+                'image' => $this->orderItemImage($item),
                 'category' => $item->category_snapshot,
                 'line' => $item->line_snapshot,
                 'offer_type' => $item->offer_type_snapshot,
@@ -293,6 +295,32 @@ class OrderController extends Controller
                 'created_at' => $event->created_at->toISOString(),
             ])->values()->all(),
         ];
+    }
+
+    private function orderItemImage(OrderItem $item): ?string
+    {
+        $product = $item->relationLoaded('product') ? $item->product : null;
+        $media = $product?->relationLoaded('media')
+            ? $product->media
+                ->where('collection_name', Product::MEDIA_COLLECTION)
+                ->sortBy('order_column')
+                ->first()
+            : null;
+
+        if ($media === null) {
+            return null;
+        }
+
+        $url = $media->hasGeneratedConversion('thumb')
+            ? $media->getUrl('thumb')
+            : $media->getUrl();
+        $parts = parse_url($url);
+
+        if ($parts === false || ! isset($parts['path'])) {
+            return $url;
+        }
+
+        return $parts['path'].(isset($parts['query']) ? '?'.$parts['query'] : '');
     }
 
     private function updateProgress(

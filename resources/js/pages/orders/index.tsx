@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Eye, Plus, Search } from 'lucide-react';
+import { Eye, Plus, Search, X } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,26 @@ function statusVariant(
     if (status === 'canceled') return 'destructive';
 
     return 'outline';
+}
+
+function paginationLabel(label: string): string {
+    if (
+        label === 'pagination.previous' ||
+        label.includes('Previous') ||
+        label.includes('laquo')
+    ) {
+        return 'Anterior';
+    }
+
+    if (
+        label === 'pagination.next' ||
+        label.includes('Next') ||
+        label.includes('raquo')
+    ) {
+        return 'Próxima';
+    }
+
+    return label;
 }
 
 export default function OrdersIndex({
@@ -104,6 +124,22 @@ export default function OrdersIndex({
                         <Search />
                         Filtrar
                     </Button>
+                    {(filters.search !== '' || filters.status !== '') && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() =>
+                                router.get(
+                                    index.url(),
+                                    { search: '', status: '' },
+                                    { preserveState: true, replace: true },
+                                )
+                            }
+                        >
+                            <X />
+                            Limpar filtros
+                        </Button>
+                    )}
                 </form>
                 <div className="grid gap-3">
                     {orders.data.map((order) => (
@@ -174,11 +210,7 @@ export default function OrdersIndex({
                                     size="sm"
                                 >
                                     <Link href={link.url}>
-                                        {link.label
-                                            .replace('&laquo;', '')
-                                            .replace('&raquo;', '')
-                                            .replace('Previous', 'Anterior')
-                                            .replace('Next', 'Próxima')}
+                                        {paginationLabel(link.label)}
                                     </Link>
                                 </Button>
                             ),

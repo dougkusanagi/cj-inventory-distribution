@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\CatalogSetting;
+use App\Models\Category;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
@@ -28,12 +30,12 @@ test('renders database products with available stock in the public catalog', fun
     $response->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('catalog')
         ->where('canPlaceOrder', true)
-        ->has('products', 1)
-        ->where('products.0.name', 'Produto persistido')
-        ->where('products.0.code', 'CJ-BANCO')
-        ->where('products.0.type', 'Reposição')
-        ->where('products.0.volumes.0.pieces', 12)
-        ->where('products.0.volumes.0.sizes', [[
+        ->has('products.data', 1)
+        ->where('products.data.0.name', 'Produto persistido')
+        ->where('products.data.0.code', 'CJ-BANCO')
+        ->where('products.data.0.type', 'Reposição')
+        ->where('products.data.0.volumes.0.pieces', 12)
+        ->where('products.data.0.volumes.0.sizes', [[
             'size' => 'M',
             'quantity' => 12,
         ]])
@@ -56,7 +58,7 @@ test('does not expose new grade products in the public catalog', function () {
 
     $response->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('catalog')
-        ->has('products', 0)
+        ->has('products.data', 0)
     );
 });
 
@@ -72,7 +74,7 @@ test('catalog uses the configured public URL for product images', function () {
 
     $this->get(route('catalog'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('products.0.image', $media->getUrl('thumb')),
+            ->where('products.data.0.image', $media->getUrl('thumb')),
         );
 });
 
@@ -89,10 +91,69 @@ test('catalog exposes every product image in display order', function () {
 
     $this->get(route('catalog'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('products.0.image', $firstMedia->getUrl('thumb'))
-            ->where('products.0.images', [
+            ->where('products.data.0.image', $firstMedia->getUrl('thumb'))
+            ->where('products.data.0.images', [
                 $firstMedia->getUrl('thumb'),
                 $secondMedia->getUrl('thumb'),
             ]),
         );
+});
+
+test('catalog filters and paginates products on the server', function () {
+    $category = Category::factory()->create(['name' => 'Calças']);
+    $accentedProduct = Product::factory()->create(['name' => 'CALÇA ACENTUADA']);
+    $accentedOffer = StockOffer::factory()->replenishment()->for($accentedProduct)->create();
+    StockOfferVolume::factory()->for($accentedOffer)->withTotal(4)->create();
+
+    foreach (range(1, 13) as $index) {
+        $product = Product::factory()->create([
+            'name' => "Calça paginada {$index}",
+            'category_id' => $category->id,
+            'model' => "MODELO-{$index}",
+        ]);
+        $offer = StockOffer::factory()->replenishment()->for($product)->create();
+        StockOfferVolume::factory()->for($offer)->withTotal(4)->create();
+    }
+
+    $this->get(route('catalog', [
+        'search' => 'MODELO-13',
+        'category' => $category->id,
+        'line' => 'all',
+    ]))->assertInertia(fn (Assert $page) => $page
+        ->has('products.data', 1)
+        ->where('products.data.0.model', 'MODELO-13')
+        ->where('filters.search', 'MODELO-13')
+        ->where('filters.category', $category->id));
+
+    $this->get(route('catalog', ['search' => 'CALCA ACENTUADA']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('products.data', 1)
+            ->where('products.data.0.id', $accentedProduct->id));
+
+    $this->get(route('catalog', ['page' => 2]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('products.data', 2)
+            ->where('products.meta.current_page', 2)
+            ->where('products.meta.last_page', 2)
+            ->where('products.meta.next_page_url', null));
+
+    $this->get(route('catalog'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('products.meta.current_page', 1)
+            ->where('products.meta.next_page_url', route('catalog', ['page' => 2])));
+});
+
+test('catalog keeps selected unavailable sacks identifiable for the bag', function () {
+    $product = Product::factory()->create();
+    $offer = StockOffer::factory()->replenishment()->for($product)->create();
+    $available = StockOfferVolume::factory()->for($offer)->withTotal(4)->create();
+    $reserved = StockOfferVolume::factory()->for($offer)->withTotal(5)->create([
+        'current_order_id' => Order::factory()->create()->id,
+    ]);
+
+    $this->get(route('catalog', ['bag' => [$available->id, $reserved->id]]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('bag.unavailable_volume_ids', [$reserved->id])
+            ->where('bag.products.0.volumes.0.id', $available->id)
+            ->where('bag.products.0.id', $product->id));
 });

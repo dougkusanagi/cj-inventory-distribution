@@ -12,6 +12,7 @@ use App\Http\Requests\Products\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Category;
 use App\Models\Product;
+use App\Support\NormalizedSearch;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\RedirectResponse;
@@ -61,7 +62,9 @@ class ProductController extends Controller
                 'latestOffer.stockVolumes.items:id,stock_offer_volume_id,size,sort_order,is_active,quantity',
                 'media',
             ])
-            ->when($search !== '', fn (Builder $query) => $query->where('name', 'like', $search.'%'))
+            ->when($search !== '', function (Builder $query) use ($search): void {
+                NormalizedSearch::apply($query, $search, ['name', 'model', 'code']);
+            })
             ->when($categoryId > 0, fn (Builder $query) => $query->where('category_id', $categoryId))
             ->when(in_array($line, array_column(ProductLine::cases(), 'value'), true), fn (Builder $query) => $query->where('line', $line))
             ->when(in_array($stockOfferType, array_column(StockOfferType::cases(), 'value'), true), fn (Builder $query) => $query->whereHas('latestOffer', fn (Builder $query) => $query->where('type', $stockOfferType)))

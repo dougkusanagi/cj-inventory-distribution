@@ -9,6 +9,8 @@ use App\Models\OrderEvent;
 use App\Models\Product;
 use App\Models\StockOfferVolume;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
 function availableOrderVolume(): StockOfferVolume
@@ -69,6 +71,28 @@ test('authenticated users can create an order that snapshots and reserves sacks'
         ->and($order->items->sole()->product_name_snapshot)->toBe($volume->offer->product->name)
         ->and($volume->refresh()->current_order_id)->toBe($order->id)
         ->and($volume->code)->toBe('SC-'.str_pad((string) $volume->id, 6, '0', STR_PAD_LEFT));
+});
+
+test('order details include the product thumbnail for conference', function () {
+    Storage::fake('public');
+    $volume = availableOrderVolume();
+    $media = $volume->offer->product
+        ->addMedia(UploadedFile::fake()->image('produto.jpg'))
+        ->toMediaCollection(Product::MEDIA_COLLECTION);
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('orders.store'), [
+            'store_name' => 'Loja Centro',
+            'requester_name' => 'Ana',
+            'volume_ids' => [$volume->id],
+        ]);
+
+    $order = Order::query()->sole();
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('orders.show', $order))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('order.items.0.image', parse_url($media->getUrl('thumb'), PHP_URL_PATH)));
 });
 
 test('a reserved sack cannot be ordered twice', function () {

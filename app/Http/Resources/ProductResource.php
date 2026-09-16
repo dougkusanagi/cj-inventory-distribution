@@ -9,7 +9,6 @@ use App\Models\StockOfferVolume;
 use App\Models\StockOfferVolumeItem;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Collection;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
@@ -31,8 +30,22 @@ class ProductResource extends JsonResource
         $totalQuantity = $offer === null
             ? null
             : (int) $stockVolumes->sum('total_quantity');
+        $availableVolumes = $stockVolumes->filter(fn (StockOfferVolume $volume): bool => $volume->total_quantity > 0
+            && $volume->current_order_id === null
+            && $volume->consumed_at === null);
+        $physicalVolumes = $stockVolumes->filter(fn (StockOfferVolume $volume): bool => $volume->total_quantity > 0
+            && $volume->consumed_at === null);
+        $reservedQuantity = (int) $stockVolumes
+            ->filter(fn (StockOfferVolume $volume): bool => $volume->current_order_id !== null
+                && $volume->consumed_at === null)
+            ->sum('total_quantity');
+        $consumedQuantity = (int) $stockVolumes
+            ->filter(fn (StockOfferVolume $volume): bool => $volume->consumed_at !== null)
+            ->sum('total_quantity');
+        $availableQuantity = (int) $availableVolumes->sum('total_quantity');
+        $physicalQuantity = (int) $physicalVolumes->sum('total_quantity');
         $hasPositiveStock = ($totalQuantity ?? 0) > 0;
-        $hasAvailableVolumes = $this->hasAvailablePhysicalVolume($stockVolumes);
+        $hasAvailableVolumes = $availableVolumes->isNotEmpty();
 
         $availableForDistribution = $this->is_active
             && $offer !== null
@@ -73,7 +86,13 @@ class ProductResource extends JsonResource
             'distribution_status' => $this->distributionStatus($offer, $hasPositiveStock, $hasAvailableVolumes),
             'stock_offer_type' => $offer?->type?->value,
             'total_quantity' => $totalQuantity,
+            'physical_quantity' => $physicalQuantity,
+            'available_quantity' => $availableQuantity,
+            'reserved_quantity' => $reservedQuantity,
+            'consumed_quantity' => $consumedQuantity,
             'stock_volume_count' => $stockVolumes->count(),
+            'physical_stock_volume_count' => $physicalVolumes->count(),
+            'available_stock_volume_count' => $availableVolumes->count(),
             'stock_volumes' => $stockVolumes
                 ->map(fn (StockOfferVolume $volume): array => $this->stockVolumeData($volume))
                 ->values()
@@ -108,18 +127,6 @@ class ProductResource extends JsonResource
                 ])->values()->all()
                 : [],
         ];
-    }
-
-    /**
-     * Determine availability when the offer has physical sacks.
-     *
-     * @param  Collection<int, StockOfferVolume>  $stockVolumes
-     */
-    private function hasAvailablePhysicalVolume(Collection $stockVolumes): bool
-    {
-        return $stockVolumes->contains(fn (StockOfferVolume $volume): bool => $volume->total_quantity > 0
-            && $volume->current_order_id === null
-            && $volume->consumed_at === null);
     }
 
     private function distributionStatus(?StockOffer $offer, bool $hasPositiveStock, bool $hasAvailableVolumes): string

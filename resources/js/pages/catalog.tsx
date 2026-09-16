@@ -1,4 +1,4 @@
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     Check,
     MessageCircle,
@@ -8,7 +8,7 @@ import {
     Trash2,
     X,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import CatalogOrderController from '@/actions/App/Http/Controllers/CatalogOrderController';
 import AppearanceToggleTab from '@/components/appearance-tabs';
@@ -44,17 +44,38 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
-import type { CatalogPreviewProduct } from '@/lib/catalog-preview';
+import type {
+    CatalogBagStatus,
+    CatalogPagination,
+    CatalogPreviewProduct,
+} from '@/lib/catalog-preview';
 import { cn } from '@/lib/utils';
-import { dashboard, login } from '@/routes';
+import { catalog as catalogRoute, dashboard, login } from '@/routes';
 
 const CATALOG_BAG_STORAGE_KEY = 'catalog-bag';
+
+type CatalogBagSnapshot = {
+    id: number;
+    productName?: string;
+    productCode?: string;
+    volumeName?: string;
+    pieces?: number;
+};
 
 function isValidStoredVolumeId(value: unknown): value is number {
     return typeof value === 'number' && Number.isInteger(value) && value > 0;
 }
 
-function readStoredVolumeIds(): number[] {
+function isStoredBagSnapshot(value: unknown): value is CatalogBagSnapshot {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        'id' in value &&
+        isValidStoredVolumeId(value.id)
+    );
+}
+
+function readStoredBag(): CatalogBagSnapshot[] {
     if (typeof window === 'undefined') {
         return [];
     }
@@ -70,15 +91,25 @@ function readStoredVolumeIds(): number[] {
 
         const parsedValue: unknown = JSON.parse(storedValue);
 
-        return Array.isArray(parsedValue)
-            ? [...new Set(parsedValue.filter(isValidStoredVolumeId))]
-            : [];
+        if (!Array.isArray(parsedValue)) {
+            return [];
+        }
+
+        const snapshots = parsedValue.flatMap((value) => {
+            if (isValidStoredVolumeId(value)) {
+                return [{ id: value }];
+            }
+
+            return isStoredBagSnapshot(value) ? [value] : [];
+        });
+
+        return [...new Map(snapshots.map((item) => [item.id, item])).values()];
     } catch {
         return [];
     }
 }
 
-function persistVolumeIds(volumeIds: number[]): void {
+function persistBag(snapshots: CatalogBagSnapshot[]): void {
     if (typeof window === 'undefined') {
         return;
     }
@@ -86,19 +117,11 @@ function persistVolumeIds(volumeIds: number[]): void {
     try {
         window.localStorage.setItem(
             CATALOG_BAG_STORAGE_KEY,
-            JSON.stringify(volumeIds),
+            JSON.stringify(snapshots),
         );
     } catch {
         return;
     }
-}
-
-function normalize(value: string) {
-    return value
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLocaleLowerCase('pt-BR')
-        .trim();
 }
 
 function CatalogFilter({
@@ -111,7 +134,7 @@ function CatalogFilter({
     id: string;
     label: string;
     value: string;
-    options: string[];
+    options: Array<{ value: string; label: string }>;
     onChange: (value: string) => void;
 }) {
     return (
@@ -127,8 +150,8 @@ function CatalogFilter({
                 <SelectContent>
                     <SelectItem value="all">Todas as opções</SelectItem>
                     {options.map((option) => (
-                        <SelectItem key={option} value={option}>
-                            {option}
+                        <SelectItem key={option.value} value={option.value}>
+                            {option.label}
                         </SelectItem>
                     ))}
                 </SelectContent>
@@ -157,7 +180,6 @@ function ProductPhoto({
                 <ImageCarousel
                     images={images}
                     alt={product.name}
-                    fallbackImage={images[0]}
                     previousTestId={`catalog-product-image-previous-${product.id}`}
                     nextTestId={`catalog-product-image-next-${product.id}`}
                     imageTestId={`catalog-product-image-${product.id}`}
@@ -173,12 +195,14 @@ function ProductPhoto({
                     Produto sem foto
                 </button>
             )}
-            <Badge
-                variant="secondary"
-                className="absolute top-3 left-3 bg-card text-foreground"
-            >
-                {product.line}
-            </Badge>
+            {product.line && (
+                <Badge
+                    variant="secondary"
+                    className="absolute top-3 left-3 bg-card text-foreground"
+                >
+                    {product.line}
+                </Badge>
+            )}
             <span className="absolute right-3 bottom-3 rounded-md bg-card px-2.5 py-1 text-xs font-medium">
                 {product.category}
             </span>
@@ -211,7 +235,10 @@ function ProductVolumeOptions({
 }: {
     product: CatalogPreviewProduct;
     selectedVolumeIds: number[];
-    onAddVolume: (id: number) => void;
+    onAddVolume: (
+        product: CatalogPreviewProduct,
+        volume: CatalogPreviewProduct['volumes'][number],
+    ) => void;
     onRemoveVolume: (id: number) => void;
     className?: string;
 }) {
@@ -249,7 +276,7 @@ function ProductVolumeOptions({
                                 onClick={() =>
                                     selected
                                         ? onRemoveVolume(volume.id)
-                                        : onAddVolume(volume.id)
+                                        : onAddVolume(product, volume)
                                 }
                                 aria-label={
                                     selected
@@ -300,10 +327,14 @@ type CatalogBagItem = {
 
 function BagItems({
     bag,
+    unavailableVolumeIds,
+    bagSnapshots,
     onRemoveVolume,
     className,
 }: {
     bag: CatalogBagItem[];
+    unavailableVolumeIds: number[];
+    bagSnapshots: Record<number, CatalogBagSnapshot>;
     onRemoveVolume: (id: number) => void;
     className?: string;
 }) {
@@ -314,40 +345,89 @@ function BagItems({
                 className,
             )}
         >
-            {bag.length === 0 ? (
+            {bag.length === 0 && unavailableVolumeIds.length === 0 ? (
                 <div className="grid justify-items-center gap-3 py-10 text-center">
                     <ShoppingBag className="size-10 text-muted-foreground" />
                     <p>Sua sacola está vazia.</p>
                 </div>
             ) : (
-                bag.map(({ product, volume }) => (
-                    <article
-                        key={volume.id}
-                        className="mb-3 flex items-start justify-between gap-3 rounded-xl border border-border p-4"
-                    >
-                        <div className="grid min-w-0 gap-1">
-                            <h3 className="font-semibold">{product.name}</h3>
-                            <p className="text-sm">
-                                {volume.name} · {volume.pieces} peças
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                                {sizeComposition(volume.sizes) ??
-                                    volume.sizes
-                                        .map(({ size }) => size)
-                                        .join(' · ')}
-                            </p>
-                        </div>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-11 shrink-0"
-                            onClick={() => onRemoveVolume(volume.id)}
-                            aria-label={`Remover ${volume.name} de ${product.name}`}
+                <>
+                    {unavailableVolumeIds.map((volumeId) => {
+                        const snapshot = bagSnapshots[volumeId];
+
+                        return (
+                            <article
+                                key={`unavailable-${volumeId}`}
+                                className="mb-3 flex items-start justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4"
+                                role="alert"
+                            >
+                                <div className="grid min-w-0 gap-1">
+                                    <h3 className="font-semibold text-destructive">
+                                        {snapshot?.productName ??
+                                            `Saco selecionado #${volumeId}`}
+                                    </h3>
+                                    {(snapshot?.productCode ||
+                                        snapshot?.volumeName) && (
+                                        <p className="text-sm font-medium">
+                                            {[
+                                                snapshot.productCode,
+                                                snapshot.volumeName,
+                                                snapshot.pieces === undefined
+                                                    ? null
+                                                    : `${snapshot.pieces} peças`,
+                                            ]
+                                                .filter(Boolean)
+                                                .join(' · ')}
+                                        </p>
+                                    )}
+                                    <p className="text-sm text-muted-foreground">
+                                        Este saco deixou de estar disponível.
+                                        Remova-o para continuar.
+                                    </p>
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="size-11 shrink-0 text-destructive hover:bg-destructive/10"
+                                    onClick={() => onRemoveVolume(volumeId)}
+                                    aria-label={`Remover saco indisponível ${volumeId} da sacola`}
+                                >
+                                    <Trash2 />
+                                </Button>
+                            </article>
+                        );
+                    })}
+                    {bag.map(({ product, volume }) => (
+                        <article
+                            key={volume.id}
+                            className="mb-3 flex items-start justify-between gap-3 rounded-xl border border-border p-4"
                         >
-                            <Trash2 />
-                        </Button>
-                    </article>
-                ))
+                            <div className="grid min-w-0 gap-1">
+                                <h3 className="font-semibold">
+                                    {product.name}
+                                </h3>
+                                <p className="text-sm">
+                                    {volume.name} · {volume.pieces} peças
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                    {sizeComposition(volume.sizes) ??
+                                        volume.sizes
+                                            .map(({ size }) => size)
+                                            .join(' · ')}
+                                </p>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-11 shrink-0"
+                                onClick={() => onRemoveVolume(volume.id)}
+                                aria-label={`Remover ${volume.name} de ${product.name}`}
+                            >
+                                <Trash2 />
+                            </Button>
+                        </article>
+                    ))}
+                </>
             )}
         </div>
     );
@@ -355,10 +435,12 @@ function BagItems({
 
 function CatalogCheckout({
     bag,
+    unavailableVolumeIds,
     canPlaceOrder,
     onOrderConfirmed,
 }: {
     bag: CatalogBagItem[];
+    unavailableVolumeIds: number[];
     canPlaceOrder: boolean;
     onOrderConfirmed: () => void;
 }) {
@@ -519,6 +601,13 @@ function CatalogCheckout({
             <InputError message={form.errors.order} />
             <InputError message={form.errors.idempotency_key} />
 
+            {unavailableVolumeIds.length > 0 && (
+                <p className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm leading-6 text-destructive">
+                    Remova os sacos indisponíveis da sacola antes de registrar o
+                    pedido.
+                </p>
+            )}
+
             {!canPlaceOrder && (
                 <p className="rounded-xl bg-muted p-3 text-sm leading-6 text-muted-foreground">
                     Os pedidos estão temporariamente indisponíveis. A equipe
@@ -529,7 +618,12 @@ function CatalogCheckout({
             <Button
                 type="submit"
                 className="h-12 w-full"
-                disabled={form.processing || bag.length === 0 || !canPlaceOrder}
+                disabled={
+                    form.processing ||
+                    bag.length === 0 ||
+                    unavailableVolumeIds.length > 0 ||
+                    !canPlaceOrder
+                }
             >
                 <MessageCircle />
                 {form.processing ? 'Registrando pedido...' : 'Registrar pedido'}
@@ -544,67 +638,202 @@ function CatalogCheckout({
 
 export default function Catalog({
     products,
+    filters,
+    categories,
+    lines,
+    bag: bagStatus,
     canPlaceOrder,
 }: {
-    products: CatalogPreviewProduct[];
+    products: CatalogPagination;
+    filters: {
+        search: string;
+        category: number | null;
+        line: string;
+    };
+    categories: Array<{ id: number; name: string }>;
+    lines: Array<{ value: string; label: string }>;
+    bag: CatalogBagStatus;
     canPlaceOrder: boolean;
 }) {
     const { auth } = usePage().props;
     const isMobile = useIsMobile();
-    const [query, setQuery] = useState('');
-    const [category, setCategory] = useState('all');
-    const [line, setLine] = useState('all');
+    const [query, setQuery] = useState(filters.search);
+    const [category, setCategory] = useState(
+        filters.category?.toString() ?? 'all',
+    );
+    const [line, setLine] = useState(filters.line || 'all');
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] =
         useState<CatalogPreviewProduct | null>(null);
     const [selectedVolumeIds, setSelectedVolumeIds] = useState<number[]>([]);
+    const [bagSnapshots, setBagSnapshots] = useState<
+        Record<number, CatalogBagSnapshot>
+    >({});
+    const [unavailableVolumeIds, setUnavailableVolumeIds] = useState<number[]>(
+        bagStatus.unavailable_volume_ids,
+    );
+    const [loadedProducts, setLoadedProducts] = useState(products.data);
+    const [knownProducts, setKnownProducts] = useState(products.data);
     const [isBagHydrated, setIsBagHydrated] = useState(false);
     const [bagOpen, setBagOpen] = useState(false);
     const [feedback, setFeedback] = useState('');
+    const [loadingMore, setLoadingMore] = useState(false);
+    const filterKey = JSON.stringify({
+        search: filters.search,
+        category: filters.category,
+        line: filters.line,
+    });
+    const previousFilterKey = useRef(filterKey);
+    const loadedPage = useRef(products.meta.current_page);
+    const hydratedBag = useRef(false);
+    const filterEffectMounted = useRef(false);
+    const selectedVolumeIdsRef = useRef<number[]>([]);
 
     useEffect(() => {
-        const availableVolumeIds = new Set(
-            products.flatMap((product) =>
-                product.volumes.map((volume) => volume.id),
+        if (hydratedBag.current) {
+            return;
+        }
+
+        hydratedBag.current = true;
+        const storedBag = readStoredBag();
+        const storedVolumeIds = storedBag.map(({ id }) => id);
+
+        setSelectedVolumeIds(storedVolumeIds);
+        setBagSnapshots(
+            Object.fromEntries(
+                storedBag.map((snapshot) => [snapshot.id, snapshot]),
             ),
         );
-        const storedVolumeIds = readStoredVolumeIds().filter((id) =>
-            availableVolumeIds.has(id),
-        );
-
-        setSelectedVolumeIds((currentVolumeIds) => [
-            ...new Set([
-                ...storedVolumeIds,
-                ...currentVolumeIds.filter((id) => availableVolumeIds.has(id)),
-            ]),
-        ]);
+        selectedVolumeIdsRef.current = storedVolumeIds;
         setIsBagHydrated(true);
-    }, [products]);
+
+        if (storedVolumeIds.length > 0) {
+            router.reload({
+                data: { bag: storedVolumeIds },
+                only: ['bag'],
+            });
+        }
+    }, []);
 
     useEffect(() => {
+        setUnavailableVolumeIds(bagStatus.unavailable_volume_ids);
+    }, [bagStatus]);
+
+    useEffect(() => {
+        const currentPage = products.meta.current_page;
+        const isNewFilter = previousFilterKey.current !== filterKey;
+
+        setKnownProducts((currentProducts) => {
+            const productMap = new Map(
+                currentProducts.map((product) => [product.id, product]),
+            );
+
+            products.data.forEach((product) =>
+                productMap.set(product.id, product),
+            );
+            bagStatus.products.forEach((product) => {
+                const currentProduct = productMap.get(product.id);
+
+                productMap.set(
+                    product.id,
+                    currentProduct
+                        ? {
+                              ...currentProduct,
+                              volumes: [
+                                  ...currentProduct.volumes.filter(
+                                      (volume) =>
+                                          !product.volumes.some(
+                                              (bagVolume) =>
+                                                  bagVolume.id === volume.id,
+                                          ),
+                                  ),
+                                  ...product.volumes,
+                              ],
+                          }
+                        : product,
+                );
+            });
+
+            return [...productMap.values()];
+        });
+
+        if (isNewFilter || currentPage === 1) {
+            setLoadedProducts(products.data);
+        } else if (currentPage > loadedPage.current) {
+            setLoadedProducts((currentProducts) => {
+                const productMap = new Map(
+                    currentProducts.map((product) => [product.id, product]),
+                );
+
+                products.data.forEach((product) =>
+                    productMap.set(product.id, product),
+                );
+
+                return [...productMap.values()];
+            });
+        }
+
+        previousFilterKey.current = filterKey;
+        loadedPage.current = currentPage;
+    }, [bagStatus.products, filterKey, products]);
+
+    useEffect(() => {
+        if (!filterEffectMounted.current) {
+            filterEffectMounted.current = true;
+
+            return;
+        }
+
+        const timeout = window.setTimeout(() => {
+            router.get(
+                catalogRoute.url({
+                    query: {
+                        search: query || undefined,
+                        category:
+                            category === 'all' ? undefined : Number(category),
+                        line: line === 'all' ? undefined : line,
+                        bag: selectedVolumeIdsRef.current,
+                    },
+                }),
+                {},
+                {
+                    preserveScroll: true,
+                    preserveState: true,
+                    replace: true,
+                },
+            );
+        }, 300);
+
+        return () => window.clearTimeout(timeout);
+    }, [category, line, query]);
+
+    useEffect(() => {
+        selectedVolumeIdsRef.current = selectedVolumeIds;
+
         if (!isBagHydrated) {
             return;
         }
 
-        persistVolumeIds(selectedVolumeIds);
-    }, [isBagHydrated, selectedVolumeIds]);
+        persistBag(
+            selectedVolumeIds.map(
+                (id): CatalogBagSnapshot => bagSnapshots[id] ?? { id },
+            ),
+        );
+    }, [bagSnapshots, isBagHydrated, selectedVolumeIds]);
 
-    const filteredProducts = products.filter(
-        (product) =>
-            normalize(
-                `${product.name} ${product.model ?? ''} ${product.code}`,
-            ).includes(normalize(query)) &&
-            (category === 'all' || product.category === category) &&
-            (line === 'all' || product.line === line),
-    );
-    const bag: CatalogBagItem[] = products.flatMap((product) =>
+    const unavailableIds = new Set(unavailableVolumeIds);
+    const bag: CatalogBagItem[] = knownProducts.flatMap((product) =>
         product.volumes
-            .filter((volume) => selectedVolumeIds.includes(volume.id))
+            .filter(
+                (volume) =>
+                    selectedVolumeIds.includes(volume.id) &&
+                    !unavailableIds.has(volume.id),
+            )
             .map((volume) => ({ product, volume })),
     );
     const totalPieces = bag.reduce((sum, item) => sum + item.volume.pieces, 0);
-    const bagDescription = bag.length
-        ? `${bag.length} ${bag.length === 1 ? 'saco' : 'sacos'} · ${totalPieces} peças no total`
+    const bagDescription = selectedVolumeIds.length
+        ? `${selectedVolumeIds.length} ${selectedVolumeIds.length === 1 ? 'saco' : 'sacos'} · ${totalPieces} ${unavailableVolumeIds.length > 0 ? 'peças disponíveis' : 'peças no total'}`
         : 'Escolha os sacos para reabastecer sua loja.';
     const filterCount = [category, line].filter(
         (value) => value !== 'all',
@@ -617,7 +846,22 @@ export default function Catalog({
         setLine('all');
     }
 
-    function addVolume(id: number) {
+    function addVolume(
+        product: CatalogPreviewProduct,
+        volume: CatalogPreviewProduct['volumes'][number],
+    ) {
+        const id = volume.id;
+
+        setBagSnapshots((current) => ({
+            ...current,
+            [id]: {
+                id,
+                productName: product.name,
+                productCode: product.code,
+                volumeName: volume.name,
+                pieces: volume.pieces,
+            },
+        }));
         setSelectedVolumeIds((current) =>
             current.includes(id) ? current : [...current, id],
         );
@@ -628,13 +872,62 @@ export default function Catalog({
         setSelectedVolumeIds((current) =>
             current.filter((item) => item !== id),
         );
+        setUnavailableVolumeIds((current) =>
+            current.filter((item) => item !== id),
+        );
+        setBagSnapshots((current) => {
+            const next = { ...current };
+            delete next[id];
+
+            return next;
+        });
         setFeedback('Saco removido da sacola.');
     }
 
     function confirmOrder() {
         setSelectedVolumeIds([]);
+        setBagSnapshots({});
+        setUnavailableVolumeIds([]);
         setBagOpen(false);
         setFeedback('Pedido confirmado. A conversa do WhatsApp foi aberta.');
+    }
+
+    function loadMore() {
+        if (!products.meta.next_page_url || loadingMore) {
+            return;
+        }
+
+        setLoadingMore(true);
+        router.get(
+            products.meta.next_page_url,
+            { bag: selectedVolumeIdsRef.current },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                only: ['products'],
+                onSuccess: (page) => {
+                    const nextProducts = page.props
+                        .products as CatalogPagination;
+
+                    setLoadedProducts((currentProducts) => {
+                        const productMap = new Map(
+                            currentProducts.map((product) => [
+                                product.id,
+                                product,
+                            ]),
+                        );
+
+                        nextProducts.data.forEach((product) =>
+                            productMap.set(product.id, product),
+                        );
+
+                        return [...productMap.values()];
+                    });
+                    loadedPage.current = nextProducts.meta.current_page;
+                },
+                onFinish: () => setLoadingMore(false),
+            },
+        );
     }
 
     return (
@@ -674,12 +967,12 @@ export default function Catalog({
                                 variant="secondary"
                                 className="h-11 gap-2"
                                 onClick={() => setBagOpen(true)}
-                                aria-label={`Ver sacola, ${bag.length} sacos`}
+                                aria-label={`Ver sacola, ${selectedVolumeIds.length} sacos`}
                             >
                                 <ShoppingBag aria-hidden="true" />
                                 <span>Sacola</span>
                                 <span className="flex min-w-6 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-bold text-primary-foreground">
-                                    {bag.length}
+                                    {selectedVolumeIds.length}
                                 </span>
                             </Button>
                         </div>
@@ -756,26 +1049,20 @@ export default function Catalog({
                                     id="catalog-category"
                                     label="Categoria"
                                     value={category}
-                                    options={[
-                                        ...new Set(
-                                            products.map(
-                                                (product) => product.category,
-                                            ),
-                                        ),
-                                    ]}
+                                    options={categories.map((option) => ({
+                                        value: option.id.toString(),
+                                        label: option.name,
+                                    }))}
                                     onChange={setCategory}
                                 />
                                 <CatalogFilter
                                     id="catalog-line"
                                     label="Linha"
                                     value={line}
-                                    options={[
-                                        ...new Set(
-                                            products.map(
-                                                (product) => product.line,
-                                            ),
-                                        ),
-                                    ]}
+                                    options={lines.map((option) => ({
+                                        value: option.value,
+                                        label: option.label,
+                                    }))}
                                     onChange={setLine}
                                 />
                             </div>
@@ -788,9 +1075,9 @@ export default function Catalog({
                             className="text-sm text-muted-foreground"
                         >
                             <strong className="text-foreground">
-                                {filteredProducts.length}
+                                {products.meta.total}
                             </strong>{' '}
-                            {filteredProducts.length === 1
+                            {products.meta.total === 1
                                 ? 'produto encontrado'
                                 : 'produtos encontrados'}
                             {filterCount > 0 &&
@@ -806,7 +1093,7 @@ export default function Catalog({
                             </Button>
                         )}
                     </div>
-                    {filteredProducts.length === 0 ? (
+                    {loadedProducts.length === 0 ? (
                         <div className="grid justify-items-center gap-3 rounded-2xl border border-dashed border-border px-4 py-16 text-center">
                             <Search className="size-8 text-muted-foreground" />
                             <h2 className="text-xl font-semibold">
@@ -824,7 +1111,7 @@ export default function Catalog({
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
-                            {filteredProducts.map((product) => {
+                            {loadedProducts.map((product) => {
                                 const selectedCount = product.volumes.filter(
                                     (volume) =>
                                         selectedVolumeIds.includes(volume.id),
@@ -928,6 +1215,21 @@ export default function Catalog({
                             })}
                         </div>
                     )}
+                    {products.meta.current_page < products.meta.last_page && (
+                        <div className="mt-8 flex justify-center">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="h-11"
+                                onClick={loadMore}
+                                disabled={loadingMore}
+                            >
+                                {loadingMore
+                                    ? 'Carregando...'
+                                    : 'Carregar mais produtos'}
+                            </Button>
+                        </div>
+                    )}
                     <footer className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-6 text-sm text-muted-foreground">
                         <p>Crônicas Jeans · Distribuição de estoque</p>
                         <Link
@@ -982,7 +1284,7 @@ export default function Catalog({
                             )}
                             <DrawerFooter className="shrink-0 border-t border-border px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">
                                 <ProductSelectionActions
-                                    bagLength={bag.length}
+                                    bagLength={selectedVolumeIds.length}
                                     onReviewBag={() => {
                                         setSelectedProduct(null);
                                         setBagOpen(true);
@@ -1025,7 +1327,7 @@ export default function Catalog({
                             )}
                             <SheetFooter className="shrink-0 flex-col border-t border-border p-6 sm:flex-col sm:justify-start">
                                 <ProductSelectionActions
-                                    bagLength={bag.length}
+                                    bagLength={selectedVolumeIds.length}
                                     onReviewBag={() => {
                                         setSelectedProduct(null);
                                         setBagOpen(true);
@@ -1058,11 +1360,14 @@ export default function Catalog({
                             </DrawerHeader>
                             <BagItems
                                 bag={bag}
+                                unavailableVolumeIds={unavailableVolumeIds}
+                                bagSnapshots={bagSnapshots}
                                 onRemoveVolume={removeVolume}
                                 className="px-4 pb-5 sm:px-6"
                             />
                             <CatalogCheckout
                                 bag={bag}
+                                unavailableVolumeIds={unavailableVolumeIds}
                                 canPlaceOrder={canPlaceOrder}
                                 onOrderConfirmed={confirmOrder}
                             />
@@ -1084,11 +1389,14 @@ export default function Catalog({
                             </SheetHeader>
                             <BagItems
                                 bag={bag}
+                                unavailableVolumeIds={unavailableVolumeIds}
+                                bagSnapshots={bagSnapshots}
                                 onRemoveVolume={removeVolume}
                                 className="flex-1 px-6 py-5"
                             />
                             <CatalogCheckout
                                 bag={bag}
+                                unavailableVolumeIds={unavailableVolumeIds}
                                 canPlaceOrder={canPlaceOrder}
                                 onOrderConfirmed={confirmOrder}
                             />

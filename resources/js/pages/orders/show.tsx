@@ -21,6 +21,7 @@ import {
     undoSeparation,
 } from '@/actions/App/Http/Controllers/OrderController';
 import InputError from '@/components/input-error';
+import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,6 +41,7 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
+    DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -51,6 +53,7 @@ export default function ShowOrder({ order }: { order: Order }) {
     const completeForm = useForm({});
     const progressForm = useForm({ reason: '' });
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+    const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
     const [divergenceItem, setDivergenceItem] = useState<OrderItem | null>(
         null,
     );
@@ -61,17 +64,9 @@ export default function ShowOrder({ order }: { order: Order }) {
         event.preventDefault();
         cancelForm.post(cancel.url(order.id));
     };
-    const submitCompletion = () => {
-        if (
-            !readyForCompletion ||
-            !window.confirm(
-                `Finalizar ${order.code}? Os sacos serão marcados como consumidos.`,
-            )
-        ) {
-            return;
-        }
-
+    const confirmCompletion = () => {
         completeForm.post(complete.url(order.id));
+        setCompleteDialogOpen(false);
     };
 
     const updateItemProgress = (url: string) => {
@@ -128,6 +123,14 @@ export default function ShowOrder({ order }: { order: Order }) {
         progress.separated === items.length &&
         progress.checked === items.length &&
         progress.divergences === 0;
+    const completionHint =
+        progress.separated < items.length
+            ? `Separe ${items.length - progress.separated} saco${items.length - progress.separated === 1 ? '' : 's'} pendente${items.length - progress.separated === 1 ? '' : 's'}.`
+            : progress.checked < items.length
+              ? `Confira ${items.length - progress.checked} saco${items.length - progress.checked === 1 ? '' : 's'} após a separação.`
+              : progress.divergences > 0
+                ? `Resolva ${progress.divergences} divergência${progress.divergences === 1 ? '' : 's'} antes de finalizar.`
+                : null;
 
     return (
         <>
@@ -192,18 +195,6 @@ export default function ShowOrder({ order }: { order: Order }) {
                                         Editar pedido
                                     </Link>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    disabled={
-                                        !readyForCompletion ||
-                                        completeForm.processing
-                                    }
-                                    data-testid="finalizar-pedido-menu"
-                                    onSelect={submitCompletion}
-                                >
-                                    <CheckCircle2 />
-                                    Finalizar pedido
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                     variant="destructive"
                                     data-testid="cancelar-pedido"
@@ -275,16 +266,32 @@ export default function ShowOrder({ order }: { order: Order }) {
                                 className="grid gap-4 rounded-2xl p-4 shadow-sm"
                             >
                                 <div className="flex flex-wrap items-start justify-between gap-3">
-                                    <div>
-                                        <h3 className="font-semibold">
-                                            {item.product_name}
-                                        </h3>
-                                        <p className="text-sm text-muted-foreground">
-                                            {item.product_code}
-                                            {item.product_model
-                                                ? ` · Modelo ${item.product_model}`
-                                                : ''}
-                                        </p>
+                                    <div className="flex min-w-0 items-start gap-3">
+                                        <div className="size-16 shrink-0 overflow-hidden rounded-xl border border-border bg-muted">
+                                            {item.image ? (
+                                                <img
+                                                    src={item.image}
+                                                    alt={item.product_name}
+                                                    loading="lazy"
+                                                    className="size-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="flex size-full items-center justify-center px-2 text-center text-[10px] text-muted-foreground">
+                                                    Sem foto
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <h3 className="font-semibold">
+                                                {item.product_name}
+                                            </h3>
+                                            <p className="text-sm text-muted-foreground">
+                                                {item.product_code}
+                                                {item.product_model
+                                                    ? ` · Modelo ${item.product_model}`
+                                                    : ''}
+                                            </p>
+                                        </div>
                                     </div>
                                     <div className="text-right">
                                         <strong className="font-mono text-sm">
@@ -321,52 +328,7 @@ export default function ShowOrder({ order }: { order: Order }) {
                                         </span>
                                     )}
                                 </div>
-                                {item.sizes.some(
-                                    ({ quantity }) => quantity !== null,
-                                ) ? (
-                                    <div className="grid gap-2">
-                                        <p className="text-xs font-medium text-muted-foreground">
-                                            Conteúdo por tamanho
-                                        </p>
-                                        <dl className="flex flex-wrap gap-2">
-                                            {item.sizes.map(
-                                                ({ size, quantity }) => (
-                                                    <div
-                                                        key={size}
-                                                        className="grid min-w-16 justify-items-center gap-0.5 rounded-lg bg-muted px-3 py-2 tabular-nums"
-                                                        aria-label={
-                                                            quantity === null
-                                                                ? `Tamanho ${size}, quantidade não informada`
-                                                                : `Tamanho ${size}, ${quantity} ${quantity === 1 ? 'peça' : 'peças'}`
-                                                        }
-                                                    >
-                                                        <dt className="text-base leading-5 font-semibold text-foreground">
-                                                            {size}
-                                                        </dt>
-                                                        <dd className="text-xs leading-4 text-muted-foreground">
-                                                            {quantity === null
-                                                                ? 'Não informada'
-                                                                : `${quantity} ${quantity === 1 ? 'pç' : 'pçs'}`}
-                                                        </dd>
-                                                    </div>
-                                                ),
-                                            )}
-                                        </dl>
-                                    </div>
-                                ) : (
-                                    <div className="grid gap-1 text-muted-foreground">
-                                        <p className="text-sm">
-                                            Tamanhos:{' '}
-                                            {item.sizes
-                                                .map(({ size }) => size)
-                                                .join(' · ')}
-                                        </p>
-                                        <p className="text-xs">
-                                            Quantidade por tamanho não
-                                            informada.
-                                        </p>
-                                    </div>
-                                )}
+                                <StockSizeBreakdown sizes={item.sizes} />
                                 {order.status === 'pending' && (
                                     <div className="flex flex-wrap gap-2 border-t border-border pt-3">
                                         {!isSeparated && (
@@ -500,24 +462,64 @@ export default function ShowOrder({ order }: { order: Order }) {
                     >
                         <div className="grid gap-2 sm:mr-auto">
                             {!readyForCompletion && (
-                                <p className="rounded-xl bg-muted p-3 text-sm text-muted-foreground">
-                                    Separe e confira todos os sacos e resolva as
-                                    divergências antes de finalizar.
-                                </p>
+                                <div className="grid gap-1 rounded-xl bg-muted p-3 text-sm text-muted-foreground">
+                                    <p>
+                                        Separe e confira todos os sacos e
+                                        resolva as divergências antes de
+                                        finalizar.
+                                    </p>
+                                    {completionHint && (
+                                        <p className="font-medium text-foreground">
+                                            Próxima ação: {completionHint}
+                                        </p>
+                                    )}
+                                </div>
                             )}
                             <InputError message={completeErrors.order} />
                         </div>
-                        <Button
-                            data-testid="finalizar-pedido"
-                            className="h-11 sm:w-fit"
-                            onClick={submitCompletion}
-                            disabled={
-                                !readyForCompletion || completeForm.processing
-                            }
+                        <Dialog
+                            open={completeDialogOpen}
+                            onOpenChange={setCompleteDialogOpen}
                         >
-                            <CheckCircle2 />
-                            Finalizar pedido
-                        </Button>
+                            <DialogTrigger asChild>
+                                <Button
+                                    data-testid="finalizar-pedido"
+                                    className="h-11 sm:w-fit"
+                                    disabled={
+                                        !readyForCompletion ||
+                                        completeForm.processing
+                                    }
+                                >
+                                    <CheckCircle2 />
+                                    Finalizar pedido
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Finalizar pedido?</DialogTitle>
+                                    <DialogDescription>
+                                        Os sacos deste pedido serão marcados
+                                        como consumidos e sairão do estoque.
+                                        Essa ação libera o pedido para
+                                        expedição.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <DialogFooter>
+                                    <DialogClose asChild>
+                                        <Button variant="outline">
+                                            Voltar
+                                        </Button>
+                                    </DialogClose>
+                                    <Button
+                                        onClick={confirmCompletion}
+                                        disabled={completeForm.processing}
+                                    >
+                                        <CheckCircle2 />
+                                        Confirmar finalização
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
                         <Dialog
                             open={cancelDialogOpen}
                             onOpenChange={setCancelDialogOpen}

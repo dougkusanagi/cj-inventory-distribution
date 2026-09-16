@@ -38,7 +38,13 @@ export type Product = {
     distribution_status?: string;
     stock_offer_type?: StockOfferType | null;
     total_quantity?: number | null;
+    physical_quantity?: number;
+    available_quantity?: number;
+    reserved_quantity?: number;
+    consumed_quantity?: number;
     stock_volume_count: number;
+    physical_stock_volume_count?: number;
+    available_stock_volume_count?: number;
     stock_volumes: StockOfferVolume[];
     created_at: string | null;
     updated_at: string | null;
@@ -61,6 +67,7 @@ export type OrderItem = {
     product_code: string;
     product_name: string;
     product_model: string | null;
+    image: string | null;
     category: string | null;
     line: ProductLine | null;
     offer_type: StockOfferType;
