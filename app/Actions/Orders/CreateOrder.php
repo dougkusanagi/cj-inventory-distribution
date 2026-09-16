@@ -191,7 +191,7 @@ class CreateOrder
     {
         if ($order->idempotency_payload_hash !== $payloadHash) {
             throw ValidationException::withMessages([
-                'idempotency_key' => 'A chave de idempotência já foi usada com outro pedido.',
+                'idempotency_key' => 'Este pedido já foi registrado com outras informações. Atualize a página e tente novamente.',
             ]);
         }
 

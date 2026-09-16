@@ -48,7 +48,7 @@ class StoreProductStockAdjustmentRequest extends FormRequest
             'items.required' => 'Informe os tamanhos do saco.',
             'items.*.quantity.min' => 'A quantidade não pode ser negativa.',
             'reason.required' => 'Informe o motivo do ajuste.',
-            'idempotency_key.required' => 'Informe uma chave para evitar duplicidade.',
+            'idempotency_key.required' => 'Não foi possível atualizar a contagem. Atualize a página e tente novamente.',
         ];
     }
 }

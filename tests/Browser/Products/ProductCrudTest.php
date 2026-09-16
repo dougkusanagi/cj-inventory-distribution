@@ -36,11 +36,11 @@ it('shows the grade type, commercial line, and category in product cards and tab
 
     visit(route('products.index', [], false))
         ->wait(1)
-        ->assertSee('Grade: Furada')
+        ->assertSee('Tipo de estoque: Grade Furada')
         ->assertSee('Slim')
         ->assertSee('Calças')
         ->click('button[aria-label="Visualização em cards"]')
-        ->assertSee('Grade: Furada')
+        ->assertSee('Tipo de estoque: Grade Furada')
         ->assertSee('Slim')
         ->assertSee('Calças')
         ->assertNoJavaScriptErrors();
@@ -164,6 +164,11 @@ it('renders the product creation form for an authenticated user', function () {
         ->assertSee('Fotos do produto')
         ->click('#product-tab-stock')
         ->assertSee('Estoque organizado por sacos')
+        ->assertDontSee('O estoque é organizado por saco')
+        ->assertDontSee('recalculado no servidor')
+        ->assertSee('Sacos para repor um estoque já existente.')
+        ->assertSee('Sacos com a grade completa de tamanhos.')
+        ->assertSee('Sacos com um ou mais tamanhos faltando.')
         ->assertDontSee('Mostrar oferta no catálogo')
         ->assertDontSee('Oferta de estoque ativa')
         ->assertAttribute(
@@ -193,7 +198,7 @@ it('creates a product without a stock offer from the form', function () {
         ->assertRoute('products.index')
         ->assertSee('Blusa básica E2E')
         ->assertSee('CJ-000001')
-        ->assertSee('Sem oferta')
+        ->assertSee('Tipo de estoque: não cadastrado')
         ->assertSee('Produto cadastrado.')
         ->assertNoJavaScriptErrors();
 
@@ -238,7 +243,7 @@ it('keeps a stock quantity when disabling a size is cancelled', function () {
     $page
         ->assertRoute('products.index')
         ->assertSee('Blusa com grade E2E')
-        ->assertSee('Grade: Nova')
+        ->assertSee('Tipo de estoque: Grade Nova')
         ->assertSee('7')
         ->assertSee('1 saco')
         ->assertSee('Produto cadastrado.')
@@ -465,9 +470,9 @@ it('keeps the product form usable on a narrow mobile viewport', function () {
         ->assertScript("(() => { const modelInput = document.querySelector('#product-model'); const categoryLabel = document.querySelector('label[for=\"product-category\"]'); const categoryInput = document.querySelector('#product-category'); const lineLabel = [...document.querySelectorAll('legend')].find((element) => element.textContent?.trim() === 'Linha comercial'); const lineInput = document.querySelector('[aria-label=\"Linha comercial\"]'); if (!modelInput || !categoryLabel || !categoryInput || !lineLabel || !lineInput) { return false; } const closeTo = (value, expected) => Math.abs(value - expected) <= 1; return closeTo(categoryLabel.getBoundingClientRect().top - modelInput.getBoundingClientRect().bottom, 20) && closeTo(lineLabel.getBoundingClientRect().top - categoryInput.getBoundingClientRect().bottom, 20) && closeTo(categoryInput.getBoundingClientRect().top - categoryLabel.getBoundingClientRect().bottom, 8) && closeTo(lineInput.getBoundingClientRect().top - lineLabel.getBoundingClientRect().bottom, 8); })()")
         ->type('#product-name', 'Produto mobile')
         ->click('#product-tab-stock')
-        ->assertSee('Tipo de Grade')
-        ->assertSee('Nova')
-        ->assertSee('Furada')
+        ->assertSee('Tipo de estoque')
+        ->assertSee('Grade Nova')
+        ->assertSee('Grade Furada')
         ->assertScript("(() => { const cards = [...document.querySelectorAll('label[for^=\"stock-offer-type-\"]')]; return cards.length === 3 && new Set(cards.map((card) => Math.round(card.getBoundingClientRect().top))).size === 1; })()")
         ->assertScript("(() => { const cards = [...document.querySelectorAll('label[for^=\"stock-offer-type-\"]')]; return cards.every((card) => { const radio = card.querySelector('[role=\"radio\"]'); const content = card.querySelector('span.grid'); if (!radio || !content) { return false; } const cardRect = card.getBoundingClientRect(); const radioRect = radio.getBoundingClientRect(); const contentRect = content.getBoundingClientRect(); const paddingLeft = Number.parseFloat(getComputedStyle(card).paddingLeft); return Math.abs((radioRect.left + radioRect.width / 2) - (cardRect.left + cardRect.width / 2)) <= 1 && contentRect.top >= radioRect.bottom && Math.abs(contentRect.left - (cardRect.left + paddingLeft)) <= 1 && getComputedStyle(content).textAlign === 'left'; }); })()")
         ->press('Adicionar saco')

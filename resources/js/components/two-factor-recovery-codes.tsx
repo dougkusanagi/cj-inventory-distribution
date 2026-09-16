@@ -114,7 +114,7 @@ export default function TwoFactorRecoveryCodes({
                                     ref={codesSectionRef}
                                     className="grid gap-1 rounded-lg bg-muted p-4 font-mono text-sm"
                                     role="list"
-                                    aria-label="Recovery codes"
+                                    aria-label="Códigos de recuperação"
                                 >
                                     {recoveryCodesList.length ? (
                                         recoveryCodesList.map((code, index) => (
@@ -150,11 +150,11 @@ export default function TwoFactorRecoveryCodes({
                                         Cada código de recuperação pode ser
                                         usado uma vez para acessar sua conta e
                                         será removido depois do uso. Se precisar
-                                        de mais, clique em{' '}
+                                        de novos, clique em{' '}
                                         <span className="font-bold">
                                             Regenerar códigos
-                                        </span>{' '}
-                                        above.
+                                        </span>
+                                        .
                                     </p>
                                 </div>
                             </>

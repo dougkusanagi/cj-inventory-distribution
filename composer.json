@@ -16,7 +16,7 @@
     ],
     "require": {
         "php": "^8.3",
-        "dougkusanagi/laravel-deploy": "^0.2",
+        "dougkusanagi/laravel-deploy": "^0.3",
         "inertiajs/inertia-laravel": "^3.0",
         "intervention/image": "^4.0",
         "laravel/chisel": "^0.1.0",

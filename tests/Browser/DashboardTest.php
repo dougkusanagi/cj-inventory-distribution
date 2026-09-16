@@ -36,7 +36,7 @@ it('shows the stock summary and opens the product catalog', function () {
         ->assertSee('O que está acontecendo no estoque?')
         ->assertSee('01')
         ->assertSee('8 peças disponíveis para distribuição.')
-        ->assertSee('unidades disponíveis para distribuição')
+        ->assertSee('peças disponíveis para distribuição')
         ->assertSee('Pedidos para preparar')
         ->assertSee('Não há pedidos pendentes neste momento.')
         ->assertSeeLink('Abrir pedidos', route('orders.index', [], false))
@@ -56,7 +56,7 @@ it('opens the order area from the sidebar', function () {
     visit(route('dashboard', [], false))
         ->click('[data-sidebar="menu-button"]:has-text("Pedidos")')
         ->assertRoute('orders.index')
-        ->assertSee('Acompanhe reservas e encerre as solicitações.')
+        ->assertSee('Acompanhe os pedidos e atualize cada solicitação.')
         ->assertNoJavaScriptErrors();
 });
 

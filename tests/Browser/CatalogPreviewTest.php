@@ -168,7 +168,7 @@ it('requires opening WhatsApp before confirming a catalog order', function () {
         ->click('button:has-text("Registrar pedido")')
         ->assertVisible('[data-testid="finalizar-whatsapp"]')
         ->assertDisabled('[data-testid="confirmar-pedido"]')
-        ->assertSee('O botão será liberado depois que você abrir o WhatsApp.');
+        ->assertSee('Depois de abrir o WhatsApp, volte aqui para concluir o pedido.');
 
     $page->script("document.querySelector('[data-testid=\"finalizar-whatsapp\"]')?.click()");
 

@@ -119,8 +119,8 @@ export default function Dashboard({ stats }: DashboardProps) {
                                 O que está acontecendo no estoque?
                             </h1>
                             <p className="max-w-xl text-sm leading-6 text-featured-card-muted sm:text-base">
-                                Acompanhe os números da operação e use o
-                                catálogo quando precisar cuidar de uma peça.
+                                Acompanhe o estoque e acesse o catálogo quando
+                                precisar atualizar uma peça.
                             </p>
                         </div>
                         <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
@@ -151,7 +151,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                     <MetricCard
                         label="produtos cadastrados"
                         value={stats.total.toString().padStart(2, '0')}
-                        description="Peças registradas no sistema."
+                        description="Peças cadastradas no catálogo."
                         icon={Package}
                         featured
                     />
@@ -164,11 +164,11 @@ export default function Dashboard({ stats }: DashboardProps) {
                     <MetricCard
                         label="com grade de tamanhos"
                         value={stats.withSizes.toString().padStart(2, '0')}
-                        description="Produtos com variações cadastradas."
+                        description="Produtos com tamanhos cadastrados."
                         icon={Layers3}
                     />
                     <MetricCard
-                        label="produtos com estoque"
+                        label="produtos com estoque cadastrado"
                         value={stats.activeOffers.toString().padStart(2, '0')}
                         description={
                             stats.stockUnits +
@@ -188,7 +188,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                                 Mantenha o catálogo reconhecível
                             </CardTitle>
                             <CardDescription className="max-w-xl leading-6">
-                                Fotos e grades ajudam a equipe a encontrar a
+                                Fotos e tamanhos ajudam a equipe a encontrar a
                                 peça certa antes de distribuir o estoque.
                             </CardDescription>
                         </CardHeader>
@@ -215,7 +215,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                                     {stats.stockUnits}
                                 </strong>
                                 <span className="text-sm text-muted-foreground">
-                                    unidades disponíveis para distribuição
+                                    peças disponíveis para distribuição
                                 </span>
                                 {stats.reservedStockUnits > 0 && (
                                     <span className="text-xs text-muted-foreground">

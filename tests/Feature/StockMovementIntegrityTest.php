@@ -73,7 +73,7 @@ test('a product with available stock cannot be moved to the trash', function () 
 
     $this->actingAs($user)
         ->delete(route('products.destroy', $product))
-        ->assertInvalid(['product' => 'Produto com estoque disponível ou reservado não pode ser excluído. Registre uma saída ou zere os sacos pelo fluxo de estoque.']);
+        ->assertInvalid(['product' => 'Produto com estoque disponível ou reservado não pode ser excluído. Registre a saída ou zere o estoque dos sacos antes de removê-lo.']);
 
     expect($product->refresh()->deleted_at)->toBeNull();
 });

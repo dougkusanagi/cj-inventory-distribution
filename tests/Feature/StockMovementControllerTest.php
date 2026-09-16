@@ -249,7 +249,7 @@ test('adjustments reject reserved sacks without changing stock', function () {
             'idempotency_key' => 'adjustment-reserved-001',
         ])
         ->assertInvalid([
-            'volume_id' => 'Selecione um saco disponível, sem reserva ou consumo.',
+            'volume_id' => 'Selecione um saco disponível, sem reserva e sem retirada registrada.',
         ]);
 
     expect(StockMovement::query()->count())->toBe(0)
@@ -275,7 +275,7 @@ test('adjustments reject a recount that does not change the sack', function () {
             'idempotency_key' => 'adjustment-unchanged-001',
         ])
         ->assertInvalid([
-            'items' => 'Informe ao menos uma alteração na recontagem.',
+            'items' => 'Altere pelo menos um tamanho ou uma quantidade antes de salvar.',
         ]);
 
     expect(StockMovement::query()->count())->toBe(0)
@@ -323,7 +323,7 @@ test('manual exits cannot consume a reserved sack', function () {
             'reason' => 'Baixa manual',
             'idempotency_key' => 'exit-reserved-001',
         ])
-        ->assertInvalid(['volume_ids' => 'Só é possível dar saída em sacos disponíveis, não reservados e não consumidos.']);
+        ->assertInvalid(['volume_ids' => 'Selecione apenas sacos disponíveis, sem reserva e sem retirada registrada.']);
 
     expect(StockMovement::query()->count())->toBe(0)
         ->and($volume->refresh()->consumed_at)->toBeNull();
@@ -412,7 +412,7 @@ test('a manual movement can be reversed once while preserving the chain', functi
 
     $this->actingAs($user)->post(route('stock-movements.reverse', $movement), [
         'reason' => 'Outro motivo',
-    ])->assertInvalid(['idempotency_key' => 'A chave de idempotência já foi usada com outra movimentação.']);
+    ])->assertInvalid(['idempotency_key' => 'Esta movimentação já foi registrada com outras informações. Atualize a página e tente novamente.']);
 });
 
 test('the stock history lists immutable movement summaries', function () {
@@ -571,7 +571,9 @@ test('movement and item records cannot be edited or deleted', function () {
         ->toThrow(LogicException::class)
         ->and(fn () => $movement->delete())
         ->toThrow(LogicException::class)
-        ->and(fn () => $movement->items()->sole()->update(['total_quantity' => 1]))
+        ->and(fn () => $movement->items()->sole()->update([
+            'total_quantity' => $movement->items()->sole()->total_quantity + 1,
+        ]))
         ->toThrow(LogicException::class)
         ->and(fn () => $movement->items()->sole()->delete())
         ->toThrow(LogicException::class);

@@ -34,7 +34,7 @@ class DeleteProduct
                 })
                 ->exists()) {
                 throw ValidationException::withMessages([
-                    'product' => 'Produto com estoque disponível ou reservado não pode ser excluído. Registre uma saída ou zere os sacos pelo fluxo de estoque.',
+                    'product' => 'Produto com estoque disponível ou reservado não pode ser excluído. Registre a saída ou zere o estoque dos sacos antes de removê-lo.',
                 ]);
             }
 

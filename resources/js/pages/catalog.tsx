@@ -220,7 +220,7 @@ function sizeComposition(
     return sizes
         .map(({ size, quantity }) =>
             quantity === null
-                ? `${size}: qtd. não informada`
+                ? `${size}: quantidade não informada`
                 : `${size}: ${quantity} ${quantity === 1 ? 'pç' : 'pçs'}`,
         )
         .join(' · ');
@@ -494,11 +494,11 @@ function CatalogCheckout({
                 </div>
                 <div className="grid gap-2">
                     <h3 className="text-lg font-semibold">
-                        Pedido {checkoutResult.orderCode} pronto para envio
+                        Pedido {checkoutResult.orderCode} registrado
                     </h3>
                     <p className="text-sm leading-6 text-muted-foreground">
-                        Clique abaixo e envie os detalhes pelo WhatsApp. Nossa
-                        equipe está pronta para atender você.
+                        Abra o WhatsApp para enviar os detalhes do pedido à
+                        equipe.
                     </p>
                 </div>
                 <Button
@@ -514,7 +514,7 @@ function CatalogCheckout({
                         onClick={() => setWhatsappOpened(true)}
                     >
                         <MessageCircle />
-                        Abrir WhatsApp e enviar pedido
+                        Abrir WhatsApp
                     </a>
                 </Button>
                 <p
@@ -523,8 +523,8 @@ function CatalogCheckout({
                     className="text-center text-xs leading-5 text-muted-foreground"
                 >
                     {whatsappOpened
-                        ? 'Conversa aberta. Ainda é necessário tocar em enviar no WhatsApp.'
-                        : 'Abra a conversa para enviar o pedido à equipe.'}
+                        ? 'Conversa aberta. Toque em enviar no WhatsApp para concluir o envio.'
+                        : 'Abra o WhatsApp para enviar o pedido à equipe.'}
                 </p>
                 <Button
                     type="button"
@@ -533,11 +533,12 @@ function CatalogCheckout({
                     data-testid="confirmar-pedido"
                     onClick={onOrderConfirmed}
                 >
-                    Confirmar pedido
+                    Concluir pedido
                 </Button>
                 {!whatsappOpened && (
                     <p className="text-center text-xs leading-5 text-muted-foreground">
-                        O botão será liberado depois que você abrir o WhatsApp.
+                        Depois de abrir o WhatsApp, volte aqui para concluir o
+                        pedido.
                     </p>
                 )}
             </div>
@@ -610,8 +611,8 @@ function CatalogCheckout({
 
             {!canPlaceOrder && (
                 <p className="rounded-xl bg-muted p-3 text-sm leading-6 text-muted-foreground">
-                    Os pedidos estão temporariamente indisponíveis. A equipe
-                    ainda precisa configurar o WhatsApp de atendimento.
+                    O pedido não pode ser enviado agora. O WhatsApp de
+                    atendimento ainda não foi configurado.
                 </p>
             )}
 
@@ -629,8 +630,8 @@ function CatalogCheckout({
                 {form.processing ? 'Registrando pedido...' : 'Registrar pedido'}
             </Button>
             <p className="text-center text-xs leading-5 text-muted-foreground">
-                Depois de registrar, abra o WhatsApp e toque em enviar para
-                concluir o contato com a equipe.
+                Depois de registrar o pedido, abra o WhatsApp e toque em enviar
+                para concluir o envio.
             </p>
         </form>
     );
@@ -889,7 +890,7 @@ export default function Catalog({
         setBagSnapshots({});
         setUnavailableVolumeIds([]);
         setBagOpen(false);
-        setFeedback('Pedido confirmado. A conversa do WhatsApp foi aberta.');
+        setFeedback('Pedido concluído. A conversa do WhatsApp foi aberta.');
     }
 
     function loadMore() {
@@ -997,7 +998,7 @@ export default function Catalog({
                             </p>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                            Sacos completos · escolha por produto
+                            Sacos completos · selecione por produto
                         </p>
                     </div>
 
@@ -1161,7 +1162,7 @@ export default function Catalog({
                                                 {product.type}
                                             </Badge>
                                             <p className="text-sm text-muted-foreground">
-                                                Tamanhos nos sacos
+                                                Tamanhos e quantidades
                                             </p>
                                             <div
                                                 className="flex flex-wrap gap-1.5"

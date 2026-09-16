@@ -16,7 +16,7 @@ class ProductStockAdjustmentController extends Controller
         Gate::authorize('update', $product);
         $movement = $adjustProductStock->handle($product, $request->validated(), $request->user());
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Ajuste registrado na movimentação #'.$movement->getKey().'.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Contagem do saco atualizada.']);
 
         return to_route('products.edit', $product);
     }

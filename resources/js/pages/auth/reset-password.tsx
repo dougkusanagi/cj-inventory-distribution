@@ -26,7 +26,7 @@ export default function ResetPassword({ token, email, passwordRules }: Props) {
                 {({ processing, errors }) => (
                     <div className="grid gap-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="email">Email</Label>
+                            <Label htmlFor="email">E-mail</Label>
                             <Input
                                 id="email"
                                 type="email"
@@ -92,5 +92,5 @@ export default function ResetPassword({ token, email, passwordRules }: Props) {
 
 ResetPassword.layout = {
     title: 'Trocar senha',
-    description: 'Informe sua nova senha abaixo',
+    description: 'Crie uma nova senha para acessar sua conta.',
 };

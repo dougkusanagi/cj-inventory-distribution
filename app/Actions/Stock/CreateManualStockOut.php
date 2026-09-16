@@ -37,7 +37,7 @@ class CreateManualStockOut
 
         if ($idempotencyKey === null) {
             throw ValidationException::withMessages([
-                'idempotency_key' => 'Informe uma chave para evitar duplicidade.',
+                'idempotency_key' => 'Não foi possível registrar a saída. Atualize a página e tente novamente.',
             ]);
         }
 
@@ -71,7 +71,7 @@ class CreateManualStockOut
                 || $volume->consumed_at !== null
                 || $volume->total_quantity <= 0)) {
                 throw ValidationException::withMessages([
-                    'volume_ids' => 'Só é possível dar saída em sacos disponíveis, não reservados e não consumidos.',
+                    'volume_ids' => 'Selecione apenas sacos disponíveis, sem reserva e sem retirada registrada.',
                 ]);
             }
 

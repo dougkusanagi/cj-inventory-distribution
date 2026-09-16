@@ -33,8 +33,8 @@ export default function EditProduct({
                                 Editar produto
                             </h1>
                             <p className="max-w-2xl text-sm leading-6 text-pretty text-muted-foreground">
-                                Atualize a referência da peça sem perder o
-                                código interno ou o histórico de uso.
+                                Atualize os dados da peça mantendo seu código e
+                                histórico de movimentações.
                             </p>
                         </div>
                     </div>

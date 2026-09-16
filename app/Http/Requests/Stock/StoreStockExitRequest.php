@@ -45,8 +45,8 @@ class StoreStockExitRequest extends FormRequest
             'volume_ids.*.exists' => 'Um ou mais sacos não estão disponíveis.',
             'volume_ids.*.distinct' => 'Cada saco deve ser selecionado uma única vez.',
             'reason.required' => 'Informe o motivo da saída.',
-            'idempotency_key.required' => 'Informe uma chave para evitar duplicidade.',
-            'idempotency_key.regex' => 'A chave de idempotência contém caracteres inválidos.',
+            'idempotency_key.required' => 'Não foi possível registrar a saída. Atualize a página e tente novamente.',
+            'idempotency_key.regex' => 'Não foi possível registrar a saída. Atualize a página e tente novamente.',
         ];
     }
 }

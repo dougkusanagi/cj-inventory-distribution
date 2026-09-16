@@ -53,6 +53,8 @@ class StoreOrderRequest extends FormRequest
             'volume_ids.required' => 'Selecione pelo menos um saco.',
             'volume_ids.min' => 'Selecione pelo menos um saco.',
             'volume_ids.*.exists' => 'Um dos sacos selecionados não existe mais.',
+            'idempotency_key.required' => 'Não foi possível registrar o pedido. Atualize a página e tente novamente.',
+            'idempotency_key.regex' => 'Não foi possível registrar o pedido. Atualize a página e tente novamente.',
         ];
     }
 

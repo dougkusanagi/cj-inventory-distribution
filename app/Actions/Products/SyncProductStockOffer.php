@@ -46,7 +46,7 @@ class SyncProductStockOffer
                 if ($stored->contains(fn ($volume) => $volume->orderItems()->exists())) {
                     throw ValidationException::withMessages(['stock_volumes' => 'Sacos vinculados a pedidos não podem ser removidos.']);
                 }
-                throw ValidationException::withMessages(['stock_volumes' => 'Sacos com estoque disponível ou reservado não podem ser excluídos. Registre uma saída ou zere o saco pelo fluxo de estoque.']);
+                throw ValidationException::withMessages(['stock_volumes' => 'Sacos com estoque disponível ou reservado não podem ser removidos. Registre a saída ou zere o estoque do saco antes de removê-lo.']);
             }
             foreach ($submitted as $raw) {
                 if (! is_array($raw)) {

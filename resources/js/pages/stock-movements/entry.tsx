@@ -83,9 +83,8 @@ export default function StockEntry({
                             Registrar entrada de estoque
                         </h1>
                         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                            Adicione sacos inteiros a uma oferta compatível ou
-                            crie uma nova oferta quando o tipo ou a observação
-                            mudarem.
+                            Registre os sacos recebidos e informe a
+                            classificação deste estoque.
                         </p>
                     </div>
                 </header>
@@ -141,7 +140,7 @@ export default function StockEntry({
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="entry-type">
-                                    Tipo do estoque{' '}
+                                    Tipo de estoque{' '}
                                     <span className="text-destructive">*</span>
                                 </Label>
                                 <Select
@@ -209,9 +208,9 @@ export default function StockEntry({
                         <CardHeader>
                             <CardTitle>Sacos recebidos</CardTitle>
                             <CardDescription>
-                                O total de cada saco é calculado pelas
-                                quantidades conhecidas; quando não houver
-                                contagem por tamanho, informe o total manual.
+                                Informe o total de cada saco. Se você preencher
+                                as quantidades por tamanho, o total será
+                                calculado automaticamente.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>

@@ -31,9 +31,9 @@ export default function TwoFactorChallenge() {
         }
 
         return {
-            title: 'Código do aplicativo',
+            title: 'Código do aplicativo autenticador',
             description:
-                'Informe o código mostrado no aplicativo de autenticação.',
+                'Informe o código de 6 dígitos mostrado no aplicativo autenticador.',
             toggleText: 'entrar usando código de recuperação',
         };
     }, [showRecoveryInput]);

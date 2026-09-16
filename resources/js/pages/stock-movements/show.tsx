@@ -13,7 +13,6 @@ import {
     StockMovementReasonField,
     stockReversalReasons,
 } from '@/components/stock-movement-reason-field';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,8 +35,8 @@ function offerTypeLabel(value: string | null): string | null {
     return (
         {
             replenishment: 'Reposição',
-            new_grade: 'Grade nova',
-            broken_grade: 'Grade furada',
+            new_grade: 'Grade Nova',
+            broken_grade: 'Grade Furada',
         }[value ?? ''] ?? null
     );
 }
@@ -131,7 +130,7 @@ export default function StockMovementShow({
 
         if (
             !window.confirm(
-                'Registrar o estorno desta movimentação? O lançamento original será preservado.',
+                'Estornar esta movimentação? O estoque será ajustado e o registro original será mantido.',
             )
         ) {
             return;
@@ -159,7 +158,7 @@ export default function StockMovementShow({
                             <p className="text-sm text-muted-foreground">
                                 {movement.source_label} ·{' '}
                                 {dateLabel(movement.occurred_at)} ·{' '}
-                                {movement.actor ?? 'Sistema'}
+                                {movement.actor ?? 'Automático'}
                             </p>
                         </div>
                     </div>
@@ -182,8 +181,8 @@ export default function StockMovementShow({
                                     </Badge>
                                 </div>
                                 <CardDescription>
-                                    Os dados abaixo são snapshots gravados no
-                                    momento da confirmação.
+                                    Confira como o estoque mudou nesta
+                                    movimentação.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="grid gap-3">
@@ -396,7 +395,7 @@ export default function StockMovementShow({
                                 onClick={() => setShowReverse(true)}
                             >
                                 <RotateCcw />
-                                Preparar estorno
+                                Estornar movimentação
                             </Button>
                         )}
                         {canReverse && showReverse && (
@@ -404,9 +403,10 @@ export default function StockMovementShow({
                                 <CardHeader>
                                     <CardTitle>Estornar movimentação</CardTitle>
                                     <CardDescription>
-                                        O estorno cria um novo lançamento e só é
-                                        aceito se não houver operação posterior
-                                        incompatível.
+                                        A movimentação original será mantida no
+                                        histórico. O estorno só pode ser feito
+                                        se nada tiver alterado esses sacos
+                                        depois.
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
@@ -423,14 +423,6 @@ export default function StockMovementShow({
                                             }
                                             error={form.errors.reason}
                                         />
-                                        <Alert variant="destructive">
-                                            <RotateCcw />
-                                            <AlertTitle>Atenção</AlertTitle>
-                                            <AlertDescription>
-                                                O lançamento original não será
-                                                apagado.
-                                            </AlertDescription>
-                                        </Alert>
                                         <div className="flex gap-2">
                                             <Button
                                                 type="button"

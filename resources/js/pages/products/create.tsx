@@ -24,8 +24,8 @@ export default function CreateProduct({
                                 Cadastrar produto
                             </h1>
                             <p className="max-w-2xl text-sm leading-6 text-pretty text-muted-foreground">
-                                Registre a identidade da peça uma vez para que
-                                ela possa receber ofertas de estoque depois.
+                                Cadastre os dados da peça para acompanhar suas
+                                disponibilidades de estoque.
                             </p>
                         </div>
                     </div>
