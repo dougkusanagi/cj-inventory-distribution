@@ -22,7 +22,6 @@ class StockOfferFactory extends Factory
         return [
             'product_id' => Product::factory(),
             'type' => StockOfferType::NewGrade,
-            'is_active' => true,
             'notes' => null,
         ];
     }
@@ -44,16 +43,6 @@ class StockOfferFactory extends Factory
     {
         return $this->state([
             'type' => StockOfferType::BrokenGrade,
-        ]);
-    }
-
-    /**
-     * Keep the offer out of the catalog.
-     */
-    public function inactive(): static
-    {
-        return $this->state([
-            'is_active' => false,
         ]);
     }
 }

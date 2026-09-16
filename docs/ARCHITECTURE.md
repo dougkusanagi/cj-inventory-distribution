@@ -2,16 +2,18 @@
 
 ## Visão geral
 
-O sistema começa como uma aplicação Laravel monolítica.
+O sistema é uma aplicação Laravel monolítica.
 
 O objetivo inicial é manter produto, disponibilidade de estoque e pedido como conceitos separados para permitir evolução posterior sem antecipar um PCP completo.
 
-### Atualização de catálogo e pedidos (10/09/2026)
+### Atualização de catálogo, pedidos e estoque (15/09/2026)
 
 O [plano de catálogo e pedidos](CATALOGO-E-PEDIDOS.md) descreve o catálogo,
 reserva e operação de pedidos atualmente implementados, incluindo separação,
 conferência, divergências e auditoria. A proposta de sacos inteiros foi
 aceita no ADR 0012; a exclusão definitiva de Grade Nova está no ADR 0011.
+As movimentações imutáveis do estoque físico e a trilha transversal de
+auditoria foram adicionadas nos ADRs 0016 e 0017.
 
 ## Modelo de domínio
 
@@ -24,6 +26,12 @@ Product
 Order
   └── OrderItem -> StockOfferVolume
   └── OrderEvent -> User (actor)
+
+StockMovement
+  └── StockMovementItem -> StockOfferVolume
+
+AuditLog
+  └── auditable -> entidade administrativa
 ```
 
 ## Product
@@ -71,9 +79,9 @@ Um produto sem modelo continua plenamente utilizável.
 O produto inicia ativo, mas pode ser desativado independentemente das ofertas
 de estoque. Produtos inativos não aparecem no catálogo compartilhado.
 
-Um produto também pode ser salvo sem uma oferta de estoque ativa. A oferta é
-criada ou atualizada somente quando o cadastro informar explicitamente que há
-disponibilidade. Quando ativa, ela possui ao menos um saco.
+Um produto também pode ser salvo sem uma oferta de estoque. A oferta é criada
+ao adicionar o primeiro saco e removida ao encerrar o estoque. Toda oferta
+possui ao menos um saco.
 
 ## Tamanhos por saco
 
@@ -105,8 +113,8 @@ explícito.
 
 ## StockOffer
 
-Representa uma disponibilidade atual de estoque. A classificação e a ativação
-pertencem à oferta, não ao produto nem ao saco.
+Representa uma disponibilidade atual de estoque. A classificação pertence à
+oferta, não ao produto nem ao saco.
 
 Campos sugeridos:
 
@@ -114,7 +122,6 @@ Campos sugeridos:
 id
 product_id
 type
-is_active
 notes nullable
 created_at
 updated_at
@@ -136,17 +143,11 @@ Grade Nova
 Grade Furada
 ```
 
-O cadastro não infere o tipo a partir das quantidades. Quando a oferta está
-ativa, o tipo é informado explicitamente e existe pelo menos um
-`StockOfferVolume`.
-
-O estado ativo da oferta controla sua exibição no catálogo, desde que o produto
-também esteja ativo. Desativar uma oferta não zera seus sacos nem a
-disponibilidade por tamanho. O encerramento do estoque atual é uma ação
-explícita e separada.
+O cadastro não infere o tipo a partir das quantidades. Ao adicionar sacos, o
+tipo é informado explicitamente e existe pelo menos um `StockOfferVolume`.
 
 A disponibilidade usa a soma de `StockOfferVolume.total_quantity`: a oferta
-só aparece quando produto e oferta estão ativos, existe ao menos um saco e o
+só aparece quando o produto está ativo, existe ao menos um saco disponível e o
 total agregado é maior que zero.
 
 Além dessas condições, o catálogo para lojistas **nunca mostra Grade Nova**.
@@ -169,7 +170,7 @@ created_at
 updated_at
 ```
 
-Uma oferta ativa precisa de ao menos um saco. A posição define o nome exibido
+Uma oferta precisa de ao menos um saco. A posição define o nome exibido
 (`Saco 1`, `Saco 2`) e pode mudar sem trocar a identidade persistida.
 
 ## StockOfferVolumeItem
@@ -210,6 +211,31 @@ O modelo vigente nasce diretamente com `StockOfferVolume` e
 `StockOfferVolumeItem`. Não há tabelas, colunas ou contratos de compatibilidade
 para a estrutura anterior; o total agregado é sempre calculado a partir dos
 sacos persistidos.
+
+## Movimentações de estoque
+
+`StockOfferVolume` continua sendo a fonte canônica do estado físico atual.
+`StockMovement` e `StockMovementItem` registram entradas, saídas e estornos de
+sacos inteiros, com snapshots do produto, oferta, saco, grade e estados
+anterior/posterior. As duas entidades são imutáveis e não usam `SoftDeletes`.
+
+Entradas e saídas manuais exigem usuário da equipe, motivo e chave de
+idempotência. A finalização de pedido cria uma única saída na mesma transação
+que consome os sacos e conclui o pedido; cancelamento apenas libera a reserva.
+O catálogo e o dashboard consultam os sacos disponíveis e reservados, nunca
+somam o histórico para derivar saldo.
+
+Depois que um saco possui movimentação, o CRUD de produto o exibe em modo de
+leitura e não pode alterar total, grade ou quantidades. Ajustes passam pelas
+actions de estoque e são representados por estornos vinculados.
+
+## Auditoria administrativa
+
+`AuditLog` registra criação, alteração, exclusão lógica, restauração e exclusão
+definitiva de produtos, categorias, ofertas, sacos, tamanhos, configurações e
+usuários. O registro é imutável, não usa `SoftDeletes` e remove atributos de
+autenticação dos snapshots. Ele não substitui `OrderEvent` nem participa do
+cálculo de estoque.
 
 ## Order
 
@@ -274,7 +300,7 @@ metadados mínimos.
 ```text
 Vendedora acessa tela compartilhada
         ↓
-Visualiza ofertas ativas
+Visualiza ofertas disponíveis
         ↓
 Seleciona produto/tamanho/quantidade
         ↓
@@ -358,7 +384,7 @@ Para o MVP, a tela deve priorizar simplicidade e uso mobile.
 
 Requisitos:
 
-- listar somente ofertas ativas;
+- listar somente ofertas disponíveis;
 - não listar ofertas sem saco físico ou com soma de sacos igual a zero;
 - mostrar a foto de capa, nome, modelo quando houver, tipo e estoque disponível;
 - permitir selecionar sacos físicos distintos, sem multiplicar um mesmo saco;

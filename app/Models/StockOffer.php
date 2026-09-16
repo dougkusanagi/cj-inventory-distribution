@@ -10,22 +10,37 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
  * @property int $product_id
  * @property StockOfferType $type
- * @property bool $is_active
  * @property string|null $notes
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['product_id', 'type', 'is_active', 'notes'])]
+#[Fillable(['product_id', 'type', 'notes'])]
 class StockOffer extends Model
 {
     /** @use HasFactory<StockOfferFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
+
+    protected static function booted(): void
+    {
+        static::deleting(function (self $offer): void {
+            $offer->stockVolumes()->withTrashed()->get()
+                ->filter(fn (StockOfferVolume $volume): bool => ! $volume->trashed())
+                ->each->delete();
+        });
+
+        static::restored(function (self $offer): void {
+            $offer->stockVolumes()->withTrashed()->get()
+                ->filter(fn (StockOfferVolume $volume): bool => $volume->trashed())
+                ->each->restore();
+        });
+    }
 
     /**
      * Get the product that owns the stock offer.
@@ -34,7 +49,7 @@ class StockOffer extends Model
      */
     public function product(): BelongsTo
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Product::class)->withTrashed();
     }
 
     /**
@@ -70,7 +85,6 @@ class StockOffer extends Model
     public static function applyAvailableForCatalog(Builder $query): void
     {
         $query
-            ->where('is_active', true)
             ->where('type', '!=', StockOfferType::NewGrade->value)
             ->whereHas('product', function (Builder $query): void {
                 $query->where('is_active', true);
@@ -115,7 +129,6 @@ class StockOffer extends Model
     {
         return [
             'type' => StockOfferType::class,
-            'is_active' => 'boolean',
         ];
     }
 }

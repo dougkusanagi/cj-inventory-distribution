@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 
 /**
  * @property int $id
@@ -29,7 +31,30 @@ use Illuminate\Support\Carbon;
 class Order extends Model
 {
     /** @use HasFactory<OrderFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
+
+    protected static function booted(): void
+    {
+        static::deleting(function (self $order): void {
+            if (! $order->isForceDeleting() && $order->status === OrderStatus::Pending) {
+                throw ValidationException::withMessages([
+                    'order' => 'Pedidos pendentes não podem ser excluídos enquanto mantêm uma reserva.',
+                ]);
+            }
+
+            $order->items()->withTrashed()->get()
+                ->filter(fn (OrderItem $item): bool => ! $item->trashed())
+                ->each(fn (OrderItem $item): ?bool => $order->isForceDeleting()
+                    ? $item->forceDelete()
+                    : $item->delete());
+        });
+
+        static::restored(function (self $order): void {
+            $order->items()->withTrashed()->get()
+                ->filter(fn (OrderItem $item): bool => $item->trashed())
+                ->each->restore();
+        });
+    }
 
     /** @return HasMany<OrderItem, $this> */
     public function items(): HasMany

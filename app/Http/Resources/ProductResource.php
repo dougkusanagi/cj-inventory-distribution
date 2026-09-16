@@ -35,7 +35,7 @@ class ProductResource extends JsonResource
         $hasAvailableVolumes = $this->hasAvailablePhysicalVolume($stockVolumes);
 
         $availableForDistribution = $this->is_active
-            && $offer?->is_active === true
+            && $offer !== null
             && $offer->type !== StockOfferType::NewGrade
             && $hasPositiveStock
             && $hasAvailableVolumes;
@@ -69,7 +69,6 @@ class ProductResource extends JsonResource
                 ->values()
                 ->all()),
             'notes' => $this->notes,
-            'has_stock_offer' => $offer?->is_active === true,
             'available_for_distribution' => $availableForDistribution,
             'distribution_status' => $this->distributionStatus($offer, $hasPositiveStock, $hasAvailableVolumes),
             'stock_offer_type' => $offer?->type?->value,
@@ -95,6 +94,10 @@ class ProductResource extends JsonResource
             'id' => $volume->id,
             'sort_order' => $volume->sort_order,
             'total_quantity' => $volume->total_quantity,
+            'is_locked' => $volume->current_order_id !== null
+                || $volume->consumed_at !== null
+                || (bool) $volume->getAttribute('has_order_items')
+                || (bool) $volume->getAttribute('has_stock_movements'),
             'items' => $volume->relationLoaded('items')
                 ? $volume->items->map(fn (StockOfferVolumeItem $item): array => [
                     'id' => $item->id,
@@ -125,7 +128,7 @@ class ProductResource extends JsonResource
             return 'Produto oculto';
         }
 
-        if ($offer?->is_active !== true) {
+        if ($offer === null) {
             return 'Sem estoque disponível';
         }
 

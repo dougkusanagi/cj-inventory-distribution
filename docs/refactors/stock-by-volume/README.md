@@ -56,7 +56,7 @@ for informada, o total do saco é informado manualmente.
 
 - `Product.model` continua opcional.
 - O código interno do produto continua obrigatório e gerado pelo sistema.
-- Produto e oferta continuam com estados de ativação independentes.
+- Produto continua com estado de ativação independente da existência de oferta.
 - Quantidade por tamanho continua opcional.
 - Um tamanho ativo pode ter quantidade desconhecida (`null`).
 - Tamanho inativo não pode manter quantidade.
@@ -76,7 +76,6 @@ Mantém a disponibilidade atual e sua classificação:
 id
 product_id
 type
-is_active
 notes nullable
 created_at
 updated_at

@@ -52,7 +52,7 @@ export default function OrdersIndex({
     return (
         <>
             <Head title="Pedidos" />
-            <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 sm:px-6 lg:px-8">
+            <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-8 sm:px-6 lg:px-8">
                 <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div className="grid gap-2">
                         <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">

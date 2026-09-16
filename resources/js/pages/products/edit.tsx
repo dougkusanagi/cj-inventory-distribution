@@ -1,6 +1,8 @@
 import { Head } from '@inertiajs/react';
 import { Package } from 'lucide-react';
+import { useState } from 'react';
 import { ProductForm } from '@/components/products/product-form';
+import { StockAdjustmentModal } from '@/components/products/stock-adjustment-modal';
 import { index as productsIndex } from '@/routes/products';
 import type { Category, Product } from '@/types';
 
@@ -11,6 +13,8 @@ export default function EditProduct({
     product: Product;
     categories: Category[];
 }) {
+    const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
+
     return (
         <>
             <Head title={`Editar ${product.name}`} />
@@ -36,7 +40,16 @@ export default function EditProduct({
                     </div>
                 </header>
 
-                <ProductForm product={product} categories={categories} />
+                <ProductForm
+                    product={product}
+                    categories={categories}
+                    onAdjustStock={() => setIsAdjustmentOpen(true)}
+                />
+                <StockAdjustmentModal
+                    product={product}
+                    open={isAdjustmentOpen}
+                    onOpenChange={setIsAdjustmentOpen}
+                />
             </div>
         </>
     );

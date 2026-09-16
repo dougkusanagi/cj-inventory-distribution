@@ -8,7 +8,6 @@ test('physical sacks keep independent totals and sizes after the cutover', funct
     $product = Product::factory()->create();
     $offer = $product->offers()->create([
         'type' => StockOfferType::NewGrade,
-        'is_active' => true,
     ]);
     $firstVolume = $offer->stockVolumes()->create(['sort_order' => 0, 'total_quantity' => 12]);
     $secondVolume = $offer->stockVolumes()->create(['sort_order' => 1, 'total_quantity' => 20]);
@@ -27,7 +26,6 @@ test('physical sack totals remain independent from their size quantities', funct
     $product = Product::factory()->create();
     $offer = $product->offers()->create([
         'type' => StockOfferType::Replenishment,
-        'is_active' => true,
     ]);
     $volume = $offer->stockVolumes()->create(['total_quantity' => 999]);
     $volume->items()->createMany([
@@ -42,7 +40,7 @@ test('physical sack totals remain independent from their size quantities', funct
 
 test('the database contains only the canonical stock schema', function () {
     expect(Schema::hasColumn('stock_offers', 'type'))->toBeTrue();
-    expect(Schema::hasColumn('stock_offers', 'is_active'))->toBeTrue();
+    expect(Schema::hasColumn('stock_offers', 'is_active'))->toBeFalse();
     expect(Schema::hasTable('stock_offer_volumes'))->toBeTrue();
     expect(Schema::hasTable('stock_offer_volume_items'))->toBeTrue();
 });

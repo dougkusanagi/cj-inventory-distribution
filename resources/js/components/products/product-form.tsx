@@ -20,6 +20,7 @@ import type { ProductCoverPreview } from '@/components/products/product-photo-ma
 import { StockOfferVolumeEditor } from '@/components/products/stock-offer-volume-editor';
 import type { StockOfferVolumeFormItem } from '@/components/products/stock-offer-volume-editor';
 import { Button } from '@/components/ui/button';
+import { CompactTabs } from '@/components/ui/compact-tabs';
 import {
     Card,
     CardContent,
@@ -50,7 +51,6 @@ type ProductFormData = {
     line: ProductLine | '';
     notes: string;
     is_active: boolean;
-    has_stock_offer: boolean;
     stock_offer_type: StockOfferType | '';
     stock_volumes: StockOfferVolumeFormItem[];
     images: File[];
@@ -62,6 +62,7 @@ type ProductFormData = {
 type ProductFormProps = {
     product?: Product;
     categories: Category[];
+    onAdjustStock?: () => void;
 };
 
 type ProductFormTab = 'details' | 'photos' | 'stock';
@@ -84,9 +85,7 @@ function tabForError(field: string): ProductFormTab {
         return 'photos';
     }
 
-    return field === 'has_stock_offer' || field.startsWith('stock_')
-        ? 'stock'
-        : 'details';
+    return field.startsWith('stock_') ? 'stock' : 'details';
 }
 
 type ProductErrorField =
@@ -117,8 +116,6 @@ const stockOfferTypes: Array<{
     },
 ];
 
-const defaultSizes = ['34', '36', '38', '40', '42', '44', '46'];
-
 function initialStockVolumes(product?: Product): StockOfferVolumeFormItem[] {
     if (product?.stock_volumes?.length) {
         return product.stock_volumes.map((volume) => ({
@@ -135,16 +132,7 @@ function initialStockVolumes(product?: Product): StockOfferVolumeFormItem[] {
         }));
     }
 
-    return [
-        {
-            total_quantity: null,
-            items: defaultSizes.map((size) => ({
-                size,
-                is_active: false,
-                quantity: null,
-            })),
-        },
-    ];
+    return [];
 }
 
 function hasKnownVolumeQuantity(volume: StockOfferVolumeFormItem): boolean {
@@ -171,7 +159,11 @@ function volumeTotal(volume: StockOfferVolumeFormItem): number {
     return Number(volume.total_quantity) || 0;
 }
 
-export function ProductForm({ product, categories }: ProductFormProps) {
+export function ProductForm({
+    product,
+    categories,
+    onAdjustStock,
+}: ProductFormProps) {
     const isEditing = product !== undefined;
     const [processingImages, setProcessingImages] = useState(false);
     const [activeTab, setActiveTab] = useState<ProductFormTab>('details');
@@ -199,7 +191,6 @@ export function ProductForm({ product, categories }: ProductFormProps) {
         line: product?.line ?? '',
         notes: product?.notes ?? '',
         is_active: product?.is_active ?? true,
-        has_stock_offer: product?.has_stock_offer ?? false,
         stock_offer_type: product?.stock_offer_type ?? 'new_grade',
         stock_volumes: initialStockVolumes(product),
         images: [],
@@ -291,15 +282,15 @@ export function ProductForm({ product, categories }: ProductFormProps) {
     const hasPositiveTotal = form.data.stock_volumes.some(
         (volume) => volumeTotal(volume) > 0,
     );
+    const lockedVolumeIds =
+        product?.stock_volumes
+            .filter((volume) => volume.is_locked)
+            .map((volume) => volume.id) ?? [];
+    const hasLockedVolumes = lockedVolumeIds.length > 0;
     const hasAvailableVolumes = form.data.stock_volumes.length > 0;
-    const hasCurrentStockData = form.data.stock_volumes.some(
-        (volume) =>
-            volumeTotal(volume) > 0 ||
-            volume.items.some((item) => item.is_active),
-    );
     const distributionStatus = !form.data.is_active
         ? 'Não aparece para as vendedoras: produto oculto.'
-        : !form.data.has_stock_offer
+        : !hasAvailableVolumes
           ? 'Não aparece para as vendedoras: sem estoque disponível.'
           : form.data.stock_offer_type === 'new_grade'
             ? 'Não aparece para as vendedoras: Grade Nova é somente para uso interno.'
@@ -310,8 +301,12 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                 : 'Aparece para as vendedoras.';
 
     const clearCurrentStock = () => {
+        if (hasLockedVolumes) {
+            return;
+        }
+
         const confirmed = window.confirm(
-            'Isso retirará a oferta de estoque do catálogo, zerará o estoque e os sacos disponíveis e limpará as quantidades deste lote. Deseja continuar?',
+            'Isso removerá a oferta de estoque e os sacos deste produto. Deseja continuar?',
         );
 
         if (!confirmed) {
@@ -320,16 +315,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
 
         form.setData((previousData) => ({
             ...previousData,
-            has_stock_offer: false,
-            stock_volumes: previousData.stock_volumes.map((volume) => ({
-                ...volume,
-                total_quantity: 0,
-                items: volume.items.map((item) => ({
-                    ...item,
-                    is_active: false,
-                    quantity: null,
-                })),
-            })),
+            stock_volumes: [],
         }));
     };
 
@@ -479,78 +465,17 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                 </div>
             </section>
 
-            <div
-                role="tablist"
-                aria-label="Seções do cadastro"
-                className="sticky top-0 z-20 grid grid-cols-3 gap-1.5 rounded-2xl border border-border bg-muted/95 p-1.5 backdrop-blur"
-            >
-                {formTabs.map(({ id, label, icon: Icon }, index) => {
-                    const errorCount = errorEntries.filter(
-                        ([field]) => tabForError(field) === id,
-                    ).length;
-
-                    return (
-                        <button
-                            key={id}
-                            id={`product-tab-${id}`}
-                            type="button"
-                            role="tab"
-                            aria-selected={activeTab === id}
-                            aria-controls={`product-panel-${id}`}
-                            tabIndex={activeTab === id ? 0 : -1}
-                            onClick={() => changeTab(id)}
-                            onKeyDown={(event) => {
-                                if (
-                                    ![
-                                        'ArrowLeft',
-                                        'ArrowRight',
-                                        'Home',
-                                        'End',
-                                    ].includes(event.key)
-                                ) {
-                                    return;
-                                }
-
-                                event.preventDefault();
-                                const nextIndex =
-                                    event.key === 'Home'
-                                        ? 0
-                                        : event.key === 'End'
-                                          ? formTabs.length - 1
-                                          : (index +
-                                                (event.key === 'ArrowLeft'
-                                                    ? -1
-                                                    : 1) +
-                                                formTabs.length) %
-                                            formTabs.length;
-                                const nextTab = formTabs[nextIndex].id;
-                                changeTab(nextTab);
-                                document
-                                    .getElementById(`product-tab-${nextTab}`)
-                                    ?.focus();
-                            }}
-                            className={cn(
-                                'flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-                                activeTab === id
-                                    ? 'bg-card text-foreground shadow-sm'
-                                    : 'text-muted-foreground hover:bg-card/60 hover:text-foreground',
-                            )}
-                        >
-                            <Icon className="size-5" aria-hidden="true" />
-                            {label}
-                            {errorCount > 0 && (
-                                <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs text-destructive">
-                                    {errorCount}
-                                    <span className="sr-only">
-                                        {' '}
-                                        erros para revisar
-                                    </span>
-                                </span>
-                            )}
-                        </button>
-                    );
-                })}
-            </div>
+            <CompactTabs
+                tabs={formTabs}
+                activeTab={activeTab}
+                onChange={changeTab}
+                idPrefix="product-tab"
+                panelIdPrefix="product-panel"
+                errorCount={(tab) =>
+                    errorEntries.filter(([field]) => tabForError(field) === tab)
+                        .length
+                }
+            />
 
             <section
                 id="product-panel-details"
@@ -847,38 +772,18 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                             <p className="text-sm font-medium text-foreground">
                                 {distributionStatus}
                             </p>
+                            {product && onAdjustStock && (
+                                <Button
+                                    type="button"
+                                    onClick={onAdjustStock}
+                                    className="mt-2 h-11 w-full sm:w-fit"
+                                >
+                                    Ajustar estoque por tamanho
+                                </Button>
+                            )}
                         </div>
                     </CardHeader>
                     <CardContent className="grid gap-6 p-5 pt-0 sm:p-6 sm:pt-0">
-                        <label
-                            htmlFor="has-stock-offer"
-                            className="flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-2xl border border-border/80 bg-muted/20 p-4 select-none"
-                        >
-                            <div className="grid gap-1">
-                                <p className="text-sm font-semibold text-foreground">
-                                    Oferta de estoque ativa
-                                </p>
-                                <p className="text-sm leading-5 text-muted-foreground">
-                                    {form.data.has_stock_offer
-                                        ? 'Este lote está disponível para distribuição. A exibição também depende do produto, do tipo da grade e do total em estoque.'
-                                        : 'Este lote está pausado, mas os dados dos sacos ficam preservados para uma próxima ativação.'}
-                                </p>
-                            </div>
-                            <Switch
-                                id="has-stock-offer"
-                                checked={form.data.has_stock_offer}
-                                onCheckedChange={(checked) =>
-                                    form.setData('has_stock_offer', checked)
-                                }
-                                aria-label={
-                                    form.data.has_stock_offer
-                                        ? 'Pausar oferta de estoque'
-                                        : 'Ativar oferta de estoque'
-                                }
-                            />
-                        </label>
-                        <InputError message={error('has_stock_offer')} />
-
                         <fieldset className="grid gap-3">
                             <legend
                                 id={radioGroupId}
@@ -893,6 +798,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                             <RadioGroup
                                 value={form.data.stock_offer_type}
                                 onValueChange={selectStockOfferType}
+                                disabled={hasLockedVolumes}
                                 className="grid grid-cols-3 gap-2"
                                 aria-labelledby={radioGroupId}
                                 aria-invalid={
@@ -940,6 +846,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                 <StockOfferVolumeEditor
                     volumes={form.data.stock_volumes}
                     errors={form.errors as Record<string, string>}
+                    lockedVolumeIds={lockedVolumeIds}
                     onChange={(volumes) =>
                         form.setData('stock_volumes', volumes)
                     }
@@ -951,15 +858,20 @@ export function ProductForm({ product, categories }: ProductFormProps) {
                             Encerrar estoque atual
                         </p>
                         <p className="text-sm leading-5 text-muted-foreground">
-                            Oculta a oferta, zera os sacos e desativa os
-                            tamanhos deste lote ao salvar.
+                            {hasLockedVolumes
+                                ? 'Sacos já movimentados precisam permanecer no histórico. Use Movimentações para novas entradas, saídas ou estornos.'
+                                : 'Remove a oferta e seus sacos deste produto ao salvar.'}
                         </p>
                     </div>
                     <Button
                         type="button"
                         variant="destructive"
+                        data-testid="end-current-stock"
                         onClick={clearCurrentStock}
-                        disabled={!hasCurrentStockData}
+                        disabled={
+                            form.data.stock_volumes.length === 0 ||
+                            hasLockedVolumes
+                        }
                         className="h-11 shrink-0"
                     >
                         <PackageX />

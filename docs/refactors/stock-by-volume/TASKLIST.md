@@ -63,7 +63,7 @@ não fazem parte do estado final.
   - Verificação: schema canônico validado em instalação limpa de testes.
 
 - [x] **SV012 — Verificar integridade das ofertas físicas** (`done`)
-  - Saída: comando de verificação das ofertas ativas sem saco físico.
+  - Saída: comando de verificação das ofertas sem saco físico.
   - Aceite: o ambiente dev não possui ofertas pendentes nem dados legados para
     reconciliação.
   - Verificação: relatório JSON retornou zero ofertas e zero pendências.

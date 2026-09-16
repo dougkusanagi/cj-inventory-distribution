@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
@@ -34,9 +35,24 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 class Product extends Model implements HasMedia
 {
     /** @use HasFactory<ProductFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     use InteractsWithMedia;
+
+    protected static function booted(): void
+    {
+        static::deleting(function (self $product): void {
+            $product->offers()->withTrashed()->get()
+                ->filter(fn (StockOffer $offer): bool => ! $offer->trashed())
+                ->each->delete();
+        });
+
+        static::restored(function (self $product): void {
+            $product->offers()->withTrashed()->get()
+                ->filter(fn (StockOffer $offer): bool => $offer->trashed())
+                ->each->restore();
+        });
+    }
 
     public const MEDIA_COLLECTION = 'product-images';
 

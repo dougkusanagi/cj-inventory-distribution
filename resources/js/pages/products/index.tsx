@@ -1054,7 +1054,7 @@ export default function ProductsIndex({
                         <DialogTitle>Excluir produto?</DialogTitle>
                         <DialogDescription>
                             {productToDelete
-                                ? `“${productToDelete.name}”, suas fotos, tamanhos e estoque serão removidos permanentemente.`
+                                ? `“${productToDelete.name}” será movido para a lixeira, junto com suas fotos, tamanhos e estoque.`
                                 : ''}
                         </DialogDescription>
                     </DialogHeader>

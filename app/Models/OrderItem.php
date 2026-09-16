@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -30,24 +31,24 @@ use Illuminate\Support\Carbon;
 class OrderItem extends Model
 {
     /** @use HasFactory<OrderItemFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     /** @return BelongsTo<Order, $this> */
     public function order(): BelongsTo
     {
-        return $this->belongsTo(Order::class);
+        return $this->belongsTo(Order::class)->withTrashed();
     }
 
     /** @return BelongsTo<StockOfferVolume, $this> */
     public function stockVolume(): BelongsTo
     {
-        return $this->belongsTo(StockOfferVolume::class, 'stock_offer_volume_id');
+        return $this->belongsTo(StockOfferVolume::class, 'stock_offer_volume_id')->withTrashed();
     }
 
     /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Product::class)->withTrashed();
     }
 
     /** @return array<string, string> */

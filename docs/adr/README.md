@@ -41,3 +41,7 @@ ADRs iniciais:
 - [0011 — Grade Nova nunca aparece no catálogo para lojistas](0011-no-new-grade-in-public-catalog.md)
 - [0012 — Pedidos de sacos inteiros com reserva e conferência](0012-whole-sack-orders-proposal.md)
 - [0013 — Pedidos do catálogo enviados via WhatsApp](0013-catalog-orders-via-whatsapp.md)
+- [0014 — Remover a ativação independente da oferta](0014-remove-stock-offer-activation.md)
+- [0015 — Soft deletes para entidades da aplicação](0015-soft-deletes-for-application-entities.md)
+- [0016 — Movimentações imutáveis para o estoque físico](0016-stock-movements.md)
+- [0017 — Trilha de auditoria administrativa](0017-application-audit-log.md)

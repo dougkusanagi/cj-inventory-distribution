@@ -51,6 +51,7 @@ class CatalogDemoSeeder extends Seeder
          *     additional_images?: list<string>,
          *     line: ProductLine,
          *     type: StockOfferType,
+         *     size_preset: 'numeric-female'|'letters',
          *     volumes: list<array{total: int, sizes: array<string, int>}>
          * }> $products
          */
@@ -64,6 +65,7 @@ class CatalogDemoSeeder extends Seeder
                 'additional_images' => ['calca-reta.png'],
                 'line' => ProductLine::Slim,
                 'type' => StockOfferType::Replenishment,
+                'size_preset' => 'numeric-female',
                 'volumes' => [
                     ['total' => 20, 'sizes' => ['34' => 4, '36' => 4, '38' => 4, '40' => 4, '42' => 4]],
                     ['total' => 18, 'sizes' => ['36' => 4, '38' => 5, '40' => 5, '42' => 4]],
@@ -77,8 +79,9 @@ class CatalogDemoSeeder extends Seeder
                 'image' => 'bermuda-jeans.png',
                 'line' => ProductLine::Plus,
                 'type' => StockOfferType::Replenishment,
+                'size_preset' => 'numeric-female',
                 'volumes' => [
-                    ['total' => 16, 'sizes' => ['44' => 4, '46' => 4, '48' => 4, '50' => 4]],
+                    ['total' => 16, 'sizes' => ['40' => 4, '42' => 4, '44' => 4, '46' => 4]],
                 ],
             ],
             [
@@ -89,6 +92,7 @@ class CatalogDemoSeeder extends Seeder
                 'image' => 'short-mom.png',
                 'line' => ProductLine::Slim,
                 'type' => StockOfferType::BrokenGrade,
+                'size_preset' => 'numeric-female',
                 'volumes' => [
                     ['total' => 12, 'sizes' => ['36' => 4, '38' => 4, '40' => 4]],
                     ['total' => 10, 'sizes' => ['34' => 5, '38' => 5]],
@@ -102,8 +106,9 @@ class CatalogDemoSeeder extends Seeder
                 'image' => 'cropped-jeans.png',
                 'line' => ProductLine::Plus,
                 'type' => StockOfferType::BrokenGrade,
+                'size_preset' => 'letters',
                 'volumes' => [
-                    ['total' => 15, 'sizes' => ['G' => 5, 'GG' => 5, '3G' => 5]],
+                    ['total' => 15, 'sizes' => ['M' => 5, 'G' => 5, 'GG' => 5]],
                 ],
             ],
             [
@@ -114,9 +119,10 @@ class CatalogDemoSeeder extends Seeder
                 'image' => 'calca-reta.png',
                 'line' => ProductLine::Plus,
                 'type' => StockOfferType::Replenishment,
+                'size_preset' => 'numeric-female',
                 'volumes' => [
-                    ['total' => 18, 'sizes' => ['44' => 6, '46' => 6, '48' => 6]],
-                    ['total' => 12, 'sizes' => ['46' => 4, '48' => 4, '50' => 4]],
+                    ['total' => 18, 'sizes' => ['40' => 6, '42' => 6, '44' => 6]],
+                    ['total' => 12, 'sizes' => ['42' => 4, '44' => 4, '46' => 4]],
                 ],
             ],
             [
@@ -127,6 +133,7 @@ class CatalogDemoSeeder extends Seeder
                 'image' => 'bermuda-ciclista.png',
                 'line' => ProductLine::Slim,
                 'type' => StockOfferType::Replenishment,
+                'size_preset' => 'letters',
                 'volumes' => [
                     ['total' => 20, 'sizes' => ['P' => 5, 'M' => 5, 'G' => 5, 'GG' => 5]],
                 ],
@@ -139,6 +146,7 @@ class CatalogDemoSeeder extends Seeder
                 'image' => 'saia-midi.png',
                 'line' => ProductLine::Plus,
                 'type' => StockOfferType::BrokenGrade,
+                'size_preset' => 'numeric-female',
                 'volumes' => [
                     ['total' => 10, 'sizes' => ['36' => 3, '38' => 3, '40' => 4]],
                 ],
@@ -151,10 +159,16 @@ class CatalogDemoSeeder extends Seeder
                 'image' => 'produto-interno-grade-nova.png',
                 'line' => ProductLine::Slim,
                 'type' => StockOfferType::NewGrade,
+                'size_preset' => 'letters',
                 'volumes' => [
-                    ['total' => 24, 'sizes' => ['36' => 6, '38' => 6, '40' => 6, '42' => 6]],
+                    ['total' => 24, 'sizes' => ['P' => 6, 'M' => 6, 'G' => 6, 'GG' => 6]],
                 ],
             ],
+        ];
+
+        $sizePresets = [
+            'numeric-female' => ['34', '36', '38', '40', '42', '44', '46'],
+            'letters' => ['PP', 'P', 'M', 'G', 'GG'],
         ];
 
         foreach ($products as $definition) {
@@ -190,7 +204,6 @@ class CatalogDemoSeeder extends Seeder
             $offer->product()->associate($product);
             $offer->fill([
                 'type' => $definition['type'],
-                'is_active' => true,
                 'notes' => 'Oferta de demonstração para testes.',
             ]);
             $offer->save();
@@ -205,12 +218,12 @@ class CatalogDemoSeeder extends Seeder
 
                 $volume->items()->delete();
                 $itemSortOrder = 0;
-                foreach ($volumeDefinition['sizes'] as $size => $quantity) {
+                foreach ($sizePresets[$definition['size_preset']] as $size) {
                     $volume->items()->create([
                         'size' => $size,
                         'sort_order' => $itemSortOrder,
-                        'is_active' => true,
-                        'quantity' => $quantity,
+                        'is_active' => array_key_exists($size, $volumeDefinition['sizes']),
+                        'quantity' => $volumeDefinition['sizes'][$size] ?? null,
                     ]);
                     $itemSortOrder++;
                 }

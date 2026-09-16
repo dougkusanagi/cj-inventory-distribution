@@ -4,7 +4,7 @@ import {
     Ban,
     Check,
     CheckCircle2,
-    MessageCircle,
+    Ellipsis,
     Pencil,
     RotateCcw,
 } from 'lucide-react';
@@ -25,6 +25,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
     Dialog,
     DialogClose,
     DialogContent,
@@ -32,7 +40,6 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -40,10 +47,10 @@ import { edit, index } from '@/routes/orders';
 import type { Order, OrderItem } from '@/types';
 
 export default function ShowOrder({ order }: { order: Order }) {
-    const [whatsappOpened, setWhatsappOpened] = useState(false);
     const cancelForm = useForm({ reason: '' });
-    const completeForm = useForm({ whatsapp_opened: false });
+    const completeForm = useForm({});
     const progressForm = useForm({ reason: '' });
+    const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
     const [divergenceItem, setDivergenceItem] = useState<OrderItem | null>(
         null,
     );
@@ -56,7 +63,7 @@ export default function ShowOrder({ order }: { order: Order }) {
     };
     const submitCompletion = () => {
         if (
-            !whatsappOpened ||
+            !readyForCompletion ||
             !window.confirm(
                 `Finalizar ${order.code}? Os sacos serão marcados como consumidos.`,
             )
@@ -64,7 +71,6 @@ export default function ShowOrder({ order }: { order: Order }) {
             return;
         }
 
-        completeForm.transform(() => ({ whatsapp_opened: whatsappOpened }));
         completeForm.post(complete.url(order.id));
     };
 
@@ -156,12 +162,58 @@ export default function ShowOrder({ order }: { order: Order }) {
                         </p>
                     </div>
                     {order.status === 'pending' && (
-                        <Button asChild variant="outline">
-                            <Link href={edit(order.id)}>
-                                <Pencil />
-                                Editar dados
-                            </Link>
-                        </Button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-11 sm:h-9"
+                                    aria-label="Mais ações do pedido"
+                                    data-testid="menu-acoes-pedido"
+                                >
+                                    <Ellipsis />
+                                    Mais ações
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                                align="end"
+                                className="min-w-56"
+                            >
+                                <DropdownMenuLabel>
+                                    Ações do pedido
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem asChild>
+                                    <Link
+                                        href={edit(order.id)}
+                                        data-testid="editar-pedido"
+                                    >
+                                        <Pencil />
+                                        Editar pedido
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    disabled={
+                                        !readyForCompletion ||
+                                        completeForm.processing
+                                    }
+                                    data-testid="finalizar-pedido-menu"
+                                    onSelect={submitCompletion}
+                                >
+                                    <CheckCircle2 />
+                                    Finalizar pedido
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                    variant="destructive"
+                                    data-testid="cancelar-pedido"
+                                    onSelect={() => setCancelDialogOpen(true)}
+                                >
+                                    <Ban />
+                                    Cancelar pedido
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     )}
                 </header>
                 <Card className="rounded-[1.75rem] border-border/80 shadow-sm">
@@ -269,19 +321,52 @@ export default function ShowOrder({ order }: { order: Order }) {
                                         </span>
                                     )}
                                 </div>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {item.sizes.map((size) => (
-                                        <span
-                                            key={size.size}
-                                            className="rounded-md bg-muted px-2 py-1 font-mono text-xs"
-                                        >
-                                            {size.size}
-                                            {size.quantity !== null
-                                                ? `: ${size.quantity}`
-                                                : ''}
-                                        </span>
-                                    ))}
-                                </div>
+                                {item.sizes.some(
+                                    ({ quantity }) => quantity !== null,
+                                ) ? (
+                                    <div className="grid gap-2">
+                                        <p className="text-xs font-medium text-muted-foreground">
+                                            Conteúdo por tamanho
+                                        </p>
+                                        <dl className="flex flex-wrap gap-2">
+                                            {item.sizes.map(
+                                                ({ size, quantity }) => (
+                                                    <div
+                                                        key={size}
+                                                        className="grid min-w-16 justify-items-center gap-0.5 rounded-lg bg-muted px-3 py-2 tabular-nums"
+                                                        aria-label={
+                                                            quantity === null
+                                                                ? `Tamanho ${size}, quantidade não informada`
+                                                                : `Tamanho ${size}, ${quantity} ${quantity === 1 ? 'peça' : 'peças'}`
+                                                        }
+                                                    >
+                                                        <dt className="text-base leading-5 font-semibold text-foreground">
+                                                            {size}
+                                                        </dt>
+                                                        <dd className="text-xs leading-4 text-muted-foreground">
+                                                            {quantity === null
+                                                                ? 'Não informada'
+                                                                : `${quantity} ${quantity === 1 ? 'pç' : 'pçs'}`}
+                                                        </dd>
+                                                    </div>
+                                                ),
+                                            )}
+                                        </dl>
+                                    </div>
+                                ) : (
+                                    <div className="grid gap-1 text-muted-foreground">
+                                        <p className="text-sm">
+                                            Tamanhos:{' '}
+                                            {item.sizes
+                                                .map(({ size }) => size)
+                                                .join(' · ')}
+                                        </p>
+                                        <p className="text-xs">
+                                            Quantidade por tamanho não
+                                            informada.
+                                        </p>
+                                    </div>
+                                )}
                                 {order.status === 'pending' && (
                                     <div className="flex flex-wrap gap-2 border-t border-border pt-3">
                                         {!isSeparated && (
@@ -408,10 +493,92 @@ export default function ShowOrder({ order }: { order: Order }) {
                         );
                     })}
                 </section>
+                {order.status === 'pending' && (
+                    <div
+                        className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center"
+                        data-testid="acoes-finalizacao"
+                    >
+                        <div className="grid gap-2 sm:mr-auto">
+                            {!readyForCompletion && (
+                                <p className="rounded-xl bg-muted p-3 text-sm text-muted-foreground">
+                                    Separe e confira todos os sacos e resolva as
+                                    divergências antes de finalizar.
+                                </p>
+                            )}
+                            <InputError message={completeErrors.order} />
+                        </div>
+                        <Button
+                            data-testid="finalizar-pedido"
+                            className="h-11 sm:w-fit"
+                            onClick={submitCompletion}
+                            disabled={
+                                !readyForCompletion || completeForm.processing
+                            }
+                        >
+                            <CheckCircle2 />
+                            Finalizar pedido
+                        </Button>
+                        <Dialog
+                            open={cancelDialogOpen}
+                            onOpenChange={setCancelDialogOpen}
+                        >
+                            <DialogContent>
+                                <form onSubmit={submitCancellation}>
+                                    <DialogHeader>
+                                        <DialogTitle>
+                                            Cancelar {order.code}?
+                                        </DialogTitle>
+                                        <DialogDescription>
+                                            Os sacos serão liberados para novos
+                                            pedidos. O histórico será
+                                            preservado.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="grid gap-2 py-5">
+                                        <Label htmlFor="cancel-reason">
+                                            Motivo
+                                        </Label>
+                                        <Textarea
+                                            id="cancel-reason"
+                                            value={cancelForm.data.reason}
+                                            onChange={(event) =>
+                                                cancelForm.setData(
+                                                    'reason',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                        <InputError
+                                            message={cancelForm.errors.reason}
+                                        />
+                                    </div>
+                                    <DialogFooter>
+                                        <DialogClose asChild>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                            >
+                                                Voltar
+                                            </Button>
+                                        </DialogClose>
+                                        <Button
+                                            type="submit"
+                                            variant="destructive"
+                                            disabled={cancelForm.processing}
+                                        >
+                                            Confirmar cancelamento
+                                        </Button>
+                                    </DialogFooter>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
+                )}
                 {order.events && order.events.length > 0 && (
                     <section
                         className="grid gap-3"
                         aria-labelledby="order-events-title"
+                        data-testid="historico-pedido"
                     >
                         <h2
                             id="order-events-title"
@@ -439,147 +606,6 @@ export default function ShowOrder({ order }: { order: Order }) {
                             ))}
                         </div>
                     </section>
-                )}
-                {order.status === 'pending' && (
-                    <div className="grid gap-5 border-t border-border pt-5">
-                        <section
-                            className="grid gap-3"
-                            aria-labelledby="whatsapp-step-title"
-                        >
-                            <div className="grid gap-1">
-                                <h2
-                                    id="whatsapp-step-title"
-                                    className="text-xl font-semibold"
-                                >
-                                    Envie o pedido pelo WhatsApp
-                                </h2>
-                                <p className="text-sm leading-6 text-muted-foreground">
-                                    Abra a conversa com o pedido preenchido
-                                    antes de finalizar. Abrir o link não
-                                    confirma que a mensagem foi enviada.
-                                </p>
-                            </div>
-                            {order.whatsapp_url ? (
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                    <Button asChild className="h-11 sm:w-fit">
-                                        <a
-                                            href={order.whatsapp_url}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            data-testid="abrir-whatsapp-pedido"
-                                            onClick={() =>
-                                                setWhatsappOpened(true)
-                                            }
-                                        >
-                                            <MessageCircle />
-                                            Abrir WhatsApp com o pedido
-                                        </a>
-                                    </Button>
-                                    <p
-                                        role="status"
-                                        aria-live="polite"
-                                        className="text-sm text-muted-foreground"
-                                    >
-                                        {whatsappOpened
-                                            ? 'Conversa aberta neste navegador.'
-                                            : 'Abra a conversa para liberar a finalização.'}
-                                    </p>
-                                </div>
-                            ) : (
-                                <p
-                                    role="alert"
-                                    className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
-                                >
-                                    O WhatsApp de atendimento não está
-                                    configurado. Configure-o antes de finalizar
-                                    este pedido.
-                                </p>
-                            )}
-                        </section>
-                        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                            <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button variant="destructive">
-                                        <Ban />
-                                        Cancelar pedido
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <form onSubmit={submitCancellation}>
-                                        <DialogHeader>
-                                            <DialogTitle>
-                                                Cancelar {order.code}?
-                                            </DialogTitle>
-                                            <DialogDescription>
-                                                Os sacos serão liberados para
-                                                novos pedidos. O histórico será
-                                                preservado.
-                                            </DialogDescription>
-                                        </DialogHeader>
-                                        <div className="grid gap-2 py-5">
-                                            <Label htmlFor="cancel-reason">
-                                                Motivo
-                                            </Label>
-                                            <Textarea
-                                                id="cancel-reason"
-                                                value={cancelForm.data.reason}
-                                                onChange={(event) =>
-                                                    cancelForm.setData(
-                                                        'reason',
-                                                        event.target.value,
-                                                    )
-                                                }
-                                            />
-                                            <InputError
-                                                message={
-                                                    cancelForm.errors.reason
-                                                }
-                                            />
-                                        </div>
-                                        <DialogFooter>
-                                            <DialogClose asChild>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                >
-                                                    Voltar
-                                                </Button>
-                                            </DialogClose>
-                                            <Button
-                                                type="submit"
-                                                variant="destructive"
-                                                disabled={cancelForm.processing}
-                                            >
-                                                Confirmar cancelamento
-                                            </Button>
-                                        </DialogFooter>
-                                    </form>
-                                </DialogContent>
-                            </Dialog>
-                            {!readyForCompletion && (
-                                <p className="rounded-xl bg-muted p-3 text-sm text-muted-foreground">
-                                    Separe e confira todos os sacos e resolva as
-                                    divergências antes de finalizar.
-                                </p>
-                            )}
-                            <InputError
-                                message={completeForm.errors.whatsapp_opened}
-                            />
-                            <InputError message={completeErrors.order} />
-                            <Button
-                                data-testid="finalizar-pedido"
-                                onClick={submitCompletion}
-                                disabled={
-                                    !whatsappOpened ||
-                                    !readyForCompletion ||
-                                    completeForm.processing
-                                }
-                            >
-                                <CheckCircle2 />
-                                Finalizar pedido
-                            </Button>
-                        </div>
-                    </div>
                 )}
                 <Dialog
                     open={divergenceItem !== null}

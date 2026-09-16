@@ -1,5 +1,5 @@
-import { useForm } from '@inertiajs/react';
-import { PackageCheck, Save } from 'lucide-react';
+import { Link, useForm, type InertiaLinkProps } from '@inertiajs/react';
+import { PackageCheck, Save, X } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { store, update } from '@/actions/App/Http/Controllers/OrderController';
 import InputError from '@/components/input-error';
@@ -14,9 +14,11 @@ import type { AvailableOrderVolume, Order } from '@/types';
 export function OrderForm({
     order,
     availableVolumes = [],
+    cancelHref,
 }: {
     order?: Order;
     availableVolumes?: AvailableOrderVolume[];
+    cancelHref?: InertiaLinkProps['href'];
 }) {
     const form = useForm({
         store_name: order?.store_name ?? '',
@@ -182,20 +184,36 @@ export function OrderForm({
                 </Card>
             )}
 
-            <Button
-                type="submit"
-                disabled={
-                    form.processing || (!order && availableVolumes.length === 0)
-                }
-                className="h-11 justify-self-end"
-            >
-                <Save />
-                {form.processing
-                    ? 'Salvando...'
-                    : order
-                      ? 'Salvar alterações'
-                      : 'Registrar pedido'}
-            </Button>
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                {cancelHref && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11"
+                        asChild
+                    >
+                        <Link href={cancelHref} data-testid="cancelar-edicao">
+                            <X />
+                            Cancelar
+                        </Link>
+                    </Button>
+                )}
+                <Button
+                    type="submit"
+                    disabled={
+                        form.processing ||
+                        (!order && availableVolumes.length === 0)
+                    }
+                    className="h-11"
+                >
+                    <Save />
+                    {form.processing
+                        ? 'Salvando...'
+                        : order
+                          ? 'Salvar alterações'
+                          : 'Registrar pedido'}
+                </Button>
+            </div>
         </form>
     );
 }

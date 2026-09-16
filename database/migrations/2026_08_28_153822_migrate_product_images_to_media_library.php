@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        foreach (Product::query()->whereNotNull('image_path')->cursor() as $product) {
+        foreach (Product::withoutGlobalScopes()->whereNotNull('image_path')->cursor() as $product) {
             $imagePath = $product->getAttribute('image_path');
 
             if (! is_string($imagePath) || ! Storage::disk('public')->exists($imagePath)) {

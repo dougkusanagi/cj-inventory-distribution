@@ -28,7 +28,8 @@ test('seeds a repeatable catalog demo with classified products and physical sack
         ->and($product->latestOffer->type)->toBe(StockOfferType::Replenishment)
         ->and($product->latestOffer->calculatedTotalQuantity())->toBe(38)
         ->and($product->latestOffer->stockVolumes->pluck('total_quantity')->all())->toBe([20, 18])
-        ->and($product->latestOffer->stockVolumes->first()->items->pluck('quantity')->all())->toBe([4, 4, 4, 4, 4])
+        ->and($product->latestOffer->stockVolumes->first()->items->pluck('size')->all())->toBe(['34', '36', '38', '40', '42', '44', '46'])
+        ->and($product->latestOffer->stockVolumes->first()->items->pluck('quantity')->all())->toBe([4, 4, 4, 4, 4, null, null])
         ->and($product->getMedia(Product::MEDIA_COLLECTION))->toHaveCount(2)
         ->and($product->getFirstMedia(Product::MEDIA_COLLECTION)?->file_name)->toBe('calca-wide-leg.png');
 
@@ -38,6 +39,14 @@ test('seeds a repeatable catalog demo with classified products and physical sack
         ->firstOrFail();
 
     expect($newGrade->latestOffer->type)->toBe(StockOfferType::NewGrade);
+
+    $letterProduct = Product::query()
+        ->with('latestOffer.stockVolumes.items')
+        ->where('code', 'DEMO-CJ-0004')
+        ->firstOrFail();
+
+    expect($letterProduct->latestOffer->stockVolumes->first()->items->pluck('size')->all())
+        ->toBe(['PP', 'P', 'M', 'G', 'GG']);
 
     $skirt = Product::query()->where('code', 'DEMO-CJ-0007')->firstOrFail();
 

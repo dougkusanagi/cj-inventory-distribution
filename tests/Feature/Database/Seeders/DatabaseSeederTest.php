@@ -8,4 +8,8 @@ test('database seeding can be repeated without duplicating the default user', fu
     $this->seed(DatabaseSeeder::class);
 
     expect(User::query()->where('email', 'test@example.com')->count())->toBe(1);
+
+    $testUser = User::query()->where('email', 'test@example.com')->sole();
+
+    expect($testUser->isStaff())->toBeTrue();
 });

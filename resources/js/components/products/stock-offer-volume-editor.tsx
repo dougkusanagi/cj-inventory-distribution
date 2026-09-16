@@ -11,7 +11,7 @@ import {
     Plus,
     Trash2,
 } from 'lucide-react';
-import { useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
 import InputError from '@/components/input-error';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -77,20 +77,21 @@ type StockOfferVolumeEditorProps = {
     volumes: StockOfferVolumeFormItem[];
     errors: Record<string, string | undefined>;
     onChange: (volumes: StockOfferVolumeFormItem[]) => void;
+    lockedVolumeIds?: number[];
 };
 
-function emptyItems(): StockOfferVolumeItemFormItem[] {
-    return sizePresets[0].sizes.map((size) => ({
+function emptyItems(sizes: string[]): StockOfferVolumeItemFormItem[] {
+    return sizes.map((size) => ({
         size,
         is_active: false,
         quantity: null,
     }));
 }
 
-function emptyVolume(): StockOfferVolumeFormItem {
+function emptyVolume(sizes: string[]): StockOfferVolumeFormItem {
     return {
         total_quantity: null,
-        items: emptyItems(),
+        items: emptyItems(sizes),
     };
 }
 
@@ -132,6 +133,10 @@ function detectPreset(items: StockOfferVolumeItemFormItem[]): SizePresetId {
 }
 
 function detectSharedPreset(volumes: StockOfferVolumeFormItem[]): SizePresetId {
+    if (volumes.length === 0) {
+        return 'numeric-female';
+    }
+
     const firstPreset = detectPreset(volumes[0]?.items ?? []);
 
     return volumes.every((volume) => detectPreset(volume.items) === firstPreset)
@@ -208,18 +213,19 @@ export function StockOfferVolumeEditor({
     volumes,
     errors,
     onChange,
+    lockedVolumeIds = [],
 }: StockOfferVolumeEditorProps) {
-    const isHydrated = useSyncExternalStore(
-        () => () => {},
-        () => true,
-        () => false,
-    );
     const [selectedPreset, setSelectedPreset] = useState<SizePresetId>(() =>
         detectSharedPreset(volumes),
     );
     const [isCustomEditorOpen, setIsCustomEditorOpen] = useState(
         () => detectSharedPreset(volumes) === 'custom',
     );
+    const lockedVolumeIdSet = new Set(lockedVolumeIds);
+    const isVolumeLocked = (
+        volume: StockOfferVolumeFormItem | undefined,
+    ): boolean => volume?.id !== undefined && lockedVolumeIdSet.has(volume.id);
+    const hasLockedVolumes = volumes.some(isVolumeLocked);
 
     const error = (field: string): string | undefined => errors[field];
 
@@ -227,6 +233,10 @@ export function StockOfferVolumeEditor({
         volumeIndex: number,
         updater: (volume: StockOfferVolumeFormItem) => StockOfferVolumeFormItem,
     ) => {
+        if (isVolumeLocked(volumes[volumeIndex])) {
+            return;
+        }
+
         onChange(
             volumes.map((volume, index) =>
                 index === volumeIndex ? updater(volume) : volume,
@@ -250,6 +260,10 @@ export function StockOfferVolumeEditor({
     };
 
     const applyPreset = (presetId: string) => {
+        if (hasLockedVolumes) {
+            return;
+        }
+
         const preset = sizePresets.find(
             (candidate) => candidate.id === presetId,
         );
@@ -272,6 +286,10 @@ export function StockOfferVolumeEditor({
     };
 
     const addSize = () => {
+        if (hasLockedVolumes) {
+            return;
+        }
+
         setSelectedPreset('custom');
         setIsCustomEditorOpen(true);
         onChange(
@@ -280,6 +298,10 @@ export function StockOfferVolumeEditor({
     };
 
     const updateSharedSize = (itemIndex: number, size: string) => {
+        if (hasLockedVolumes) {
+            return;
+        }
+
         const sizes = sharedSizes(volumes);
 
         sizes[itemIndex] = size;
@@ -287,6 +309,10 @@ export function StockOfferVolumeEditor({
     };
 
     const removeSize = (itemIndex: number) => {
+        if (hasLockedVolumes) {
+            return;
+        }
+
         const sizes = sharedSizes(volumes);
         const sizeToRemove = sizes[itemIndex];
         const hasData = volumes.some((volume) => {
@@ -321,6 +347,9 @@ export function StockOfferVolumeEditor({
 
     const addVolume = () => {
         const template = volumes[volumes.length - 1];
+        const selectedSizes =
+            sizePresets.find((preset) => preset.id === selectedPreset)?.sizes ??
+            [];
         const nextVolume = template
             ? {
                   total_quantity: null,
@@ -330,7 +359,7 @@ export function StockOfferVolumeEditor({
                       quantity: null,
                   })),
               }
-            : emptyVolume();
+            : emptyVolume(selectedSizes);
 
         onChange([...volumes, nextVolume]);
     };
@@ -338,7 +367,7 @@ export function StockOfferVolumeEditor({
     const duplicateVolume = (volumeIndex: number) => {
         const source = volumes[volumeIndex];
 
-        if (!source) {
+        if (!source || isVolumeLocked(source)) {
             return;
         }
 
@@ -356,7 +385,11 @@ export function StockOfferVolumeEditor({
     };
 
     const removeVolume = (volumeIndex: number) => {
-        if (volumes.length <= 1 || !volumes[volumeIndex]) {
+        if (
+            volumes.length <= 1 ||
+            !volumes[volumeIndex] ||
+            isVolumeLocked(volumes[volumeIndex])
+        ) {
             return;
         }
 
@@ -387,6 +420,10 @@ export function StockOfferVolumeEditor({
     ) => {
         const item = volumes[volumeIndex]?.items[itemIndex];
 
+        if (isVolumeLocked(volumes[volumeIndex])) {
+            return;
+        }
+
         if (
             item &&
             !isActive &&
@@ -408,6 +445,10 @@ export function StockOfferVolumeEditor({
 
     const setAllItemsActive = (volumeIndex: number, isActive: boolean) => {
         const volume = volumes[volumeIndex];
+
+        if (!volume || isVolumeLocked(volume)) {
+            return;
+        }
 
         if (
             volume &&
@@ -458,167 +499,184 @@ export function StockOfferVolumeEditor({
 
     return (
         <div className="grid gap-5">
-            <Alert className="border-primary/25 bg-primary/5 [&>svg]:text-primary">
-                <Layers />
-                <AlertTitle>O estoque é organizado por saco</AlertTitle>
-                <AlertDescription>
-                    Cada saco tem sua própria grade. O total geral é a soma dos
-                    totais dos sacos e é recalculado no servidor ao salvar.
-                </AlertDescription>
-            </Alert>
+            <Card className="grid gap-5 rounded-2xl border-border/80 p-4 shadow-sm sm:p-5">
+                <Alert className="border-primary/25 bg-primary/5 [&>svg]:text-primary">
+                    <Layers />
+                    <AlertTitle>O estoque é organizado por saco</AlertTitle>
+                    <AlertDescription>
+                        Cada saco tem sua própria grade. O total geral é a soma
+                        dos totais dos sacos e é recalculado no servidor ao
+                        salvar.
+                    </AlertDescription>
+                </Alert>
 
-            <fieldset className="grid gap-3">
-                <legend className="text-sm font-semibold text-foreground">
-                    Modelo de grade
-                </legend>
-                <p className="text-xs text-muted-foreground">
-                    Escolha o modelo dos tamanhos. A presença e a quantidade
-                    continuam sendo definidas separadamente em cada saco.
-                </p>
-                <RadioGroup
-                    value={selectedPreset}
-                    onValueChange={applyPreset}
-                    className="grid grid-cols-1 gap-2 sm:grid-cols-3"
-                    aria-label="Modelo de grade"
-                >
-                    {sizePresets.map((preset) => {
-                        const optionId = `stock-size-preset-${preset.id}`;
+                <fieldset className="grid gap-3">
+                    <legend className="text-sm font-semibold text-foreground">
+                        Modelo de grade
+                    </legend>
+                    <p className="text-xs text-muted-foreground">
+                        Escolha o modelo dos tamanhos. A presença e a quantidade
+                        continuam sendo definidas separadamente em cada saco.
+                    </p>
+                    <RadioGroup
+                        value={selectedPreset}
+                        onValueChange={applyPreset}
+                        disabled={hasLockedVolumes}
+                        className="grid grid-cols-1 gap-2 sm:grid-cols-3"
+                        aria-label="Modelo de grade"
+                    >
+                        {sizePresets.map((preset) => {
+                            const optionId = `stock-size-preset-${preset.id}`;
 
-                        return (
-                            <label
-                                key={preset.id}
-                                htmlFor={optionId}
-                                className={cn(
-                                    'flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors select-none',
-                                    selectedPreset === preset.id
-                                        ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                                        : 'border-border hover:bg-muted/30',
-                                )}
-                            >
-                                <RadioGroupItem
-                                    id={optionId}
-                                    value={preset.id}
-                                />
-                                <span className="grid gap-0.5">
-                                    <span>{preset.label}</span>
-                                    <span className="text-xs font-normal text-muted-foreground">
-                                        {preset.description}
-                                    </span>
-                                </span>
-                            </label>
-                        );
-                    })}
-                </RadioGroup>
-            </fieldset>
-
-            {selectedPreset === 'custom' && (
-                <div className="grid gap-3 rounded-xl border border-dashed border-border bg-muted/20 p-3">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="grid gap-1">
-                            <p className="text-sm font-semibold text-foreground">
-                                Nomes dos tamanhos
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                Esta lista é compartilhada por todos os sacos; a
-                                presença e a quantidade continuam independentes.
-                            </p>
-                        </div>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                                setIsCustomEditorOpen((current) => !current)
-                            }
-                        >
-                            {isCustomEditorOpen ? <EyeOff /> : <Eye />}
-                            {isCustomEditorOpen
-                                ? 'Ocultar edição'
-                                : 'Editar tamanhos'}
-                        </Button>
-                    </div>
-
-                    {isCustomEditorOpen && (
-                        <div className="grid gap-3">
-                            {customItems.map((item, itemIndex) => (
-                                <div
-                                    key={item.id ?? `custom-size-${itemIndex}`}
-                                    className="flex items-start gap-2"
+                            return (
+                                <label
+                                    key={preset.id}
+                                    htmlFor={optionId}
+                                    className={cn(
+                                        'flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors select-none',
+                                        selectedPreset === preset.id
+                                            ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                                            : 'border-border hover:bg-muted/30',
+                                    )}
                                 >
-                                    <div className="grid min-w-0 flex-1 gap-1">
-                                        <Label
-                                            htmlFor={`custom-size-${itemIndex}`}
-                                            className="sr-only"
-                                        >
-                                            Tamanho {itemIndex + 1}
-                                        </Label>
-                                        <Input
-                                            id={`custom-size-${itemIndex}`}
-                                            value={item.size}
-                                            onChange={(event) =>
-                                                updateSharedSize(
-                                                    itemIndex,
-                                                    event.target.value,
-                                                )
-                                            }
-                                            placeholder="Ex.: 3G ou 42"
-                                            className="h-10 text-base sm:text-sm"
-                                            aria-invalid={
-                                                customSizeError(itemIndex)
-                                                    ? true
-                                                    : undefined
-                                            }
-                                        />
-                                        <InputError
-                                            message={customSizeError(itemIndex)}
-                                        />
-                                    </div>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => removeSize(itemIndex)}
-                                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                        aria-label={`Remover tamanho ${itemIndex + 1} de todos os sacos`}
-                                    >
-                                        <Trash2 />
-                                    </Button>
-                                </div>
-                            ))}
+                                    <RadioGroupItem
+                                        id={optionId}
+                                        value={preset.id}
+                                    />
+                                    <span className="grid gap-0.5">
+                                        <span>{preset.label}</span>
+                                        <span className="text-xs font-normal text-muted-foreground">
+                                            {preset.description}
+                                        </span>
+                                    </span>
+                                </label>
+                            );
+                        })}
+                    </RadioGroup>
+                </fieldset>
+
+                {selectedPreset === 'custom' && (
+                    <div className="grid gap-3 rounded-xl border border-dashed border-border bg-muted/20 p-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="grid gap-1">
+                                <p className="text-sm font-semibold text-foreground">
+                                    Nomes dos tamanhos
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    Esta lista é compartilhada por todos os
+                                    sacos; a presença e a quantidade continuam
+                                    independentes.
+                                </p>
+                            </div>
                             <Button
                                 type="button"
-                                variant="outline"
-                                onClick={addSize}
-                                className="w-full sm:w-fit"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                    setIsCustomEditorOpen((current) => !current)
+                                }
                             >
-                                <Plus />
-                                Adicionar tamanho
+                                {isCustomEditorOpen ? <EyeOff /> : <Eye />}
+                                {isCustomEditorOpen
+                                    ? 'Ocultar edição'
+                                    : 'Editar tamanhos'}
                             </Button>
                         </div>
-                    )}
-                </div>
-            )}
 
-            <div className="flex flex-col gap-3 rounded-2xl border border-primary/25 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="grid gap-1">
-                    <span className="text-xs font-semibold tracking-[0.16em] text-highlight uppercase">
-                        Total da oferta
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                        Soma dos {volumes.length}{' '}
-                        {volumes.length === 1 ? 'saco' : 'sacos'} cadastrados.
-                    </span>
-                </div>
-                <strong className="font-mono text-2xl text-foreground">
-                    {totalQuantity} peças
-                </strong>
-            </div>
+                        {isCustomEditorOpen && (
+                            <div className="grid gap-3">
+                                {customItems.map((item, itemIndex) => (
+                                    <div
+                                        key={
+                                            item.id ??
+                                            `custom-size-${itemIndex}`
+                                        }
+                                        className="flex items-start gap-2"
+                                    >
+                                        <div className="grid min-w-0 flex-1 gap-1">
+                                            <Label
+                                                htmlFor={`custom-size-${itemIndex}`}
+                                                className="sr-only"
+                                            >
+                                                Tamanho {itemIndex + 1}
+                                            </Label>
+                                            <Input
+                                                id={`custom-size-${itemIndex}`}
+                                                value={item.size}
+                                                onChange={(event) =>
+                                                    updateSharedSize(
+                                                        itemIndex,
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                readOnly={hasLockedVolumes}
+                                                placeholder="Ex.: 3G ou 42"
+                                                className="h-10 text-base sm:text-sm"
+                                                aria-invalid={
+                                                    customSizeError(itemIndex)
+                                                        ? true
+                                                        : undefined
+                                                }
+                                            />
+                                            <InputError
+                                                message={customSizeError(
+                                                    itemIndex,
+                                                )}
+                                            />
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() =>
+                                                removeSize(itemIndex)
+                                            }
+                                            disabled={hasLockedVolumes}
+                                            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                            aria-label={`Remover tamanho ${itemIndex + 1} de todos os sacos`}
+                                        >
+                                            <Trash2 />
+                                        </Button>
+                                    </div>
+                                ))}
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={addSize}
+                                    disabled={hasLockedVolumes}
+                                    className="w-full sm:w-fit"
+                                >
+                                    <Plus />
+                                    Adicionar tamanho
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                )}
 
-            <InputError message={error('stock_volumes')} />
+                <div className="flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="grid gap-1">
+                        <span className="text-xs font-semibold tracking-[0.16em] text-highlight uppercase">
+                            Total da oferta
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                            Soma dos {volumes.length}{' '}
+                            {volumes.length === 1 ? 'saco' : 'sacos'}{' '}
+                            cadastrados.
+                        </span>
+                    </div>
+                    <strong className="font-mono text-2xl text-foreground">
+                        {totalQuantity} peças
+                    </strong>
+                </div>
+
+                <InputError message={error('stock_volumes')} />
+            </Card>
 
             <div className="grid gap-5">
                 {volumes.map((volume, volumeIndex) => {
                     const knownQuantities = hasKnownItemQuantity(volume);
+                    const isLocked = isVolumeLocked(volume);
                     const volumeError = error(
                         `stock_volumes.${volumeIndex}.total_quantity`,
                     );
@@ -632,19 +690,96 @@ export function StockOfferVolumeEditor({
                                 volumeError && 'border-destructive/60',
                             )}
                         >
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                <div className="grid gap-1">
+                            <div className="grid gap-1">
+                                <div className="flex items-start justify-between gap-3">
                                     <h3
                                         id={`volume-title-${volumeIndex}`}
                                         className="text-lg font-semibold"
                                     >
                                         Saco {volumeIndex + 1}
                                     </h3>
-                                    <p className="text-sm text-muted-foreground">
-                                        Escolha os tamanhos encontrados neste
-                                        saco.
-                                    </p>
+                                    <div className="flex shrink-0 gap-1">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="!size-11 sm:!size-9"
+                                            onClick={() =>
+                                                moveVolume(volumeIndex, -1)
+                                            }
+                                            disabled={
+                                                volumeIndex === 0 || isLocked
+                                            }
+                                            aria-label={`Mover Saco ${volumeIndex + 1} para cima`}
+                                        >
+                                            <ArrowUp />
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="!size-11 sm:!size-9"
+                                            onClick={() =>
+                                                moveVolume(volumeIndex, 1)
+                                            }
+                                            disabled={
+                                                volumeIndex ===
+                                                    volumes.length - 1 ||
+                                                isLocked
+                                            }
+                                            aria-label={`Mover Saco ${volumeIndex + 1} para baixo`}
+                                        >
+                                            <ArrowDown />
+                                        </Button>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="size-9"
+                                                    disabled={isLocked}
+                                                    aria-label={`Mais ações para o Saco ${volumeIndex + 1}`}
+                                                >
+                                                    <Ellipsis />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem
+                                                    id={`duplicate-volume-${volumeIndex}`}
+                                                    onSelect={() =>
+                                                        duplicateVolume(
+                                                            volumeIndex,
+                                                        )
+                                                    }
+                                                >
+                                                    <Copy />
+                                                    Duplicar saco
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    id={`remove-volume-${volumeIndex}`}
+                                                    variant="destructive"
+                                                    disabled={
+                                                        volumes.length <= 1
+                                                    }
+                                                    onSelect={() =>
+                                                        removeVolume(
+                                                            volumeIndex,
+                                                        )
+                                                    }
+                                                >
+                                                    <Trash2 />
+                                                    Remover saco
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
                                 </div>
+                                <p className="text-sm text-muted-foreground">
+                                    {isLocked
+                                        ? 'Saco já movimentado. Ajustes físicos devem ser feitos em Movimentações.'
+                                        : 'Escolha os tamanhos encontrados neste saco.'}
+                                </p>
                             </div>
 
                             <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -668,7 +803,7 @@ export function StockOfferVolumeEditor({
                                                 ? volumeTotal(volume)
                                                 : (volume.total_quantity ?? '')
                                         }
-                                        readOnly={knownQuantities}
+                                        readOnly={knownQuantities || isLocked}
                                         onKeyDown={(event) => {
                                             if (
                                                 preventsNonNumericKey(
@@ -693,7 +828,9 @@ export function StockOfferVolumeEditor({
                                             )
                                         }
                                         aria-readonly={
-                                            knownQuantities ? true : undefined
+                                            knownQuantities || isLocked
+                                                ? true
+                                                : undefined
                                         }
                                         aria-invalid={
                                             volumeError ? true : undefined
@@ -701,6 +838,8 @@ export function StockOfferVolumeEditor({
                                         className={cn(
                                             'h-11 text-base sm:h-10 sm:text-sm',
                                             knownQuantities &&
+                                                'cursor-not-allowed bg-muted/40 text-muted-foreground',
+                                            isLocked &&
                                                 'cursor-not-allowed bg-muted/40 text-muted-foreground',
                                         )}
                                         placeholder="Ex.: 20"
@@ -711,76 +850,6 @@ export function StockOfferVolumeEditor({
                                             : 'Informe o total quando as quantidades por tamanho forem desconhecidas.'}
                                     </p>
                                     <InputError message={volumeError} />
-                                </div>
-                                <div className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-1.5 sm:w-auto sm:grid-cols-3">
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-11 w-full! sm:size-9"
-                                        onClick={() =>
-                                            moveVolume(volumeIndex, -1)
-                                        }
-                                        disabled={
-                                            !isHydrated || volumeIndex === 0
-                                        }
-                                        aria-label={`Mover Saco ${volumeIndex + 1} para cima`}
-                                    >
-                                        <ArrowUp />
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-11 w-full! sm:size-9"
-                                        onClick={() =>
-                                            moveVolume(volumeIndex, 1)
-                                        }
-                                        disabled={
-                                            !isHydrated ||
-                                            volumeIndex === volumes.length - 1
-                                        }
-                                        aria-label={`Mover Saco ${volumeIndex + 1} para baixo`}
-                                    >
-                                        <ArrowDown />
-                                    </Button>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="icon"
-                                                className="size-11 sm:size-9"
-                                                aria-label={`Mais ações para o Saco ${volumeIndex + 1}`}
-                                            >
-                                                <Ellipsis />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem
-                                                id={`duplicate-volume-${volumeIndex}`}
-                                                aria-label={`Duplicar Saco ${volumeIndex + 1}`}
-                                                onSelect={() =>
-                                                    duplicateVolume(volumeIndex)
-                                                }
-                                            >
-                                                <Copy />
-                                                Duplicar saco
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                id={`remove-volume-${volumeIndex}`}
-                                                aria-label={`Remover Saco ${volumeIndex + 1}`}
-                                                variant="destructive"
-                                                disabled={volumes.length <= 1}
-                                                onSelect={() =>
-                                                    removeVolume(volumeIndex)
-                                                }
-                                            >
-                                                <Trash2 />
-                                                Remover saco
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
                                 </div>
                             </div>
 
@@ -807,6 +876,7 @@ export function StockOfferVolumeEditor({
                                                         true,
                                                     )
                                                 }
+                                                disabled={isLocked}
                                             >
                                                 <ListCheck />
                                                 Marcar todos
@@ -821,6 +891,7 @@ export function StockOfferVolumeEditor({
                                                         false,
                                                     )
                                                 }
+                                                disabled={isLocked}
                                             >
                                                 <ListX />
                                                 Desmarcar todos
@@ -863,6 +934,7 @@ export function StockOfferVolumeEditor({
                                                 <Switch
                                                     id={activeId}
                                                     checked={item.is_active}
+                                                    disabled={isLocked}
                                                     onCheckedChange={(
                                                         checked,
                                                     ) =>
@@ -888,7 +960,10 @@ export function StockOfferVolumeEditor({
                                                     type="number"
                                                     min="0"
                                                     inputMode="numeric"
-                                                    disabled={!item.is_active}
+                                                    disabled={
+                                                        !item.is_active ||
+                                                        isLocked
+                                                    }
                                                     value={
                                                         item.is_active
                                                             ? (item.quantity ??

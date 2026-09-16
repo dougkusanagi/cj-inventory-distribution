@@ -37,10 +37,10 @@ class UpdateProduct
 
                 $lockedProduct->update([
                     'name' => $data['name'],
-                    'model' => ($data['model'] ?? null) ?: null,
+                    'model' => $data['model'] ?? null,
                     'category_id' => $data['category_id'] ?? null,
                     'line' => $data['line'] ?? null,
-                    'notes' => ($data['notes'] ?? null) ?: null,
+                    'notes' => $data['notes'] ?? null,
                     'is_active' => $data['is_active'] ?? true,
                 ]);
 

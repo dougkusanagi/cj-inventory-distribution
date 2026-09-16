@@ -37,8 +37,9 @@ it('shows the stock summary and opens the product catalog', function () {
         ->assertSee('01')
         ->assertSee('8 peças disponíveis para distribuição.')
         ->assertSee('unidades disponíveis para distribuição')
-        ->assertDisabled('button[aria-label="Pedidos indisponível por enquanto"]')
-        ->assertSee('Em breve')
+        ->assertSee('Pedidos para preparar')
+        ->assertSee('Não há pedidos pendentes neste momento.')
+        ->assertSeeLink('Abrir pedidos', route('orders.index', [], false))
         ->assertNoJavaScriptErrors();
 
     $page
@@ -46,6 +47,16 @@ it('shows the stock summary and opens the product catalog', function () {
         ->wait(1)
         ->assertRoute('products.index')
         ->assertSee($product->name)
+        ->assertNoJavaScriptErrors();
+});
+
+it('opens the order area from the sidebar', function () {
+    $this->actingAs(User::factory()->create());
+
+    visit(route('dashboard', [], false))
+        ->click('[data-sidebar="menu-button"]:has-text("Pedidos")')
+        ->assertRoute('orders.index')
+        ->assertSee('Acompanhe reservas e encerre as solicitações.')
         ->assertNoJavaScriptErrors();
 });
 

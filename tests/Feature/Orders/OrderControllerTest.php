@@ -155,7 +155,7 @@ test('pending orders can be edited and canceled with their reservations released
         ->toContain(OrderEventType::Created->value, OrderEventType::Updated->value, OrderEventType::Canceled->value);
 });
 
-test('does not finalize an order before WhatsApp is opened', function () {
+test('does not finalize an order before conference is complete', function () {
     $volume = availableOrderVolume();
     $user = User::factory()->create();
     $this->actingAs($user)->post(route('orders.store'), [
@@ -166,7 +166,7 @@ test('does not finalize an order before WhatsApp is opened', function () {
     $order = Order::query()->sole();
 
     $this->actingAs($user)->post(route('orders.complete', $order))
-        ->assertInvalid(['whatsapp_opened' => 'Abra o WhatsApp do pedido antes de finalizá-lo.']);
+        ->assertInvalid(['order' => 'Todos os sacos precisam estar separados, conferidos e sem divergências antes da finalização.']);
 
     expect($order->refresh()->status)->toBe(OrderStatus::Pending)
         ->and($volume->refresh()->current_order_id)->toBe($order->id)
@@ -184,9 +184,7 @@ test('orders require complete conference and keep an audit trail', function () {
     $order = Order::query()->sole();
     $item = $order->items()->sole();
 
-    $this->actingAs($user)->post(route('orders.complete', $order), [
-        'whatsapp_opened' => true,
-    ])->assertInvalid([
+    $this->actingAs($user)->post(route('orders.complete', $order))->assertInvalid([
         'order' => 'Todos os sacos precisam estar separados, conferidos e sem divergências antes da finalização.',
     ]);
 
@@ -205,9 +203,7 @@ test('orders require complete conference and keep an audit trail', function () {
     expect($item->refresh()->checked_at)->toBeNull()
         ->and($item->divergence_note)->toBe('Quantidade divergente');
 
-    $this->actingAs($user)->post(route('orders.complete', $order), [
-        'whatsapp_opened' => true,
-    ])->assertInvalid([
+    $this->actingAs($user)->post(route('orders.complete', $order))->assertInvalid([
         'order' => 'Todos os sacos precisam estar separados, conferidos e sem divergências antes da finalização.',
     ]);
 
@@ -219,9 +215,8 @@ test('orders require complete conference and keep an audit trail', function () {
     $this->actingAs($user)
         ->post(route('orders.items.check', [$order, $item]))
         ->assertRedirect();
-    $this->actingAs($user)->post(route('orders.complete', $order), [
-        'whatsapp_opened' => true,
-    ])->assertRedirect(route('orders.show', $order));
+    $this->actingAs($user)->post(route('orders.complete', $order))
+        ->assertRedirect(route('orders.show', $order));
 
     expect($order->refresh()->status)->toBe(OrderStatus::Completed)
         ->and(OrderEvent::query()->where('order_id', $order->id)->get()->map(
@@ -286,9 +281,7 @@ test('finalization rejects a reservation set that differs from the order items',
     $unexpectedVolume->update(['current_order_id' => $order->id]);
     $item->update(['separated_at' => now(), 'checked_at' => now()]);
 
-    $this->actingAs($user)->post(route('orders.complete', $order), [
-        'whatsapp_opened' => true,
-    ])->assertInvalid([
+    $this->actingAs($user)->post(route('orders.complete', $order))->assertInvalid([
         'order' => 'A reserva dos sacos mudou. Revise o pedido antes de finalizar.',
     ]);
 
@@ -324,7 +317,7 @@ test('an order item from another order cannot be updated through a scoped route'
         ->and($secondItem->refresh()->separated_at)->toBeNull();
 });
 
-test('order details expose the generated WhatsApp link', function () {
+test('order details keep the requester WhatsApp without an internal send link', function () {
     CatalogSetting::factory()->create(['whatsapp_number' => '5511988887777']);
     $volume = availableOrderVolume();
     $user = User::factory()->create();
@@ -339,11 +332,12 @@ test('order details expose the generated WhatsApp link', function () {
     $this->actingAs($user)
         ->get(route('orders.show', $order))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('order.whatsapp_url', fn (string $url): bool => str_starts_with($url, 'https://wa.me/5511988887777?text='))
+            ->where('order.whatsapp', '5511999999999')
+            ->missing('order.whatsapp_url')
         );
 });
 
-test('finalizing an order consumes every reserved sack after WhatsApp is opened', function () {
+test('finalizing an order consumes every reserved sack after conference', function () {
     $volume = availableOrderVolume();
     $user = User::factory()->create();
     $this->actingAs($user)->post(route('orders.store'), [
@@ -361,9 +355,7 @@ test('finalizing an order consumes every reserved sack after WhatsApp is opened'
         ->post(route('orders.items.check', [$order, $item]))
         ->assertRedirect();
 
-    $this->actingAs($user)->post(route('orders.complete', $order), [
-        'whatsapp_opened' => true,
-    ])
+    $this->actingAs($user)->post(route('orders.complete', $order))
         ->assertRedirect(route('orders.show', $order));
 
     expect($order->refresh()->status)->toBe(OrderStatus::Completed)

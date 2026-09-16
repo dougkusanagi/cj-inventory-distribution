@@ -141,7 +141,6 @@ class CreateOrder
         return $volume->current_order_id === null
             && $volume->consumed_at === null
             && $volume->total_quantity > 0
-            && $volume->offer->is_active
             && $volume->offer->type !== StockOfferType::NewGrade
             && $volume->offer->product->is_active;
     }

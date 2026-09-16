@@ -23,9 +23,13 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'password' => 'password',
         ]);
-        $testUser->forceFill(['email_verified_at' => now()]);
+        $testUser->forceFill([
+            'email_verified_at' => now(),
+            'is_staff' => true,
+        ]);
         $testUser->save();
 
         $this->call(CatalogDemoSeeder::class);
+        $this->call(OperationalDemoSeeder::class);
     }
 }

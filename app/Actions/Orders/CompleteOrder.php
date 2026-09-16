@@ -2,6 +2,7 @@
 
 namespace App\Actions\Orders;
 
+use App\Actions\Stock\RecordOrderStockMovement;
 use App\Enums\OrderEventType;
 use App\Enums\OrderStatus;
 use App\Models\Order;
@@ -14,19 +15,16 @@ class CompleteOrder
 {
     public function __construct(
         private readonly RecordOrderEvent $recordOrderEvent,
+        private readonly RecordOrderStockMovement $recordOrderStockMovement,
     ) {}
 
-    public function handle(Order $order, bool $whatsappOpened, ?User $actor = null): Order
+    public function handle(Order $order, ?User $actor = null): Order
     {
-        return DB::transaction(function () use ($order, $whatsappOpened, $actor): Order {
+        return DB::transaction(function () use ($order, $actor): Order {
             $lockedOrder = Order::query()->whereKey($order->getKey())->lockForUpdate()->firstOrFail();
 
             if ($lockedOrder->status !== OrderStatus::Pending) {
                 throw ValidationException::withMessages(['order' => 'Somente pedidos pendentes podem ser finalizados.']);
-            }
-
-            if (! $whatsappOpened) {
-                throw ValidationException::withMessages(['whatsapp_opened' => 'Abra o WhatsApp do pedido antes de finalizá-lo.']);
             }
 
             $orderItems = $lockedOrder->items()->orderBy('id')->lockForUpdate()->get();
@@ -52,7 +50,7 @@ class CompleteOrder
                 throw ValidationException::withMessages(['order' => 'A reserva dos sacos mudou. Revise o pedido antes de finalizar.']);
             }
 
-            $reservedVolumes->each->update(['current_order_id' => null, 'consumed_at' => now()]);
+            $movement = $this->recordOrderStockMovement->handle($lockedOrder, $reservedVolumes, $actor);
             $lockedOrder->update(['status' => OrderStatus::Completed, 'completed_at' => now()]);
 
             $this->recordOrderEvent->handle(
@@ -60,7 +58,10 @@ class CompleteOrder
                 OrderEventType::Completed,
                 $actor,
                 null,
-                ['consumed_volume_ids' => $reservedVolumeIds],
+                [
+                    'consumed_volume_ids' => $reservedVolumeIds,
+                    'stock_movement_id' => $movement->getKey(),
+                ],
             );
 
             return $lockedOrder;
