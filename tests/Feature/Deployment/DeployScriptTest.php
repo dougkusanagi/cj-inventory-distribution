@@ -30,9 +30,10 @@ test('the deployment script uses the application production toolchain', function
         ->toContain('run_tool php artisan event:cache')
         ->toContain('run_tool php artisan about --only=environment,application')
         ->toContain('curl --fail --silent --show-error --location --max-time 10 "$HEALTHCHECK_URL"')
-        ->toContain('sudo systemctl restart "${PHP_FPM_SERVICE%.service}"')
+        ->toContain('sudo systemctl "$PHP_FPM_ACTION" "${PHP_FPM_SERVICE%.service}"')
         ->not->toContain('bun install')
-        ->not->toContain('horizon');
+        ->toContain('run_tool php artisan horizon-new-dawn:install --force --ansi')
+        ->toContain('run_tool php artisan horizon:terminate');
 
     expect($wrapper)
         ->not->toBeFalse()
@@ -48,6 +49,9 @@ test('the deployment script uses the application production toolchain', function
     expect($config)
         ->not->toBeFalse()
         ->toContain('DEPLOY_BRANCH="${DEPLOY_BRANCH:-master}"')
+        ->toContain('PHP_FPM_ACTION="${PHP_FPM_ACTION:-reload}"')
+        ->toContain('WEB_SERVICE="${WEB_SERVICE-}"')
+        ->toContain('HORIZON="${HORIZON:-false}"')
         ->toContain('FRONTEND_INSTALL=(vp install --frozen-lockfile)')
         ->toContain('FRONTEND_BUILD=(vp build)');
 });
@@ -104,8 +108,9 @@ test('the deployment script pulls remote changes when an untracked file exists',
         $filesystem->put($application.'/deploy.config.sh', <<<'BASH'
 DEPLOY_BRANCH="master"
 PHP_FPM_SERVICE=""
+PHP_FPM_ACTION="reload"
 WEB_SERVICE=""
-AUTO_DETECT_WEB_SERVICE="false"
+HORIZON="false"
 STORAGE_LINK="false"
 FRONTEND_INSTALL=()
 FRONTEND_BUILD=()

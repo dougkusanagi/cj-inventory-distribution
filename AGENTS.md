@@ -110,8 +110,10 @@ o usuário solicitar deploy. Antes de executá-lo:
 3. Confira ferramentas, permissões dos serviços e a configuração do ambiente de destino.
 
 O arquivo de configuração define `master` como branch padrão
-(`DEPLOY_BRANCH` permite sobrescrever), `PHP_FPM_SERVICE=php8.5-fpm` e o build
-Vite+ deste projeto. `WEB_SERVICE` vazio ativa a detecção de Caddy/Nginx.
+(`DEPLOY_BRANCH` permite sobrescrever), `PHP_FPM_SERVICE=php8.5-fpm`, ação
+`reload` para o PHP-FPM e o build Vite+ deste projeto. `WEB_SERVICE` vazio não
+recarrega Caddy/Nginx; configure-o explicitamente apenas quando o deploy também
+alterar a configuração do servidor web. Horizon fica desativado neste projeto.
 Informe os nomes dos serviços sem o sufixo `.service`. Requer Bash, Git, flock,
 Composer, PHP, a ferramenta de frontend configurada, sudo e systemctl quando
 serviços estiverem definidos; usa mise quando disponível. Defina
@@ -125,7 +127,7 @@ mesmo deploy, fora dos arquivos versionados.
 
 O deploy instala dependências PHP sem dev, compila o frontend, executa migrations,
 recria caches de configuração/eventos preservando o cache da aplicação e
-recarrega os serviços. Ele atualiza a aplicação no próprio diretório, sem rollback
+recarrega apenas os serviços configurados. Ele atualiza a aplicação no próprio diretório, sem rollback
 automático; uma falha pode deixar etapas já aplicadas. Não reverta migrations
 automaticamente. Investigue a falha antes de repetir a execução.
 

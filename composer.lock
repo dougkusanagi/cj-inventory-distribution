@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ba9dcf8ca1a6d0de37917bda3e67e0e8",
+    "content-hash": "733db55c319a6da97cbc4d352488dda7",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -613,16 +613,16 @@
         },
         {
             "name": "dougkusanagi/laravel-deploy",
-            "version": "v0.2.2",
+            "version": "v0.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/dougkusanagi/laravel-deploy.git",
-                "reference": "1322276d5aa2e7e219ed9285fb45d04f8768951a"
+                "reference": "13f640b839e10a3430f7c1c7d4d01d43a13b14f1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/dougkusanagi/laravel-deploy/zipball/1322276d5aa2e7e219ed9285fb45d04f8768951a",
-                "reference": "1322276d5aa2e7e219ed9285fb45d04f8768951a",
+                "url": "https://api.github.com/repos/dougkusanagi/laravel-deploy/zipball/13f640b839e10a3430f7c1c7d4d01d43a13b14f1",
+                "reference": "13f640b839e10a3430f7c1c7d4d01d43a13b14f1",
                 "shasum": ""
             },
             "require": {
@@ -632,6 +632,11 @@
                 "bin/deploy"
             ],
             "type": "library",
+            "scripts": {
+                "test": [
+                    "bash tests/deploy-test.sh"
+                ]
+            },
             "license": [
                 "MIT"
             ],
@@ -647,7 +652,7 @@
                 "issues": "https://github.com/dougkusanagi/laravel-deploy/issues",
                 "source": "https://github.com/dougkusanagi/laravel-deploy"
             },
-            "time": "2026-09-10T11:35:58+00:00"
+            "time": "2026-09-16T11:10:59+00:00"
         },
         {
             "name": "dragonmantank/cron-expression",
