@@ -475,7 +475,7 @@ export function ProductPhotoManager({
         if (!isRetake && filesToProcess.length === 0) {
             dispatch({
                 type: 'setError',
-                message: 'Você já adicionou o limite de 5 fotos.',
+                message: 'Você já adicionou 5 fotos.',
             });
 
             return;
@@ -764,7 +764,7 @@ export function ProductPhotoManager({
                         Adicione fotos da peça
                     </span>
                     <span className="text-xs text-muted-foreground">
-                        JPG, PNG ou WebP · a foto será otimizada antes de salvar
+                        JPG, PNG ou WebP · escolha uma foto nítida da peça
                     </span>
                 </button>
             ) : (
@@ -1268,9 +1268,7 @@ function PhotoOrganizer({
                                 disabled={index === 0}
                                 className="size-12 px-0"
                                 aria-label={
-                                    index === 0
-                                        ? 'Subir foto'
-                                        : 'Subir foto ' + (index + 1)
+                                    'Mover foto ' + (index + 1) + ' para cima'
                                 }
                             >
                                 <ChevronUp />
@@ -1281,7 +1279,9 @@ function PhotoOrganizer({
                                 onClick={() => onMove(item, 1)}
                                 disabled={index === items.length - 1}
                                 className="size-12 px-0"
-                                aria-label={'Descer foto ' + (index + 1)}
+                                aria-label={
+                                    'Mover foto ' + (index + 1) + ' para baixo'
+                                }
                             >
                                 <ChevronDown />
                             </Button>
@@ -1309,8 +1309,8 @@ function PhotoOrganizer({
                     <DrawerHeader>
                         <DrawerTitle>Organizar fotos</DrawerTitle>
                         <DrawerDescription>
-                            A primeira foto será a capa. Use subir e descer para
-                            ordenar.
+                            A primeira foto será a capa. Use os botões para
+                            mover as fotos e definir a ordem.
                         </DrawerDescription>
                     </DrawerHeader>
                     <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-4">
@@ -1330,8 +1330,8 @@ function PhotoOrganizer({
                 <DialogHeader>
                     <DialogTitle>Organizar fotos</DialogTitle>
                     <DialogDescription>
-                        A primeira foto será a capa. Use subir e descer para
-                        ordenar.
+                        A primeira foto será a capa. Use os botões para mover as
+                        fotos e definir a ordem.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="min-h-0 overflow-y-auto">{content}</div>
@@ -1371,7 +1371,7 @@ function getSelectedFilesError(files: File[], truncated: boolean): string {
     }
 
     return truncated
-        ? 'Selecione somente as vagas restantes para adicionar fotos.'
+        ? 'Você selecionou fotos demais. O limite é de 5 fotos por produto.'
         : 'Você pode adicionar até 5 fotos por produto.';
 }
 

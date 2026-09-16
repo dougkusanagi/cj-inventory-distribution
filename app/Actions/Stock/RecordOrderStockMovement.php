@@ -48,7 +48,7 @@ class RecordOrderStockMovement
                 || $volume->consumed_at !== null
                 || $volume->total_quantity <= 0)) {
                 throw ValidationException::withMessages([
-                    'order' => 'A reserva dos sacos não está disponível para consumo.',
+                    'order' => 'A reserva dos sacos não está mais disponível. Atualize o pedido e tente novamente.',
                 ]);
             }
 

@@ -104,7 +104,7 @@ function TwoFactorSetupStep({
                     <div className="relative flex w-full items-center justify-center">
                         <div className="absolute inset-0 top-1/2 h-px w-full bg-border" />
                         <span className="relative bg-card px-2 py-1">
-                            ou informe o código manualmente
+                            ou informe a chave manualmente
                         </span>
                     </div>
 
@@ -264,7 +264,7 @@ export default function TwoFactorSetupModal({
             return {
                 title: 'Autenticação de dois fatores ativada',
                 description:
-                    'A autenticação de dois fatores está ativa. Escaneie o QR code ou informe a chave de configuração no seu aplicativo autenticador.',
+                    'A autenticação de dois fatores está ativa. Escaneie o código QR ou informe a chave de configuração no seu aplicativo autenticador.',
                 buttonText: 'Fechar',
             };
         }
@@ -281,7 +281,7 @@ export default function TwoFactorSetupModal({
         return {
             title: 'Ativar autenticação de dois fatores',
             description:
-                'Para concluir, escaneie o QR code ou informe a chave de configuração no seu aplicativo autenticador',
+                'Para concluir, escaneie o código QR ou informe a chave de configuração no seu aplicativo autenticador.',
             buttonText: 'Continuar',
         };
     }, [twoFactorEnabled, showVerificationStep]);

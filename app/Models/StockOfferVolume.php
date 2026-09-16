@@ -36,7 +36,7 @@ class StockOfferVolume extends Model
                 && ($volume->current_order_id !== null
                     || ($volume->total_quantity > 0 && $volume->consumed_at === null))) {
                 throw ValidationException::withMessages([
-                    'stock_volumes' => 'Sacos com estoque disponível ou reservado não podem ser excluídos. Registre uma saída ou zere o saco pelo fluxo de estoque.',
+                    'stock_volumes' => 'Sacos com estoque disponível ou reservado não podem ser removidos. Registre a saída ou zere o estoque do saco antes de removê-lo.',
                 ]);
             }
 

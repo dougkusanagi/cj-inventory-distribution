@@ -72,8 +72,9 @@ export default function StockExit({
                             Registrar saída manual
                         </h1>
                         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                            A saída consome sacos inteiros. Sacos reservados ou
-                            já consumidos só podem avançar pelo fluxo do pedido.
+                            A saída retira sacos inteiros do estoque disponível.
+                            Sacos reservados ou já retirados não podem ser
+                            selecionados aqui.
                         </p>
                     </div>
                 </header>
@@ -83,8 +84,8 @@ export default function StockExit({
                         <CardHeader>
                             <CardTitle>Sacos disponíveis</CardTitle>
                             <CardDescription>
-                                Escolha os sacos físicos que deixarão de estar
-                                disponíveis.
+                                Selecione os sacos que serão retirados do
+                                estoque.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-3">

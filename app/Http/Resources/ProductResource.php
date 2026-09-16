@@ -133,7 +133,7 @@ class ProductResource extends JsonResource
         }
 
         if ($offer->type === StockOfferType::NewGrade) {
-            return 'Uso interno (Grade Nova)';
+            return 'Disponível apenas para a equipe (Grade Nova)';
         }
 
         if (! $hasPositiveStock) {

@@ -20,7 +20,7 @@ export default function CreateOrder({
                         Novo pedido
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Selecione sacos inteiros disponíveis e identifique a
+                        Selecione os sacos disponíveis e informe os dados da
                         solicitação.
                     </p>
                 </header>

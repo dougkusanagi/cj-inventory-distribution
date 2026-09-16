@@ -102,17 +102,17 @@ const stockOfferTypes: Array<{
     {
         id: 'replenishment',
         label: 'Reposição',
-        description: 'Distribuição em sacos.',
+        description: 'Sacos para repor um estoque já existente.',
     },
     {
         id: 'new_grade',
-        label: 'Nova',
-        description: 'Grade completa.',
+        label: 'Grade Nova',
+        description: 'Sacos com a grade completa de tamanhos.',
     },
     {
         id: 'broken_grade',
-        label: 'Furada',
-        description: 'Grade incompleta.',
+        label: 'Grade Furada',
+        description: 'Sacos com um ou mais tamanhos faltando.',
     },
 ];
 
@@ -289,16 +289,14 @@ export function ProductForm({
     const hasLockedVolumes = lockedVolumeIds.length > 0;
     const hasAvailableVolumes = form.data.stock_volumes.length > 0;
     const distributionStatus = !form.data.is_active
-        ? 'Não aparece para as vendedoras: produto oculto.'
+        ? 'Produto oculto para as vendedoras.'
         : !hasAvailableVolumes
-          ? 'Não aparece para as vendedoras: sem estoque disponível.'
+          ? 'Sem sacos cadastrados.'
           : form.data.stock_offer_type === 'new_grade'
-            ? 'Não aparece para as vendedoras: Grade Nova é somente para uso interno.'
+            ? 'Grade Nova: disponível apenas para a equipe.'
             : !hasPositiveTotal
-              ? 'Não aparece para as vendedoras: estoque zerado.'
-              : !hasAvailableVolumes
-                ? 'Não aparece para as vendedoras: sem sacos disponíveis.'
-                : 'Aparece para as vendedoras.';
+              ? 'Estoque zerado.'
+              : 'Disponível no catálogo para as vendedoras.';
 
     const clearCurrentStock = () => {
         if (hasLockedVolumes) {
@@ -306,7 +304,7 @@ export function ProductForm({
         }
 
         const confirmed = window.confirm(
-            'Isso removerá a oferta de estoque e os sacos deste produto. Deseja continuar?',
+            'O estoque atual e todos os seus sacos serão removidos deste produto. Deseja continuar?',
         );
 
         if (!confirmed) {
@@ -369,8 +367,7 @@ export function ProductForm({
         >
             <p className="text-xs text-muted-foreground sm:text-sm">
                 Campos marcados com <span className="text-destructive">*</span>{' '}
-                são obrigatórios. As quantidades por tamanho podem ficar em
-                branco.
+                são obrigatórios. As quantidades por tamanho são opcionais.
             </p>
 
             {hasErrors && (
@@ -765,9 +762,7 @@ export function ProductForm({
                                 Estoque organizado por sacos
                             </h2>
                             <CardDescription className="text-sm leading-6">
-                                Cada saco tem sua própria grade e total. O total
-                                da oferta é a soma dos sacos e é recalculado no
-                                servidor.
+                                Cadastre os sacos que fazem parte deste estoque.
                             </CardDescription>
                             <p className="text-sm font-medium text-foreground">
                                 {distributionStatus}
@@ -789,11 +784,10 @@ export function ProductForm({
                                 id={radioGroupId}
                                 className="text-sm font-semibold text-foreground"
                             >
-                                Tipo de Grade
+                                Tipo de estoque
                             </legend>
                             <p className="text-sm leading-5 text-muted-foreground">
-                                Todos os tipos usam pelo menos um saco; a
-                                diferença está na classificação da oferta.
+                                Escolha como classificar este estoque.
                             </p>
                             <RadioGroup
                                 value={form.data.stock_offer_type}
@@ -859,8 +853,8 @@ export function ProductForm({
                         </p>
                         <p className="text-sm leading-5 text-muted-foreground">
                             {hasLockedVolumes
-                                ? 'Sacos já movimentados precisam permanecer no histórico. Use Movimentações para novas entradas, saídas ou estornos.'
-                                : 'Remove a oferta e seus sacos deste produto ao salvar.'}
+                                ? 'Este estoque já faz parte do histórico. Use Movimentações para registrar novas entradas, saídas ou correções.'
+                                : 'Ao salvar, o estoque atual deste produto será encerrado.'}
                         </p>
                     </div>
                     <Button

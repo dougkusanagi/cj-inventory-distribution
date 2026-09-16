@@ -65,7 +65,7 @@ export default function ShowOrder({ order }: { order: Order }) {
         if (
             !readyForCompletion ||
             !window.confirm(
-                `Finalizar ${order.code}? Os sacos serão marcados como consumidos.`,
+                `Finalizar ${order.code}? Os sacos serão retirados do estoque.`,
             )
         ) {
             return;
@@ -386,7 +386,7 @@ export default function ShowOrder({ order }: { order: Order }) {
                                                 }
                                             >
                                                 <Check />
-                                                Marcar como separado
+                                                Marcar saco como separado
                                             </Button>
                                         )}
                                         {isSeparated &&
@@ -626,7 +626,7 @@ export default function ShowOrder({ order }: { order: Order }) {
                                 <DialogDescription>
                                     {divergenceAction === 'report'
                                         ? `Descreva o problema encontrado no ${divergenceItem?.volume_code ?? 'saco'}.`
-                                        : 'Registre o que foi feito para resolver o apontamento.'}
+                                        : 'Descreva como a divergência foi resolvida.'}
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-2 py-5">

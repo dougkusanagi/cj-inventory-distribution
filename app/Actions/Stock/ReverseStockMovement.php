@@ -51,7 +51,7 @@ class ReverseStockMovement
 
             if ($original->source !== StockMovementSource::Manual) {
                 throw ValidationException::withMessages([
-                    'movement' => 'Somente movimentações manuais podem ser estornadas nesta versão.',
+                    'movement' => 'Esta movimentação não pode ser estornada porque foi gerada automaticamente.',
                 ]);
             }
 
@@ -77,7 +77,7 @@ class ReverseStockMovement
 
             if ($this->hasLaterMovement($original, $volumeIds->all())) {
                 throw ValidationException::withMessages([
-                    'movement' => 'A movimentação não pode ser estornada porque há uma operação posterior incompatível.',
+                    'movement' => 'Esta movimentação não pode ser estornada porque os mesmos sacos já foram movimentados depois.',
                 ]);
             }
 
@@ -137,7 +137,7 @@ class ReverseStockMovement
     {
         if ($volume->trashed() || $volume->current_order_id !== null || $volume->consumed_at === null) {
             throw ValidationException::withMessages([
-                'movement' => 'O saco de uma saída manual já não está no estado que permite estorno.',
+                'movement' => 'Esta saída não pode ser estornada porque o saco já foi alterado.',
             ]);
         }
 
@@ -151,7 +151,7 @@ class ReverseStockMovement
             || $volume->consumed_at !== null
             || $volume->orderItems()->withTrashed()->exists()) {
             throw ValidationException::withMessages([
-                'movement' => 'A entrada não pode ser estornada porque o saco já possui uma referência operacional.',
+                'movement' => 'Esta entrada não pode ser estornada porque o saco já foi reservado, retirado ou usado em outro registro.',
             ]);
         }
 

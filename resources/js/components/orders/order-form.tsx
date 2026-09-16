@@ -79,7 +79,7 @@ export function OrderForm({
                             aria-invalid={
                                 form.errors.requester_name ? true : undefined
                             }
-                            placeholder="Quem solicitou"
+                            placeholder="Nome de quem solicitou"
                         />
                         <InputError message={form.errors.requester_name} />
                     </div>

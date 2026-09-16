@@ -86,7 +86,7 @@ class StockMovementRecorder
 
         if ($existing !== null && $payloadHash !== null && $existing->payload_hash !== $payloadHash) {
             throw ValidationException::withMessages([
-                'idempotency_key' => 'A chave de idempotência já foi usada com outra movimentação.',
+                'idempotency_key' => 'Esta movimentação já foi registrada com outras informações. Atualize a página e tente novamente.',
             ]);
         }
 

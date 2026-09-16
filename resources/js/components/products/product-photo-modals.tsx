@@ -519,7 +519,7 @@ export function PhotoEditor({
                         className="h-12"
                     >
                         <RotateCcw />
-                        Esquerda
+                        Girar à esquerda
                     </Button>
                     <Button
                         type="button"
@@ -529,7 +529,7 @@ export function PhotoEditor({
                         className="h-12"
                     >
                         <RotateCw />
-                        Direita
+                        Girar à direita
                     </Button>
                     <Button
                         type="button"
@@ -561,7 +561,7 @@ export function PhotoEditor({
                         className="h-12"
                     >
                         <FlipVertical2 />
-                        Inverter
+                        Virar na vertical
                     </Button>
                 </div>
 

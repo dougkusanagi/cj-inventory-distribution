@@ -149,8 +149,8 @@ export function StockAdjustmentModal({
                         <div>
                             <Label>Quantidades por tamanho</Label>
                             <p className="mt-1 text-sm text-muted-foreground">
-                                Vazio significa contagem desconhecida; zero é
-                                uma contagem conhecida.
+                                Deixe em branco quando não souber a quantidade.
+                                Zero indica que não há peças desse tamanho.
                             </p>
                         </div>
                         <div className="grid gap-2">
@@ -243,7 +243,7 @@ export function StockAdjustmentModal({
                         <p className="text-sm text-muted-foreground">
                             {hasKnownQuantity
                                 ? 'O total é calculado pelas quantidades informadas nos tamanhos.'
-                                : 'Como não há quantidades por tamanho, informe o total manual do saco.'}
+                                : 'Se não informar as quantidades por tamanho, digite o total do saco.'}
                         </p>
                         <InputError message={form.errors.total_quantity} />
                     </div>
@@ -281,14 +281,12 @@ export function StockAdjustmentModal({
                     }
                 >
                     <Save />
-                    {form.processing
-                        ? 'Registrando...'
-                        : 'Confirmar recontagem'}
+                    {form.processing ? 'Salvando...' : 'Salvar contagem'}
                 </Button>
             </div>
         </div>
     );
-    const title = 'Recontar saco';
+    const title = 'Atualizar contagem do saco';
     if (isMobile)
         return (
             <Drawer
@@ -299,7 +297,7 @@ export function StockAdjustmentModal({
                     <DrawerHeader>
                         <DrawerTitle>{title}</DrawerTitle>
                         <DrawerDescription>
-                            Confira todos os tamanhos antes de salvar.
+                            Atualize as quantidades encontradas na conferência.
                         </DrawerDescription>
                     </DrawerHeader>
                     {content}
@@ -312,7 +310,7 @@ export function StockAdjustmentModal({
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>
-                        Confira todos os tamanhos antes de salvar.
+                        Atualize as quantidades encontradas na conferência.
                     </DialogDescription>
                 </DialogHeader>
                 {content}

@@ -45,7 +45,7 @@ class CreateStockEntry
 
         if ($idempotencyKey === null) {
             throw ValidationException::withMessages([
-                'idempotency_key' => 'Informe uma chave para evitar duplicidade.',
+                'idempotency_key' => 'Não foi possível registrar a entrada. Atualize a página e tente novamente.',
             ]);
         }
 
@@ -97,7 +97,7 @@ class CreateStockEntry
 
                 if ($totalQuantity <= 0) {
                     throw ValidationException::withMessages([
-                        "stock_volumes.{$offset}.total_quantity" => 'A entrada precisa ter estoque físico maior que zero.',
+                        "stock_volumes.{$offset}.total_quantity" => 'Cada saco precisa ter pelo menos uma peça.',
                     ]);
                 }
 

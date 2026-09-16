@@ -106,7 +106,7 @@ test('catalog retries with the same idempotency key return the original order', 
         ...$payload,
         'store_name' => 'Outra loja',
     ])->assertInvalid([
-        'idempotency_key' => 'A chave de idempotência já foi usada com outro pedido.',
+        'idempotency_key' => 'Este pedido já foi registrado com outras informações. Atualize a página e tente novamente.',
     ]);
 });
 

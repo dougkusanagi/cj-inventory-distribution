@@ -62,7 +62,7 @@ export default function OrdersIndex({
                             Pedidos
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            Acompanhe reservas e encerre as solicitações.
+                            Acompanhe os pedidos e atualize cada solicitação.
                         </p>
                     </div>
                     <Button asChild>

@@ -204,11 +204,11 @@ function ProductFilterFields({
                 name="stock_offer_type"
                 id={`${idPrefix}-stock-offer-type`}
                 defaultValue={values.stock_offer_type || 'all'}
-                placeholder="Tipo de grade"
-                label={labelled ? 'Tipo de grade' : undefined}
+                placeholder="Tipo de estoque"
+                label={labelled ? 'Tipo de estoque' : undefined}
                 triggerClassName={triggerClassName}
             >
-                <SelectItem value="all">Todas as grades</SelectItem>
+                <SelectItem value="all">Todos os tipos</SelectItem>
                 <SelectItem value="replenishment">Reposição</SelectItem>
                 <SelectItem value="new_grade">Grade Nova</SelectItem>
                 <SelectItem value="broken_grade">Grade Furada</SelectItem>
@@ -330,7 +330,7 @@ function ProductSizes({ product }: { product: Product }) {
     if (sizes.length === 0) {
         return (
             <span className="text-xs text-muted-foreground">
-                Sem grade cadastrada
+                Nenhum tamanho cadastrado
             </span>
         );
     }
@@ -347,8 +347,8 @@ function ProductSizes({ product }: { product: Product }) {
 
 const stockOfferTypeLabels: Record<StockOfferType, string> = {
     replenishment: 'Reposição',
-    new_grade: 'Nova',
-    broken_grade: 'Furada',
+    new_grade: 'Grade Nova',
+    broken_grade: 'Grade Furada',
 };
 
 const productLineLabels: Record<ProductLine, string> = {
@@ -361,7 +361,7 @@ function ProductClassification({ product }: { product: Product }) {
     const productLine = product.line;
 
     const classifications = [
-        `Grade: ${stockOfferType ? stockOfferTypeLabels[stockOfferType] : 'Sem oferta'}`,
+        `Tipo de estoque: ${stockOfferType ? stockOfferTypeLabels[stockOfferType] : 'não cadastrado'}`,
         productLine ? productLineLabels[productLine] : null,
         product.category?.name ?? null,
     ].filter(
@@ -587,7 +587,7 @@ function ProductTable({
                                     </>
                                 ) : (
                                     <span className="text-muted-foreground">
-                                        Sem oferta
+                                        Sem estoque cadastrado
                                     </span>
                                 )}
                             </td>
@@ -739,9 +739,8 @@ export default function ProductsIndex({
                             </span>
                         </div>
                         <p className="max-w-xl text-base leading-7 text-muted-foreground">
-                            A identidade de cada peça fica aqui. Depois, ela
-                            pode receber diferentes ofertas e condições de
-                            estoque.
+                            Cadastre as peças e acompanhe suas disponibilidades
+                            de estoque.
                         </p>
                     </div>
                     <Button asChild size="lg" className="w-full sm:w-fit">
@@ -765,8 +764,8 @@ export default function ProductsIndex({
                                 name="search"
                                 type="search"
                                 value={mobileSearch}
-                                placeholder="Buscar por nome"
-                                aria-label="Buscar por nome"
+                                placeholder="Nome, modelo ou código"
+                                aria-label="Buscar por nome, modelo ou código"
                                 onChange={(event) =>
                                     setMobileSearch(event.target.value)
                                 }
@@ -876,8 +875,8 @@ export default function ProductsIndex({
                     <Input
                         name="search"
                         defaultValue={filters.search}
-                        placeholder="Buscar por nome"
-                        aria-label="Buscar por nome"
+                        placeholder="Nome, modelo ou código"
+                        aria-label="Buscar por nome, modelo ou código"
                     />
                     <ProductFilterFields
                         key={`desktop-${Object.values(filterValues).join('-')}`}

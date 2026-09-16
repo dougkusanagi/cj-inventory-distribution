@@ -32,7 +32,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                                     name="email"
                                     autoComplete="off"
                                     autoFocus
-                                    placeholder="email@example.com"
+                                    placeholder="nome@empresa.com"
                                 />
 
                                 <InputError message={errors.email} />
@@ -47,7 +47,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                                     {processing && (
                                         <LoaderCircle className="h-4 w-4 animate-spin" />
                                     )}
-                                    Enviar link para trocar a senha
+                                    Enviar link para redefinir a senha
                                 </Button>
                             </div>
                         </>
@@ -65,5 +65,6 @@ export default function ForgotPassword({ status }: { status?: string }) {
 
 ForgotPassword.layout = {
     title: 'Esqueci minha senha',
-    description: 'Informe seu e-mail para receber um link de troca',
+    description:
+        'Informe seu e-mail para receber um link e criar uma nova senha.',
 };

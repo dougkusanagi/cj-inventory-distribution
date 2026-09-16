@@ -51,7 +51,7 @@ class SyncProductStockOffer
                 && $existingVolumes->contains(fn (StockOfferVolume $volume): bool => (bool) $volume->getAttribute('has_stock_movements'))
                 && $offer->type !== $type) {
                 throw ValidationException::withMessages([
-                    'stock_offer_type' => 'A classificação de uma oferta já movimentada não pode ser alterada pelo cadastro do produto.',
+                    'stock_offer_type' => 'A classificação de um estoque já movimentado não pode ser alterada no cadastro do produto.',
                 ]);
             }
 
@@ -98,7 +98,7 @@ class SyncProductStockOffer
             }
 
             if ($usedVolumeIds === []) {
-                throw new InvalidArgumentException('An offer must contain at least one stock volume.');
+                throw new InvalidArgumentException('Um estoque precisa ter pelo menos um saco.');
             }
 
             $this->ensureVolumesMayBeRemoved($existingVolumes->except($usedVolumeIds));
@@ -319,7 +319,7 @@ class SyncProductStockOffer
         if ($volumes->contains(fn (StockOfferVolume $volume): bool => $volume->total_quantity > 0
             && $volume->consumed_at === null)) {
             throw ValidationException::withMessages([
-                'stock_volumes' => 'Sacos com estoque disponível ou reservado não podem ser excluídos. Registre uma saída ou zere o saco pelo fluxo de estoque.',
+                'stock_volumes' => 'Sacos com estoque disponível ou reservado não podem ser removidos. Registre a saída ou zere o estoque do saco antes de removê-lo.',
             ]);
         }
     }

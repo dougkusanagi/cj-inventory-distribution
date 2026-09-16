@@ -23,7 +23,7 @@ export default function ConfirmPassword() {
                 }}
                 label="Confirmar com chave de acesso"
                 loadingLabel="Confirmando..."
-                separator="Ou confirmar com senha"
+                separator="Ou confirme com sua senha"
             />
 
             <Form {...store.form()} resetOnSuccess={['password']}>

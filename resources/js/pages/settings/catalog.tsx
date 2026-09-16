@@ -116,9 +116,8 @@ export default function CatalogSettings({
                                     }
                                 />
                                 <p className="text-sm leading-6 text-muted-foreground">
-                                    Informe o DDD e o telefone. O sistema
-                                    adiciona o DDI 55 e remove espaços e
-                                    pontuação ao salvar.
+                                    Informe o número com DDD. O código do Brasil
+                                    (+55) será adicionado automaticamente.
                                 </p>
                                 <InputError message={errors.whatsapp_number} />
                             </div>

@@ -62,7 +62,7 @@ class AdjustProductStock
                 ->first();
 
             if ($volume === null || $volume->current_order_id !== null || $volume->consumed_at !== null) {
-                throw ValidationException::withMessages(['volume_id' => 'Selecione um saco disponível, sem reserva ou consumo.']);
+                throw ValidationException::withMessages(['volume_id' => 'Selecione um saco disponível, sem reserva e sem retirada registrada.']);
             }
 
             $previousStates = [$volume->getKey() => $this->recorder->snapshot($volume)];
@@ -94,7 +94,7 @@ class AdjustProductStock
             $resultingStates = [$volume->getKey() => $this->recorder->snapshot($volume)];
 
             if ($previousStates[$volume->getKey()] === $resultingStates[$volume->getKey()]) {
-                throw ValidationException::withMessages(['items' => 'Informe ao menos uma alteração na recontagem.']);
+                throw ValidationException::withMessages(['items' => 'Altere pelo menos um tamanho ou uma quantidade antes de salvar.']);
             }
 
             $previousTotalQuantity = (int) $previousStates[$volume->getKey()]['total_quantity'];

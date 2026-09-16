@@ -96,8 +96,8 @@ class StoreStockEntryRequest extends FormRequest
             'stock_offer_type.required' => 'Informe o tipo do estoque.',
             'stock_offer_type.enum' => 'Selecione um tipo de estoque válido.',
             'reason.required' => 'Informe o motivo da entrada.',
-            'idempotency_key.required' => 'Informe uma chave para evitar duplicidade.',
-            'idempotency_key.regex' => 'A chave de idempotência contém caracteres inválidos.',
+            'idempotency_key.required' => 'Não foi possível registrar a entrada. Atualize a página e tente novamente.',
+            'idempotency_key.regex' => 'Não foi possível registrar a entrada. Atualize a página e tente novamente.',
             'stock_volumes.required' => 'Adicione pelo menos um saco.',
             'stock_volumes.min' => 'Adicione pelo menos um saco.',
             'stock_volumes.*.items.*.size.required' => 'Informe o tamanho do saco.',
@@ -154,7 +154,7 @@ class StoreStockEntryRequest extends FormRequest
                 if ($total === null || $total === '' || (int) $total <= 0) {
                     $validator->errors()->add(
                         "stock_volumes.{$volumeIndex}.total_quantity",
-                        'A entrada precisa ter estoque físico maior que zero.',
+                        'Cada saco precisa ter pelo menos uma peça.',
                     );
                 }
             }

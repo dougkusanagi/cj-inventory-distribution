@@ -815,7 +815,7 @@ test('ending the current stock is rejected while a sack still has stock', functi
 
     $response
         ->assertSessionHasErrors([
-            'stock_volumes' => 'Sacos com estoque disponível ou reservado não podem ser excluídos. Registre uma saída ou zere o saco pelo fluxo de estoque.',
+            'stock_volumes' => 'Sacos com estoque disponível ou reservado não podem ser removidos. Registre a saída ou zere o estoque do saco antes de removê-lo.',
         ])
         ->assertRedirect(route('products.edit', $product));
 

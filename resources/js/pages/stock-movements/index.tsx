@@ -121,8 +121,8 @@ export default function StockMovementsIndex({
                             Movimentações
                         </h1>
                         <p className="max-w-2xl text-sm text-muted-foreground">
-                            Registre o caminho físico de cada saco sem alterar o
-                            histórico confirmado.
+                            Registre entradas e saídas e consulte o histórico do
+                            estoque.
                         </p>
                     </div>
                     <div className="flex flex-col gap-2 sm:flex-row">
@@ -147,7 +147,7 @@ export default function StockMovementsIndex({
                 >
                     <Card className="min-w-[calc(100%-2.5rem)] snap-start gap-2 rounded-2xl p-4 sm:min-w-0">
                         <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                            Lançamentos
+                            Movimentações
                         </span>
                         <strong className="text-2xl">{summary.count}</strong>
                     </Card>
@@ -377,7 +377,7 @@ export default function StockMovementsIndex({
                                                 : ''}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            {movement.actor ?? 'Sistema'} ·{' '}
+                                            {movement.actor ?? 'Automático'} ·{' '}
                                             {dateLabel(movement.occurred_at)}
                                         </p>
                                     </div>

@@ -45,11 +45,11 @@ export const stockAdjustmentReasons = [
     'Peças faltantes',
     'Avaria identificada na conferência',
     'Recontagem após separação',
-    'Reorganização do saco',
+    'Redistribuição entre tamanhos',
 ] as const;
 
 export const stockReversalReasons = [
-    'Lançamento duplicado',
+    'Registro duplicado',
     'Produto ou saco incorreto',
     'Quantidade incorreta',
     'Grade de tamanhos incorreta',

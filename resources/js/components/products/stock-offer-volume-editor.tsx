@@ -5,7 +5,6 @@ import {
     Ellipsis,
     Eye,
     EyeOff,
-    Layers,
     ListCheck,
     ListX,
     Plus,
@@ -13,7 +12,6 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -56,19 +54,19 @@ const sizePresets: SizePreset[] = [
     {
         id: 'numeric-female',
         label: 'Numérica feminina',
-        description: '34 a 46, com seleção dos tamanhos presentes.',
+        description: 'Tamanhos de 34 a 46. Marque os que estão presentes.',
         sizes: ['34', '36', '38', '40', '42', '44', '46'],
     },
     {
         id: 'letters',
         label: 'Por letras',
-        description: 'PP, P, M, G e GG, com seleção dos tamanhos presentes.',
+        description: 'Tamanhos PP a GG. Marque os que estão presentes.',
         sizes: ['PP', 'P', 'M', 'G', 'GG'],
     },
     {
         id: 'custom',
         label: 'Personalizada',
-        description: 'Defina os nomes dos tamanhos manualmente.',
+        description: 'Digite os tamanhos que deseja usar.',
         sizes: [],
     },
 ];
@@ -393,7 +391,11 @@ export function StockOfferVolumeEditor({
             return;
         }
 
-        if (!window.confirm(`Remover o Saco ${volumeIndex + 1} e sua grade?`)) {
+        if (
+            !window.confirm(
+                `Remover o saco ${volumeIndex + 1} e seus tamanhos?`,
+            )
+        ) {
             return;
         }
 
@@ -500,30 +502,19 @@ export function StockOfferVolumeEditor({
     return (
         <div className="grid gap-5">
             <Card className="grid gap-5 rounded-2xl border-border/80 p-4 shadow-sm sm:p-5">
-                <Alert className="border-primary/25 bg-primary/5 [&>svg]:text-primary">
-                    <Layers />
-                    <AlertTitle>O estoque é organizado por saco</AlertTitle>
-                    <AlertDescription>
-                        Cada saco tem sua própria grade. O total geral é a soma
-                        dos totais dos sacos e é recalculado no servidor ao
-                        salvar.
-                    </AlertDescription>
-                </Alert>
-
                 <fieldset className="grid gap-3">
                     <legend className="text-sm font-semibold text-foreground">
-                        Modelo de grade
+                        Lista de tamanhos
                     </legend>
                     <p className="text-xs text-muted-foreground">
-                        Escolha o modelo dos tamanhos. A presença e a quantidade
-                        continuam sendo definidas separadamente em cada saco.
+                        Escolha os tamanhos que serão usados nos sacos.
                     </p>
                     <RadioGroup
                         value={selectedPreset}
                         onValueChange={applyPreset}
                         disabled={hasLockedVolumes}
                         className="grid grid-cols-1 gap-2 sm:grid-cols-3"
-                        aria-label="Modelo de grade"
+                        aria-label="Lista de tamanhos"
                     >
                         {sizePresets.map((preset) => {
                             const optionId = `stock-size-preset-${preset.id}`;
@@ -560,12 +551,11 @@ export function StockOfferVolumeEditor({
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <div className="grid gap-1">
                                 <p className="text-sm font-semibold text-foreground">
-                                    Nomes dos tamanhos
+                                    Tamanhos personalizados
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                    Esta lista é compartilhada por todos os
-                                    sacos; a presença e a quantidade continuam
-                                    independentes.
+                                    A lista será usada em todos os sacos. Você
+                                    define os tamanhos presentes em cada um.
                                 </p>
                             </div>
                             <Button
@@ -657,12 +647,13 @@ export function StockOfferVolumeEditor({
                 <div className="flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="grid gap-1">
                         <span className="text-xs font-semibold tracking-[0.16em] text-highlight uppercase">
-                            Total da oferta
+                            Total do estoque
                         </span>
                         <span className="text-sm text-muted-foreground">
-                            Soma dos {volumes.length}{' '}
-                            {volumes.length === 1 ? 'saco' : 'sacos'}{' '}
-                            cadastrados.
+                            {volumes.length === 1
+                                ? '1 saco cadastrado'
+                                : `${volumes.length} sacos cadastrados`}{' '}
+                            · total de todos os sacos.
                         </span>
                     </div>
                     <strong className="font-mono text-2xl text-foreground">
@@ -777,8 +768,8 @@ export function StockOfferVolumeEditor({
                                 </div>
                                 <p className="text-sm text-muted-foreground">
                                     {isLocked
-                                        ? 'Saco já movimentado. Ajustes físicos devem ser feitos em Movimentações.'
-                                        : 'Escolha os tamanhos encontrados neste saco.'}
+                                        ? 'Este saco já foi movimentado. Para alterar suas quantidades, use Movimentações.'
+                                        : 'Marque os tamanhos presentes neste saco.'}
                                 </p>
                             </div>
 
@@ -846,8 +837,8 @@ export function StockOfferVolumeEditor({
                                     />
                                     <p className="text-xs text-muted-foreground">
                                         {knownQuantities
-                                            ? 'Calculado pela soma das quantidades conhecidas deste saco.'
-                                            : 'Informe o total quando as quantidades por tamanho forem desconhecidas.'}
+                                            ? 'Calculado pelas quantidades informadas acima.'
+                                            : 'Informe o total se não souber a quantidade de cada tamanho.'}
                                     </p>
                                     <InputError message={volumeError} />
                                 </div>
@@ -859,8 +850,8 @@ export function StockOfferVolumeEditor({
                                         Tamanhos presentes
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                        Ative somente os tamanhos encontrados no
-                                        saco.
+                                        Marque somente os tamanhos presentes
+                                        neste saco.
                                     </p>
                                 </div>
                                 <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:flex sm:flex-row">
