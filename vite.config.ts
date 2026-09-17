@@ -40,12 +40,10 @@ export default defineConfig(({ mode }) => {
         server: {
             ...(devServerUrl
                 ? {
-                      host: devServerUrl.hostname,
-                      origin: devServerUrl.origin,
+                      host: env.VITE_DEV_SERVER_HOST || devServerUrl.hostname,
                       port: Number(devServerUrl.port) || 5173,
                       hmr: {
                           host: devServerUrl.hostname,
-                          port: Number(devServerUrl.port) || 5173,
                       },
                       cors: appUrl
                           ? {
