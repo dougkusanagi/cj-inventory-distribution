@@ -52,8 +52,8 @@ test('the deployment script uses the application production toolchain', function
         ->toContain('PHP_FPM_ACTION="${PHP_FPM_ACTION:-reload}"')
         ->toContain('WEB_SERVICE="${WEB_SERVICE-}"')
         ->toContain('HORIZON="${HORIZON:-false}"')
-        ->toContain('FRONTEND_INSTALL=(bun install --frozen-lockfile --no-save)')
-        ->toContain('FRONTEND_BUILD=(bun run build)');
+        ->toContain('FRONTEND_INSTALL=(/usr/local/bin/bun install --frozen-lockfile --no-save)')
+        ->toContain('FRONTEND_BUILD=(/usr/local/bin/bun run build)');
 });
 
 test('the short deployment entrypoint delegates to the package command', function (): void {

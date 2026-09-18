@@ -8,5 +8,5 @@ STORAGE_LINK="${STORAGE_LINK:-true}"
 # Bun provides the JavaScript runtime on the server, which does not have Node.
 # Do not let Vite+ select npm internally: invoke Bun's installer and script
 # runner directly.
-FRONTEND_INSTALL=(bun install --frozen-lockfile --no-save)
-FRONTEND_BUILD=(bun run build)
+FRONTEND_INSTALL=(/usr/local/bin/bun install --frozen-lockfile --no-save)
+FRONTEND_BUILD=(/usr/local/bin/bun run build)
