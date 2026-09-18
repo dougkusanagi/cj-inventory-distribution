@@ -41,13 +41,12 @@ class CatalogController extends Controller
             ->with([
                 'category:id,name',
                 'media',
-                'offers' => fn (Relation $query) => $query->where('type', '!=', 'new_grade'),
-                'offers.stockVolumes' => function (Relation $query): void {
+                'latestAvailableOffer.stockVolumes' => function (Relation $query): void {
                     $query->where('total_quantity', '>', 0)
                         ->whereNull('current_order_id')
                         ->whereNull('consumed_at');
                 },
-                'offers.stockVolumes.items' => function (Relation $query): void {
+                'latestAvailableOffer.stockVolumes.items' => function (Relation $query): void {
                     $query->where('is_active', true);
                 },
             ])
@@ -56,12 +55,12 @@ class CatalogController extends Controller
             ->paginate(12)
             ->withQueryString()
             ->through(function (Product $product): array {
-                $offer = $product->offers->first();
+                $offer = $product->latestAvailableOffer;
                 if ($offer === null) {
                     throw new LogicException('Catalog product loaded without an available offer.');
                 }
 
-                return $this->catalogProductData($product, $offer, $product->offers->flatMap(fn ($offer) => $offer->stockVolumes));
+                return $this->catalogProductData($product, $offer, $offer->stockVolumes);
             });
 
         $availableBagVolumeIds = $bagVolumeIds->isEmpty()

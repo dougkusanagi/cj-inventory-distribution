@@ -41,19 +41,18 @@ final class NormalizedSearch
         }
 
         $expression = "LOWER({$column})";
+        // SQLite has a shallow parser stack. Keep this portable expression
+        // intentionally short: LOWER handles ASCII, while these pairs cover
+        // the Portuguese characters that need an explicit normalization.
         $replacements = [
-            'á' => 'a', 'à' => 'a', 'ã' => 'a', 'â' => 'a', 'ä' => 'a',
-            'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
-            'í' => 'i', 'ì' => 'i', 'î' => 'i', 'ï' => 'i',
-            'ó' => 'o', 'ò' => 'o', 'õ' => 'o', 'ô' => 'o', 'ö' => 'o',
-            'ú' => 'u', 'ù' => 'u', 'û' => 'u', 'ü' => 'u',
-            'ç' => 'c',
-            'Á' => 'a', 'À' => 'a', 'Ã' => 'a', 'Â' => 'a', 'Ä' => 'a',
-            'É' => 'e', 'È' => 'e', 'Ê' => 'e', 'Ë' => 'e',
-            'Í' => 'i', 'Ì' => 'i', 'Î' => 'i', 'Ï' => 'i',
-            'Ó' => 'o', 'Ò' => 'o', 'Õ' => 'o', 'Ô' => 'o', 'Ö' => 'o',
-            'Ú' => 'u', 'Ù' => 'u', 'Û' => 'u', 'Ü' => 'u',
-            'Ç' => 'c',
+            'á' => 'a', 'Á' => 'a',
+            'ã' => 'a', 'Ã' => 'a',
+            'é' => 'e', 'É' => 'e',
+            'í' => 'i', 'Í' => 'i',
+            'ó' => 'o', 'Ó' => 'o',
+            'õ' => 'o', 'Õ' => 'o',
+            'ú' => 'u', 'Ú' => 'u',
+            'ç' => 'c', 'Ç' => 'c',
         ];
 
         foreach ($replacements as $from => $to) {

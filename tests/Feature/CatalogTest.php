@@ -42,6 +42,21 @@ test('renders database products with available stock in the public catalog', fun
     );
 });
 
+test('catalog renders the latest available offer instead of an older exhausted offer', function () {
+    $product = Product::factory()->create(['name' => 'Produto com histórico']);
+    $exhaustedOffer = StockOffer::factory()->replenishment()->for($product)->create();
+    StockOfferVolume::factory()->for($exhaustedOffer)->withTotal(0)->create();
+    $availableOffer = StockOffer::factory()->brokenGrade()->for($product)->create();
+    $availableVolume = StockOfferVolume::factory()->for($availableOffer)->withTotal(7)->create();
+
+    $this->get(route('catalog'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('products.data', 1)
+            ->where('products.data.0.type', 'Grade Furada')
+            ->where('products.data.0.volumes.0.id', $availableVolume->id)
+            ->where('products.data.0.volumes.0.pieces', 7));
+});
+
 test('disables catalog checkout until a WhatsApp destination is configured', function () {
     $this->get(route('catalog'))
         ->assertInertia(fn (Assert $page) => $page
@@ -141,6 +156,18 @@ test('catalog filters and paginates products on the server', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->where('products.meta.current_page', 1)
             ->where('products.meta.next_page_url', route('catalog', ['page' => 2])));
+});
+
+test('catalog search stays within SQLite parser limits with an available offer', function () {
+    $product = Product::factory()->create(['name' => 'Teste de busca']);
+    $offer = StockOffer::factory()->replenishment()->for($product)->create();
+    StockOfferVolume::factory()->for($offer)->withTotal(4)->create();
+
+    $this->get(route('catalog', ['search' => 'teste']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('products.data', 1)
+            ->where('products.data.0.id', $product->id));
 });
 
 test('catalog keeps selected unavailable sacks identifiable for the bag', function () {
