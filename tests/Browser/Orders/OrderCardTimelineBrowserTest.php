@@ -67,6 +67,10 @@ test('order timeline starts collapsed and expands on mobile', function () {
 });
 
 test('canceled orders render a terminal canceled step', function () {
+    $this->timelineOrder->items()->firstOrFail()->update([
+        'separated_at' => now(),
+    ]);
+
     $this->actingAs(User::factory()->create())
         ->post(route('orders.cancel', $this->timelineOrder), ['reason' => 'Cliente desistiu.'])
         ->assertRedirect();
@@ -74,8 +78,10 @@ test('canceled orders render a terminal canceled step', function () {
     expect($this->timelineOrder->refresh()->status->value)->toBe('canceled');
 
     visit(route('orders.index', [], false))
-        ->resize(1280, 900)
+        ->resize(390, 844)
         ->assertSee('Cancelado')
+        ->assertSee('Atual: Cancelado')
+        ->click('[data-testid="alternar-estados"]')
         ->assertSee('Pedido criado')
         ->assertDontSee('Aguardando')
         ->assertNoJavaScriptErrors();

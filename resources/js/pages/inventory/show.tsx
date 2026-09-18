@@ -1,4 +1,5 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import { ArrowLeft, ArrowRight, Check, CircleDot } from 'lucide-react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
 import {
@@ -7,6 +8,7 @@ import {
 } from '@/components/products/recount-fields';
 import type { RecountItem } from '@/components/products/recount-fields';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     index,
@@ -46,11 +48,13 @@ type Inventory = {
 function CountEditor({
     inventory,
     item,
-    onClose,
+    onSaved,
+    onCancel,
 }: {
     inventory: Inventory;
     item: CountItem;
-    onClose: () => void;
+    onSaved: () => void;
+    onCancel: () => void;
 }) {
     const form = useForm({
         version: inventory.version,
@@ -71,10 +75,16 @@ function CountEditor({
                 e.preventDefault();
                 form.put(
                     update.url({ inventory: inventory.id, item: item.id }),
-                    { preserveScroll: true, onSuccess: onClose },
+                    { preserveScroll: true, onSuccess: onSaved },
                 );
             }}
         >
+            <div className="grid gap-1">
+                <h3 className="font-semibold">Conte o que está no saco</h3>
+                <p className="text-sm text-muted-foreground">
+                    Ajuste somente os tamanhos e quantidades que você encontrou.
+                </p>
+            </div>
             <RecountFields
                 prefix={`count-${item.id}`}
                 items={form.data.items}
@@ -82,12 +92,19 @@ function CountEditor({
                 onItems={(items) => form.setData('items', items)}
                 onTotal={(value) => form.setData('total_quantity', value)}
             />
-            <p className="font-medium">
-                Diferença:{' '}
-                {recountTotal(form.data.items, form.data.total_quantity) -
-                    item.snapshot.total_quantity}{' '}
-                peças
-            </p>
+            <div className="flex items-center justify-between gap-3 rounded-lg bg-muted px-3 py-2 text-sm">
+                <span>Diferença encontrada</span>
+                <strong className="tabular-nums">
+                    {recountTotal(form.data.items, form.data.total_quantity) -
+                        item.snapshot.total_quantity >
+                    0
+                        ? '+'
+                        : ''}
+                    {recountTotal(form.data.items, form.data.total_quantity) -
+                        item.snapshot.total_quantity}{' '}
+                    peças
+                </strong>
+            </div>
             <div role="alert">
                 {Object.entries(form.errors).map(([field, message]) => (
                     <InputError key={field} message={message} />
@@ -95,10 +112,11 @@ function CountEditor({
             </div>
             <div className="flex flex-wrap gap-2">
                 <Button disabled={form.processing} type="submit">
-                    Salvar contagem
+                    {form.processing ? 'Salvando...' : 'Salvar e continuar'}
+                    {!form.processing && <ArrowRight />}
                 </Button>
-                <Button type="button" variant="ghost" onClick={onClose}>
-                    Fechar
+                <Button type="button" variant="ghost" onClick={onCancel}>
+                    Voltar
                 </Button>
             </div>
         </form>
@@ -106,7 +124,12 @@ function CountEditor({
 }
 
 export default function InventoryShow({ inventory }: { inventory: Inventory }) {
-    const [editing, setEditing] = useState<number | null>(null);
+    const firstPendingItem = inventory.items.find(
+        (item) => item.counted_total === null,
+    );
+    const [editing, setEditing] = useState<number | null>(
+        inventory.status === 'draft' ? (firstPendingItem?.id ?? null) : null,
+    );
     const form = useForm({ version: inventory.version });
     const draft = inventory.status === 'draft';
     const counted = inventory.items.filter(
@@ -117,6 +140,10 @@ export default function InventoryShow({ inventory }: { inventory: Inventory }) {
             total + (item.counted_total ?? 0) - item.snapshot.total_quantity,
         0,
     );
+    const progress = inventory.items.length
+        ? Math.round((counted.length / inventory.items.length) * 100)
+        : 0;
+    const allCounted = counted.length === inventory.items.length;
     const submit = (operation: 'confirm' | 'cancel') => {
         if (
             !window.confirm(
@@ -136,35 +163,57 @@ export default function InventoryShow({ inventory }: { inventory: Inventory }) {
     return (
         <>
             <Head title={`Balanço #${inventory.id}`} />
-            <div className="mx-auto grid max-w-5xl gap-6 px-4 py-6 sm:px-6">
+            <div className="mx-auto grid max-w-4xl gap-5 px-4 py-6 sm:px-6">
                 <header className="grid gap-2">
                     <Link
                         href={index()}
-                        className="text-sm underline underline-offset-4"
+                        className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
                     >
-                        Voltar aos balanços
+                        <ArrowLeft className="size-4" />
+                        Balanços
                     </Link>
-                    <h1 className="text-2xl font-semibold">
-                        Balanço #{inventory.id}
-                    </h1>
-                    <p>{inventory.reason}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <h1 className="text-2xl font-semibold tracking-tight">
+                            {inventory.reason}
+                        </h1>
+                        <Badge variant={draft ? 'default' : 'outline'}>
+                            {draft
+                                ? 'Em andamento'
+                                : inventory.status === 'confirmed'
+                                  ? 'Confirmado'
+                                  : 'Cancelado'}
+                        </Badge>
+                    </div>
                     <p className="text-sm text-muted-foreground">
-                        {draft
-                            ? 'Em contagem — saldo ainda não alterado'
-                            : inventory.status === 'confirmed'
-                              ? 'Confirmado — ajustes registrados'
-                              : 'Cancelado — saldo preservado'}
+                        Balanço #{inventory.id} · O saldo permanece igual até a
+                        confirmação final.
                     </p>
                 </header>
-                <div className="flex flex-wrap justify-between gap-3 rounded-xl bg-muted p-4">
-                    <span>
-                        {counted.length} de {inventory.items.length} sacos
-                        contados
-                    </span>
-                    <strong>
-                        Diferença total: {difference > 0 ? '+' : ''}
-                        {difference} peças
-                    </strong>
+                <div className="grid gap-3 rounded-xl bg-muted p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                        <strong>
+                            {allCounted
+                                ? 'Contagem concluída'
+                                : `${counted.length} de ${inventory.items.length} sacos contados`}
+                        </strong>
+                        <span className="text-muted-foreground tabular-nums">
+                            Diferença total: {difference > 0 ? '+' : ''}
+                            {difference} peças
+                        </span>
+                    </div>
+                    <div
+                        className="h-2 overflow-hidden rounded-full bg-background"
+                        role="progressbar"
+                        aria-label="Progresso da contagem"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={progress}
+                    >
+                        <div
+                            className="h-full rounded-full bg-primary transition-[width]"
+                            style={{ width: `${progress}%` }}
+                        />
+                    </div>
                 </div>
                 <div role="alert">
                     {Object.entries(form.errors).map(([field, message]) => (
@@ -174,7 +223,7 @@ export default function InventoryShow({ inventory }: { inventory: Inventory }) {
                 {inventory.items.map((item) => (
                     <section
                         key={item.id}
-                        className="grid gap-4 rounded-xl border p-4 sm:p-5"
+                        className={`grid gap-4 rounded-xl border p-4 sm:p-5 ${editing === item.id ? 'border-primary/50 bg-primary/5' : ''}`}
                         aria-label={item.snapshot.code}
                     >
                         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -186,11 +235,22 @@ export default function InventoryShow({ inventory }: { inventory: Inventory }) {
                                     {item.snapshot.code}
                                 </p>
                             </div>
-                            <span className="text-sm">
+                            <Badge
+                                variant={
+                                    item.counted_total === null
+                                        ? 'secondary'
+                                        : 'outline'
+                                }
+                            >
+                                {item.counted_total === null ? (
+                                    <CircleDot />
+                                ) : (
+                                    <Check />
+                                )}
                                 {item.counted_total === null
-                                    ? 'Aguardando contagem'
-                                    : 'Contagem salva'}
-                            </span>
+                                    ? 'Aguardando'
+                                    : 'Contado'}
+                            </Badge>
                         </div>
                         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                             <span>
@@ -213,10 +273,16 @@ export default function InventoryShow({ inventory }: { inventory: Inventory }) {
                         {draft && (
                             <div className="flex flex-wrap gap-2">
                                 <Button
-                                    variant="outline"
+                                    variant={
+                                        item.counted_total === null
+                                            ? 'default'
+                                            : 'outline'
+                                    }
                                     onClick={() => setEditing(item.id)}
                                 >
-                                    Contar {item.snapshot.code}
+                                    {item.counted_total === null
+                                        ? 'Contar agora'
+                                        : 'Revisar contagem'}
                                 </Button>
                                 <Button
                                     variant="ghost"
@@ -251,7 +317,15 @@ export default function InventoryShow({ inventory }: { inventory: Inventory }) {
                                 key={`${item.id}-${inventory.version}`}
                                 inventory={inventory}
                                 item={item}
-                                onClose={() => setEditing(null)}
+                                onCancel={() => setEditing(null)}
+                                onSaved={() => {
+                                    const next = inventory.items.find(
+                                        (candidate) =>
+                                            candidate.id !== item.id &&
+                                            candidate.counted_total === null,
+                                    );
+                                    setEditing(next?.id ?? null);
+                                }}
                             />
                         )}
                         {item.stock_movement_id && (
@@ -265,26 +339,33 @@ export default function InventoryShow({ inventory }: { inventory: Inventory }) {
                     </section>
                 ))}
                 {draft && (
-                    <div className="flex flex-wrap justify-end gap-3 border-t pt-5">
-                        <Button
-                            variant="outline"
-                            disabled={form.processing}
-                            onClick={() => submit('cancel')}
-                        >
-                            Cancelar balanço
-                        </Button>
-                        <Button
-                            disabled={
-                                form.processing ||
-                                counted.length !== inventory.items.length ||
-                                editing !== null
-                            }
-                            onClick={() => submit('confirm')}
-                        >
-                            {form.processing
-                                ? 'Confirmando...'
-                                : 'Confirmar balanço'}
-                        </Button>
+                    <div className="sticky bottom-3 z-20 grid gap-3 rounded-xl border bg-background/95 p-4 shadow-lg backdrop-blur sm:flex sm:items-center sm:justify-between">
+                        <p className="text-sm text-muted-foreground">
+                            {allCounted
+                                ? 'Revise a diferença total e confirme para atualizar o estoque.'
+                                : `Faltam ${inventory.items.length - counted.length} sacos para contar.`}
+                        </p>
+                        <div className="flex flex-wrap justify-end gap-2">
+                            <Button
+                                variant="ghost"
+                                disabled={form.processing}
+                                onClick={() => submit('cancel')}
+                            >
+                                Cancelar balanço
+                            </Button>
+                            <Button
+                                disabled={
+                                    form.processing ||
+                                    !allCounted ||
+                                    editing !== null
+                                }
+                                onClick={() => submit('confirm')}
+                            >
+                                {form.processing
+                                    ? 'Confirmando...'
+                                    : 'Confirmar balanço'}
+                            </Button>
+                        </div>
                     </div>
                 )}
             </div>

@@ -29,12 +29,12 @@ import { index as inventoryIndex } from '@/routes/inventory';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
-    { title: 'Balanço de estoque', href: inventoryIndex(), icon: Package },
     {
         title: 'Painel',
         href: dashboard(),
         icon: LayoutGrid,
     },
+    { title: 'Balanço de estoque', href: inventoryIndex(), icon: Package },
     {
         title: 'Produtos',
         href: productsIndex(),

@@ -37,7 +37,7 @@ it('shows validation feedback and does not save an invalid stock offer', functio
     expect(Product::query()->count())->toBe(0);
 });
 
-it('keeps a second sack when its removal is cancelled', function () {
+it('keeps existing sacks read only in the product form', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create(['name' => 'Produto com dois sacos E2E']);
     $offer = $product->offers()->create([
@@ -60,26 +60,17 @@ it('keeps a second sack when its removal is cancelled', function () {
 
     $this->actingAs($user);
 
-    $page = visit(route('products.edit', [$product->id], false))
+    visit(route('products.edit', [$product->id], false))
         ->wait(1)
         ->click('#product-tab-stock')
         ->assertSee('Saco 1')
         ->assertSee('Saco 2')
-        ->assertValue('#volume-total-1', '3');
-
-    $page->script('window.confirm = () => false;');
-
-    $page
-        ->click('#product-tab-stock')
-        ->click('button[aria-label="Mais ações para o Saco 2"]')
-        ->assertSee('Duplicar saco')
-        ->assertSee('Remover saco');
-
-    $page->script("Array.from(document.querySelectorAll('[role=menuitem]')).find((element) => element.textContent?.includes('Remover saco'))?.click();");
-
-    $page
-        ->assertSee('Saco 2')
-        ->assertValue('#volume-total-1', '3')
+        ->assertSee('4 peças · Disponível')
+        ->assertSee('3 peças · Disponível')
+        ->assertSee('Registrar entrada')
+        ->assertSee('Registrar saída')
+        ->assertDontSee('Duplicar saco')
+        ->assertDontSee('Remover saco')
         ->assertNoJavaScriptErrors();
 
     expect($offer->stockVolumes()->count())->toBe(2);

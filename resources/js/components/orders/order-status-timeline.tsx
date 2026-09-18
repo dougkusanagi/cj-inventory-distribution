@@ -57,15 +57,11 @@ export function getOrderTimelineSteps(
             { label: 'Pedido criado', state: 'done' },
             {
                 label: 'Separação',
-                state: allSeparated
-                    ? 'done'
-                    : separatedCount > 0
-                      ? 'current'
-                      : 'todo',
+                state: allSeparated ? 'done' : 'todo',
             },
             {
                 label: 'Conferência',
-                state: allChecked ? 'done' : allSeparated ? 'current' : 'todo',
+                state: allChecked ? 'done' : 'todo',
             },
             { label: 'Cancelado', state: 'canceled' },
         ];

@@ -11,6 +11,14 @@ beforeEach(function (): void {
     Vite::useHotFile(storage_path('framework/testing-hot-file'));
 });
 
+it('keeps the dashboard as the first main navigation item', function () {
+    $this->actingAs(User::factory()->create());
+
+    visit(route('dashboard', [], false))
+        ->assertScript("document.querySelector('[data-sidebar=\"content\"] [data-sidebar=\"menu-button\"] span')?.textContent === 'Painel'")
+        ->assertNoJavaScriptErrors();
+});
+
 it('shows the stock summary and opens the product catalog', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create(['name' => 'Produto do painel E2E']);
