@@ -53,7 +53,7 @@ test('the deployment script uses the application production toolchain', function
         ->toContain('WEB_SERVICE="${WEB_SERVICE-}"')
         ->toContain('HORIZON="${HORIZON:-false}"')
         ->toContain('FRONTEND_INSTALL=(vp install --frozen-lockfile)')
-        ->toContain('FRONTEND_BUILD=(vp build)');
+        ->toContain("FRONTEND_BUILD=(bash -c 'rm -f public/hot && vp build')");
 });
 
 test('the short deployment entrypoint delegates to the package command', function (): void {

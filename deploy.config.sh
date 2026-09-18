@@ -6,4 +6,4 @@ WEB_SERVICE="${WEB_SERVICE-}"
 HORIZON="${HORIZON:-false}"
 STORAGE_LINK="${STORAGE_LINK:-true}"
 FRONTEND_INSTALL=(vp install --frozen-lockfile)
-FRONTEND_BUILD=(vp build)
+FRONTEND_BUILD=(bash -c 'rm -f public/hot && vp build')

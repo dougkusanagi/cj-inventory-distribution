@@ -586,7 +586,7 @@ function ProductTable({
                                     <>
                                         <p className="font-semibold text-card-foreground">
                                             {product.available_quantity ?? 0}{' '}
-                                            disponíveis
+                                            peças disponíveis
                                         </p>
                                         <p className="text-xs text-muted-foreground">
                                             Físico: {product.physical_quantity}{' '}

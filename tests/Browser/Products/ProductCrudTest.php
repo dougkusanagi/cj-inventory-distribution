@@ -39,6 +39,7 @@ it('shows the grade type, commercial line, and category in product cards and tab
         ->assertSee('Tipo de estoque: Grade Furada')
         ->assertSee('Slim')
         ->assertSee('Calças')
+        ->assertSee('3 peças disponíveis')
         ->click('button[aria-label="Visualização em cards"]')
         ->assertSee('Tipo de estoque: Grade Furada')
         ->assertSee('Slim')
