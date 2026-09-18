@@ -36,11 +36,11 @@ it('shows the grade type, commercial line, and category in product cards and tab
 
     visit(route('products.index', [], false))
         ->wait(1)
-        ->assertSee('Tipo de estoque: Grade Furada')
+        ->assertSee('Grade: Furada')
         ->assertSee('Slim')
         ->assertSee('Calças')
         ->click('button[aria-label="Visualização em cards"]')
-        ->assertSee('Tipo de estoque: Grade Furada')
+        ->assertSee('Grade: Furada')
         ->assertSee('Slim')
         ->assertSee('Calças')
         ->assertNoJavaScriptErrors();
@@ -165,10 +165,10 @@ it('renders the product creation form for an authenticated user', function () {
         ->click('#product-tab-stock')
         ->assertSee('Estoque organizado por sacos')
         ->assertDontSee('O estoque é organizado por saco')
-        ->assertDontSee('recalculado no servidor')
-        ->assertSee('Sacos para repor um estoque já existente.')
-        ->assertSee('Sacos com a grade completa de tamanhos.')
-        ->assertSee('Sacos com um ou mais tamanhos faltando.')
+        ->assertSee('recalculado no servidor')
+        ->assertSee('Distribuição em sacos.')
+        ->assertSee('Grade completa.')
+        ->assertSee('Grade incompleta.')
         ->assertDontSee('Mostrar oferta no catálogo')
         ->assertDontSee('Oferta de estoque ativa')
         ->assertAttribute(
@@ -198,7 +198,7 @@ it('creates a product without a stock offer from the form', function () {
         ->assertRoute('products.index')
         ->assertSee('Blusa básica E2E')
         ->assertSee('CJ-000001')
-        ->assertSee('Tipo de estoque: não cadastrado')
+        ->assertSee('Grade: Sem oferta')
         ->assertSee('Produto cadastrado.')
         ->assertNoJavaScriptErrors();
 
@@ -243,7 +243,7 @@ it('keeps a stock quantity when disabling a size is cancelled', function () {
     $page
         ->assertRoute('products.index')
         ->assertSee('Blusa com grade E2E')
-        ->assertSee('Tipo de estoque: Grade Nova')
+        ->assertSee('Grade: Nova')
         ->assertSee('7')
         ->assertSee('1 saco')
         ->assertSee('Produto cadastrado.')
@@ -264,7 +264,7 @@ it('keeps a stock quantity when disabling a size is cancelled', function () {
     expect($medium->quantity)->toBe(7);
 });
 
-it('edits a product, preserves its code, and adds a stock sack', function () {
+it('edits product details while keeping existing stock read only', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create([
         'name' => 'Produto antigo E2E',
@@ -288,40 +288,26 @@ it('edits a product, preserves its code, and adds a stock sack', function () {
 
     $this->actingAs($user);
 
-    $page = visit(route('products.edit', [$product->id], false))
+    visit(route('products.edit', [$product->id], false))
         ->wait(1)
         ->assertRoute('products.edit', [$product->id])
         ->assertValue('#product-name', 'Produto antigo E2E')
         ->assertValue('#product-model', 'MODELO-ANTIGO')
         ->assertSee($product->code)
-        ->assertValue('#volume-0-quantity-2', '4');
-
-    $page->script('window.confirm = () => false;');
-
-    $page
         ->click('#product-tab-stock')
-        ->press('Encerrar estoque')
-        ->assertValue('#volume-0-quantity-2', '4')
+        ->assertSee('Estoque do produto')
+        ->assertSee('4 peças · Disponível')
+        ->assertSee('Registrar entrada')
+        ->assertSee('Registrar saída')
+        ->assertDontSee('Adicionar saco')
         ->click('#product-tab-details')
         ->type('#product-name', 'Produto atualizado E2E')
-        ->click('#product-tab-stock')
-        ->click('#stock-offer-type-broken_grade')
-        ->press('Adicionar saco')
-        ->assertSee('Saco 2')
-        ->type('#volume-total-1', '3');
-
-    $page->script('window.scrollTo(0, document.body.scrollHeight);');
-    $page->wait(0.2);
-
-    $page
         ->submit()
-        ->wait(1);
-
-    $page
+        ->wait(1)
         ->assertRoute('products.index')
         ->assertSee('Produto atualizado E2E')
-        ->assertSee('7')
-        ->assertSee('2 sacos')
+        ->assertSee('4')
+        ->assertSee('1 saco')
         ->assertSee('Produto atualizado.')
         ->assertNoJavaScriptErrors();
 
@@ -330,12 +316,12 @@ it('edits a product, preserves its code, and adds a stock sack', function () {
     expect($product->code)->toBe($originalCode);
     expect($product->name)->toBe('Produto atualizado E2E');
     expect($product->latestOffer)->not->toBeNull();
-    expect($product->latestOffer->type)->toBe(StockOfferType::BrokenGrade);
-    expect($product->latestOffer->calculatedTotalQuantity())->toBe(7);
-    expect($product->latestOffer->stockVolumes->pluck('total_quantity')->all())->toBe([4, 3]);
+    expect($product->latestOffer->type)->toBe(StockOfferType::NewGrade);
+    expect($product->latestOffer->calculatedTotalQuantity())->toBe(4);
+    expect($product->latestOffer->stockVolumes)->toHaveCount(1);
 });
 
-it('persists an edited quantity for an existing size', function () {
+it('routes an existing sack adjustment through the audited recount flow', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create(['name' => 'Produto com tamanho editável E2E']);
     $offer = $product->offers()->create([
@@ -357,20 +343,21 @@ it('persists an edited quantity for an existing size', function () {
     visit(route('products.edit', [$product->id], false))
         ->wait(1)
         ->click('#product-tab-stock')
-        ->clear('#volume-0-quantity-0')
-        ->fill('#volume-0-quantity-0', '7')
-        ->assertValue('#volume-0-quantity-0', '7')
-        ->assertValue('#volume-total-0', '7')
-        ->submit()
-        ->wait(1)
-        ->assertRoute('products.index')
+        ->assertSee('Saco 1')
+        ->assertSee('4 peças · Disponível')
+        ->assertMissing('#volume-0-quantity-0')
+        ->press('Ajustar estoque por tamanho')
+        ->assertSee('Recontar saco')
+        ->click('button[role="combobox"]:has-text("Selecione o saco")')
+        ->click('[role="option"]:has-text("SC-000001")')
+        ->assertPresent('#recount-0')
         ->assertNoJavaScriptErrors();
 
-    expect($item->fresh()->quantity)->toBe(7);
-    expect($volume->fresh()->total_quantity)->toBe(7);
+    expect($item->fresh()->quantity)->toBe(4);
+    expect($volume->fresh()->total_quantity)->toBe(4);
 });
 
-it('allows ending an existing zero stock offer', function () {
+it('keeps zero stock history read only in the product form', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create(['name' => 'Produto sem saldo E2E']);
     $offer = $product->offers()->create([
@@ -392,7 +379,10 @@ it('allows ending an existing zero stock offer', function () {
     visit(route('products.edit', [$product->id], false))
         ->wait(1)
         ->click('#product-tab-stock')
-        ->assertEnabled('[data-testid="end-current-stock"]')
+        ->assertSee('0 peças · Disponível')
+        ->assertSee('Registrar entrada')
+        ->assertSee('Registrar saída')
+        ->assertMissing('[data-testid="end-current-stock"]')
         ->assertNoJavaScriptErrors();
 });
 
@@ -470,9 +460,9 @@ it('keeps the product form usable on a narrow mobile viewport', function () {
         ->assertScript("(() => { const modelInput = document.querySelector('#product-model'); const categoryLabel = document.querySelector('label[for=\"product-category\"]'); const categoryInput = document.querySelector('#product-category'); const lineLabel = [...document.querySelectorAll('legend')].find((element) => element.textContent?.trim() === 'Linha comercial'); const lineInput = document.querySelector('[aria-label=\"Linha comercial\"]'); if (!modelInput || !categoryLabel || !categoryInput || !lineLabel || !lineInput) { return false; } const closeTo = (value, expected) => Math.abs(value - expected) <= 1; return closeTo(categoryLabel.getBoundingClientRect().top - modelInput.getBoundingClientRect().bottom, 20) && closeTo(lineLabel.getBoundingClientRect().top - categoryInput.getBoundingClientRect().bottom, 20) && closeTo(categoryInput.getBoundingClientRect().top - categoryLabel.getBoundingClientRect().bottom, 8) && closeTo(lineInput.getBoundingClientRect().top - lineLabel.getBoundingClientRect().bottom, 8); })()")
         ->type('#product-name', 'Produto mobile')
         ->click('#product-tab-stock')
-        ->assertSee('Tipo de estoque')
-        ->assertSee('Grade Nova')
-        ->assertSee('Grade Furada')
+        ->assertSee('Tipo de Grade')
+        ->assertSee('Nova')
+        ->assertSee('Furada')
         ->assertScript("(() => { const cards = [...document.querySelectorAll('label[for^=\"stock-offer-type-\"]')]; return cards.length === 3 && new Set(cards.map((card) => Math.round(card.getBoundingClientRect().top))).size === 1; })()")
         ->assertScript("(() => { const cards = [...document.querySelectorAll('label[for^=\"stock-offer-type-\"]')]; return cards.every((card) => { const radio = card.querySelector('[role=\"radio\"]'); const content = card.querySelector('span.grid'); if (!radio || !content) { return false; } const cardRect = card.getBoundingClientRect(); const radioRect = radio.getBoundingClientRect(); const contentRect = content.getBoundingClientRect(); const paddingLeft = Number.parseFloat(getComputedStyle(card).paddingLeft); return Math.abs((radioRect.left + radioRect.width / 2) - (cardRect.left + cardRect.width / 2)) <= 1 && contentRect.top >= radioRect.bottom && Math.abs(contentRect.left - (cardRect.left + paddingLeft)) <= 1 && getComputedStyle(content).textAlign === 'left'; }); })()")
         ->press('Adicionar saco')

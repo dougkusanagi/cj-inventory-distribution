@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\StockOfferType;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Support\Facades\Vite;
@@ -8,6 +9,14 @@ use Illuminate\Support\Facades\Vite;
 beforeEach(function (): void {
     config(['inertia.ssr.enabled' => false]);
     Vite::useHotFile(storage_path('framework/testing-hot-file'));
+});
+
+it('keeps the dashboard as the first main navigation item', function () {
+    $this->actingAs(User::factory()->create());
+
+    visit(route('dashboard', [], false))
+        ->assertScript("document.querySelector('[data-sidebar=\"content\"] [data-sidebar=\"menu-button\"] span')?.textContent === 'Painel'")
+        ->assertNoJavaScriptErrors();
 });
 
 it('shows the stock summary and opens the product catalog', function () {
@@ -51,12 +60,31 @@ it('shows the stock summary and opens the product catalog', function () {
 });
 
 it('opens the order area from the sidebar', function () {
+    Order::factory()->create([
+        'store_name' => 'Loja da timeline',
+        'requester_name' => 'Ana',
+    ]);
     $this->actingAs(User::factory()->create());
 
     visit(route('dashboard', [], false))
         ->click('[data-sidebar="menu-button"]:has-text("Pedidos")')
+        ->wait(1)
         ->assertRoute('orders.index')
         ->assertSee('Acompanhe os pedidos e atualize cada solicitação.')
+        ->assertSee('Loja da timeline')
+        ->assertSee('Pedido criado')
+        ->assertSee('Separação')
+        ->assertSee('Conferência')
+        ->assertSee('Finalizado')
+        ->resize(390, 844)
+        ->assertSee('Atual:')
+        ->assertSee('Ver estados')
+        ->assertMissing('[data-slot="collapsible-content"] li')
+        ->press('Ver estados')
+        ->assertSee('Ocultar estados')
+        ->assertVisible('[data-testid="order-timeline-mobile"]')
+        ->press('Ocultar estados')
+        ->assertMissing('[data-slot="collapsible-content"] li')
         ->assertNoJavaScriptErrors();
 });
 
