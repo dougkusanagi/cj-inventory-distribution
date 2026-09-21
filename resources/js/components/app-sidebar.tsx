@@ -34,7 +34,6 @@ const mainNavItems: NavItem[] = [
         href: dashboard(),
         icon: LayoutGrid,
     },
-    { title: 'Balanço de estoque', href: inventoryIndex(), icon: Package },
     {
         title: 'Produtos',
         href: productsIndex(),
@@ -55,6 +54,7 @@ const mainNavItems: NavItem[] = [
         href: stockMovementsIndex(),
         icon: ArrowLeftRight,
     },
+    { title: 'Balanço de estoque', href: inventoryIndex(), icon: Package },
 ];
 
 export function AppSidebar() {
