@@ -2,6 +2,8 @@
 
 use App\Enums\StockOfferType;
 use App\Models\Product;
+use App\Models\StockMovement;
+use App\Models\StockOfferVolume;
 use App\Models\User;
 use Illuminate\Support\Facades\Vite;
 
@@ -74,6 +76,66 @@ it('keeps existing sacks read only in the product form', function () {
         ->assertNoJavaScriptErrors();
 
     expect($offer->stockVolumes()->count())->toBe(2);
+});
+
+it('opens product stock entry in a dialog or drawer with grade cards', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create(['name' => 'Produto para entrada rápida']);
+
+    $this->actingAs($user);
+
+    $page = visit(route('products.edit', [$product->id], false))
+        ->wait(1)
+        ->click('#product-tab-stock')
+        ->click('[data-testid="open-stock-entry"]')
+        ->assertPresent('[data-testid="stock-entry-dialog"]')
+        ->assertPresent('[data-testid="stock-entry-form"]')
+        ->assertPresent('[data-testid="entry-stock-offer-type-selector"]')
+        ->assertPresent('#entry-stock-offer-type-new_grade')
+        ->press('Cancelar')
+        ->assertMissing('[data-testid="stock-entry-dialog"]')
+        ->resize(390, 844)
+        ->click('[data-testid="open-stock-entry"]')
+        ->assertVisible('[data-slot="drawer-content"]')
+        ->assertPresent('[data-testid="stock-entry-drawer"]')
+        ->assertPresent('[data-testid="entry-stock-offer-type-selector"]')
+        ->assertNoJavaScriptErrors();
+});
+
+it('registers stock from the product dialog and returns to the product', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create(['name' => 'Produto lançado pelo modal']);
+
+    $this->actingAs($user);
+
+    $page = visit(route('products.edit', [$product->id], false))
+        ->wait(1)
+        ->click('#product-tab-stock')
+        ->click('[data-testid="open-stock-entry"]')
+        ->press('Adicionar saco')
+        ->type('#volume-total-0', '8')
+        ->click('#entry-reason')
+        ->click('[role="option"]:has-text("Recebimento da fábrica")')
+        ->click('[data-testid="stock-entry-form"] button[type="submit"]')
+        ->wait(1)
+        ->assertRoute('products.edit', [$product->id])
+        ->assertSee('8 peças · Disponível')
+        ->assertSee('Entrada de estoque registrada.')
+        ->assertNoJavaScriptErrors();
+
+    expect(StockMovement::query()->count())->toBe(1)
+        ->and(StockOfferVolume::query()->count())->toBe(1);
+});
+
+it('uses the grade cards on the standalone stock entry form', function () {
+    $this->actingAs(User::factory()->create());
+
+    visit(route('stock-entries.create', [], false))
+        ->wait(1)
+        ->assertPresent('[data-testid="entry-stock-offer-type-selector"]')
+        ->assertPresent('#entry-stock-offer-type-broken_grade')
+        ->assertMissing('#entry-type')
+        ->assertNoJavaScriptErrors();
 });
 
 it('opens the stock tab when saving from the details tab returns stock errors', function () {

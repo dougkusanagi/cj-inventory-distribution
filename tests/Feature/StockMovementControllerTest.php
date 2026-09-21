@@ -92,6 +92,32 @@ test('stock entry preselects the product sent from its page', function () {
             ->where('selectedProductId', $product->id));
 });
 
+test('stock entry returns to the product when started from its stock tab', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+
+    $payload = [
+        'product_id' => $product->id,
+        'stock_offer_type' => StockOfferType::NewGrade->value,
+        'reason' => 'Recebimento da fábrica',
+        'notes' => null,
+        'idempotency_key' => 'entry-from-product-001',
+        'stock_volumes' => [[
+            'total_quantity' => 8,
+            'items' => [
+                ['size' => 'M', 'is_active' => true, 'quantity' => 8],
+            ],
+        ]],
+    ];
+
+    $this->actingAs($user)
+        ->post(route('stock-entries.store', ['return_to' => 'product']), $payload)
+        ->assertRedirect(route('products.edit', $product));
+
+    expect(StockMovement::query()->count())->toBe(1)
+        ->and($product->fresh()->latestOffer->type)->toBe(StockOfferType::NewGrade);
+});
+
 test('stock exit lists only the selected product available sacks', function () {
     $user = User::factory()->create();
     $selectedVolume = movementVolume();

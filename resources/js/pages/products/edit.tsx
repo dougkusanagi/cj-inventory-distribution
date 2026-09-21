@@ -3,6 +3,7 @@ import { Package } from 'lucide-react';
 import { useState } from 'react';
 import { ProductForm } from '@/components/products/product-form';
 import { StockAdjustmentModal } from '@/components/products/stock-adjustment-modal';
+import { StockEntryModal } from '@/components/products/stock-entry-modal';
 import { index as productsIndex } from '@/routes/products';
 import type { Category, Product } from '@/types';
 
@@ -14,6 +15,7 @@ export default function EditProduct({
     categories: Category[];
 }) {
     const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
+    const [isEntryOpen, setIsEntryOpen] = useState(false);
 
     return (
         <>
@@ -44,6 +46,12 @@ export default function EditProduct({
                     product={product}
                     categories={categories}
                     onAdjustStock={() => setIsAdjustmentOpen(true)}
+                    onRegisterEntry={() => setIsEntryOpen(true)}
+                />
+                <StockEntryModal
+                    product={product}
+                    open={isEntryOpen}
+                    onOpenChange={setIsEntryOpen}
                 />
                 <StockAdjustmentModal
                     product={product}

@@ -48,6 +48,16 @@ Priorize uso simples em celular, poucos passos, estados visuais claros, feedback
 
 No frontend, prefira componentes shadcn existentes ou bibliotecas React maduras e leves a implementações próprias. Crie uma solução customizada somente quando as opções existentes não atenderem ao requisito ou adicionarem complexidade desnecessária.
 
+- Antes de criar um componente local, procure primeiro em
+  `resources/js/components` e `resources/js/components/ui` por um componente
+  que já represente a mesma semântica e comportamento. Se existir, reutilize-o
+  ou adapte sua API sem duplicar a implementação. Quando uma implementação
+  local passar a ser necessária em uma segunda tela, extraia imediatamente a
+  parte compartilhada para um componente reutilizável. Não mantenha cópias de
+  um mesmo componente em locais diferentes; preserve como variações locais
+  apenas o markup ou o comportamento que for realmente específico de cada
+  contexto.
+
 - Antes de criar markup visual para dados que já aparecem em outra tela, procure
   componentes reutilizáveis no projeto. Em especial, represente grades e
   quantidades de estoque por tamanho com o componente compartilhado de mini

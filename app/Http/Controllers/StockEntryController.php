@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Stock\CreateStockEntry;
-use App\Enums\StockOfferType;
 use App\Http\Requests\Stock\StoreStockEntryRequest;
 use App\Models\Category;
 use App\Models\Product;
@@ -37,10 +36,6 @@ class StockEntryController extends Controller
                     'model' => $product->model,
                     'category' => $product->category?->name,
                 ])->values()->all(),
-            'stockOfferTypes' => array_map(fn (StockOfferType $type): array => [
-                'value' => $type->value,
-                'label' => $type->label(),
-            ], StockOfferType::cases()),
             'categories' => Category::query()->orderBy('name')->get(['id', 'name'])->toArray(),
             'selectedProductId' => $selectedProductId,
         ]);
@@ -54,6 +49,8 @@ class StockEntryController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Entrada de estoque registrada.']);
 
-        return to_route('stock-movements.show', $movement);
+        return $request->string('return_to')->toString() === 'product'
+            ? to_route('products.edit', $product)
+            : to_route('stock-movements.show', $movement);
     }
 }

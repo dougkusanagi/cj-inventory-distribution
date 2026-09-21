@@ -8,7 +8,7 @@ import {
     PackageX,
     Save,
 } from 'lucide-react';
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
     update,
@@ -16,11 +16,11 @@ import {
 } from '@/actions/App/Http/Controllers/ProductController';
 import InputError from '@/components/input-error';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
-import { create as stockEntry } from '@/routes/stock-entries';
 import { create as stockExit } from '@/routes/stock-exits';
 import { index as inventoryIndex } from '@/routes/inventory';
 import { ProductPhotoManager } from '@/components/products/product-photo-manager';
 import type { ProductCoverPreview } from '@/components/products/product-photo-manager';
+import { StockOfferTypeSelector } from '@/components/products/stock-offer-type-selector';
 import { StockOfferVolumeEditor } from '@/components/products/stock-offer-volume-editor';
 import type { StockOfferVolumeFormItem } from '@/components/products/stock-offer-volume-editor';
 import { Button } from '@/components/ui/button';
@@ -67,6 +67,7 @@ type ProductFormProps = {
     product?: Product;
     categories: Category[];
     onAdjustStock?: () => void;
+    onRegisterEntry?: () => void;
 };
 
 type ProductFormTab = 'details' | 'photos' | 'stock';
@@ -97,28 +98,6 @@ type ProductErrorField =
     | `stock_volumes.${number}.total_quantity`
     | `stock_volumes.${number}.items.${number}.size`
     | `stock_volumes.${number}.items.${number}.quantity`;
-
-const stockOfferTypes: Array<{
-    id: StockOfferType;
-    label: string;
-    description: string;
-}> = [
-    {
-        id: 'replenishment',
-        label: 'Reposição',
-        description: 'Distribuição em sacos.',
-    },
-    {
-        id: 'new_grade',
-        label: 'Nova',
-        description: 'Grade completa.',
-    },
-    {
-        id: 'broken_grade',
-        label: 'Furada',
-        description: 'Grade incompleta.',
-    },
-];
 
 function initialStockVolumes(product?: Product): StockOfferVolumeFormItem[] {
     if (product?.stock_volumes?.length) {
@@ -167,6 +146,7 @@ export function ProductForm({
     product,
     categories,
     onAdjustStock,
+    onRegisterEntry,
 }: ProductFormProps) {
     const isEditing = product !== undefined;
     const [processingImages, setProcessingImages] = useState(false);
@@ -183,7 +163,6 @@ export function ProductForm({
                   }
                 : null;
         });
-    const radioGroupId = useId();
     const formRef = useRef<HTMLFormElement>(null);
     const submittingRef = useRef(false);
     const { isMobile, state: sidebarState } = useSidebar();
@@ -274,10 +253,6 @@ export function ProductForm({
             firstInvalidField?.focus({ preventScroll: true });
         });
     }, [form.errors, form.processing, hasErrors]);
-
-    const selectStockOfferType = (value: string) => {
-        form.setData('stock_offer_type', value as StockOfferType);
-    };
 
     const toggleProductActive = (isActive: boolean) => {
         form.setData('is_active', isActive);
@@ -778,15 +753,15 @@ export function ProductForm({
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            <Button asChild>
-                                <Link
-                                    href={stockEntry({
-                                        query: { product: product.id },
-                                    })}
+                            {onRegisterEntry && (
+                                <Button
+                                    type="button"
+                                    onClick={onRegisterEntry}
+                                    data-testid="open-stock-entry"
                                 >
                                     Registrar entrada
-                                </Link>
-                            </Button>
+                                </Button>
+                            )}
                             <Button asChild variant="outline">
                                 <Link
                                     href={stockExit({
@@ -877,71 +852,14 @@ export function ProductForm({
                                 </div>
                             </CardHeader>
                             <CardContent className="grid gap-6 p-5 pt-0 sm:p-6 sm:pt-0">
-                                <fieldset className="grid gap-3">
-                                    <legend
-                                        id={radioGroupId}
-                                        className="text-sm font-semibold text-foreground"
-                                    >
-                                        Tipo de Grade
-                                    </legend>
-                                    <p className="text-sm leading-5 text-muted-foreground">
-                                        Todos os tipos usam pelo menos um saco;
-                                        a diferença está na classificação da
-                                        oferta.
-                                    </p>
-                                    <RadioGroup
-                                        value={form.data.stock_offer_type}
-                                        onValueChange={selectStockOfferType}
-                                        disabled={hasLockedVolumes}
-                                        className="grid grid-cols-3 gap-2"
-                                        aria-labelledby={radioGroupId}
-                                        aria-invalid={
-                                            error('stock_offer_type')
-                                                ? true
-                                                : undefined
-                                        }
-                                    >
-                                        {stockOfferTypes.map((offerType) => {
-                                            const optionId =
-                                                'stock-offer-type-' +
-                                                offerType.id;
-
-                                            return (
-                                                <label
-                                                    key={offerType.id}
-                                                    htmlFor={optionId}
-                                                    className={cn(
-                                                        'flex min-h-16 min-w-0 cursor-pointer flex-col items-stretch gap-1.5 rounded-xl border px-2.5 py-2.5 text-sm font-medium transition-colors select-none',
-                                                        form.data
-                                                            .stock_offer_type ===
-                                                            offerType.id
-                                                            ? 'border-highlight bg-accent/50'
-                                                            : 'border-border hover:bg-muted/30',
-                                                    )}
-                                                >
-                                                    <RadioGroupItem
-                                                        id={optionId}
-                                                        value={offerType.id}
-                                                        className="shrink-0 self-center"
-                                                    />
-                                                    <span className="grid w-full min-w-0 gap-0.5 text-left">
-                                                        <span className="text-xs leading-4 break-words sm:text-sm">
-                                                            {offerType.label}
-                                                        </span>
-                                                        <span className="text-xs leading-4 font-normal break-words text-muted-foreground">
-                                                            {
-                                                                offerType.description
-                                                            }
-                                                        </span>
-                                                    </span>
-                                                </label>
-                                            );
-                                        })}
-                                    </RadioGroup>
-                                    <InputError
-                                        message={error('stock_offer_type')}
-                                    />
-                                </fieldset>
+                                <StockOfferTypeSelector
+                                    value={form.data.stock_offer_type}
+                                    onChange={(value) =>
+                                        form.setData('stock_offer_type', value)
+                                    }
+                                    disabled={hasLockedVolumes}
+                                    error={error('stock_offer_type')}
+                                />
                             </CardContent>
                         </Card>
 
