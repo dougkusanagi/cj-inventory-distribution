@@ -19,6 +19,14 @@ it('keeps the dashboard as the first main navigation item', function () {
         ->assertNoJavaScriptErrors();
 });
 
+it('places the stock balance at the end of the main navigation', function () {
+    $this->actingAs(User::factory()->create());
+
+    visit(route('dashboard', [], false))
+        ->assertScript("Array.from(document.querySelectorAll('[data-sidebar=\"content\"] [data-sidebar=\"menu-button\"] span')).map((item) => item.textContent?.trim()).join('|') === 'Painel|Produtos|Categorias|Pedidos|Movimentações|Balanço de estoque'")
+        ->assertNoJavaScriptErrors();
+});
+
 it('shows the stock summary and opens the product catalog', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create(['name' => 'Produto do painel E2E']);
