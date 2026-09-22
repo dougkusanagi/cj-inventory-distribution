@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
-import { CalendarDays, Eye, Package, ShoppingBag, User } from 'lucide-react';
+import { CalendarDays, Eye, Shirt, User } from 'lucide-react';
+import { PaperBag } from '@/components/icons/paper-bag';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -79,7 +80,7 @@ export function OrderCard({ order }: { order: Order }) {
                         <div className="flex items-center">
                             <dt className="sr-only">Sacos</dt>
                             <dd className="flex items-center gap-1.5 tabular-nums">
-                                <ShoppingBag
+                                <PaperBag
                                     className="size-4 shrink-0"
                                     aria-hidden="true"
                                 />
@@ -90,7 +91,7 @@ export function OrderCard({ order }: { order: Order }) {
                         <div className="flex items-center">
                             <dt className="sr-only">Peças</dt>
                             <dd className="flex items-center gap-1.5 tabular-nums">
-                                <Package
+                                <Shirt
                                     className="size-4 shrink-0"
                                     aria-hidden="true"
                                 />

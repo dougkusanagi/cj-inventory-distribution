@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import CatalogOrderController from '@/actions/App/Http/Controllers/CatalogOrderController';
 import AppearanceToggleTab from '@/components/appearance-tabs';
+import { PaperBag } from '@/components/icons/paper-bag';
 import ImageCarousel from '@/components/image-carousel';
 import InputError from '@/components/input-error';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
@@ -284,7 +285,7 @@ function ProductVolumeOptions({
                                         : `Adicionar ${volume.name}`
                                 }
                             >
-                                {selected ? <Trash2 /> : <ShoppingBag />}
+                                {selected ? <Trash2 /> : <PaperBag />}
                                 {selected ? 'Remover saco' : 'Adicionar saco'}
                             </Button>
                         </section>
@@ -1204,7 +1205,7 @@ export default function Catalog({
                                                 {selectedCount > 0 ? (
                                                     <Check />
                                                 ) : (
-                                                    <ShoppingBag />
+                                                    <PaperBag />
                                                 )}
                                                 {selectedCount > 0
                                                     ? `Ver sacos · ${selectedCount} na sacola`

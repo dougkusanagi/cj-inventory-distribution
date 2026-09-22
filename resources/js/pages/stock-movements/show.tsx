@@ -453,7 +453,7 @@ export default function StockMovementShow({
 
 StockMovementShow.layout = {
     breadcrumbs: [
-        { title: 'Movimentações', href: index() },
+        { title: 'Histórico de estoque', href: index() },
         { title: 'Detalhes', href: index() },
     ],
 };

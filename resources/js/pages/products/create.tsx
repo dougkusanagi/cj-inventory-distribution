@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { PackagePlus } from 'lucide-react';
+import { Shirt } from 'lucide-react';
 import { ProductForm } from '@/components/products/product-form';
 import { index as productsIndex } from '@/routes/products';
 import type { Category } from '@/types';
@@ -17,7 +17,7 @@ export default function CreateProduct({
                 <header className="flex flex-col gap-5 sm:flex-row sm:items-end">
                     <div className="flex min-w-0 items-start gap-3 sm:gap-4">
                         <span className="mt-1 flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                            <PackagePlus className="size-5" />
+                            <Shirt className="size-5" />
                         </span>
                         <div className="grid gap-1.5">
                             <h1 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">

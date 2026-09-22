@@ -19,11 +19,65 @@ it('keeps the dashboard as the first main navigation item', function () {
         ->assertNoJavaScriptErrors();
 });
 
-it('places the stock balance at the end of the main navigation', function () {
+it('marks only the current top-level page as active', function () {
     $this->actingAs(User::factory()->create());
 
     visit(route('dashboard', [], false))
-        ->assertScript("Array.from(document.querySelectorAll('[data-sidebar=\"content\"] [data-sidebar=\"menu-button\"] span')).map((item) => item.textContent?.trim()).join('|') === 'Painel|Produtos|Categorias|Pedidos|Movimentações|Balanço de estoque'")
+        ->assertAttribute(
+            '[data-sidebar="menu-button"]:has-text("Painel")',
+            'data-active',
+            'true',
+        )
+        ->click('[data-sidebar="menu-button"]:has-text("Produtos")')
+        ->wait(1)
+        ->assertRoute('products.index')
+        ->assertAttribute(
+            '[data-sidebar="menu-button"]:has-text("Painel")',
+            'data-active',
+            'false',
+        )
+        ->assertAttribute(
+            '[data-sidebar="menu-button"]:has-text("Produtos")',
+            'data-active',
+            'true',
+        )
+        ->assertNoJavaScriptErrors();
+});
+
+it('groups stock operations under the stock navigation', function () {
+    $this->actingAs(User::factory()->create());
+
+    visit(route('dashboard', [], false))
+        ->assertScript("Array.from(document.querySelectorAll('[data-sidebar=\"content\"] [data-sidebar=\"menu-button\"] span')).map((item) => item.textContent?.trim()).join('|') === 'Painel|Produtos|Categorias|Pedidos|Estoque'")
+        ->click('[data-sidebar="menu-button"]:has-text("Estoque")')
+        ->assertScript("Array.from(document.querySelectorAll('[data-sidebar=\"content\"] [data-sidebar=\"menu-sub-button\"] span')).map((item) => item.textContent?.trim()).join('|') === 'Balanço de estoque|Histórico de estoque'")
+        ->assertNoJavaScriptErrors();
+});
+
+it('opens stock submenus from the compact sidebar', function () {
+    $this->actingAs(User::factory()->create());
+
+    $page = visit(route('dashboard', [], false));
+    $page->script("document.cookie = 'sidebar_state=true; path=/';");
+    $page->refresh();
+
+    $page
+        ->click('[data-slot="sidebar-trigger"]')
+        ->assertAttribute('[data-slot="sidebar"]', 'data-state', 'collapsed')
+        ->click('[data-sidebar="menu-button"][aria-label="Estoque"]')
+        ->assertAttribute('[data-slot="sidebar"]', 'data-state', 'collapsed')
+        ->assertVisible(
+            '[data-testid="compact-navigation"][data-state="open"]',
+        )
+        ->assertSee('Balanço de estoque')
+        ->assertSee('Histórico de estoque')
+        ->click(
+            '[data-testid="compact-navigation"] [data-slot="dropdown-menu-item"]:has-text("Balanço de estoque")',
+        )
+        ->wait(1)
+        ->assertRoute('inventory.index')
+        ->assertAttribute('[data-slot="sidebar"]', 'data-state', 'collapsed')
+        ->assertMissing('[data-testid="compact-navigation"]')
         ->assertNoJavaScriptErrors();
 });
 

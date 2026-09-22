@@ -1,7 +1,8 @@
 import { Link, useForm, type InertiaLinkProps } from '@inertiajs/react';
-import { PackageCheck, Save, X } from 'lucide-react';
+import { Save, X } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { store, update } from '@/actions/App/Http/Controllers/OrderController';
+import { PaperBag } from '@/components/icons/paper-bag';
 import InputError from '@/components/input-error';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
 import { Button } from '@/components/ui/button';
@@ -217,7 +218,7 @@ export function OrderForm({
                         })}
                         {availableVolumes.length === 0 && (
                             <div className="grid justify-items-center gap-2 rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-                                <PackageCheck className="size-7" />
+                                <PaperBag className="size-7" />
                                 <p>
                                     Não há sacos disponíveis para um novo
                                     pedido.

@@ -109,20 +109,20 @@ export default function StockMovementsIndex({
 
     return (
         <>
-            <Head title="Movimentações de estoque" />
+            <Head title="Histórico de movimentações" />
             <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-8 sm:px-6 lg:px-8">
                 <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div className="grid gap-2">
                         <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
-                            Operação
+                            Estoque / histórico
                         </p>
                         <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight">
                             <ArrowLeftRight className="size-7 text-primary" />
-                            Movimentações
+                            Histórico de movimentações
                         </h1>
                         <p className="max-w-2xl text-sm text-muted-foreground">
-                            Registre entradas e saídas e consulte o histórico do
-                            estoque.
+                            Consulte entradas, saídas e ajustes para entender o
+                            que aconteceu com cada saco.
                         </p>
                     </div>
                     <div className="flex flex-col gap-2 sm:flex-row">
@@ -147,7 +147,7 @@ export default function StockMovementsIndex({
                 >
                     <Card className="min-w-[calc(100%-2.5rem)] snap-start gap-2 rounded-2xl p-4 sm:min-w-0">
                         <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                            Movimentações
+                            Lançamentos
                         </span>
                         <strong className="text-2xl">{summary.count}</strong>
                     </Card>
@@ -423,5 +423,5 @@ export default function StockMovementsIndex({
 }
 
 StockMovementsIndex.layout = {
-    breadcrumbs: [{ title: 'Movimentações', href: index() }],
+    breadcrumbs: [{ title: 'Histórico de estoque', href: index() }],
 };

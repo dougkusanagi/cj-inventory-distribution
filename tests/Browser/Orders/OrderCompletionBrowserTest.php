@@ -34,9 +34,21 @@ test('enables order completion after all sacks are checked without WhatsApp', fu
         ->assertDisabled('[data-testid="finalizar-pedido"]')
         ->assertMissing('[data-testid="abrir-whatsapp-pedido"]')
         ->assertVisible('[aria-label="Tamanho M, 12 peças"]')
+        ->assertSee('Informações do pedido')
+        ->assertSee('Número do pedido')
+        ->assertSee('WhatsApp')
+        ->assertSee('Observações')
         ->assertSee('12 pçs')
-        ->assertScript("(() => { const actions = document.querySelector('[data-testid=acoes-finalizacao]'); const history = document.querySelector('[data-testid=historico-pedido]'); return actions !== null && history !== null && actions.getBoundingClientRect().top < history.getBoundingClientRect().top; })()")
+        ->assertSee('Separação e conferência')
+        ->assertSee('Separe cada saco, confira o conteúdo e registre qualquer divergência antes de finalizar.')
         ->assertSee('Separe e confira todos os sacos e resolva as divergências antes de finalizar.')
+        ->assertAttribute('#order-tab-details', 'aria-selected', 'true')
+        ->assertAttribute('#order-tab-history', 'aria-selected', 'false')
+        ->click('#order-tab-history')
+        ->assertAttribute('#order-tab-history', 'aria-selected', 'true')
+        ->assertVisible('[data-testid="historico-pedido"]')
+        ->click('#order-tab-details')
+        ->assertAttribute('#order-tab-details', 'aria-selected', 'true')
         ->click('[data-testid="menu-acoes-pedido"]')
         ->assertVisible(
             '[data-slot="dropdown-menu-content"][data-state="open"]',
@@ -67,6 +79,7 @@ test('enables order completion after all sacks are checked without WhatsApp', fu
         ->assertSee('serão marcados como consumidos e sairão do estoque')
         ->click('Confirmar finalização')
         ->assertSee('Finalizado')
+        ->assertAttribute('#order-tab-details', 'aria-selected', 'true')
         ->assertNoJavaScriptErrors();
 
     expect($order->refresh()->status->value)->toBe('completed')
@@ -98,6 +111,7 @@ test('provides return and cancellation actions while editing an order', function
         ->assertSee($product->name)
         ->assertSee($volume->refresh()->code)
         ->assertVisible('[data-testid="voltar-pedido"]')
+        ->assertSee('Voltar ao pedido')
         ->assertVisible('[data-testid="cancelar-edicao"]')
         ->assertVisible('nav[aria-label="breadcrumb"] a[href$="/painel/pedidos/'.$order->id.'"]')
         ->click('nav[aria-label="breadcrumb"] a[href$="/painel/pedidos/'.$order->id.'"]')
@@ -153,6 +167,7 @@ test('creates, reads, updates, and cancels an order through the interface', func
         ->press('Salvar alterações')
         ->assertRoute('orders.show', [$order->id])
         ->assertSee('Loja Atualizada E2E')
+        ->click('#order-tab-details')
         ->assertSee('Observação atualizada pelo E2E.')
         ->assertNoJavaScriptErrors();
 
