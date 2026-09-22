@@ -18,13 +18,12 @@ it('shows validation feedback and does not save an invalid stock offer', functio
     $this->actingAs($user);
 
     $page = visit(route('products.create', [], false))
-        ->wait(1)
         ->type('#product-name', '   ')
         ->click('#product-tab-stock')
         ->press('Adicionar saco');
 
     $page->script('window.scrollTo(0, document.body.scrollHeight);');
-    $page->submit()->wait(1);
+    $page->submit();
 
     $page
         ->assertRoute('products.create')
@@ -63,7 +62,6 @@ it('keeps existing sacks read only in the product form', function () {
     $this->actingAs($user);
 
     visit(route('products.edit', [$product->id], false))
-        ->wait(1)
         ->click('#product-tab-stock')
         ->assertSee('Saco 1')
         ->assertSee('Saco 2')
@@ -85,7 +83,6 @@ it('opens product stock entry in a dialog or drawer with grade cards', function 
     $this->actingAs($user);
 
     $page = visit(route('products.edit', [$product->id], false))
-        ->wait(1)
         ->click('#product-tab-stock')
         ->click('[data-testid="open-stock-entry"]')
         ->assertPresent('[data-testid="stock-entry-dialog"]')
@@ -109,7 +106,6 @@ it('registers stock from the product dialog and returns to the product', functio
     $this->actingAs($user);
 
     $page = visit(route('products.edit', [$product->id], false))
-        ->wait(1)
         ->click('#product-tab-stock')
         ->click('[data-testid="open-stock-entry"]')
         ->press('Adicionar saco')
@@ -117,7 +113,6 @@ it('registers stock from the product dialog and returns to the product', functio
         ->click('#entry-reason')
         ->click('[role="option"]:has-text("Recebimento da fábrica")')
         ->click('[data-testid="stock-entry-form"] button[type="submit"]')
-        ->wait(1)
         ->assertRoute('products.edit', [$product->id])
         ->assertSee('8 peças · Disponível')
         ->assertSee('Entrada de estoque registrada.')
@@ -131,7 +126,6 @@ it('uses the grade cards on the standalone stock entry form', function () {
     $this->actingAs(User::factory()->create());
 
     visit(route('stock-entries.create', [], false))
-        ->wait(1)
         ->assertPresent('[data-testid="entry-stock-offer-type-selector"]')
         ->assertPresent('#entry-stock-offer-type-broken_grade')
         ->assertMissing('#entry-type')
@@ -147,7 +141,7 @@ it('opens the stock tab when saving from the details tab returns stock errors', 
         ->press('Adicionar saco')
         ->click('#product-tab-details');
 
-    $page->submit()->wait(1);
+    $page->submit();
 
     $page
         ->assertAttribute('#product-tab-stock', 'aria-selected', 'true')
@@ -186,14 +180,12 @@ it('prevents leaving a product form with unsaved changes when navigation is canc
     $this->actingAs($user);
 
     $page = visit(route('products.create', [], false))
-        ->wait(1)
         ->type('#product-name', 'Produto ainda não salvo');
 
     $page->script('window.confirm = () => false;');
 
     $page
         ->click('Produtos')
-        ->wait(0.5)
         ->assertRoute('products.create')
         ->assertValue('#product-name', 'Produto ainda não salvo')
         ->assertNoJavaScriptErrors();
@@ -208,7 +200,6 @@ it('requires confirmation before deleting a product and allows cancellation', fu
     $this->actingAs($user);
 
     $page = visit(route('products.index', [], false))
-        ->wait(1)
         ->assertSee($product->name);
 
     $page
@@ -224,7 +215,6 @@ it('requires confirmation before deleting a product and allows cancellation', fu
     $page
         ->click('button[aria-label="Excluir Produto removível E2E"]')
         ->press('Excluir produto')
-        ->wait(1)
         ->assertRoute('products.index')
         ->assertDontSee($product->name)
         ->assertSee('Produto excluído.')

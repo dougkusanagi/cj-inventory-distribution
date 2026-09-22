@@ -9,6 +9,22 @@ test('guests are redirected when visiting categories', function () {
     $this->get(route('categories.index'))->assertRedirect(route('login'));
 });
 
+test('category creation and editing render their matching forms', function () {
+    $user = User::factory()->create();
+    $category = Category::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('categories.create'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('categories/create'));
+
+    $this->actingAs($user)
+        ->get(route('categories.edit', $category))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('categories/edit')
+            ->where('category.id', $category->id));
+});
+
 test('authenticated users can list and search categories', function () {
     Category::factory()->create(['name' => 'Calça', 'slug' => 'calca']);
     Category::factory()->create(['name' => 'Cropped', 'slug' => 'cropped']);

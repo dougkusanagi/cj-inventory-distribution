@@ -29,7 +29,6 @@ it('marks only the current top-level page as active', function () {
             'true',
         )
         ->click('[data-sidebar="menu-button"]:has-text("Produtos")')
-        ->wait(1)
         ->assertRoute('products.index')
         ->assertAttribute(
             '[data-sidebar="menu-button"]:has-text("Painel")',
@@ -74,7 +73,6 @@ it('opens stock submenus from the compact sidebar', function () {
         ->click(
             '[data-testid="compact-navigation"] [data-slot="dropdown-menu-item"]:has-text("Balanço de estoque")',
         )
-        ->wait(1)
         ->assertRoute('inventory.index')
         ->assertAttribute('[data-slot="sidebar"]', 'data-state', 'collapsed')
         ->assertMissing('[data-testid="compact-navigation"]')
@@ -102,7 +100,6 @@ it('shows the stock summary and opens the product catalog', function () {
     $this->actingAs($user);
 
     $page = visit(route('dashboard', [], false))
-        ->wait(1)
         ->assertRoute('dashboard')
         ->assertSee('O que está acontecendo no estoque?')
         ->assertSee('01')
@@ -115,7 +112,6 @@ it('shows the stock summary and opens the product catalog', function () {
 
     $page
         ->press('Abrir catálogo')
-        ->wait(1)
         ->assertRoute('products.index')
         ->assertSee($product->name)
         ->assertNoJavaScriptErrors();
@@ -130,7 +126,6 @@ it('opens the order area from the sidebar', function () {
 
     visit(route('dashboard', [], false))
         ->click('[data-sidebar="menu-button"]:has-text("Pedidos")')
-        ->wait(1)
         ->assertRoute('orders.index')
         ->assertSee('Acompanhe os pedidos e atualize cada solicitação.')
         ->assertSee('Loja da timeline')
@@ -154,15 +149,12 @@ it('closes the mobile sidebar after navigating from it', function () {
     $this->actingAs(User::factory()->create());
 
     $page = visit(route('dashboard', [], false))
-        ->wait(1)
-        ->resize(390, 844)
-        ->wait(1);
+        ->resize(390, 844);
 
     $page
         ->click('[data-slot="sidebar-trigger"]')
         ->assertVisible('[data-slot="sidebar"][data-mobile="true"]')
         ->click('[data-sidebar="menu-button"]:has-text("Produtos")')
-        ->wait(1)
         ->assertRoute('products.index')
         ->assertMissing('[data-slot="sidebar"][data-mobile="true"]')
         ->assertNoJavaScriptErrors();

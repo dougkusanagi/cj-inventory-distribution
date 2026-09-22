@@ -168,6 +168,7 @@ test('staff can recount known sizes from the product and records the difference'
     $this->actingAs($user)
         ->get(route('stock-movements.show', $movement))
         ->assertInertia(fn ($page) => $page
+            ->component('stock-movements/show')
             ->where('movement.items.0.previous_state.total_quantity', 12)
             ->where('movement.items.0.resulting_state.total_quantity', 9)
             ->where('movement.items.0.previous_state.sizes.0', [

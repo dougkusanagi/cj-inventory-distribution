@@ -13,6 +13,12 @@ test('guests are redirected to the login page', function () {
     $response->assertRedirect(route('login'));
 });
 
+test('non-staff users are forbidden from the internal panel', function () {
+    $this->actingAs(User::factory()->nonStaff()->create())
+        ->get(route('dashboard'))
+        ->assertForbidden();
+});
+
 test('authenticated users can visit the dashboard', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();

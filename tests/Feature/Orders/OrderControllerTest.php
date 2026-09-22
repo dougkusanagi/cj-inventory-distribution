@@ -30,6 +30,26 @@ test('guests are redirected when visiting orders', function () {
     $this->get(route('orders.index'))->assertRedirect(route('login'));
 });
 
+test('order list and edit routes render their matching screens', function () {
+    $order = Order::factory()->create([
+        'store_name' => 'Loja para editar',
+        'requester_name' => 'Ana',
+    ]);
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('orders.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('orders/index')
+            ->where('orders.data.0.id', $order->id));
+
+    $this->actingAs($user)
+        ->get(route('orders.edit', $order))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('orders/edit')
+            ->where('order.id', $order->id));
+});
+
 test('non-staff users cannot access the internal order panel', function () {
     $user = User::factory()->nonStaff()->create();
 
@@ -92,6 +112,7 @@ test('order details include the product thumbnail for conference', function () {
     $this->actingAs(User::factory()->create())
         ->get(route('orders.show', $order))
         ->assertInertia(fn (Assert $page) => $page
+            ->component('orders/show')
             ->where('order.items.0.image', parse_url($media->getUrl('thumb'), PHP_URL_PATH)));
 });
 
@@ -356,6 +377,7 @@ test('order details keep the requester WhatsApp without an internal send link', 
     $this->actingAs($user)
         ->get(route('orders.show', $order))
         ->assertInertia(fn (Assert $page) => $page
+            ->component('orders/show')
             ->where('order.whatsapp', '5511999999999')
             ->missing('order.whatsapp_url')
         );

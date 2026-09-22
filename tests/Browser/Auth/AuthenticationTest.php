@@ -12,13 +12,11 @@ it('keeps an invalid login on the login screen with feedback', function () {
     $user = User::factory()->create();
 
     $page = visit(route('login', [], false))
-        ->wait(1)
         ->type('#email', $user->email)
         ->type('#password', 'wrong-password');
 
     $page
         ->submit()
-        ->wait(1)
         ->assertRoute('login')
         ->assertSee('As credenciais informadas não correspondem aos nossos registros.')
         ->assertNoJavaScriptErrors();
@@ -28,13 +26,11 @@ it('logs in and logs out through the authenticated navigation', function () {
     $user = User::factory()->create();
 
     $page = visit(route('login', [], false))
-        ->wait(1)
         ->type('#email', $user->email)
         ->type('#password', 'password');
 
     $page
         ->submit()
-        ->wait(1)
         ->assertRoute('dashboard')
         ->assertSee('O que está acontecendo no estoque?')
         ->assertPresent('@sidebar-menu-button')
@@ -44,7 +40,6 @@ it('logs in and logs out through the authenticated navigation', function () {
         ->click('@sidebar-menu-button')
         ->assertPresent('@logout-button')
         ->click('@logout-button')
-        ->wait(1)
         ->assertRoute('home')
         ->assertSee('Reabasteça sua loja')
         ->assertSee('Área da equipe')

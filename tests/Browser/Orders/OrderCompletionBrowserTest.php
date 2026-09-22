@@ -73,7 +73,6 @@ test('enables order completion after all sacks are checked without WhatsApp', fu
     $page->script("document.querySelector('[data-testid=finalizar-pedido]')?.click()");
 
     $page
-        ->wait(0.5)
         ->assertVisible('[role="dialog"]')
         ->assertSee('Finalizar pedido?')
         ->assertSee('serão marcados como consumidos e sairão do estoque')
@@ -115,7 +114,6 @@ test('provides return and cancellation actions while editing an order', function
         ->assertVisible('[data-testid="cancelar-edicao"]')
         ->assertVisible('nav[aria-label="breadcrumb"] a[href$="/painel/pedidos/'.$order->id.'"]')
         ->click('nav[aria-label="breadcrumb"] a[href$="/painel/pedidos/'.$order->id.'"]')
-        ->wait(1)
         ->assertRoute('orders.show', [$order->id])
         ->assertSee('Loja para editar')
         ->assertNoJavaScriptErrors();
@@ -123,7 +121,6 @@ test('provides return and cancellation actions while editing an order', function
     visit(route('orders.edit', $order, false))
         ->assertVisible('[data-testid="cancelar-edicao"]')
         ->click('[data-testid="cancelar-edicao"]')
-        ->wait(1)
         ->assertRoute('orders.show', [$order->id])
         ->assertSee('Loja para editar')
         ->assertNoJavaScriptErrors();

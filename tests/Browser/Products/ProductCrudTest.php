@@ -14,7 +14,6 @@ beforeEach(function (): void {
 
 it('redirects a guest away from the product creation form', function () {
     visit(route('products.create', [], false))
-        ->wait(1)
         ->assertRoute('login')
         ->assertSee('Entrar')
         ->assertNoJavaScriptErrors();
@@ -35,7 +34,6 @@ it('shows the grade type, commercial line, and category in product cards and tab
     $this->actingAs($user);
 
     visit(route('products.index', [], false))
-        ->wait(1)
         ->assertSee('Grade: Furada')
         ->assertSee('Slim')
         ->assertSee('Calças')
@@ -139,7 +137,6 @@ it('requires confirmation before deleting a product', function () {
     $this->actingAs($user);
 
     visit(route('products.index', [], false))
-        ->wait(1)
         ->click('button[aria-label="Excluir Produto para excluir E2E"]')
         ->assertSee('Excluir produto?')
         ->assertSee('Produto para excluir E2E')
@@ -156,7 +153,6 @@ it('renders the product creation form for an authenticated user', function () {
     $this->actingAs($user);
 
     visit(route('products.create', [], false))
-        ->wait(1)
         ->assertRoute('products.create')
         ->assertSee('Cadastrar produto')
         ->assertPresent('#product-name')
@@ -188,12 +184,11 @@ it('creates a product without a stock offer from the form', function () {
     $this->actingAs($user);
 
     $page = visit(route('products.create', [], false))
-        ->wait(1)
         ->type('#product-name', 'Blusa básica E2E')
         ->type('#product-model', 'MOD-E2E-001')
         ->type('#product-notes', 'Produto criado pelo fluxo principal.');
 
-    $page->submit()->wait(1);
+    $page->submit();
 
     $page
         ->assertRoute('products.index')
@@ -218,7 +213,6 @@ it('keeps a stock quantity when disabling a size is cancelled', function () {
     $this->actingAs($user);
 
     $page = visit(route('products.create', [], false))
-        ->wait(1)
         ->type('#product-name', 'Blusa com grade E2E')
         ->click('#product-tab-stock')
         ->press('Adicionar saco')
@@ -239,7 +233,7 @@ it('keeps a stock quantity when disabling a size is cancelled', function () {
         ->assertAttribute('#volume-0-active-2', 'aria-checked', 'true')
         ->assertValue('#volume-0-quantity-2', '7');
 
-    $page->submit()->wait(1);
+    $page->submit();
 
     $page
         ->assertRoute('products.index')
@@ -290,7 +284,6 @@ it('edits product details while keeping existing stock read only', function () {
     $this->actingAs($user);
 
     visit(route('products.edit', [$product->id], false))
-        ->wait(1)
         ->assertRoute('products.edit', [$product->id])
         ->assertValue('#product-name', 'Produto antigo E2E')
         ->assertValue('#product-model', 'MODELO-ANTIGO')
@@ -304,7 +297,6 @@ it('edits product details while keeping existing stock read only', function () {
         ->click('#product-tab-details')
         ->type('#product-name', 'Produto atualizado E2E')
         ->submit()
-        ->wait(1)
         ->assertRoute('products.index')
         ->assertSee('Produto atualizado E2E')
         ->assertSee('4')
@@ -342,7 +334,6 @@ it('routes an existing sack adjustment through the audited recount flow', functi
     $this->actingAs($user);
 
     visit(route('products.edit', [$product->id], false))
-        ->wait(1)
         ->click('#product-tab-stock')
         ->assertSee('Saco 1')
         ->assertSee('4 peças · Disponível')
@@ -378,7 +369,6 @@ it('keeps zero stock history read only in the product form', function () {
     $this->actingAs($user);
 
     visit(route('products.edit', [$product->id], false))
-        ->wait(1)
         ->click('#product-tab-stock')
         ->assertSee('0 peças · Disponível')
         ->assertSee('Registrar entrada')
@@ -393,7 +383,6 @@ it('rejects an invalid image without adding it to the form', function () {
     $this->actingAs($user);
 
     visit(route('products.create', [], false))
-        ->wait(1)
         ->click('#product-tab-photos')
         ->attach('#product-images-gallery', base_path('README.md'))
         ->assertSee('README.md: use JPG, PNG ou WebP.')
@@ -410,7 +399,6 @@ it('crops a gallery image before adding it to the product form', function () {
     $this->actingAs($user);
 
     visit(route('products.create', [], false))
-        ->wait(1)
         ->type('#product-name', 'Produto com foto E2E')
         ->attach('#product-images-gallery', base_path('public/apple-touch-icon.png'))
         ->assertEnabled('Cortar e usar foto')
@@ -432,7 +420,6 @@ it('asks for confirmation before removing a product photo', function () {
     $this->actingAs($user);
 
     visit(route('products.create', [], false))
-        ->wait(1)
         ->click('#product-tab-photos')
         ->attach('#product-images-gallery', base_path('public/apple-touch-icon.png'))
         ->press('Cortar e usar foto')
@@ -450,7 +437,6 @@ it('keeps the product form usable on a narrow mobile viewport', function () {
     $this->actingAs($user);
 
     visit(route('products.create', [], false))
-        ->wait(1)
         ->resize(390, 844)
         ->assertRoute('products.create')
         ->assertPresent('#product-name')
