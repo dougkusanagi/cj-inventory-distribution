@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { Package } from 'lucide-react';
+import { Shirt } from 'lucide-react';
 import { useState } from 'react';
 import { ProductForm } from '@/components/products/product-form';
 import { StockAdjustmentModal } from '@/components/products/stock-adjustment-modal';
@@ -25,7 +25,7 @@ export default function EditProduct({
                 <header className="flex flex-col gap-5 sm:flex-row sm:items-end">
                     <div className="flex min-w-0 items-start gap-3 sm:gap-4">
                         <span className="mt-1 flex size-11 shrink-0 items-center justify-center rounded-xl bg-featured-card text-featured-card-foreground">
-                            <Package className="size-5" />
+                            <Shirt className="size-5" />
                         </span>
                         <div className="grid gap-1.5">
                             <p className="font-mono text-xs font-semibold tracking-[0.16em] text-highlight uppercase">

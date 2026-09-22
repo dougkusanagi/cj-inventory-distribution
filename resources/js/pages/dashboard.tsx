@@ -5,8 +5,8 @@ import {
     Camera,
     ClipboardList,
     Layers3,
-    Package,
     Plus,
+    Shirt,
     Warehouse,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -33,7 +33,7 @@ type MetricCardProps = {
     label: string;
     value: string;
     description: string;
-    icon: typeof Package;
+    icon: typeof Shirt;
     featured?: boolean;
 };
 
@@ -152,7 +152,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                         label="produtos cadastrados"
                         value={stats.total.toString().padStart(2, '0')}
                         description="Peças cadastradas no catálogo."
-                        icon={Package}
+                        icon={Shirt}
                         featured
                     />
                     <MetricCard

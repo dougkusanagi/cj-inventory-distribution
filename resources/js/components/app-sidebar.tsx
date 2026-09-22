@@ -1,10 +1,12 @@
 import { Link } from '@inertiajs/react';
 import {
     ArrowLeftRight,
+    ClipboardCheck,
     LayoutGrid,
-    Package,
+    Shirt,
     ShoppingCart,
     Tags,
+    Warehouse,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import AppearanceToggleTab from '@/components/appearance-tabs';
@@ -33,11 +35,12 @@ const mainNavItems: NavItem[] = [
         title: 'Painel',
         href: dashboard(),
         icon: LayoutGrid,
+        exact: true,
     },
     {
         title: 'Produtos',
         href: productsIndex(),
-        icon: Package,
+        icon: Shirt,
     },
     {
         title: 'Categorias',
@@ -50,11 +53,22 @@ const mainNavItems: NavItem[] = [
         icon: ShoppingCart,
     },
     {
-        title: 'Movimentações',
-        href: stockMovementsIndex(),
-        icon: ArrowLeftRight,
+        title: 'Estoque',
+        href: inventoryIndex(),
+        icon: Warehouse,
+        items: [
+            {
+                title: 'Balanço de estoque',
+                href: inventoryIndex(),
+                icon: ClipboardCheck,
+            },
+            {
+                title: 'Histórico de estoque',
+                href: stockMovementsIndex(),
+                icon: ArrowLeftRight,
+            },
+        ],
     },
-    { title: 'Balanço de estoque', href: inventoryIndex(), icon: Package },
 ];
 
 export function AppSidebar() {

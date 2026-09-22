@@ -278,7 +278,7 @@ export default function StockExit({
 
 StockExit.layout = {
     breadcrumbs: [
-        { title: 'Movimentações', href: index() },
+        { title: 'Histórico de estoque', href: index() },
         { title: 'Nova saída', href: index() },
     ],
 };

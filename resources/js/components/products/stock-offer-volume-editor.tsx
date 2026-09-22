@@ -768,7 +768,7 @@ export function StockOfferVolumeEditor({
                                 </div>
                                 <p className="text-sm text-muted-foreground">
                                     {isLocked
-                                        ? 'Este saco já foi movimentado. Para alterar suas quantidades, use Movimentações.'
+                                        ? 'Este saco já foi movimentado. Para alterar suas quantidades, use o histórico de movimentações.'
                                         : 'Marque os tamanhos presentes neste saco.'}
                                 </p>
                             </div>

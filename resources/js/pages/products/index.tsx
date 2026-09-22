@@ -4,9 +4,9 @@ import {
     ChevronRight,
     ImageOff,
     LayoutGrid,
-    Package,
     Plus,
     Search,
+    Shirt,
     SlidersHorizontal,
     Table2,
     Trash2,
@@ -988,7 +988,7 @@ export default function ProductsIndex({
                     <Card className="rounded-[2rem] border-dashed shadow-sm">
                         <CardHeader className="items-center pt-12 text-center">
                             <span className="mb-2 flex size-16 items-center justify-center rounded-3xl bg-primary text-primary-foreground">
-                                <Package className="size-7" />
+                                <Shirt className="size-7" />
                             </span>
                             <CardTitle className="text-2xl tracking-tight">
                                 Seu catálogo começa aqui

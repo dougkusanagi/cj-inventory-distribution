@@ -1,13 +1,5 @@
 import { Link, router, useForm } from '@inertiajs/react';
-import {
-    FileText,
-    ImagePlus,
-    Images,
-    Layers,
-    Package,
-    PackageX,
-    Save,
-} from 'lucide-react';
+import { FileText, ImagePlus, Images, Layers, Save } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
@@ -15,6 +7,7 @@ import {
     store,
 } from '@/actions/App/Http/Controllers/ProductController';
 import InputError from '@/components/input-error';
+import { PaperBag } from '@/components/icons/paper-bag';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
 import { create as stockExit } from '@/routes/stock-exits';
 import { index as inventoryIndex } from '@/routes/inventory';
@@ -75,7 +68,7 @@ type ProductFormTab = 'details' | 'photos' | 'stock';
 const formTabs = [
     { id: 'details', label: 'Detalhes', icon: FileText },
     { id: 'photos', label: 'Fotos', icon: Images },
-    { id: 'stock', label: 'Estoque', icon: Package },
+    { id: 'stock', label: 'Estoque', icon: PaperBag },
 ] as const;
 
 function tabForError(field: string): ProductFormTab {
@@ -879,7 +872,7 @@ export function ProductForm({
                                 </p>
                                 <p className="text-sm leading-5 text-muted-foreground">
                                     {hasLockedVolumes
-                                        ? 'Sacos já movimentados precisam permanecer no histórico. Use Movimentações para novas entradas, saídas ou estornos.'
+                                        ? 'Sacos já movimentados precisam permanecer no histórico. Use o histórico de movimentações para novas entradas, saídas ou estornos.'
                                         : 'Remove a oferta e seus sacos deste produto ao salvar.'}
                                 </p>
                             </div>
@@ -894,7 +887,7 @@ export function ProductForm({
                                 }
                                 className="h-11 shrink-0"
                             >
-                                <PackageX />
+                                <PaperBag />
                                 Encerrar estoque
                             </Button>
                         </div>

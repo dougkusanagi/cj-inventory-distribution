@@ -48,7 +48,7 @@ export default function StockEntry({
 
 StockEntry.layout = {
     breadcrumbs: [
-        { title: 'Movimentações', href: index() },
+        { title: 'Histórico de estoque', href: index() },
         { title: 'Nova entrada', href: index() },
     ],
 };
