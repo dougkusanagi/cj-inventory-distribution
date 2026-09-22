@@ -111,6 +111,7 @@ test('provides return and cancellation actions while editing an order', function
         ->assertSee($product->name)
         ->assertSee($volume->refresh()->code)
         ->assertVisible('[data-testid="voltar-pedido"]')
+        ->assertSee('Voltar ao pedido')
         ->assertVisible('[data-testid="cancelar-edicao"]')
         ->assertVisible('nav[aria-label="breadcrumb"] a[href$="/painel/pedidos/'.$order->id.'"]')
         ->click('nav[aria-label="breadcrumb"] a[href$="/painel/pedidos/'.$order->id.'"]')
