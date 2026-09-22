@@ -26,7 +26,7 @@ import InputError from '@/components/input-error';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { CompactTabs } from '@/components/ui/compact-tabs';
 import {
     DropdownMenu,
@@ -149,6 +149,12 @@ export default function ShowOrder({ order }: { order: Order }) {
               : progress.divergences > 0
                 ? `Resolva ${progress.divergences} divergência${progress.divergences === 1 ? '' : 's'} antes de finalizar.`
                 : null;
+    const statusVariant =
+        order.status === 'pending'
+            ? 'secondary'
+            : order.status === 'canceled'
+              ? 'destructive'
+              : 'outline';
 
     return (
         <>
@@ -157,30 +163,16 @@ export default function ShowOrder({ order }: { order: Order }) {
                 <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div className="grid gap-2">
                         <p className="font-mono text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
-                            {order.code}
+                            Detalhes do pedido
                         </p>
                         <div className="flex flex-wrap items-center gap-3">
                             <h1 className="text-3xl font-semibold tracking-tight">
                                 {order.store_name}
                             </h1>
-                            <Badge
-                                variant={
-                                    order.status === 'pending'
-                                        ? 'secondary'
-                                        : order.status === 'canceled'
-                                          ? 'destructive'
-                                          : 'outline'
-                                }
-                            >
+                            <Badge variant={statusVariant}>
                                 {order.status_label}
                             </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                            Solicitado por {order.requester_name} em{' '}
-                            {new Date(order.submitted_at).toLocaleString(
-                                'pt-BR',
-                            )}
-                        </p>
                     </div>
                     {order.status === 'pending' && (
                         <DropdownMenu>
@@ -225,6 +217,99 @@ export default function ShowOrder({ order }: { order: Order }) {
                         </DropdownMenu>
                     )}
                 </header>
+                <section
+                    aria-labelledby="order-information-title"
+                    className="grid gap-4 border-y border-border/80 py-5"
+                >
+                    <div className="grid gap-1">
+                        <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
+                            Identificação e contato
+                        </p>
+                        <h2
+                            id="order-information-title"
+                            className="text-lg font-semibold"
+                        >
+                            Informações do pedido
+                        </h2>
+                    </div>
+                    <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="grid gap-1">
+                            <dt className="text-xs font-medium text-muted-foreground">
+                                Número do pedido
+                            </dt>
+                            <dd className="font-mono text-sm">{order.code}</dd>
+                        </div>
+                        <div className="grid gap-1">
+                            <dt className="text-xs font-medium text-muted-foreground">
+                                Status
+                            </dt>
+                            <dd>
+                                <Badge variant={statusVariant}>
+                                    {order.status_label}
+                                </Badge>
+                            </dd>
+                        </div>
+                        <div className="grid gap-1">
+                            <dt className="text-xs font-medium text-muted-foreground">
+                                Loja
+                            </dt>
+                            <dd className="text-sm">{order.store_name}</dd>
+                        </div>
+                        <div className="grid gap-1">
+                            <dt className="text-xs font-medium text-muted-foreground">
+                                Solicitado por
+                            </dt>
+                            <dd className="text-sm">{order.requester_name}</dd>
+                        </div>
+                        <div className="grid gap-1">
+                            <dt className="text-xs font-medium text-muted-foreground">
+                                Data do pedido
+                            </dt>
+                            <dd className="text-sm tabular-nums">
+                                {new Date(order.submitted_at).toLocaleString(
+                                    'pt-BR',
+                                )}
+                            </dd>
+                        </div>
+                        <div className="grid gap-1">
+                            <dt className="text-xs font-medium text-muted-foreground">
+                                WhatsApp
+                            </dt>
+                            <dd className="text-sm">
+                                {order.whatsapp || 'Não informado'}
+                            </dd>
+                        </div>
+                        <div className="grid gap-1 lg:col-span-2">
+                            <dt className="text-xs font-medium text-muted-foreground">
+                                Conteúdo do pedido
+                            </dt>
+                            <dd className="text-sm">
+                                {order.items_count}{' '}
+                                {order.items_count === 1 ? 'saco' : 'sacos'} ·{' '}
+                                {order.total_quantity}{' '}
+                                {order.total_quantity === 1 ? 'peça' : 'peças'}
+                            </dd>
+                        </div>
+                        <div className="grid gap-1 sm:col-span-2 lg:col-span-4">
+                            <dt className="text-xs font-medium text-muted-foreground">
+                                Observações
+                            </dt>
+                            <dd className="text-sm whitespace-pre-wrap">
+                                {order.notes || 'Nenhuma observação.'}
+                            </dd>
+                        </div>
+                        {order.cancellation_reason && (
+                            <div className="grid gap-1 sm:col-span-2 lg:col-span-4">
+                                <dt className="text-xs font-medium text-muted-foreground">
+                                    Motivo do cancelamento
+                                </dt>
+                                <dd className="text-sm">
+                                    {order.cancellation_reason}
+                                </dd>
+                            </div>
+                        )}
+                    </dl>
+                </section>
                 <CompactTabs
                     tabs={orderTabs}
                     activeTab={activeTab}
@@ -241,35 +326,6 @@ export default function ShowOrder({ order }: { order: Order }) {
                         activeTab === 'details' ? 'grid gap-6' : 'hidden'
                     }
                 >
-                    <Card className="rounded-[1.75rem] border-border/80 shadow-sm">
-                        <CardHeader>
-                            <CardTitle>Contato e observações</CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
-                            <div>
-                                <span className="text-muted-foreground">
-                                    WhatsApp
-                                </span>
-                                <p>{order.whatsapp || 'Não informado'}</p>
-                            </div>
-                            <div>
-                                <span className="text-muted-foreground">
-                                    Observações
-                                </span>
-                                <p className="whitespace-pre-wrap">
-                                    {order.notes || 'Nenhuma observação.'}
-                                </p>
-                            </div>
-                            {order.cancellation_reason && (
-                                <div className="sm:col-span-2">
-                                    <span className="text-muted-foreground">
-                                        Motivo do cancelamento
-                                    </span>
-                                    <p>{order.cancellation_reason}</p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
                     <section
                         className="grid gap-3"
                         aria-labelledby="order-items-title"
