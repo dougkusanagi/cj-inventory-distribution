@@ -1,8 +1,10 @@
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import {
     Check,
+    LayoutGrid,
     MessageCircle,
     Search,
+    Shirt,
     ShoppingBag,
     SlidersHorizontal,
     Trash2,
@@ -15,6 +17,7 @@ import AppearanceToggleTab from '@/components/appearance-tabs';
 import { PaperBag } from '@/components/icons/paper-bag';
 import ImageCarousel from '@/components/image-carousel';
 import InputError from '@/components/input-error';
+import ProductImageGallery from '@/components/products/product-image-gallery';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -44,6 +47,12 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type {
     CatalogBagStatus,
@@ -51,7 +60,7 @@ import type {
     CatalogPreviewProduct,
 } from '@/lib/catalog-preview';
 import { cn } from '@/lib/utils';
-import { catalog as catalogRoute, dashboard, login } from '@/routes';
+import { catalog as catalogRoute } from '@/routes';
 
 const CATALOG_BAG_STORAGE_KEY = 'catalog-bag';
 
@@ -62,6 +71,10 @@ type CatalogBagSnapshot = {
     volumeName?: string;
     pieces?: number;
 };
+
+function catalogOfferTypeLabel(type: string): string {
+    return type.replace(/^Grade\s+/i, '');
+}
 
 function isValidStoredVolumeId(value: unknown): value is number {
     return typeof value === 'number' && Number.isInteger(value) && value > 0;
@@ -164,9 +177,11 @@ function CatalogFilter({
 function ProductPhoto({
     product,
     onOpenSelection,
+    onOpenImage,
 }: {
     product: CatalogPreviewProduct;
     onOpenSelection: () => void;
+    onOpenImage: () => void;
 }) {
     const images =
         product.images.length > 0
@@ -184,7 +199,12 @@ function ProductPhoto({
                     previousTestId={`catalog-product-image-previous-${product.id}`}
                     nextTestId={`catalog-product-image-next-${product.id}`}
                     imageTestId={`catalog-product-image-${product.id}`}
-                    onImageClick={onOpenSelection}
+                    onImageClick={onOpenImage}
+                    imageClickAriaLabel={(index) =>
+                        index === 0
+                            ? `Ampliar imagem de ${product.name}`
+                            : `Ampliar imagem ${index + 1} de ${product.name}`
+                    }
                 />
             ) : (
                 <button
@@ -195,14 +215,6 @@ function ProductPhoto({
                 >
                     Produto sem foto
                 </button>
-            )}
-            {product.line && (
-                <Badge
-                    variant="secondary"
-                    className="absolute top-3 left-3 bg-card text-foreground"
-                >
-                    {product.line}
-                </Badge>
             )}
             <span className="absolute right-3 bottom-3 rounded-md bg-card px-2.5 py-1 text-xs font-medium">
                 {product.category}
@@ -657,7 +669,6 @@ export default function Catalog({
     bag: CatalogBagStatus;
     canPlaceOrder: boolean;
 }) {
-    const { auth } = usePage().props;
     const isMobile = useIsMobile();
     const [query, setQuery] = useState(filters.search);
     const [category, setCategory] = useState(
@@ -667,6 +678,9 @@ export default function Catalog({
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] =
         useState<CatalogPreviewProduct | null>(null);
+    const [selectedImageProduct, setSelectedImageProduct] =
+        useState<CatalogPreviewProduct | null>(null);
+    const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [selectedVolumeIds, setSelectedVolumeIds] = useState<number[]>([]);
     const [bagSnapshots, setBagSnapshots] = useState<
         Record<number, CatalogBagSnapshot>
@@ -842,6 +856,11 @@ export default function Catalog({
     ).length;
     const hasFilters = query !== '' || filterCount > 0;
 
+    function openProductImage(product: CatalogPreviewProduct) {
+        setSelectedImageIndex(0);
+        setSelectedImageProduct(product);
+    }
+
     function clearFilters() {
         setQuery('');
         setCategory('all');
@@ -998,9 +1017,6 @@ export default function Catalog({
                                 tamanhos que sua loja precisa.
                             </p>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                            Sacos completos · selecione por produto
-                        </p>
                     </div>
 
                     <section
@@ -1144,63 +1160,143 @@ export default function Catalog({
                                             onOpenSelection={() =>
                                                 setSelectedProduct(product)
                                             }
+                                            onOpenImage={() =>
+                                                openProductImage(product)
+                                            }
                                         />
-                                        <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
+                                        <div className="flex flex-1 flex-col gap-0 p-4 sm:p-5">
                                             <div>
                                                 <p className="font-mono text-xs text-muted-foreground">
                                                     {product.code}
                                                     {product.model &&
                                                         ` · Mod. ${product.model}`}
                                                 </p>
-                                                <h2 className="mt-1.5 text-xl leading-snug font-semibold tracking-tight text-balance">
+                                                <h2 className="text-xl leading-snug font-semibold tracking-tight text-balance">
                                                     {product.name}
                                                 </h2>
                                             </div>
-                                            <Badge
-                                                variant="secondary"
-                                                className="w-fit"
-                                            >
-                                                {product.type}
-                                            </Badge>
-                                            <p className="text-sm text-muted-foreground">
-                                                Tamanhos e quantidades
-                                            </p>
-                                            <div
-                                                className="flex flex-wrap gap-1.5"
-                                                aria-label="Tamanhos presentes"
-                                            >
-                                                {sizes.map((size) => (
-                                                    <span
-                                                        key={size}
-                                                        className="inline-flex min-w-9 items-center justify-center rounded-md bg-muted px-2.5 py-1 text-sm font-medium tabular-nums"
-                                                    >
-                                                        {size}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                            <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-3 text-sm">
-                                                <strong>
-                                                    {product.volumes.length}{' '}
-                                                    {product.volumes.length ===
-                                                    1
-                                                        ? 'saco'
-                                                        : 'sacos'}
-                                                </strong>
-                                                <span className="text-muted-foreground">
-                                                    {product.volumes.reduce(
-                                                        (sum, volume) =>
-                                                            sum + volume.pieces,
-                                                        0,
-                                                    )}{' '}
-                                                    peças no total
-                                                </span>
+                                            <TooltipProvider>
+                                                <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span
+                                                                tabIndex={0}
+                                                                className="inline-flex items-center gap-1.5 font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                            >
+                                                                <LayoutGrid
+                                                                    className="size-4"
+                                                                    aria-hidden="true"
+                                                                />
+                                                                {catalogOfferTypeLabel(
+                                                                    product.type,
+                                                                )}
+                                                            </span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            Disponibilidade do
+                                                            estoque
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span
+                                                                tabIndex={0}
+                                                                className="inline-flex items-center gap-1.5 tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                            >
+                                                                <PaperBag
+                                                                    className="size-4 scale-[1.35]"
+                                                                    aria-hidden="true"
+                                                                />
+                                                                {
+                                                                    product
+                                                                        .volumes
+                                                                        .length
+                                                                }{' '}
+                                                                {product.volumes
+                                                                    .length ===
+                                                                1
+                                                                    ? 'saco'
+                                                                    : 'sacos'}
+                                                            </span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            Quantidade de sacos
+                                                            disponíveis
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span
+                                                                tabIndex={0}
+                                                                className="inline-flex items-center gap-1.5 tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                            >
+                                                                <Shirt
+                                                                    className="size-4"
+                                                                    aria-hidden="true"
+                                                                />
+                                                                {product.volumes.reduce(
+                                                                    (
+                                                                        sum,
+                                                                        volume,
+                                                                    ) =>
+                                                                        sum +
+                                                                        volume.pieces,
+                                                                    0,
+                                                                )}{' '}
+                                                                peças
+                                                            </span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            Total de peças nos
+                                                            sacos disponíveis
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                    {product.line && (
+                                                        <Tooltip>
+                                                            <TooltipTrigger
+                                                                asChild
+                                                            >
+                                                                <Badge
+                                                                    tabIndex={0}
+                                                                    variant="secondary"
+                                                                    className="font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                                >
+                                                                    {
+                                                                        product.line
+                                                                    }
+                                                                </Badge>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                Linha comercial
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    )}
+                                                </div>
+                                            </TooltipProvider>
+                                            <div className="mt-4 grid gap-1">
+                                                <p className="text-sm text-muted-foreground">
+                                                    Tamanhos
+                                                </p>
+                                                <div
+                                                    className="flex flex-wrap gap-1.5"
+                                                    aria-label="Tamanhos presentes"
+                                                >
+                                                    {sizes.map((size) => (
+                                                        <span
+                                                            key={size}
+                                                            className="inline-flex min-w-9 items-center justify-center rounded-md bg-muted px-2.5 py-1 text-sm font-medium tabular-nums"
+                                                        >
+                                                            {size}
+                                                        </span>
+                                                    ))}
+                                                </div>
                                             </div>
                                             <Button
-                                                className="h-12 w-full"
+                                                className="mt-4 h-12 w-full"
                                                 onClick={() =>
                                                     setSelectedProduct(product)
                                                 }
-                                                aria-label={`Escolher sacos de ${product.name}`}
+                                                aria-label={`Adicionar ${product.name} ao pedido`}
                                             >
                                                 {selectedCount > 0 ? (
                                                     <Check />
@@ -1209,7 +1305,7 @@ export default function Catalog({
                                                 )}
                                                 {selectedCount > 0
                                                     ? `Ver sacos · ${selectedCount} na sacola`
-                                                    : 'Escolher sacos'}
+                                                    : 'Adicionar ao pedido'}
                                             </Button>
                                         </div>
                                     </article>
@@ -1232,19 +1328,43 @@ export default function Catalog({
                             </Button>
                         </div>
                     )}
-                    <footer className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-6 text-sm text-muted-foreground">
+                    <footer className="mt-10 border-t border-border pt-6 text-sm text-muted-foreground">
                         <p>Crônicas Jeans · Distribuição de estoque</p>
-                        <Link
-                            href={auth.user ? dashboard() : login()}
-                            className="inline-flex min-h-11 items-center underline underline-offset-4"
-                        >
-                            Área da equipe
-                        </Link>
                     </footer>
                 </main>
                 <p role="status" aria-live="polite" className="sr-only">
                     {feedback}
                 </p>
+
+                <ProductImageGallery
+                    product={
+                        selectedImageProduct
+                            ? {
+                                  id: selectedImageProduct.id,
+                                  name: selectedImageProduct.name,
+                                  images: (selectedImageProduct.images.length >
+                                  0
+                                      ? selectedImageProduct.images
+                                      : selectedImageProduct.image
+                                        ? [selectedImageProduct.image]
+                                        : []
+                                  ).map((url, index) => ({
+                                      id: index + 1,
+                                      url,
+                                      thumb_url: url,
+                                  })),
+                              }
+                            : null
+                    }
+                    open={selectedImageProduct !== null}
+                    selectedIndex={selectedImageIndex}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setSelectedImageProduct(null);
+                        }
+                    }}
+                    onSelectedIndexChange={setSelectedImageIndex}
+                />
 
                 {isMobile ? (
                     <Drawer

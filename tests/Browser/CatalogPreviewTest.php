@@ -98,6 +98,15 @@ it('navigates through all product images in the card carousel', function () {
         ->assertNoJavaScriptErrors();
 });
 
+it('opens the product image gallery when a catalog image is clicked', function () {
+    visit(route('catalog', [], false))
+        ->resize(390, 844)
+        ->click('button[aria-label="Ampliar imagem de Calça Wide Leg"]')
+        ->assertVisible('[data-testid="galeria-produto-1"]')
+        ->assertVisible('input[aria-label="Zoom da imagem de Calça Wide Leg"]')
+        ->assertNoJavaScriptErrors();
+});
+
 it('changes the catalog theme from the top navigation selector', function () {
     visit(route('catalog', [], false))
         ->resize(390, 844)
@@ -140,7 +149,7 @@ it('opens product selection in a side panel on desktop', function () {
 it('shows the quantity of each size in every sack', function () {
     visit(route('catalog', [], false))
         ->resize(390, 844)
-        ->click('button[aria-label="Escolher sacos de Short Mom"]')
+        ->click('button[aria-label="Adicionar Short Mom ao pedido"]')
         ->assertSee('Conteúdo por tamanho')
         ->assertVisible('[aria-label="Tamanho 36, 4 peças"]')
         ->assertVisible('[aria-label="Tamanho 40, 4 peças"]')
@@ -153,7 +162,7 @@ it('shows the quantity of each size in every sack', function () {
 it('opens the bag in a side panel on desktop', function () {
     visit(route('catalog', [], false))
         ->resize(1280, 900)
-        ->click('button[aria-label="Escolher sacos de Calça Wide Leg"]')
+        ->click('button[aria-label="Adicionar Calça Wide Leg ao pedido"]')
         ->click('button[aria-label="Adicionar Saco 01"]')
         ->click('button:has-text("Revisar sacola (1)")')
         ->assertVisible('[data-slot="sheet-content"]')
@@ -168,7 +177,7 @@ it('requires opening WhatsApp before confirming a catalog order', function () {
 
     $page = visit(route('catalog', [], false))
         ->resize(1280, 900)
-        ->click('button[aria-label="Escolher sacos de Calça Wide Leg"]')
+        ->click('button[aria-label="Adicionar Calça Wide Leg ao pedido"]')
         ->click('button[aria-label="Adicionar Saco 01"]')
         ->click('button:has-text("Revisar sacola (1)")')
         ->type('#catalog-store-name', 'Loja Centro')
@@ -207,7 +216,7 @@ it('removes a selected sack from the product panel without closing it', function
 it('keeps the bag action in the header without a duplicate fixed action', function () {
     visit(route('home', [], false))
         ->resize(390, 844)
-        ->click('button[aria-label="Escolher sacos de Calça Wide Leg"]')
+        ->click('button[aria-label="Adicionar Calça Wide Leg ao pedido"]')
         ->click('button[aria-label="Adicionar Saco 01"]')
         ->click('button:has-text("Continuar escolhendo")')
         ->assertCount('button[aria-label^="Ver sacola"]', 1)
@@ -225,7 +234,7 @@ it('restores the selected sacks after reloading the catalog', function () {
     $page->script('localStorage.removeItem("catalog-bag");');
 
     $page
-        ->click('button[aria-label="Escolher sacos de Calça Wide Leg"]')
+        ->click('button[aria-label="Adicionar Calça Wide Leg ao pedido"]')
         ->click('button[aria-label="Adicionar Saco 01"]')
         ->click('button:has-text("Continuar escolhendo")')
         ->refresh()
@@ -247,7 +256,7 @@ it('identifies a selected sack that became unavailable', function () {
     $page->script('localStorage.removeItem("catalog-bag");');
 
     $page
-        ->click('button[aria-label="Escolher sacos de Calça Wide Leg"]')
+        ->click('button[aria-label="Adicionar Calça Wide Leg ao pedido"]')
         ->click('button[aria-label="Adicionar Saco 01"]')
         ->click('button:has-text("Continuar escolhendo")');
 
@@ -266,7 +275,7 @@ it('identifies a selected sack that became unavailable', function () {
 it('selects each physical sack once and removes it from the preview bag', function () {
     visit(route('home', [], false))
         ->resize(390, 844)
-        ->click('button[aria-label="Escolher sacos de Calça Wide Leg"]')
+        ->click('button[aria-label="Adicionar Calça Wide Leg ao pedido"]')
         ->click('button[aria-label="Adicionar Saco 01"]')
         ->assertVisible('button[aria-label="Remover Saco 01 da sacola"]')
         ->click('button:has-text("Revisar sacola (1)")')
