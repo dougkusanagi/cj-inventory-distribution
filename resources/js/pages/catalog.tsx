@@ -1,22 +1,27 @@
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import {
     Check,
+    Grid2X2,
+    Grid3X3,
+    LayoutGrid,
     MessageCircle,
     Search,
+    Shirt,
     ShoppingBag,
     SlidersHorizontal,
+    Tag,
     Trash2,
     X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { FormEvent } from 'react';
+import type { CSSProperties, FormEvent } from 'react';
 import CatalogOrderController from '@/actions/App/Http/Controllers/CatalogOrderController';
 import AppearanceToggleTab from '@/components/appearance-tabs';
 import { PaperBag } from '@/components/icons/paper-bag';
 import ImageCarousel from '@/components/image-carousel';
 import InputError from '@/components/input-error';
+import ProductImageGallery from '@/components/products/product-image-gallery';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Drawer,
@@ -44,6 +49,12 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type {
     CatalogBagStatus,
@@ -51,9 +62,10 @@ import type {
     CatalogPreviewProduct,
 } from '@/lib/catalog-preview';
 import { cn } from '@/lib/utils';
-import { catalog as catalogRoute, dashboard, login } from '@/routes';
+import { catalog as catalogRoute } from '@/routes';
 
 const CATALOG_BAG_STORAGE_KEY = 'catalog-bag';
+const CATALOG_GRID_STORAGE_KEY = 'catalog-grid-columns';
 
 type CatalogBagSnapshot = {
     id: number;
@@ -62,6 +74,10 @@ type CatalogBagSnapshot = {
     volumeName?: string;
     pieces?: number;
 };
+
+function catalogOfferTypeLabel(type: string): string {
+    return type.replace(/^Grade\s+/i, '');
+}
 
 function isValidStoredVolumeId(value: unknown): value is number {
     return typeof value === 'number' && Number.isInteger(value) && value > 0;
@@ -164,9 +180,11 @@ function CatalogFilter({
 function ProductPhoto({
     product,
     onOpenSelection,
+    onOpenImage,
 }: {
     product: CatalogPreviewProduct;
     onOpenSelection: () => void;
+    onOpenImage: () => void;
 }) {
     const images =
         product.images.length > 0
@@ -176,7 +194,7 @@ function ProductPhoto({
               : [product.image];
 
     return (
-        <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-t-2xl bg-muted/60">
+        <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-t-[1.5rem] bg-muted/60 [&_img]:transition-transform [&_img]:duration-500 [&_img]:ease-out group-hover:[&_img]:scale-[1.035] motion-reduce:[&_img]:transition-none">
             {images.length > 0 ? (
                 <ImageCarousel
                     images={images}
@@ -184,7 +202,12 @@ function ProductPhoto({
                     previousTestId={`catalog-product-image-previous-${product.id}`}
                     nextTestId={`catalog-product-image-next-${product.id}`}
                     imageTestId={`catalog-product-image-${product.id}`}
-                    onImageClick={onOpenSelection}
+                    onImageClick={onOpenImage}
+                    imageClickAriaLabel={(index) =>
+                        index === 0
+                            ? `Ampliar imagem de ${product.name}`
+                            : `Ampliar imagem ${index + 1} de ${product.name}`
+                    }
                 />
             ) : (
                 <button
@@ -196,15 +219,7 @@ function ProductPhoto({
                     Produto sem foto
                 </button>
             )}
-            {product.line && (
-                <Badge
-                    variant="secondary"
-                    className="absolute top-3 left-3 bg-card text-foreground"
-                >
-                    {product.line}
-                </Badge>
-            )}
-            <span className="absolute right-3 bottom-3 rounded-md bg-card px-2.5 py-1 text-xs font-medium">
+            <span className="absolute right-3 bottom-3 rounded-full border border-white/50 bg-card/90 px-3 py-1 text-xs font-semibold shadow-sm backdrop-blur">
                 {product.category}
             </span>
         </div>
@@ -657,7 +672,6 @@ export default function Catalog({
     bag: CatalogBagStatus;
     canPlaceOrder: boolean;
 }) {
-    const { auth } = usePage().props;
     const isMobile = useIsMobile();
     const [query, setQuery] = useState(filters.search);
     const [category, setCategory] = useState(
@@ -665,8 +679,12 @@ export default function Catalog({
     );
     const [line, setLine] = useState(filters.line || 'all');
     const [filtersOpen, setFiltersOpen] = useState(false);
+    const [gridColumns, setGridColumns] = useState<3 | 4>(3);
     const [selectedProduct, setSelectedProduct] =
         useState<CatalogPreviewProduct | null>(null);
+    const [selectedImageProduct, setSelectedImageProduct] =
+        useState<CatalogPreviewProduct | null>(null);
+    const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [selectedVolumeIds, setSelectedVolumeIds] = useState<number[]>([]);
     const [bagSnapshots, setBagSnapshots] = useState<
         Record<number, CatalogBagSnapshot>
@@ -690,6 +708,29 @@ export default function Catalog({
     const hydratedBag = useRef(false);
     const filterEffectMounted = useRef(false);
     const selectedVolumeIdsRef = useRef<number[]>([]);
+
+    useEffect(() => {
+        try {
+            if (window.localStorage.getItem(CATALOG_GRID_STORAGE_KEY) === '4') {
+                setGridColumns(4);
+            }
+        } catch {
+            return;
+        }
+    }, []);
+
+    function changeGridColumns(columns: 3 | 4) {
+        setGridColumns(columns);
+
+        try {
+            window.localStorage.setItem(
+                CATALOG_GRID_STORAGE_KEY,
+                String(columns),
+            );
+        } catch {
+            return;
+        }
+    }
 
     useEffect(() => {
         if (hydratedBag.current) {
@@ -842,6 +883,11 @@ export default function Catalog({
     ).length;
     const hasFilters = query !== '' || filterCount > 0;
 
+    function openProductImage(product: CatalogPreviewProduct) {
+        setSelectedImageIndex(0);
+        setSelectedImageProduct(product);
+    }
+
     function clearFilters() {
         setQuery('');
         setCategory('all');
@@ -935,14 +981,14 @@ export default function Catalog({
     return (
         <>
             <Head title="Catálogo para lojistas" />
-            <div className="min-h-svh bg-background text-foreground selection:bg-primary/30">
+            <div className="ds-ambient min-h-svh bg-background text-foreground selection:bg-primary/30">
                 <a
                     href="#produtos"
                     className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:p-3 focus:text-primary-foreground"
                 >
                     Ir para os produtos
                 </a>
-                <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
+                <header className="sticky top-0 z-30 border-b border-border/70 bg-background/88 shadow-sm shadow-foreground/5 backdrop-blur-xl">
                     <div className="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
                         <a
                             href="#produtos"
@@ -973,7 +1019,10 @@ export default function Catalog({
                             >
                                 <ShoppingBag aria-hidden="true" />
                                 <span>Sacola</span>
-                                <span className="flex min-w-6 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-bold text-primary-foreground">
+                                <span
+                                    className="flex min-w-6 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-bold text-primary-foreground transition-transform duration-200 motion-reduce:transition-none"
+                                    key={selectedVolumeIds.length}
+                                >
                                     {selectedVolumeIds.length}
                                 </span>
                             </Button>
@@ -985,27 +1034,26 @@ export default function Catalog({
                     id="produtos"
                     className="mx-auto max-w-7xl scroll-mt-24 px-4 pt-5 pb-12 sm:px-6 sm:pt-8 lg:px-8"
                 >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="ds-reveal relative flex flex-col gap-3 overflow-hidden rounded-[2rem] border border-border/70 bg-card px-5 py-8 shadow-sm sm:flex-row sm:items-end sm:justify-between sm:px-8 sm:py-10">
+                        <div className="pointer-events-none absolute -top-28 -right-20 size-72 rounded-full border-[32px] border-primary/15" />
+                        <div className="pointer-events-none absolute right-24 -bottom-24 size-48 rounded-full bg-brand-expressive/10 blur-3xl" />
                         <div className="grid gap-2">
-                            <p className="text-xs font-semibold tracking-widest text-highlight uppercase">
+                            <p className="ds-eyebrow relative text-highlight">
                                 Crônicas Jeans · para lojistas
                             </p>
-                            <h1 className="text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl">
+                            <h1 className="ds-display relative max-w-2xl text-4xl sm:text-5xl">
                                 Reabasteça sua loja
                             </h1>
-                            <p className="max-w-xl text-sm leading-6 text-muted-foreground">
+                            <p className="relative max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
                                 Encontre a peça e escolha os sacos com os
                                 tamanhos que sua loja precisa.
                             </p>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                            Sacos completos · selecione por produto
-                        </p>
                     </div>
 
                     <section
                         aria-label="Buscar e filtrar produtos"
-                        className="mt-8 mb-3 border-y border-border py-5"
+                        className="ds-reveal mt-6 mb-3 rounded-[1.5rem] border border-border/70 bg-card p-4 shadow-sm [--reveal-delay:60ms] sm:p-5"
                     >
                         <div className="grid gap-3 sm:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)_minmax(0,1fr)] sm:items-end">
                             <div className="flex items-end gap-3 sm:contents">
@@ -1085,18 +1133,58 @@ export default function Catalog({
                             {filterCount > 0 &&
                                 ` · ${filterCount} ${filterCount === 1 ? 'filtro aplicado' : 'filtros aplicados'}`}
                         </p>
-                        {hasFilters && (
-                            <Button
-                                variant="ghost"
-                                className="h-11"
-                                onClick={clearFilters}
+                        <div className="flex items-center gap-2">
+                            {hasFilters && (
+                                <Button
+                                    variant="ghost"
+                                    className="h-11"
+                                    onClick={clearFilters}
+                                >
+                                    <X /> Limpar filtros
+                                </Button>
+                            )}
+                            <div
+                                role="group"
+                                aria-label="Colunas do catálogo"
+                                className="hidden items-center gap-1 rounded-xl border border-border bg-card p-1 xl:flex"
                             >
-                                <X /> Limpar filtros
-                            </Button>
-                        )}
+                                <button
+                                    type="button"
+                                    aria-label="Visualizar 3 produtos por linha"
+                                    aria-pressed={gridColumns === 3}
+                                    onClick={() => changeGridColumns(3)}
+                                    className={cn(
+                                        'ds-press flex size-9 items-center justify-center rounded-lg text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                                        gridColumns === 3 &&
+                                            'bg-secondary text-foreground shadow-sm',
+                                    )}
+                                >
+                                    <Grid2X2
+                                        className="size-4"
+                                        aria-hidden="true"
+                                    />
+                                </button>
+                                <button
+                                    type="button"
+                                    aria-label="Visualizar 4 produtos por linha"
+                                    aria-pressed={gridColumns === 4}
+                                    onClick={() => changeGridColumns(4)}
+                                    className={cn(
+                                        'ds-press flex size-9 items-center justify-center rounded-lg text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                                        gridColumns === 4 &&
+                                            'bg-secondary text-foreground shadow-sm',
+                                    )}
+                                >
+                                    <Grid3X3
+                                        className="size-4"
+                                        aria-hidden="true"
+                                    />
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     {loadedProducts.length === 0 ? (
-                        <div className="grid justify-items-center gap-3 rounded-2xl border border-dashed border-border px-4 py-16 text-center">
+                        <div className="ds-reveal grid justify-items-center gap-3 rounded-[1.5rem] border border-dashed border-border bg-card px-4 py-16 text-center">
                             <Search className="size-8 text-muted-foreground" />
                             <h2 className="text-xl font-semibold">
                                 Nenhum produto encontrado
@@ -1112,8 +1200,13 @@ export default function Catalog({
                             </Button>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
-                            {loadedProducts.map((product) => {
+                        <div
+                            className={cn(
+                                'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3',
+                                gridColumns === 4 && 'xl:grid-cols-4 xl:gap-4',
+                            )}
+                        >
+                            {loadedProducts.map((product, index) => {
                                 const selectedCount = product.volumes.filter(
                                     (volume) =>
                                         selectedVolumeIds.includes(volume.id),
@@ -1133,83 +1226,233 @@ export default function Catalog({
                                         key={product.id}
                                         data-testid="catalog-product"
                                         className={cn(
-                                            'flex min-w-0 flex-col rounded-2xl border bg-card transition-colors motion-reduce:transition-none',
+                                            'group ds-reveal ds-lift flex min-w-0 flex-col rounded-[1.5rem] border bg-card shadow-sm',
                                             selectedCount > 0
                                                 ? 'border-highlight'
                                                 : 'border-border hover:border-input',
                                         )}
+                                        style={
+                                            {
+                                                '--reveal-delay': `${Math.min(index, 5) * 55}ms`,
+                                            } as CSSProperties
+                                        }
                                     >
                                         <ProductPhoto
                                             product={product}
                                             onOpenSelection={() =>
                                                 setSelectedProduct(product)
                                             }
+                                            onOpenImage={() =>
+                                                openProductImage(product)
+                                            }
                                         />
-                                        <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
+                                        <div
+                                            className={cn(
+                                                'flex flex-1 flex-col gap-0 p-4 sm:p-5',
+                                                gridColumns === 4 && 'xl:p-4',
+                                            )}
+                                        >
                                             <div>
                                                 <p className="font-mono text-xs text-muted-foreground">
                                                     {product.code}
                                                     {product.model &&
                                                         ` · Mod. ${product.model}`}
                                                 </p>
-                                                <h2 className="mt-1.5 text-xl leading-snug font-semibold tracking-tight text-balance">
+                                                <h2
+                                                    className={cn(
+                                                        'ds-display mt-1 text-xl leading-snug',
+                                                        gridColumns === 4 &&
+                                                            'xl:min-h-11 xl:text-lg',
+                                                    )}
+                                                >
                                                     {product.name}
                                                 </h2>
                                             </div>
-                                            <Badge
-                                                variant="secondary"
-                                                className="w-fit"
-                                            >
-                                                {product.type}
-                                            </Badge>
-                                            <p className="text-sm text-muted-foreground">
-                                                Tamanhos e quantidades
-                                            </p>
-                                            <div
-                                                className="flex flex-wrap gap-1.5"
-                                                aria-label="Tamanhos presentes"
-                                            >
-                                                {sizes.map((size) => (
-                                                    <span
-                                                        key={size}
-                                                        className="inline-flex min-w-9 items-center justify-center rounded-md bg-muted px-2.5 py-1 text-sm font-medium tabular-nums"
-                                                    >
-                                                        {size}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                            <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-3 text-sm">
-                                                <strong>
-                                                    {product.volumes.length}{' '}
-                                                    {product.volumes.length ===
-                                                    1
-                                                        ? 'saco'
-                                                        : 'sacos'}
-                                                </strong>
-                                                <span className="text-muted-foreground">
-                                                    {product.volumes.reduce(
-                                                        (sum, volume) =>
-                                                            sum + volume.pieces,
-                                                        0,
-                                                    )}{' '}
-                                                    peças no total
-                                                </span>
+                                            <TooltipProvider>
+                                                <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border/70 pt-3 text-xs text-muted-foreground">
+                                                    <div className="contents">
+                                                        <Tooltip>
+                                                            <TooltipTrigger
+                                                                asChild
+                                                            >
+                                                                <span
+                                                                    tabIndex={0}
+                                                                    className="inline-flex min-w-0 items-center gap-1.5 font-medium text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                                >
+                                                                    <LayoutGrid
+                                                                        className="size-4"
+                                                                        aria-hidden="true"
+                                                                    />
+                                                                    {catalogOfferTypeLabel(
+                                                                        product.type,
+                                                                    )}
+                                                                </span>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                Disponibilidade
+                                                                do estoque
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                        {product.line && (
+                                                            <Tooltip>
+                                                                <TooltipTrigger
+                                                                    asChild
+                                                                >
+                                                                    <span
+                                                                        tabIndex={
+                                                                            0
+                                                                        }
+                                                                        className="row-start-2 inline-flex min-w-0 items-center gap-1.5 font-medium text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                                    >
+                                                                        <Tag
+                                                                            className="size-4"
+                                                                            aria-hidden="true"
+                                                                        />
+                                                                        Linha{' '}
+                                                                        {
+                                                                            product.line
+                                                                        }
+                                                                    </span>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    Linha
+                                                                    comercial
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        )}
+                                                    </div>
+                                                    <div className="contents">
+                                                        <Tooltip>
+                                                            <TooltipTrigger
+                                                                asChild
+                                                            >
+                                                                <span
+                                                                    tabIndex={0}
+                                                                    className="col-start-2 row-start-1 inline-flex min-w-0 items-center gap-1.5 tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                                >
+                                                                    <PaperBag
+                                                                        className="size-4 scale-[1.35]"
+                                                                        aria-hidden="true"
+                                                                    />
+                                                                    {
+                                                                        product
+                                                                            .volumes
+                                                                            .length
+                                                                    }{' '}
+                                                                    {product
+                                                                        .volumes
+                                                                        .length ===
+                                                                    1
+                                                                        ? 'saco'
+                                                                        : 'sacos'}
+                                                                </span>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                Quantidade de
+                                                                sacos
+                                                                disponíveis
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                        <Tooltip>
+                                                            <TooltipTrigger
+                                                                asChild
+                                                            >
+                                                                <span
+                                                                    tabIndex={0}
+                                                                    className="col-start-2 row-start-2 inline-flex min-w-0 items-center gap-1.5 tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                                >
+                                                                    <Shirt
+                                                                        className="size-4"
+                                                                        aria-hidden="true"
+                                                                    />
+                                                                    {product.volumes.reduce(
+                                                                        (
+                                                                            sum,
+                                                                            volume,
+                                                                        ) =>
+                                                                            sum +
+                                                                            volume.pieces,
+                                                                        0,
+                                                                    )}{' '}
+                                                                    peças
+                                                                </span>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                Total de peças
+                                                                nos sacos
+                                                                disponíveis
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </div>
+                                                </div>
+                                            </TooltipProvider>
+                                            <div className="mt-4 grid gap-1">
+                                                <p className="text-sm text-muted-foreground">
+                                                    Tamanhos
+                                                </p>
+                                                <div
+                                                    className={cn(
+                                                        'flex flex-wrap gap-1.5',
+                                                        gridColumns === 4 &&
+                                                            'xl:gap-1',
+                                                    )}
+                                                    aria-label="Tamanhos presentes"
+                                                >
+                                                    {sizes.map((size) => (
+                                                        <span
+                                                            key={size}
+                                                            className={cn(
+                                                                'inline-flex min-w-9 items-center justify-center rounded-lg border border-border/70 bg-muted px-2.5 py-1 text-sm font-semibold tabular-nums',
+                                                                gridColumns ===
+                                                                    4 &&
+                                                                    'xl:min-w-7 xl:rounded-md xl:px-1.5 xl:py-0.5 xl:text-xs',
+                                                            )}
+                                                        >
+                                                            {size}
+                                                        </span>
+                                                    ))}
+                                                </div>
                                             </div>
                                             <Button
-                                                className="h-12 w-full"
+                                                className={cn(
+                                                    'mt-auto h-12 w-full',
+                                                    gridColumns === 4
+                                                        ? 'xl:mt-4 xl:h-11'
+                                                        : 'mt-4',
+                                                )}
                                                 onClick={() =>
                                                     setSelectedProduct(product)
                                                 }
-                                                aria-label={`Escolher sacos de ${product.name}`}
+                                                aria-label={`Adicionar ${product.name} ao pedido`}
                                             >
                                                 {selectedCount > 0 ? (
                                                     <Check />
                                                 ) : (
                                                     <PaperBag />
                                                 )}
-                                                {selectedCount > 0
-                                                    ? `Ver sacos · ${selectedCount} na sacola`
-                                                    : 'Escolher sacos'}
+                                                {selectedCount > 0 ? (
+                                                    <>
+                                                        <span
+                                                            className={cn(
+                                                                gridColumns ===
+                                                                    4 &&
+                                                                    'xl:hidden',
+                                                            )}
+                                                        >
+                                                            Ver sacos ·{' '}
+                                                            {selectedCount} na
+                                                            sacola
+                                                        </span>
+                                                        {gridColumns === 4 && (
+                                                            <span className="hidden xl:inline">
+                                                                Ver sacos ·{' '}
+                                                                {selectedCount}
+                                                            </span>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    'Adicionar ao pedido'
+                                                )}
                                             </Button>
                                         </div>
                                     </article>
@@ -1232,19 +1475,43 @@ export default function Catalog({
                             </Button>
                         </div>
                     )}
-                    <footer className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-6 text-sm text-muted-foreground">
+                    <footer className="mt-10 border-t border-border pt-6 text-sm text-muted-foreground">
                         <p>Crônicas Jeans · Distribuição de estoque</p>
-                        <Link
-                            href={auth.user ? dashboard() : login()}
-                            className="inline-flex min-h-11 items-center underline underline-offset-4"
-                        >
-                            Área da equipe
-                        </Link>
                     </footer>
                 </main>
                 <p role="status" aria-live="polite" className="sr-only">
                     {feedback}
                 </p>
+
+                <ProductImageGallery
+                    product={
+                        selectedImageProduct
+                            ? {
+                                  id: selectedImageProduct.id,
+                                  name: selectedImageProduct.name,
+                                  images: (selectedImageProduct.images.length >
+                                  0
+                                      ? selectedImageProduct.images
+                                      : selectedImageProduct.image
+                                        ? [selectedImageProduct.image]
+                                        : []
+                                  ).map((url, index) => ({
+                                      id: index + 1,
+                                      url,
+                                      thumb_url: url,
+                                  })),
+                              }
+                            : null
+                    }
+                    open={selectedImageProduct !== null}
+                    selectedIndex={selectedImageIndex}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setSelectedImageProduct(null);
+                        }
+                    }}
+                    onSelectedIndexChange={setSelectedImageIndex}
+                />
 
                 {isMobile ? (
                     <Drawer

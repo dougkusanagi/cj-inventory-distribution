@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Vite;
 
 beforeEach(function (): void {
     config(['inertia.ssr.enabled' => false]);
+    config(['filesystems.disks.public.url' => '/storage']);
     Vite::useHotFile(storage_path('framework/testing-hot-file'));
     $this->seed(CatalogDemoSeeder::class);
 });
@@ -46,16 +47,21 @@ it('loads the next product batch without depending on translated pagination labe
         ->resize(1280, 900)
         ->assertCount('[data-testid="catalog-product"]', 12)
         ->click('Carregar mais produtos')
-        ->wait(1)
         ->assertCount('[data-testid="catalog-product"]', 20)
         ->assertSee('ZZ Produto adicional 13')
         ->assertNoJavaScriptErrors();
 });
 
 it('renders a generated photo for each visible product card', function () {
+    $wideLeg = Product::query()->where('code', 'DEMO-CJ-0001')->firstOrFail();
+
+    expect($wideLeg->getMedia(Product::MEDIA_COLLECTION))->toHaveCount(2);
+
     visit(route('catalog', [], false))
         ->resize(1280, 900)
+        ->assertCount('[data-testid="catalog-product"]', 7)
         ->assertCount('img[data-testid^="catalog-product-image-"]', 8)
+        ->assertScript("(() => Array.from(document.querySelectorAll('[data-testid=\"catalog-product\"]')).every((card) => card.querySelector('img[data-testid^=\"catalog-product-image-\"]') !== null))()")
         ->assertScript("(() => Array.from(document.querySelectorAll('img[data-testid^=\"catalog-product-image-\"]')).every((image) => image.getAttribute('src')?.includes('/storage/')))()")
         ->assertAttributeContains(
             'img[data-testid="catalog-product-image-1"]',
@@ -89,6 +95,15 @@ it('navigates through all product images in the card carousel', function () {
             'alt',
             'Calça Wide Leg - Imagem 2',
         )
+        ->assertNoJavaScriptErrors();
+});
+
+it('opens the product image gallery when a catalog image is clicked', function () {
+    visit(route('catalog', [], false))
+        ->resize(390, 844)
+        ->click('button[aria-label="Ampliar imagem de Calça Wide Leg"]')
+        ->assertVisible('[data-testid="galeria-produto-1"]')
+        ->assertVisible('input[aria-label="Zoom da imagem de Calça Wide Leg"]')
         ->assertNoJavaScriptErrors();
 });
 
@@ -127,13 +142,14 @@ it('opens product selection in a side panel on desktop', function () {
         ->click('button[aria-label="Ver sacos de Calça Wide Leg"]')
         ->assertVisible('[data-slot="sheet-content"]')
         ->assertSee('Escolha os sacos completos.')
-        ->assertScript("(() => { const panel = document.querySelector('[data-slot=\"sheet-content\"][data-state=\"open\"]'); return panel !== null && panel.getBoundingClientRect().left > window.innerWidth / 2 && panel.getBoundingClientRect().right <= window.innerWidth; })()");
+        ->assertScript("(() => { const panel = document.querySelector('[data-slot=\"sheet-content\"][data-state=\"open\"]'); return panel !== null && panel.getBoundingClientRect().left > window.innerWidth / 2 && panel.getBoundingClientRect().right <= window.innerWidth; })()")
+        ->assertNoJavaScriptErrors();
 });
 
 it('shows the quantity of each size in every sack', function () {
     visit(route('catalog', [], false))
         ->resize(390, 844)
-        ->click('button[aria-label="Escolher sacos de Short Mom"]')
+        ->click('button[aria-label="Adicionar Short Mom ao pedido"]')
         ->assertSee('Conteúdo por tamanho')
         ->assertVisible('[aria-label="Tamanho 36, 4 peças"]')
         ->assertVisible('[aria-label="Tamanho 40, 4 peças"]')
@@ -146,13 +162,14 @@ it('shows the quantity of each size in every sack', function () {
 it('opens the bag in a side panel on desktop', function () {
     visit(route('catalog', [], false))
         ->resize(1280, 900)
-        ->click('button[aria-label="Escolher sacos de Calça Wide Leg"]')
+        ->click('button[aria-label="Adicionar Calça Wide Leg ao pedido"]')
         ->click('button[aria-label="Adicionar Saco 01"]')
         ->click('button:has-text("Revisar sacola (1)")')
         ->assertVisible('[data-slot="sheet-content"]')
         ->assertSee('Sua sacola')
         ->assertSee('1 saco · 20 peças no total')
-        ->assertScript("(() => { const panel = document.querySelector('[data-slot=\"sheet-content\"][data-state=\"open\"]'); return panel !== null && panel.getBoundingClientRect().left > window.innerWidth / 2 && panel.getBoundingClientRect().right <= window.innerWidth; })()");
+        ->assertScript("(() => { const panel = document.querySelector('[data-slot=\"sheet-content\"][data-state=\"open\"]'); return panel !== null && panel.getBoundingClientRect().left > window.innerWidth / 2 && panel.getBoundingClientRect().right <= window.innerWidth; })()")
+        ->assertNoJavaScriptErrors();
 });
 
 it('requires opening WhatsApp before confirming a catalog order', function () {
@@ -160,7 +177,7 @@ it('requires opening WhatsApp before confirming a catalog order', function () {
 
     $page = visit(route('catalog', [], false))
         ->resize(1280, 900)
-        ->click('button[aria-label="Escolher sacos de Calça Wide Leg"]')
+        ->click('button[aria-label="Adicionar Calça Wide Leg ao pedido"]')
         ->click('button[aria-label="Adicionar Saco 01"]')
         ->click('button:has-text("Revisar sacola (1)")')
         ->type('#catalog-store-name', 'Loja Centro')
@@ -199,7 +216,7 @@ it('removes a selected sack from the product panel without closing it', function
 it('keeps the bag action in the header without a duplicate fixed action', function () {
     visit(route('home', [], false))
         ->resize(390, 844)
-        ->click('button[aria-label="Escolher sacos de Calça Wide Leg"]')
+        ->click('button[aria-label="Adicionar Calça Wide Leg ao pedido"]')
         ->click('button[aria-label="Adicionar Saco 01"]')
         ->click('button:has-text("Continuar escolhendo")')
         ->assertCount('button[aria-label^="Ver sacola"]', 1)
@@ -217,7 +234,7 @@ it('restores the selected sacks after reloading the catalog', function () {
     $page->script('localStorage.removeItem("catalog-bag");');
 
     $page
-        ->click('button[aria-label="Escolher sacos de Calça Wide Leg"]')
+        ->click('button[aria-label="Adicionar Calça Wide Leg ao pedido"]')
         ->click('button[aria-label="Adicionar Saco 01"]')
         ->click('button:has-text("Continuar escolhendo")')
         ->refresh()
@@ -239,7 +256,7 @@ it('identifies a selected sack that became unavailable', function () {
     $page->script('localStorage.removeItem("catalog-bag");');
 
     $page
-        ->click('button[aria-label="Escolher sacos de Calça Wide Leg"]')
+        ->click('button[aria-label="Adicionar Calça Wide Leg ao pedido"]')
         ->click('button[aria-label="Adicionar Saco 01"]')
         ->click('button:has-text("Continuar escolhendo")');
 
@@ -247,7 +264,6 @@ it('identifies a selected sack that became unavailable', function () {
 
     $page
         ->refresh()
-        ->wait(1)
         ->click('button[aria-label="Ver sacola, 1 sacos"]')
         ->assertSee('Calça Wide Leg')
         ->assertSee($product->code)
@@ -259,7 +275,7 @@ it('identifies a selected sack that became unavailable', function () {
 it('selects each physical sack once and removes it from the preview bag', function () {
     visit(route('home', [], false))
         ->resize(390, 844)
-        ->click('button[aria-label="Escolher sacos de Calça Wide Leg"]')
+        ->click('button[aria-label="Adicionar Calça Wide Leg ao pedido"]')
         ->click('button[aria-label="Adicionar Saco 01"]')
         ->assertVisible('button[aria-label="Remover Saco 01 da sacola"]')
         ->click('button:has-text("Revisar sacola (1)")')

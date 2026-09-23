@@ -12,6 +12,7 @@
         'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
+    --font-display: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -102,7 +103,7 @@
     --chart-3: oklch(0.398 0.07 227.392);
     --chart-4: oklch(0.828 0.189 84.429);
     --chart-5: oklch(0.769 0.188 70.08);
-    --radius: 0.625rem;
+    --radius: 0.875rem;
     --sidebar: oklch(0.97 0.012 82);
     --sidebar-foreground: oklch(0.22 0.035 38);
     --sidebar-primary: oklch(0.74 0.16 78);
@@ -163,5 +164,106 @@
 
     body {
         @apply bg-background text-foreground;
+    }
+
+    ::selection {
+        background: color-mix(in oklab, var(--action) 36%, transparent);
+        color: var(--foreground);
+    }
+}
+
+@layer components {
+    .ds-display {
+        font-family: var(--font-display);
+        font-weight: 650;
+        letter-spacing: -0.055em;
+        line-height: 1.05;
+        text-wrap: balance;
+    }
+
+    .ds-eyebrow {
+        font-size: 0.7rem;
+        font-weight: 750;
+        letter-spacing: 0.19em;
+        line-height: 1.4;
+        text-transform: uppercase;
+    }
+
+    .ds-surface {
+        border: 1px solid var(--border);
+        border-radius: 1.5rem;
+        background: var(--card);
+        box-shadow:
+            0 1px 2px color-mix(in oklab, var(--foreground) 5%, transparent),
+            0 14px 40px -32px
+                color-mix(in oklab, var(--foreground) 22%, transparent);
+    }
+
+    .ds-lift {
+        transition:
+            transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+            box-shadow 220ms ease,
+            border-color 220ms ease;
+    }
+
+    .ds-lift:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 18px 36px -25px
+            color-mix(in oklab, var(--foreground) 28%, transparent);
+    }
+
+    .ds-reveal {
+        animation: ds-reveal 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+        animation-delay: var(--reveal-delay, 0ms);
+    }
+
+    .ds-press {
+        transition:
+            transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
+            background-color 160ms ease,
+            box-shadow 160ms ease;
+    }
+
+    .ds-press:active:not(:disabled) {
+        transform: scale(0.975);
+    }
+
+    .ds-ambient {
+        background-image:
+            radial-gradient(
+                circle at 88% 0%,
+                color-mix(in oklab, var(--action) 13%, transparent),
+                transparent 34%
+            ),
+            radial-gradient(
+                circle at 5% 45%,
+                color-mix(in oklab, var(--brand-expressive) 6%, transparent),
+                transparent 40%
+            );
+    }
+}
+
+@keyframes ds-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ds-reveal {
+        animation: none;
+    }
+    .ds-lift,
+    .ds-press {
+        transition: none;
+    }
+    .ds-lift:hover,
+    .ds-press:active:not(:disabled) {
+        transform: none;
     }
 }

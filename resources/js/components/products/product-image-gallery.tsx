@@ -7,15 +7,64 @@ import {
     DialogDescription,
     DialogTitle,
 } from '@/components/ui/dialog';
-import type { Product } from '@/types';
+
+type ProductImageGalleryImage = {
+    id: number;
+    url: string;
+    thumb_url: string | null;
+};
+
+type ProductImageGalleryProduct = {
+    id: number;
+    name: string;
+    images: ProductImageGalleryImage[];
+};
 
 type ProductImageGalleryProps = {
-    product: Product | null;
+    product: ProductImageGalleryProduct | null;
     open: boolean;
     selectedIndex: number;
     onOpenChange: (open: boolean) => void;
     onSelectedIndexChange: (index: number) => void;
 };
+
+function GalleryThumbnail({
+    image,
+    index,
+    productName,
+    active,
+    onSelect,
+    className = '',
+}: {
+    image: ProductImageGalleryImage;
+    index: number;
+    productName: string;
+    active: boolean;
+    onSelect: () => void;
+    className?: string;
+}) {
+    return (
+        <button
+            type="button"
+            aria-label={`Ver imagem ${index + 1} de ${productName}`}
+            aria-current={active ? 'true' : undefined}
+            onClick={onSelect}
+            className={`relative aspect-[3/4] w-full overflow-hidden rounded-xl border bg-black/20 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
+                active
+                    ? 'border-primary shadow-[0_0_0_2px_color-mix(in_srgb,var(--primary)_22%,transparent),0_8px_24px_rgba(0,0,0,0.28)]'
+                    : 'border-white/10 opacity-55 hover:scale-[1.03] hover:border-white/35 hover:opacity-100'
+            } ${className}`}
+        >
+            <img
+                src={image.thumb_url ?? image.url}
+                alt={`${productName} — miniatura ${index + 1}`}
+                loading="lazy"
+                className="h-full w-full object-cover"
+                draggable={false}
+            />
+        </button>
+    );
+}
 
 export default function ProductImageGallery({
     product,
@@ -153,51 +202,74 @@ export default function ProductImageGallery({
                 </DialogDescription>
 
                 <div className="flex min-h-0 flex-col bg-[#090a0c]">
-                    <div
-                        className={`relative flex min-w-0 items-center justify-center bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.07),_transparent_54%),_linear-gradient(135deg,_#16181c,_#090a0c)] p-2 sm:p-5 md:p-8 ${imageLoaded ? '' : 'min-h-[8rem] sm:min-h-[12rem] md:min-h-[16rem]'}`}
-                    >
+                    <div className="flex min-h-0 flex-col md:grid md:flex-1 md:grid-cols-[minmax(0,1fr)_8rem]">
                         <div
-                            data-testid={`galeria-imagem-produto-${product.id}`}
-                            className={`flex max-w-full items-center justify-center overflow-hidden rounded-lg bg-black/10 ${zoom > 1 ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
-                            onWheel={handleImageWheel}
+                            className={`relative flex min-w-0 items-center justify-center bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.07),_transparent_54%),_linear-gradient(135deg,_#16181c,_#090a0c)] p-2 sm:p-5 md:min-h-0 md:p-8 ${imageLoaded ? '' : 'min-h-[8rem] sm:min-h-[12rem] md:min-h-[16rem]'}`}
                         >
-                            <img
-                                key={selectedImage.id}
-                                src={selectedImage.url}
-                                alt={`${product.name} — imagem ${activeIndex + 1}`}
-                                className="block max-h-[calc(92dvh-13rem)] max-w-full animate-in object-contain transition-transform duration-150 fade-in-0 md:max-h-[calc(92dvh-18rem)]"
-                                style={{ transform: `scale(${zoom})` }}
-                                onLoad={(event) =>
-                                    setImageLoaded(
-                                        event.currentTarget.naturalWidth > 64 &&
-                                            event.currentTarget.naturalHeight >
-                                                64,
-                                    )
-                                }
-                                draggable={false}
-                            />
+                            <div
+                                data-testid={`galeria-imagem-produto-${product.id}`}
+                                className={`flex max-w-full items-center justify-center overflow-hidden rounded-lg bg-black/10 ${zoom > 1 ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
+                                onWheel={handleImageWheel}
+                            >
+                                <img
+                                    key={selectedImage.id}
+                                    src={selectedImage.url}
+                                    alt={`${product.name} — imagem ${activeIndex + 1}`}
+                                    className="block max-h-[calc(92dvh-13rem)] max-w-full animate-in object-contain transition-transform duration-150 fade-in-0 md:max-h-[calc(92dvh-8rem)]"
+                                    style={{ transform: `scale(${zoom})` }}
+                                    onLoad={(event) =>
+                                        setImageLoaded(
+                                            event.currentTarget.naturalWidth >
+                                                64 &&
+                                                event.currentTarget
+                                                    .naturalHeight > 64,
+                                        )
+                                    }
+                                    draggable={false}
+                                />
+                            </div>
+
+                            {hasMultipleImages && (
+                                <>
+                                    <button
+                                        type="button"
+                                        aria-label={`Imagem anterior de ${product.name}`}
+                                        onClick={goToPreviousImage}
+                                        className="absolute top-1/2 left-3 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/30 text-white/90 shadow-xl backdrop-blur-md transition-all duration-200 hover:scale-105 hover:bg-black/55 hover:text-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:left-5"
+                                    >
+                                        <ChevronLeft className="size-5" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        aria-label={`Próxima imagem de ${product.name}`}
+                                        onClick={goToNextImage}
+                                        className="absolute top-1/2 right-3 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/30 text-white/90 shadow-xl backdrop-blur-md transition-all duration-200 hover:scale-105 hover:bg-black/55 hover:text-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:right-5"
+                                    >
+                                        <ChevronRight className="size-5" />
+                                    </button>
+                                </>
+                            )}
                         </div>
 
-                        {hasMultipleImages && (
-                            <>
-                                <button
-                                    type="button"
-                                    aria-label={`Imagem anterior de ${product.name}`}
-                                    onClick={goToPreviousImage}
-                                    className="absolute top-1/2 left-3 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/30 text-white/90 shadow-xl backdrop-blur-md transition-all duration-200 hover:scale-105 hover:bg-black/55 hover:text-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:left-5"
-                                >
-                                    <ChevronLeft className="size-5" />
-                                </button>
-                                <button
-                                    type="button"
-                                    aria-label={`Próxima imagem de ${product.name}`}
-                                    onClick={goToNextImage}
-                                    className="absolute top-1/2 right-3 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/30 text-white/90 shadow-xl backdrop-blur-md transition-all duration-200 hover:scale-105 hover:bg-black/55 hover:text-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:right-5"
-                                >
-                                    <ChevronRight className="size-5" />
-                                </button>
-                            </>
-                        )}
+                        <aside className="hidden min-h-0 border-l border-white/10 bg-black/25 md:flex md:flex-col">
+                            <div className="shrink-0 border-b border-white/10 px-3 py-3 text-[11px] font-medium tracking-wide text-white/60 uppercase">
+                                Miniaturas
+                            </div>
+                            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                                <div className="grid gap-3">
+                                    {images.map((image, index) => (
+                                        <GalleryThumbnail
+                                            key={image.id}
+                                            image={image}
+                                            index={index}
+                                            productName={product.name}
+                                            active={index === activeIndex}
+                                            onSelect={() => goToImage(index)}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </aside>
                     </div>
 
                     <div className="relative border-t border-white/10 bg-black/25 px-3 py-3 sm:px-6 sm:py-4">
@@ -243,7 +315,7 @@ export default function ProductImageGallery({
                             )}
                         </div>
 
-                        <div className="relative">
+                        <div className="relative md:hidden">
                             {hasMultipleImages && (
                                 <>
                                     <button
@@ -276,32 +348,15 @@ export default function ProductImageGallery({
                                             key={image.id}
                                             className="min-w-0 shrink-0 basis-[4.5rem] sm:basis-24"
                                         >
-                                            <button
-                                                type="button"
-                                                aria-label={`Ver imagem ${index + 1} de ${product.name}`}
-                                                aria-current={
-                                                    index === activeIndex
-                                                        ? 'true'
-                                                        : undefined
+                                            <GalleryThumbnail
+                                                image={image}
+                                                index={index}
+                                                productName={product.name}
+                                                active={index === activeIndex}
+                                                onSelect={() =>
+                                                    goToImage(index)
                                                 }
-                                                onClick={() => goToImage(index)}
-                                                className={`relative aspect-[3/4] w-full overflow-hidden rounded-xl border bg-black/20 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
-                                                    index === activeIndex
-                                                        ? 'border-primary shadow-[0_0_0_2px_color-mix(in_srgb,var(--primary)_22%,transparent),0_8px_24px_rgba(0,0,0,0.28)]'
-                                                        : 'border-white/10 opacity-55 hover:scale-[1.03] hover:border-white/35 hover:opacity-100'
-                                                }`}
-                                            >
-                                                <img
-                                                    src={
-                                                        image.thumb_url ??
-                                                        image.url
-                                                    }
-                                                    alt={`${product.name} — miniatura ${index + 1}`}
-                                                    loading="lazy"
-                                                    className="h-full w-full object-cover"
-                                                    draggable={false}
-                                                />
-                                            </button>
+                                            />
                                         </div>
                                     ))}
                                 </div>

@@ -48,8 +48,8 @@ function MetricCard({
         <Card
             className={
                 featured
-                    ? 'rounded-[1.75rem] border-0 bg-featured-card text-featured-card-foreground shadow-none'
-                    : 'rounded-[1.75rem] border-border/80 bg-card shadow-sm'
+                    ? 'ds-lift ds-reveal rounded-[1.75rem] border-0 bg-featured-card text-featured-card-foreground shadow-none'
+                    : 'ds-lift ds-reveal rounded-[1.75rem] border-border/80 bg-card shadow-sm'
             }
         >
             <CardContent className="flex min-h-32 flex-col justify-between gap-4 p-4 sm:min-h-40 sm:gap-6 sm:p-6">
@@ -74,7 +74,7 @@ function MetricCard({
                     </span>
                 </div>
                 <div className="grid gap-1">
-                    <strong className="text-3xl font-semibold tracking-tight">
+                    <strong className="ds-display text-4xl tabular-nums">
                         {value}
                     </strong>
                     <span
@@ -106,16 +106,16 @@ export default function Dashboard({ stats }: DashboardProps) {
         <>
             <Head title="Painel" />
 
-            <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
-                <header className="relative overflow-hidden rounded-[2rem] bg-featured-card px-6 py-8 text-featured-card-foreground shadow-sm sm:px-8 sm:py-10">
+            <div className="ds-ambient mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+                <header className="ds-reveal relative overflow-hidden rounded-[2rem] bg-featured-card px-6 py-8 text-featured-card-foreground shadow-lg shadow-foreground/10 sm:px-8 sm:py-10">
                     <div className="pointer-events-none absolute -top-24 -right-16 size-64 rounded-full border-[24px] border-primary/15" />
                     <div className="pointer-events-none absolute -right-8 -bottom-20 size-56 rounded-full bg-primary/10 blur-3xl" />
                     <div className="relative grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
                         <div className="grid gap-3">
-                            <p className="text-xs font-semibold tracking-[0.22em] text-primary uppercase">
+                            <p className="ds-eyebrow text-primary">
                                 Painel de distribuição / visão geral
                             </p>
-                            <h1 className="max-w-2xl text-4xl font-semibold tracking-[-0.05em] sm:text-5xl">
+                            <h1 className="ds-display max-w-2xl text-4xl sm:text-5xl">
                                 O que está acontecendo no estoque?
                             </h1>
                             <p className="max-w-xl text-sm leading-6 text-featured-card-muted sm:text-base">
@@ -145,7 +145,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                 </header>
 
                 <section
-                    className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
+                    className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 [&>*:nth-child(2)]:[--reveal-delay:60ms] [&>*:nth-child(3)]:[--reveal-delay:120ms] [&>*:nth-child(4)]:[--reveal-delay:180ms]"
                     aria-label="Resumo da operação"
                 >
                     <MetricCard
@@ -179,12 +179,12 @@ export default function Dashboard({ stats }: DashboardProps) {
                 </section>
 
                 <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-                    <Card className="rounded-[1.75rem] border-border/80 shadow-sm">
+                    <Card className="ds-reveal ds-lift rounded-[1.75rem] border-border/80 shadow-sm">
                         <CardHeader className="p-6 pb-3">
                             <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
                                 Próximo passo
                             </p>
-                            <CardTitle className="text-2xl tracking-tight">
+                            <CardTitle className="ds-display text-2xl">
                                 Mantenha o catálogo reconhecível
                             </CardTitle>
                             <CardDescription className="max-w-xl leading-6">
@@ -202,7 +202,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                         </CardContent>
                     </Card>
 
-                    <Card className="rounded-[1.75rem] border-primary/25 bg-primary/10 shadow-none">
+                    <Card className="ds-reveal ds-lift rounded-[1.75rem] border-primary/25 bg-primary/10 shadow-none [--reveal-delay:80ms]">
                         <CardContent className="flex h-full items-center gap-4 p-6">
                             <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
                                 <Warehouse className="size-6" />
@@ -231,7 +231,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                 </section>
 
                 <section aria-labelledby="orders-summary-title">
-                    <Card className="overflow-hidden rounded-[1.75rem] border-border/80 shadow-sm">
+                    <Card className="ds-reveal ds-lift overflow-hidden rounded-[1.75rem] border-border/80 shadow-sm [--reveal-delay:140ms]">
                         <CardContent className="grid gap-6 p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
                             <div className="grid min-w-0 gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start">
                                 <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
@@ -240,7 +240,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                                 <div className="grid min-w-0 gap-2">
                                     <h2
                                         id="orders-summary-title"
-                                        className="text-2xl font-semibold tracking-tight"
+                                        className="ds-display text-2xl"
                                     >
                                         Pedidos para preparar
                                     </h2>

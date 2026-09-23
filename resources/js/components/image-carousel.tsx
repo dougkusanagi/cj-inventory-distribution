@@ -12,6 +12,7 @@ type ImageCarouselProps = {
     nextTestId?: string;
     imageTestId?: string;
     onImageClick?: () => void;
+    imageClickAriaLabel?: (index: number) => string;
 };
 
 export default function ImageCarousel({
@@ -24,6 +25,7 @@ export default function ImageCarousel({
     nextTestId,
     imageTestId,
     onImageClick,
+    imageClickAriaLabel,
 }: ImageCarouselProps) {
     const [emblaRef, emblaApi] = useEmblaCarousel({
         loop: images.length > 1,
@@ -130,9 +132,10 @@ export default function ImageCarousel({
                                 onClick={onImageClick}
                                 className="absolute inset-0 size-full cursor-zoom-in text-left outline-none"
                                 aria-label={
-                                    index === 0
+                                    imageClickAriaLabel?.(index) ??
+                                    (index === 0
                                         ? `Ver sacos de ${alt}`
-                                        : `Ver sacos de ${alt}, imagem ${index + 1}`
+                                        : `Ver sacos de ${alt}, imagem ${index + 1}`)
                                 }
                             >
                                 {renderImage(src, index)}

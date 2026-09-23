@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\StockOfferVolume;
 use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
 
 function inventoryVolume(): StockOfferVolume
 {
@@ -17,6 +18,32 @@ function inventoryVolume(): StockOfferVolume
 
     return $volume->load(['items', 'offer.product']);
 }
+
+test('inventory selection and count routes render their matching screens', function () {
+    $user = User::factory()->create();
+    $volume = inventoryVolume();
+
+    $this->actingAs($user)
+        ->get(route('inventory.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('inventory/index')
+            ->where('volumes.data.0.id', $volume->id));
+
+    $this->actingAs($user)->post(route('inventory.store'), [
+        'volume_ids' => [$volume->id],
+        'reason' => 'Conferência mensal',
+        'idempotency_key' => '323e4567-e89b-42d3-a456-426614174000',
+    ])->assertRedirect();
+
+    $count = InventoryCount::query()->sole();
+
+    $this->actingAs($user)
+        ->get(route('inventory.show', $count))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('inventory/show')
+            ->where('inventory.id', $count->id)
+            ->has('inventory.items', 1));
+});
 
 test('a balance keeps its count in draft until the final confirmation records the adjustment', function () {
     $user = User::factory()->create();

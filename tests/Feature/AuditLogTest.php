@@ -5,7 +5,6 @@ use App\Models\AuditLog;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
-use LogicException;
 
 test('administrative writes create audit records with actor and snapshots', function () {
     $user = User::factory()->create();
