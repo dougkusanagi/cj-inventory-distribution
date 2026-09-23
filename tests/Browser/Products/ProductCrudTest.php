@@ -1,8 +1,11 @@
 <?php
 
+use App\Enums\StockMovementSource;
+use App\Enums\StockMovementType;
 use App\Enums\StockOfferType;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\StockMovement;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Vite;
@@ -314,7 +317,7 @@ it('edits product details while keeping existing stock read only', function () {
     expect($product->latestOffer->stockVolumes)->toHaveCount(1);
 });
 
-it('routes an existing sack adjustment through the audited recount flow', function () {
+it('saves a product recount and records its stock adjustment', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create(['name' => 'Produto com tamanho editável E2E']);
     $offer = $product->offers()->create([
@@ -333,7 +336,7 @@ it('routes an existing sack adjustment through the audited recount flow', functi
 
     $this->actingAs($user);
 
-    visit(route('products.edit', [$product->id], false))
+    $page = visit(route('products.edit', [$product->id], false))
         ->click('#product-tab-stock')
         ->assertSee('Saco 1')
         ->assertSee('4 peças · Disponível')
@@ -343,10 +346,28 @@ it('routes an existing sack adjustment through the audited recount flow', functi
         ->click('button[role="combobox"]:has-text("Selecione o saco")')
         ->click('[role="option"]:has-text("SC-000001")')
         ->assertPresent('#recount-0')
+        ->assertValue('#recount-0', '4')
+        ->clear('#recount-0')
+        ->fill('#recount-0', '3')
+        ->assertValue('#recount-total', '3')
+        ->click('#recount-reason')
+        ->click('[role="option"]:has-text("Balanço ou inventário")')
+        ->press('Confirmar recontagem')
+        ->assertRoute('products.edit', [$product->id])
+        ->assertSee('3 peças · Disponível')
+        ->assertSee('Contagem do saco atualizada.')
         ->assertNoJavaScriptErrors();
 
-    expect($item->fresh()->quantity)->toBe(4);
-    expect($volume->fresh()->total_quantity)->toBe(4);
+    $movement = StockMovement::query()->sole();
+    $movementItem = $movement->items()->sole();
+
+    expect($item->fresh()->quantity)->toBe(3);
+    expect($volume->fresh()->total_quantity)->toBe(3);
+    expect($movement->source)->toBe(StockMovementSource::Adjustment);
+    expect($movement->type)->toBe(StockMovementType::Out);
+    expect($movement->reason)->toBe('Balanço ou inventário');
+    expect($movementItem->previous_state['total_quantity'])->toBe(4);
+    expect($movementItem->resulting_state['total_quantity'])->toBe(3);
 });
 
 it('keeps zero stock history read only in the product form', function () {

@@ -1,8 +1,11 @@
 <?php
 
+use App\Enums\StockMovementSource;
+use App\Enums\StockMovementType;
 use App\Enums\StockOfferType;
 use App\Models\InventoryCount;
 use App\Models\Product;
+use App\Models\StockMovement;
 use App\Models\User;
 use Illuminate\Support\Facades\Vite;
 
@@ -11,7 +14,7 @@ beforeEach(function (): void {
     Vite::useHotFile(storage_path('framework/testing-hot-file'));
 });
 
-it('guides the user from selecting a sack to saving its count', function () {
+it('selects, counts, and confirms a stock balance, applying its adjustment', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create(['name' => 'Calça para conferir']);
     $offer = $product->offers()->create(['type' => StockOfferType::Replenishment]);
@@ -43,6 +46,7 @@ it('guides the user from selecting a sack to saving its count', function () {
         ->assertRoute('inventory.show', [$count->id])
         ->assertSee('0 de 1 sacos contados')
         ->assertSee('Conte o que está no saco')
+        ->assertDisabled('Confirmar balanço')
         ->clear("#count-{$countItem->id}-0")
         ->fill("#count-{$countItem->id}-0", '8')
         ->press('Salvar e continuar')
@@ -53,4 +57,35 @@ it('guides the user from selecting a sack to saving its count', function () {
 
     expect($size->fresh()->quantity)->toBe(10)
         ->and($countItem->fresh()->counted_total)->toBe(8);
+
+    $page->script('window.confirm = () => false;');
+
+    $page
+        ->press('Confirmar balanço')
+        ->assertSee('Em andamento')
+        ->assertEnabled('Confirmar balanço');
+
+    expect($count->refresh()->status)->toBe('draft');
+    expect(StockMovement::query()->count())->toBe(0);
+    expect($volume->refresh()->total_quantity)->toBe(10);
+
+    $page->script('window.confirm = () => true;');
+
+    $page
+        ->press('Confirmar balanço')
+        ->assertSee('Confirmado');
+
+    $movement = StockMovement::query()->sole();
+
+    expect($count->refresh()->status)->toBe('confirmed');
+    expect($count->confirmed_by)->toBe($user->id);
+    expect($volume->refresh()->total_quantity)->toBe(8);
+    expect($size->refresh()->quantity)->toBe(8);
+    expect($countItem->refresh()->stock_movement_id)->toBe($movement->id);
+    expect($movement->source)->toBe(StockMovementSource::Adjustment);
+    expect($movement->type)->toBe(StockMovementType::Out);
+
+    $page
+        ->assertSee('Ver ajuste #'.$movement->id)
+        ->assertNoJavaScriptErrors();
 });
