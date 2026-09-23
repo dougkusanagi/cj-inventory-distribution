@@ -6,7 +6,9 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\StockOffer;
 use Database\Seeders\CatalogDemoSeeder;
+use Database\Seeders\FullSizeCatalogDemoSeeder;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('seeds a repeatable catalog demo with classified products and physical sacks', function () {
     Storage::fake('public');
@@ -75,4 +77,25 @@ test('product and category factories expose catalog classifications', function (
     expect($slimProduct->category->is($category))->toBeTrue()
         ->and($slimProduct->line)->toBe(ProductLine::Slim)
         ->and($plusProduct->line)->toBe(ProductLine::Plus);
+});
+
+test('the complete size demo is repeatable and visible in the public catalog', function () {
+    Storage::fake('public');
+
+    $this->seed(CatalogDemoSeeder::class);
+    $this->seed(FullSizeCatalogDemoSeeder::class);
+    $this->seed(FullSizeCatalogDemoSeeder::class);
+
+    expect(Product::query()->where('code', 'DEMO-CJ-0009')->count())->toBe(1);
+
+    $this->get(route('catalog', ['search' => '34 a 46']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('products.data', 1)
+            ->where('products.data.0.name', 'Calça Jeans 34 a 46')
+            ->where('products.data.0.volumes.0.pieces', 14)
+            ->where('products.data.0.volumes.0.sizes', array_map(
+                fn (string $size): array => ['size' => $size, 'quantity' => 2],
+                ['34', '36', '38', '40', '42', '44', '46'],
+            )));
 });

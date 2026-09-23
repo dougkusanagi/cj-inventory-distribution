@@ -584,6 +584,46 @@ export default function DesignSystem() {
                         </div>
                     </section>
 
+                    <section className="grid gap-6 rounded-[1.75rem] border border-border bg-card p-6 sm:p-8">
+                        <SectionHeading
+                            eyebrow="Movimento e superfícies"
+                            title="Resposta rápida, presença leve"
+                            description="Elevação em cartões, pressão nas ações e entrada suave organizam a atenção sem atrasar a operação. O sistema respeita a preferência por movimento reduzido."
+                        />
+                        <div className="grid gap-4 sm:grid-cols-3">
+                            <div className="ds-surface ds-lift p-5">
+                                <p className="ds-eyebrow text-highlight">
+                                    Superfície
+                                </p>
+                                <p className="mt-3 text-lg font-semibold">
+                                    Passe o cursor
+                                </p>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    Borda, sombra e deslocamento trabalham
+                                    juntos.
+                                </p>
+                            </div>
+                            <div className="ds-surface ds-reveal p-5 [--reveal-delay:100ms]">
+                                <p className="ds-eyebrow text-highlight">
+                                    Entrada
+                                </p>
+                                <p className="mt-3 text-lg font-semibold">
+                                    Aparece em sequência
+                                </p>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    Use atrasos curtos apenas nos primeiros
+                                    elementos.
+                                </p>
+                            </div>
+                            <div className="ds-surface grid content-between gap-4 p-5">
+                                <p className="ds-eyebrow text-highlight">
+                                    Ação
+                                </p>
+                                <Button>Pressione o botão</Button>
+                            </div>
+                        </div>
+                    </section>
+
                     <footer className="flex flex-col justify-between gap-4 border-t border-border pt-8 text-sm sm:flex-row sm:items-center">
                         <p className="text-muted-foreground">
                             Fonte:{' '}
