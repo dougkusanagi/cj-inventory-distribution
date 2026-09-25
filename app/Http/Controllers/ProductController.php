@@ -35,69 +35,27 @@ class ProductController extends Controller
      */
     public function index(Request $request): Response
     {
-        Gate::authorize('viewAny', Product::class);
+        return $this->productsIndex($request);
+    }
 
-        $search = trim($request->string('search')->toString());
-        $categoryId = $request->integer('category');
-        $line = $request->string('line')->toString();
-        $image = $request->string('image')->toString();
-        $stockOfferType = $request->string('stock_offer_type')->toString();
+    public function cardPreview(Request $request): Response
+    {
+        return $this->productsIndex($request, 'products/card-preview');
+    }
 
-        $products = Product::query()
-            ->select(['id', 'code', 'model', 'name', 'category_id', 'line', 'notes', 'is_active', 'created_at', 'updated_at'])
-            ->with([
-                'category:id,name,is_active',
-                'offers.stockVolumes' => function (Relation $query): void {
-                    $query->select([
-                        'id',
-                        'stock_offer_id',
-                        'sort_order',
-                        'total_quantity',
-                        'current_order_id',
-                        'consumed_at', 'code', 'stock_version',
-                    ])->withExists([
-                        'orderItems as has_order_items',
-                        'stockMovementItems as has_stock_movements',
-                    ]);
-                },
-                'offers.stockVolumes.items:id,stock_offer_volume_id,size,sort_order,is_active,quantity',
-                'media',
-            ])
-            ->when($search !== '', function (Builder $query) use ($search): void {
-                NormalizedSearch::apply($query, $search, ['name', 'model', 'code']);
-            })
-            ->when($categoryId > 0, fn (Builder $query) => $query->where('category_id', $categoryId))
-            ->when(in_array($line, array_column(ProductLine::cases(), 'value'), true), fn (Builder $query) => $query->where('line', $line))
-            ->when(in_array($stockOfferType, array_column(StockOfferType::cases(), 'value'), true), fn (Builder $query) => $query->whereHas('offers', fn (Builder $query) => $query->where('type', $stockOfferType)))
-            ->when($image === 'with', fn (Builder $query) => $query->whereHas('media', fn (Builder $query) => $query->where('collection_name', Product::MEDIA_COLLECTION)))
-            ->when($image === 'without', fn (Builder $query) => $query->whereDoesntHave('media', fn (Builder $query) => $query->where('collection_name', Product::MEDIA_COLLECTION)))
-            ->latest()
-            ->paginate(12)
-            ->withQueryString()
-            ->through(fn (Product $product): array => ProductResource::make($product)->resolve());
+    public function cardPreviewV3(Request $request): Response
+    {
+        return $this->productsIndex($request, 'products/card-preview-v3');
+    }
 
-        return Inertia::render('products/index', [
-            'products' => [
-                'data' => $products->items(),
-                'links' => $products->linkCollection()->toArray(),
-                'meta' => [
-                    'current_page' => $products->currentPage(),
-                    'last_page' => $products->lastPage(),
-                    'total' => $products->total(),
-                ],
-            ],
-            'filters' => [
-                'search' => $search,
-                'category' => $categoryId > 0 ? $categoryId : null,
-                'line' => $line,
-                'stock_offer_type' => $stockOfferType,
-                'image' => $image,
-            ],
-            'categories' => Category::query()
-                ->orderBy('name')
-                ->get(['id', 'name', 'is_active'])
-                ->toArray(),
-        ]);
+    public function cardPreviewV4(Request $request): Response
+    {
+        return $this->productsIndex($request, 'products/cards-v4');
+    }
+
+    public function cardPreviewV5(Request $request): Response
+    {
+        return $this->productsIndex($request, 'products/cards-v5');
     }
 
     /**
@@ -177,6 +135,73 @@ class ProductController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Produto excluído.']);
 
         return to_route('products.index');
+    }
+
+    private function productsIndex(Request $request, string $component = 'products/index'): Response
+    {
+        Gate::authorize('viewAny', Product::class);
+
+        $search = trim($request->string('search')->toString());
+        $categoryId = $request->integer('category');
+        $line = $request->string('line')->toString();
+        $image = $request->string('image')->toString();
+        $stockOfferType = $request->string('stock_offer_type')->toString();
+
+        $products = Product::query()
+            ->select(['id', 'code', 'model', 'name', 'category_id', 'line', 'notes', 'is_active', 'created_at', 'updated_at'])
+            ->with([
+                'category:id,name,is_active',
+                'offers.stockVolumes' => function (Relation $query): void {
+                    $query->select([
+                        'id',
+                        'stock_offer_id',
+                        'sort_order',
+                        'total_quantity',
+                        'current_order_id',
+                        'consumed_at', 'code', 'stock_version',
+                    ])->withExists([
+                        'orderItems as has_order_items',
+                        'stockMovementItems as has_stock_movements',
+                    ]);
+                },
+                'offers.stockVolumes.items:id,stock_offer_volume_id,size,sort_order,is_active,quantity',
+                'media',
+            ])
+            ->when($search !== '', function (Builder $query) use ($search): void {
+                NormalizedSearch::apply($query, $search, ['name', 'model', 'code']);
+            })
+            ->when($categoryId > 0, fn (Builder $query) => $query->where('category_id', $categoryId))
+            ->when(in_array($line, array_column(ProductLine::cases(), 'value'), true), fn (Builder $query) => $query->where('line', $line))
+            ->when(in_array($stockOfferType, array_column(StockOfferType::cases(), 'value'), true), fn (Builder $query) => $query->whereHas('offers', fn (Builder $query) => $query->where('type', $stockOfferType)))
+            ->when($image === 'with', fn (Builder $query) => $query->whereHas('media', fn (Builder $query) => $query->where('collection_name', Product::MEDIA_COLLECTION)))
+            ->when($image === 'without', fn (Builder $query) => $query->whereDoesntHave('media', fn (Builder $query) => $query->where('collection_name', Product::MEDIA_COLLECTION)))
+            ->latest()
+            ->paginate(12)
+            ->withQueryString()
+            ->through(fn (Product $product): array => ProductResource::make($product)->resolve());
+
+        return Inertia::render($component, [
+            'products' => [
+                'data' => $products->items(),
+                'links' => $products->linkCollection()->toArray(),
+                'meta' => [
+                    'current_page' => $products->currentPage(),
+                    'last_page' => $products->lastPage(),
+                    'total' => $products->total(),
+                ],
+            ],
+            'filters' => [
+                'search' => $search,
+                'category' => $categoryId > 0 ? $categoryId : null,
+                'line' => $line,
+                'stock_offer_type' => $stockOfferType,
+                'image' => $image,
+            ],
+            'categories' => Category::query()
+                ->orderBy('name')
+                ->get(['id', 'name', 'is_active'])
+                ->toArray(),
+        ]);
     }
 
     /** @return array<int, array{id: int, name: string, is_active: bool}> */

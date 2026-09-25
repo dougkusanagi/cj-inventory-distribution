@@ -30,6 +30,14 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('painel')->group(functi
     Route::post('estoque/balancos/{inventory}/confirmar', [InventoryCountController::class, 'confirm'])->name('inventory.confirm');
     Route::post('estoque/balancos/{inventory}/cancelar', [InventoryCountController::class, 'cancel'])->name('inventory.cancel');
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('produtos/cards-v2', [ProductController::class, 'cardPreview'])
+        ->name('products.card-preview');
+    Route::get('produtos/cards-v3', [ProductController::class, 'cardPreviewV3'])
+        ->name('products.card-preview-v3');
+    Route::get('produtos/cards-v4', [ProductController::class, 'cardPreviewV4'])
+        ->name('products.card-preview-v4');
+    Route::get('produtos/cards-v5', [ProductController::class, 'cardPreviewV5'])
+        ->name('products.card-preview-v5');
     Route::resource('produtos', ProductController::class)
         ->names('products')
         ->parameters(['produtos' => 'product'])

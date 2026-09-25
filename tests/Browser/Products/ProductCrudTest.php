@@ -48,6 +48,109 @@ it('shows the grade type, commercial line, and category in product cards and tab
         ->assertNoJavaScriptErrors();
 });
 
+it('renders the refined product card preview with compact stock details', function () {
+    $user = User::factory()->create();
+    $category = Category::factory()->create(['name' => 'Card refined category']);
+    $product = Product::factory()
+        ->inCategory($category)
+        ->slim()
+        ->create([
+            'name' => 'Produto no card refinado',
+            'model' => '9999',
+            'notes' => 'Observação curta para comparação visual.',
+        ]);
+    $product->addMedia(UploadedFile::fake()->image('refined-card.jpg', 800, 1000))
+        ->toMediaCollection(Product::MEDIA_COLLECTION);
+    $offer = $product->offers()->create([
+        'type' => StockOfferType::BrokenGrade,
+    ]);
+    $volume = $offer->stockVolumes()->create(['total_quantity' => 24]);
+    $volume->items()->createMany([
+        ['size' => '36', 'sort_order' => 0, 'is_active' => true, 'quantity' => 8],
+        ['size' => '38', 'sort_order' => 1, 'is_active' => true, 'quantity' => 8],
+        ['size' => '40', 'sort_order' => 2, 'is_active' => true, 'quantity' => 8],
+    ]);
+
+    $this->actingAs($user);
+
+    visit(route('products.card-preview', [], false))
+        ->resize(390, 844)
+        ->assertScript('document.documentElement.scrollWidth <= document.documentElement.clientWidth')
+        ->assertPresent('[data-testid="product-cards-refined"]')
+        ->assertPresent('[data-testid="product-card-refined"]')
+        ->assertScript('document.querySelector(\'[data-testid="product-card-refined"]\').getBoundingClientRect().height < 520')
+        ->assertSee('Produto no card refinado')
+        ->assertSee('Mod. 9999')
+        ->assertSee('Grade Furada')
+        ->assertSee('Slim')
+        ->assertSee('Card refined category')
+        ->assertSee('24')
+        ->assertSee('1 saco disponível')
+        ->assertPresent('a[aria-label="Editar Produto no card refinado"]')
+        ->assertMissing('table[aria-label="Produtos cadastrados"]')
+        ->assertMissing('button[aria-label="Visualização em cards"]')
+        ->assertNoJavaScriptErrors();
+});
+
+it('renders the v3 product card preview with the catalog pattern', function () {
+    $user = User::factory()->create();
+    $category = Category::factory()->create(['name' => 'Card v3 category']);
+    $product = Product::factory()
+        ->inCategory($category)
+        ->slim()
+        ->create([
+            'name' => 'Produto no card v3',
+            'model' => '9999',
+            'notes' => 'Observação curta para comparação visual.',
+        ]);
+    $product->addMedia(UploadedFile::fake()->image('v3-card.jpg', 800, 1000))
+        ->toMediaCollection(Product::MEDIA_COLLECTION);
+    $offer = $product->offers()->create([
+        'type' => StockOfferType::BrokenGrade,
+    ]);
+    $volume = $offer->stockVolumes()->create(['total_quantity' => 24]);
+    $volume->items()->createMany([
+        ['size' => '36', 'sort_order' => 0, 'is_active' => true, 'quantity' => 8],
+        ['size' => '38', 'sort_order' => 1, 'is_active' => true, 'quantity' => 8],
+        ['size' => '40', 'sort_order' => 2, 'is_active' => true, 'quantity' => 8],
+    ]);
+
+    $this->actingAs($user);
+
+    visit(route('products.card-preview-v3', [], false))
+        ->resize(390, 844)
+        ->assertScript('document.documentElement.scrollWidth <= document.documentElement.clientWidth')
+        ->assertPresent('[data-testid="product-cards-v3"]')
+        ->assertPresent('[data-testid="product-card-v3"]')
+        ->assertScript('document.querySelector(\'[data-testid="product-card-v3"]\').getBoundingClientRect().height < 950')
+        ->assertSee('Produto no card v3')
+        ->assertSee('Mod. 9999')
+        ->assertSee('Grade Furada')
+        ->assertSee('Slim')
+        ->assertSee('Card v3 category')
+        ->assertSee('24')
+        ->assertSee('1 saco disponível')
+        ->assertPresent('button[aria-label="Ver observação de Produto no card v3"]')
+        ->click('button[aria-label="Ver observação de Produto no card v3"]')
+        ->assertVisible('[data-slot="popover-content"]')
+        ->assertSee('Observação curta para comparação visual.')
+        ->assertMissing('[data-slot="drawer-overlay"]')
+        ->click('button[aria-label="Ver observação de Produto no card v3"]')
+        ->assertMissing('[data-slot="popover-content"]')
+        ->assertSee('Mais')
+        ->assertPresent('button[aria-label="Ver mais informações de Produto no card v3"]')
+        ->assertMissing('[data-testid="product-card-v3-details"]')
+        ->assertPresent('a[aria-label="Editar Produto no card v3"]')
+        ->click('button[aria-label="Ver mais informações de Produto no card v3"]')
+        ->assertDontSee('Quantidade por tamanho')
+        ->assertSee('Quantidade por saco')
+        ->assertPresent('button[aria-label="Excluir Produto no card v3"]')
+        ->assertMissing('[data-testid="product-card-refined"]')
+        ->assertMissing('table[aria-label="Produtos cadastrados"]')
+        ->assertMissing('button[aria-label="Visualização em cards"]')
+        ->assertNoJavaScriptErrors();
+});
+
 it('collapses product filters into a mobile drawer', function () {
     $user = User::factory()->create();
     $category = Category::factory()->create(['name' => 'Categoria filtrada']);
@@ -125,7 +228,9 @@ it('opens a product image gallery and changes the selected image', function () {
         ->click('button[aria-label="Próxima imagem de Produto com galeria E2E"]')
         ->assertSee('2 de 2')
         ->assertSee('100%')
-        ->click('button[aria-label="Ver imagem 1 de Produto com galeria E2E"]')
+        ->click(
+            'button[aria-label="Ver imagem 1 de Produto com galeria E2E"]:visible',
+        )
         ->assertSee('1 de 2')
         ->click('[data-testid="galeria-produto-'.$product->id.'"] > button')
         ->click('[data-testid="abrir-galeria-produto-'.$product->id.'"]')
