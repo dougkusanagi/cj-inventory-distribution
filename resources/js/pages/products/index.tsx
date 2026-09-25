@@ -20,7 +20,6 @@ import {
     type ReactNode,
 } from 'react';
 import { destroy } from '@/actions/App/Http/Controllers/ProductController';
-import AlertError from '@/components/alert-error';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -61,6 +60,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import TextLink from '@/components/text-link';
 import ProductImageGallery from '@/components/products/product-image-gallery';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import {
     index as productsIndex,
     edit as productEdit,
@@ -651,7 +651,6 @@ export default function ProductsIndex({
         null,
     );
     const [deleting, setDeleting] = useState(false);
-    const [deleteErrors, setDeleteErrors] = useState<string[]>([]);
 
     const openProductGallery = (product: Product): void => {
         if (product.images.length === 0) {
@@ -731,13 +730,14 @@ export default function ProductsIndex({
         }
 
         setDeleting(true);
-        setDeleteErrors([]);
         router.delete(destroy.url(productToDelete.id), {
             preserveScroll: true,
             onError: (errors) => {
-                setDeleteErrors(Object.values(errors));
+                toast.error(Object.values(errors).join(' '), {
+                    closeButton: true,
+                    duration: Infinity,
+                });
             },
-            onSuccess: () => setDeleteErrors([]),
             onFinish: () => {
                 setDeleting(false);
                 setProductToDelete(null);
@@ -778,10 +778,6 @@ export default function ProductsIndex({
                         </Link>
                     </Button>
                 </header>
-
-                {deleteErrors.length > 0 && (
-                    <AlertError errors={deleteErrors} />
-                )}
 
                 <div className="md:hidden">
                     <form

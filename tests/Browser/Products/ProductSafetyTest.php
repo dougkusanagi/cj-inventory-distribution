@@ -235,6 +235,7 @@ it('explains why a product with available stock cannot be moved to the trash', f
         ->click('button[aria-label="Excluir Produto com estoque ativo E2E"]')
         ->press('Excluir produto')
         ->assertSee('Produto com estoque disponível ou reservado não pode ser excluído.')
+        ->assertPresent('[data-sonner-toast][data-type="error"]')
         ->assertSee($product->name)
         ->assertNoJavaScriptErrors();
 
