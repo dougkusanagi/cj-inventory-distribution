@@ -17,8 +17,8 @@ test('seeds a repeatable catalog demo with classified products and physical sack
     $this->seed(CatalogDemoSeeder::class);
 
     expect(Category::query()->count())->toBe(6)
-        ->and(Product::query()->where('code', 'like', 'DEMO-CJ-%')->count())->toBe(8)
-        ->and(StockOffer::query()->whereHas('product', fn ($query) => $query->where('code', 'like', 'DEMO-CJ-%'))->count())->toBe(8);
+        ->and(Product::query()->where('code', 'like', 'DEMO-CJ-%')->count())->toBe(10)
+        ->and(StockOffer::query()->whereHas('product', fn ($query) => $query->where('code', 'like', 'DEMO-CJ-%'))->count())->toBe(10);
 
     $product = Product::query()
         ->with(['category', 'latestOffer.stockVolumes.items'])
@@ -63,6 +63,23 @@ test('seeds a repeatable catalog demo with classified products and physical sack
         ->toHaveCount(1)
         ->and($shortMom->getFirstMedia(Product::MEDIA_COLLECTION)?->file_name)
         ->toBe('short-mom.png');
+
+    $photoFallback = Product::query()
+        ->with('latestOffer.stockVolumes.items')
+        ->where('code', 'DEMO-CJ-0010')
+        ->firstOrFail();
+
+    expect($photoFallback->getMedia(Product::MEDIA_COLLECTION))->toHaveCount(0)
+        ->and($photoFallback->latestOffer->stockVolumes->first()->items)->toHaveCount(0)
+        ->and($photoFallback->latestOffer->type)->toBe(StockOfferType::BrokenGrade);
+
+    $unknownQuantities = Product::query()
+        ->with('latestOffer.stockVolumes.items')
+        ->where('code', 'DEMO-CJ-0011')
+        ->firstOrFail();
+
+    expect($unknownQuantities->latestOffer->stockVolumes->first()->items->where('is_active', true)->pluck('quantity')->all())
+        ->toBe([null, null, null]);
 });
 
 test('product and category factories expose catalog classifications', function () {

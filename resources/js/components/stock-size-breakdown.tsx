@@ -4,6 +4,14 @@ type StockSize = {
 };
 
 export function StockSizeBreakdown({ sizes }: { sizes: StockSize[] }) {
+    if (sizes.length === 0) {
+        return (
+            <p className="text-sm text-muted-foreground">
+                Tamanhos não informados
+            </p>
+        );
+    }
+
     const sizesWithKnownQuantity = sizes.filter(
         ({ quantity }) => quantity !== null,
     );

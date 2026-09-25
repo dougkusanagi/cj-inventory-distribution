@@ -229,10 +229,10 @@ it('keeps a stock quantity when disabling a size is cancelled', function () {
         ->assertAttribute('#volume-total-0', 'aria-readonly', 'true')
         ->assertPresent('button[aria-label="Mais ações para o Saco 1"]');
 
-    $page->script('window.confirm = () => false;');
-
     $page
         ->click('#volume-0-active-2')
+        ->assertVisible('[role="dialog"]')
+        ->click('[role="dialog"] button:has-text("Voltar")')
         ->assertAttribute('#volume-0-active-2', 'aria-checked', 'true')
         ->assertValue('#volume-0-quantity-2', '7');
 

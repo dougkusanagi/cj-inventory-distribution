@@ -154,7 +154,7 @@ export default function ImageCarousel({
                         data-testid={previousTestId}
                         aria-label={`Imagem anterior de ${alt}`}
                         onClick={() => emblaApi?.scrollPrev()}
-                        className={`absolute ${compact ? 'left-2 size-8' : 'left-4 size-10'} top-1/2 z-10 flex -translate-y-1/2 items-center justify-center rounded-full bg-foreground/65 text-background opacity-0 shadow-sm transition-all duration-200 group-hover/carousel:opacity-100 hover:bg-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
+                        className={`absolute ${compact ? 'left-2' : 'left-4'} top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-foreground/65 text-background shadow-sm transition-colors duration-200 hover:bg-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
                     >
                         <ChevronLeft
                             className={compact ? 'size-4' : 'size-5'}
@@ -165,7 +165,7 @@ export default function ImageCarousel({
                         data-testid={nextTestId}
                         aria-label={`Próxima imagem de ${alt}`}
                         onClick={() => emblaApi?.scrollNext()}
-                        className={`absolute ${compact ? 'right-2 size-8' : 'right-4 size-10'} top-1/2 z-10 flex -translate-y-1/2 items-center justify-center rounded-full bg-foreground/65 text-background opacity-0 shadow-sm transition-all duration-200 group-hover/carousel:opacity-100 hover:bg-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
+                        className={`absolute ${compact ? 'right-2' : 'right-4'} top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-foreground/65 text-background shadow-sm transition-colors duration-200 hover:bg-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
                     >
                         <ChevronRight
                             className={compact ? 'size-4' : 'size-5'}
@@ -174,8 +174,12 @@ export default function ImageCarousel({
                     <div
                         role="group"
                         aria-label={`Imagem ${selectedIndex + 1} de ${images.length}`}
-                        className={`absolute ${compact ? 'bottom-3 px-2.5 py-1.5' : 'bottom-4 px-3 py-2'} left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-foreground/45 backdrop-blur-sm`}
+                        className={`absolute ${compact ? 'bottom-3' : 'bottom-4'} left-1/2 flex -translate-x-1/2 items-center gap-0.5`}
                     >
+                        <span
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-x-2 top-2 bottom-2 rounded-full bg-foreground/45 backdrop-blur-sm"
+                        />
                         {images.map((_, index) => (
                             <button
                                 type="button"
@@ -185,16 +189,21 @@ export default function ImageCarousel({
                                     index === selectedIndex ? 'true' : undefined
                                 }
                                 onClick={() => scrollTo(index)}
-                                className={`block rounded-full transition-all duration-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
-                                    index === selectedIndex
-                                        ? compact
-                                            ? 'h-1.5 w-4 bg-background'
-                                            : 'h-2 w-5 bg-background'
-                                        : compact
-                                          ? 'size-1.5 bg-background/45'
-                                          : 'size-2 bg-background/40'
-                                }`}
-                            />
+                                className="relative z-10 flex size-11 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                            >
+                                <span
+                                    aria-hidden="true"
+                                    className={`block rounded-full transition-all duration-300 ${
+                                        index === selectedIndex
+                                            ? compact
+                                                ? 'h-1.5 w-4 bg-background'
+                                                : 'h-2 w-5 bg-background'
+                                            : compact
+                                              ? 'size-1.5 bg-background/45'
+                                              : 'size-2 bg-background/40'
+                                    }`}
+                                />
+                            </button>
                         ))}
                     </div>
                 </>

@@ -342,11 +342,6 @@ export default function ShowOrder({ order }: { order: Order }) {
                                 >
                                     Separação e conferência
                                 </h2>
-                                <p className="max-w-2xl text-sm text-muted-foreground">
-                                    Separe cada saco, confira o conteúdo e
-                                    registre qualquer divergência antes de
-                                    finalizar.
-                                </p>
                             </div>
                             <div className="flex items-baseline gap-2 self-start rounded-xl border border-border bg-card px-3 py-2 text-sm sm:self-auto">
                                 <strong className="font-mono text-lg">
@@ -357,10 +352,23 @@ export default function ShowOrder({ order }: { order: Order }) {
                                 </span>
                             </div>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                            {order.items_count} sacos · {order.total_quantity}{' '}
-                            peças no pedido
-                        </p>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                            <span>
+                                {order.items_count} sacos ·{' '}
+                                {order.total_quantity} peças no pedido
+                            </span>
+                            {!readyForCompletion && completionHint && (
+                                <span
+                                    id="order-completion-hint"
+                                    aria-live="polite"
+                                >
+                                    <span className="font-medium text-foreground">
+                                        Próxima ação:
+                                    </span>{' '}
+                                    {completionHint}
+                                </span>
+                            )}
+                        </div>
                         {items.map((item) => {
                             const isSeparated = item.separated_at !== null;
                             const isChecked = item.checked_at !== null;
@@ -401,13 +409,75 @@ export default function ShowOrder({ order }: { order: Order }) {
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <strong className="font-mono text-sm">
-                                                {item.volume_code}
-                                            </strong>
-                                            <p className="text-sm text-muted-foreground">
-                                                {item.total_quantity} peças
-                                            </p>
+                                        <div className="flex items-start gap-2">
+                                            <div className="text-right">
+                                                <strong className="font-mono text-sm">
+                                                    {item.volume_code}
+                                                </strong>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {item.total_quantity} peças
+                                                </p>
+                                            </div>
+                                            {order.status === 'pending' && (
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                        asChild
+                                                    >
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="size-11 shrink-0 sm:size-9"
+                                                            aria-label={`Mais ações para ${item.volume_code}`}
+                                                            data-testid={`menu-acoes-saco-${item.id}`}
+                                                        >
+                                                            <Ellipsis />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent
+                                                        align="end"
+                                                        className="min-w-56"
+                                                    >
+                                                        <DropdownMenuLabel>
+                                                            Ações do saco
+                                                        </DropdownMenuLabel>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            onSelect={() =>
+                                                                openDivergenceDialog(
+                                                                    item,
+                                                                    'report',
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                progressForm.processing
+                                                            }
+                                                        >
+                                                            <AlertTriangle />
+                                                            {hasOpenDivergence
+                                                                ? 'Atualizar divergência'
+                                                                : 'Registrar divergência'}
+                                                        </DropdownMenuItem>
+                                                        {hasOpenDivergence && (
+                                                            <DropdownMenuItem
+                                                                onSelect={() =>
+                                                                    openDivergenceDialog(
+                                                                        item,
+                                                                        'resolve',
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    progressForm.processing
+                                                                }
+                                                            >
+                                                                <Check />
+                                                                Resolver
+                                                                divergência
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -523,42 +593,6 @@ export default function ShowOrder({ order }: { order: Order }) {
                                                     Desfazer conferência
                                                 </Button>
                                             )}
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() =>
-                                                    openDivergenceDialog(
-                                                        item,
-                                                        'report',
-                                                    )
-                                                }
-                                                disabled={
-                                                    progressForm.processing
-                                                }
-                                            >
-                                                <AlertTriangle />
-                                                {hasOpenDivergence
-                                                    ? 'Atualizar divergência'
-                                                    : 'Registrar divergência'}
-                                            </Button>
-                                            {hasOpenDivergence && (
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() =>
-                                                        openDivergenceDialog(
-                                                            item,
-                                                            'resolve',
-                                                        )
-                                                    }
-                                                    disabled={
-                                                        progressForm.processing
-                                                    }
-                                                >
-                                                    <Check />
-                                                    Resolver divergência
-                                                </Button>
-                                            )}
                                         </div>
                                     )}
                                 </Card>
@@ -567,26 +601,13 @@ export default function ShowOrder({ order }: { order: Order }) {
                     </section>
                     {order.status === 'pending' && (
                         <div
-                            className="sticky bottom-3 z-20 grid gap-3 rounded-xl border border-border bg-background/95 p-4 shadow-lg backdrop-blur sm:flex sm:items-center sm:justify-between"
+                            className="sticky bottom-3 z-20 grid gap-3 rounded-xl border border-border bg-background/95 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-lg backdrop-blur sm:flex sm:items-center sm:justify-between"
                             data-testid="acoes-finalizacao"
                         >
-                            <div className="grid gap-2 sm:mr-auto">
-                                {!readyForCompletion && (
-                                    <div className="grid gap-1 rounded-xl bg-muted p-3 text-sm text-muted-foreground">
-                                        <p>
-                                            Separe e confira todos os sacos e
-                                            resolva as divergências antes de
-                                            finalizar.
-                                        </p>
-                                        {completionHint && (
-                                            <p className="font-medium text-foreground">
-                                                Próxima ação: {completionHint}
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
-                                <InputError message={completeErrors.order} />
-                            </div>
+                            <InputError
+                                message={completeErrors.order}
+                                className="sm:mr-auto"
+                            />
                             <Dialog
                                 open={completeDialogOpen}
                                 onOpenChange={setCompleteDialogOpen}
@@ -598,6 +619,12 @@ export default function ShowOrder({ order }: { order: Order }) {
                                         disabled={
                                             !readyForCompletion ||
                                             completeForm.processing
+                                        }
+                                        aria-describedby={
+                                            !readyForCompletion &&
+                                            completionHint
+                                                ? 'order-completion-hint'
+                                                : undefined
                                         }
                                     >
                                         <CheckCircle2 />

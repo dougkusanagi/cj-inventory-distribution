@@ -51,8 +51,8 @@ class CatalogDemoSeeder extends Seeder
          *     additional_images?: list<string>,
          *     line: ProductLine,
          *     type: StockOfferType,
-         *     size_preset: 'numeric-female'|'letters',
-         *     volumes: list<array{total: int, sizes: array<string, int>}>
+         *     size_preset: 'numeric-female'|'letters'|'none',
+         *     volumes: list<array{total: int, sizes: array<string, int|null>}>
          * }> $products
          */
         $products = [
@@ -164,11 +164,38 @@ class CatalogDemoSeeder extends Seeder
                     ['total' => 24, 'sizes' => ['P' => 6, 'M' => 6, 'G' => 6, 'GG' => 6]],
                 ],
             ],
+            [
+                'code' => 'DEMO-CJ-0010',
+                'model' => null,
+                'name' => 'Blusa sem foto',
+                'category' => 'blusa',
+                'image' => null,
+                'line' => ProductLine::Slim,
+                'type' => StockOfferType::BrokenGrade,
+                'size_preset' => 'none',
+                'volumes' => [
+                    ['total' => 8, 'sizes' => []],
+                ],
+            ],
+            [
+                'code' => 'DEMO-CJ-0011',
+                'model' => '5012',
+                'name' => 'Cropped sem quantidades',
+                'category' => 'cropped',
+                'image' => 'cropped-jeans.png',
+                'line' => ProductLine::Plus,
+                'type' => StockOfferType::Replenishment,
+                'size_preset' => 'letters',
+                'volumes' => [
+                    ['total' => 15, 'sizes' => ['P' => null, 'M' => null, 'G' => null]],
+                ],
+            ],
         ];
 
         $sizePresets = [
             'numeric-female' => ['34', '36', '38', '40', '42', '44', '46'],
             'letters' => ['PP', 'P', 'M', 'G', 'GG'],
+            'none' => [],
         ];
 
         foreach ($products as $definition) {

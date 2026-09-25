@@ -11,6 +11,7 @@ import {
     Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
+import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -76,6 +77,12 @@ type StockOfferVolumeEditorProps = {
     errors: Record<string, string | undefined>;
     onChange: (volumes: StockOfferVolumeFormItem[]) => void;
     lockedVolumeIds?: number[];
+};
+
+type VolumeConfirmation = {
+    title: string;
+    description: string;
+    onConfirm: () => void;
 };
 
 function emptyItems(sizes: string[]): StockOfferVolumeItemFormItem[] {
@@ -219,6 +226,9 @@ export function StockOfferVolumeEditor({
     const [isCustomEditorOpen, setIsCustomEditorOpen] = useState(
         () => detectSharedPreset(volumes) === 'custom',
     );
+    const [confirmation, setConfirmation] = useState<VolumeConfirmation | null>(
+        null,
+    );
     const lockedVolumeIdSet = new Set(lockedVolumeIds);
     const isVolumeLocked = (
         volume: StockOfferVolumeFormItem | undefined,
@@ -326,21 +336,26 @@ export function StockOfferVolumeEditor({
             );
         });
 
-        if (
-            hasData &&
-            !window.confirm(
-                `Remover o tamanho ${sizeToRemove || 'informado'} de todos os sacos?`,
-            )
-        ) {
+        const remove = () =>
+            onChange(
+                synchronizeVolumesToSizes(
+                    volumes,
+                    sizes.filter((_, index) => index !== itemIndex),
+                ),
+            );
+
+        if (hasData) {
+            setConfirmation({
+                title: `Remover o tamanho ${sizeToRemove || 'informado'}?`,
+                description:
+                    'Esse tamanho será removido de todos os sacos e os dados preenchidos nele serão apagados.',
+                onConfirm: remove,
+            });
+
             return;
         }
 
-        onChange(
-            synchronizeVolumesToSizes(
-                volumes,
-                sizes.filter((_, index) => index !== itemIndex),
-            ),
-        );
+        remove();
     };
 
     const addVolume = () => {
@@ -391,15 +406,13 @@ export function StockOfferVolumeEditor({
             return;
         }
 
-        if (
-            !window.confirm(
-                `Remover o saco ${volumeIndex + 1} e seus tamanhos?`,
-            )
-        ) {
-            return;
-        }
-
-        onChange(volumes.filter((_, index) => index !== volumeIndex));
+        setConfirmation({
+            title: `Remover o Saco ${volumeIndex + 1}?`,
+            description:
+                'O saco e todos os tamanhos informados nele serão removidos deste produto.',
+            onConfirm: () =>
+                onChange(volumes.filter((_, index) => index !== volumeIndex)),
+        });
     };
 
     const moveVolume = (volumeIndex: number, direction: -1 | 1) => {
@@ -426,23 +439,30 @@ export function StockOfferVolumeEditor({
             return;
         }
 
+        const update = () =>
+            updateItem(volumeIndex, itemIndex, (currentItem) => ({
+                ...currentItem,
+                is_active: isActive,
+                quantity: isActive ? currentItem.quantity : null,
+            }));
+
         if (
             item &&
             !isActive &&
             item.quantity !== null &&
-            item.quantity !== '' &&
-            !window.confirm(
-                `Desativar o tamanho ${item.size}? A quantidade será apagada.`,
-            )
+            item.quantity !== ''
         ) {
+            setConfirmation({
+                title: `Desativar o tamanho ${item.size}?`,
+                description:
+                    'A quantidade preenchida para esse tamanho será apagada.',
+                onConfirm: update,
+            });
+
             return;
         }
 
-        updateItem(volumeIndex, itemIndex, (currentItem) => ({
-            ...currentItem,
-            is_active: isActive,
-            quantity: isActive ? currentItem.quantity : null,
-        }));
+        update();
     };
 
     const setAllItemsActive = (volumeIndex: number, isActive: boolean) => {
@@ -452,27 +472,34 @@ export function StockOfferVolumeEditor({
             return;
         }
 
+        const update = () =>
+            updateVolume(volumeIndex, (currentVolume) => ({
+                ...currentVolume,
+                items: currentVolume.items.map((item) => ({
+                    ...item,
+                    is_active: isActive,
+                    quantity: isActive ? item.quantity : null,
+                })),
+            }));
+
         if (
             volume &&
             !isActive &&
             volume.items.some(
                 (item) => item.quantity !== null && item.quantity !== '',
-            ) &&
-            !window.confirm(
-                'Desmarcar os tamanhos apagará as quantidades informadas. Deseja continuar?',
             )
         ) {
+            setConfirmation({
+                title: 'Desmarcar todos os tamanhos?',
+                description:
+                    'As quantidades informadas serão apagadas de todos os tamanhos deste saco.',
+                onConfirm: update,
+            });
+
             return;
         }
 
-        updateVolume(volumeIndex, (currentVolume) => ({
-            ...currentVolume,
-            items: currentVolume.items.map((item) => ({
-                ...item,
-                is_active: isActive,
-                quantity: isActive ? item.quantity : null,
-            })),
-        }));
+        update();
     };
 
     const totalQuantity = volumes.reduce(
@@ -1010,6 +1037,24 @@ export function StockOfferVolumeEditor({
                 <Plus />
                 Adicionar saco
             </Button>
+            <ConfirmationDialog
+                open={confirmation !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setConfirmation(null);
+                    }
+                }}
+                title={confirmation?.title ?? ''}
+                description={confirmation?.description ?? ''}
+                confirmLabel="Confirmar"
+                destructive
+                onConfirm={() => {
+                    const action = confirmation?.onConfirm;
+
+                    setConfirmation(null);
+                    action?.();
+                }}
+            />
         </div>
     );
 }

@@ -145,10 +145,10 @@ test('a manual stock movement can be reversed from its details screen', function
         ->click('#reverse-reason')
         ->click('[role="option"]:has-text("Operação cancelada")');
 
-    $page->script('window.confirm = () => true;');
-
     $page
         ->click('button:has-text("Confirmar estorno")')
+        ->assertVisible('[role="dialog"]')
+        ->click('[role="dialog"] button:has-text("Confirmar estorno")')
         ->assertSee('Estorno registrado.')
         ->assertSee('Estornado por')
         ->assertMissing('button:has-text("Estornar movimentação")')

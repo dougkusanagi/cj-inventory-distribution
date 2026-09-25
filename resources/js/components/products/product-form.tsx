@@ -6,6 +6,7 @@ import {
     update,
     store,
 } from '@/actions/App/Http/Controllers/ProductController';
+import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import InputError from '@/components/input-error';
 import { PaperBag } from '@/components/icons/paper-bag';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
@@ -144,6 +145,8 @@ export function ProductForm({
     const isEditing = product !== undefined;
     const [processingImages, setProcessingImages] = useState(false);
     const [activeTab, setActiveTab] = useState<ProductFormTab>('details');
+    const [clearStockConfirmationOpen, setClearStockConfirmationOpen] =
+        useState(false);
     const [coverPreview, setCoverPreview] =
         useState<ProductCoverPreview | null>(() => {
             const cover = product?.images[0];
@@ -277,18 +280,15 @@ export function ProductForm({
             return;
         }
 
-        const confirmed = window.confirm(
-            'Isso removerá a oferta de estoque e os sacos deste produto. Deseja continuar?',
-        );
+        setClearStockConfirmationOpen(true);
+    };
 
-        if (!confirmed) {
-            return;
-        }
-
+    const confirmClearCurrentStock = () => {
         form.setData((previousData) => ({
             ...previousData,
             stock_volumes: [],
         }));
+        setClearStockConfirmationOpen(false);
     };
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -345,7 +345,7 @@ export function ProductForm({
             ref={formRef}
             onSubmit={submit}
             noValidate
-            className="grid min-w-0 scroll-mt-4 gap-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:pb-28"
+            className="grid min-w-0 scroll-mt-4 gap-5 pb-[calc(7rem+env(safe-area-inset-bottom))]"
         >
             <p className="text-xs text-muted-foreground sm:text-sm">
                 Campos marcados com <span className="text-destructive">*</span>{' '}
@@ -926,6 +926,15 @@ export function ProductForm({
                     </Button>
                 </div>
             </div>
+            <ConfirmationDialog
+                open={clearStockConfirmationOpen}
+                onOpenChange={setClearStockConfirmationOpen}
+                title="Encerrar o estoque atual?"
+                description="A oferta de estoque e os sacos deste produto serão removidos ao salvar. O histórico de movimentações será preservado."
+                confirmLabel="Encerrar estoque"
+                destructive
+                onConfirm={confirmClearCurrentStock}
+            />
         </form>
     );
 }

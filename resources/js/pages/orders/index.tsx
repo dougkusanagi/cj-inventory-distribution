@@ -133,8 +133,37 @@ export default function OrdersIndex({
                         <OrderCard key={order.id} order={order} />
                     ))}
                     {orders.data.length === 0 && (
-                        <Card className="p-8 text-center text-sm text-muted-foreground">
-                            Nenhum pedido encontrado.
+                        <Card className="grid justify-items-center gap-4 p-8 text-center shadow-sm">
+                            <p className="text-sm text-muted-foreground">
+                                {filters.search || filters.status
+                                    ? 'Nenhum pedido encontrado com esses critérios.'
+                                    : 'Nenhum pedido registrado ainda.'}
+                            </p>
+                            {filters.search || filters.status ? (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() =>
+                                        router.get(
+                                            index.url(),
+                                            { search: '', status: '' },
+                                            {
+                                                preserveState: true,
+                                                replace: true,
+                                            },
+                                        )
+                                    }
+                                >
+                                    Limpar filtros
+                                </Button>
+                            ) : (
+                                <Button asChild>
+                                    <Link href={create()}>
+                                        <Plus />
+                                        Registrar primeiro pedido
+                                    </Link>
+                                </Button>
+                            )}
                         </Card>
                     )}
                 </div>

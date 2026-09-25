@@ -40,8 +40,7 @@ test('enables order completion after all sacks are checked without WhatsApp', fu
         ->assertSee('Observações')
         ->assertSee('12 pçs')
         ->assertSee('Separação e conferência')
-        ->assertSee('Separe cada saco, confira o conteúdo e registre qualquer divergência antes de finalizar.')
-        ->assertSee('Separe e confira todos os sacos e resolva as divergências antes de finalizar.')
+        ->assertSee('Próxima ação: Separe 1 saco pendente.')
         ->assertAttribute('#order-tab-details', 'aria-selected', 'true')
         ->assertAttribute('#order-tab-history', 'aria-selected', 'false')
         ->click('#order-tab-history')
@@ -68,7 +67,7 @@ test('enables order completion after all sacks are checked without WhatsApp', fu
         ->click("[data-testid=separar-saco-{$item->id}]")
         ->click("[data-testid=conferir-saco-{$item->id}]")
         ->assertEnabled('[data-testid="finalizar-pedido"]')
-        ->assertDontSee('Separe e confira todos os sacos e resolva as divergências antes de finalizar.');
+        ->assertDontSee('Próxima ação:');
 
     $page->script("document.querySelector('[data-testid=finalizar-pedido]')?.click()");
 
