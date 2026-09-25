@@ -939,16 +939,6 @@ function ProductCard({
     onOpenGallery: (product: Product) => void;
     variant?: ProductCardVariant;
 }) {
-    if (variant === 'v3') {
-        return (
-            <ProductCardV3
-                product={product}
-                onDelete={onDelete}
-                onOpenGallery={onOpenGallery}
-            />
-        );
-    }
-
     if (variant === 'refined') {
         return (
             <RefinedProductCard
@@ -960,82 +950,11 @@ function ProductCard({
     }
 
     return (
-        <article
-            data-testid="product-card"
-            className="group flex min-h-full flex-col overflow-hidden rounded-[1.75rem] border border-border/80 bg-card shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
-        >
-            <div className="relative aspect-[4/5] overflow-hidden bg-featured-card">
-                <ProductImageButton
-                    product={product}
-                    onOpenGallery={onOpenGallery}
-                    className="transition duration-500 group-hover:scale-105"
-                    iconClassName="size-8"
-                />
-                <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between p-4">
-                    <span className="rounded-full bg-background/90 px-3 py-1 font-mono text-[11px] font-semibold tracking-[0.12em] text-foreground shadow-sm backdrop-blur">
-                        {product.code}
-                    </span>
-                </div>
-            </div>
-
-            <div className="flex flex-1 flex-col gap-5 p-5">
-                <div className="grid gap-2">
-                    <div className="flex items-start justify-between gap-3">
-                        <TextLink
-                            href={productEdit(product.id)}
-                            className="text-xl leading-tight font-semibold tracking-tight text-card-foreground"
-                        >
-                            {product.name}
-                        </TextLink>
-                        <span
-                            className="mt-1 size-2 shrink-0 rounded-full bg-muted-foreground/60"
-                            aria-hidden="true"
-                        />
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                        {product.model
-                            ? `Modelo ${product.model}`
-                            : 'Modelo não informado'}
-                    </p>
-                    <ProductClassification product={product} />
-                </div>
-
-                <div className="flex min-h-7 flex-wrap gap-1.5">
-                    <ProductSizes product={product} />
-                </div>
-
-                <div className="mt-auto grid gap-4 border-t border-border pt-4">
-                    <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
-                        {product.notes ?? 'Nenhuma observação registrada.'}
-                    </p>
-                    <div className="grid gap-1 text-sm">
-                        <span className="font-semibold text-card-foreground">
-                            {product.available_quantity ?? 0} peças disponíveis
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                            Físico: {product.physical_quantity ?? 0} peças ·{' '}
-                            {product.physical_stock_volume_count ?? 0}{' '}
-                            {(product.physical_stock_volume_count ?? 0) === 1
-                                ? 'saco'
-                                : 'sacos'}
-                            {(product.reserved_quantity ?? 0) > 0 &&
-                                ` · Reservado: ${product.reserved_quantity}`}
-                            {(product.consumed_quantity ?? 0) > 0 &&
-                                ` · Baixado: ${product.consumed_quantity}`}
-                        </span>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="ml-auto text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => onDelete(product)}
-                            aria-label={`Excluir ${product.name}`}
-                        >
-                            <Trash2 />
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        </article>
+        <ProductCardV3
+            product={product}
+            onDelete={onDelete}
+            onOpenGallery={onOpenGallery}
+        />
     );
 }
 
