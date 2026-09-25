@@ -19,6 +19,39 @@ test('guests are redirected to login when visiting products', function () {
     $response->assertRedirect(route('login'));
 });
 
+test('cards v4 is available at the product preview path', function () {
+    $product = Product::factory()->create(['name' => 'Calça V4']);
+
+    expect(route('products.card-preview-v4', [], false))->toBe('/painel/produtos/cards-v4');
+
+    $this->get('/painel/produtos/cards-v4')->assertRedirect(route('login'));
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('products.card-preview-v4', ['search' => 'Calça V4']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('products/cards-v4')
+            ->has('products.data', 1)
+            ->where('products.data.0.id', $product->id));
+});
+
+test('cards v5 keeps the same filtered products behind the staff route', function () {
+    $product = Product::factory()->create(['name' => 'Produto Estoque V5']);
+    Product::factory()->create(['name' => 'Bermuda fora do filtro']);
+
+    expect(route('products.card-preview-v5', [], false))->toBe('/painel/produtos/cards-v5');
+
+    $this->get('/painel/produtos/cards-v5')->assertRedirect(route('login'));
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('products.card-preview-v5', ['search' => $product->name]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('products/cards-v5')
+            ->has('products.data', 1)
+            ->where('products.data.0.id', $product->id));
+});
+
 test('authenticated users can view the product catalog', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create([
@@ -48,6 +81,36 @@ test('authenticated users can view the product catalog', function () {
             ->where('products.data.0.stock_offer_type', 'new_grade')
             ->where('products.data.0.line', 'slim')
             ->where('products.data.0.images', []),
+        );
+});
+
+test('authenticated users can open the refined product card preview', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create(['name' => 'Card refinado em teste']);
+
+    $this->actingAs($user)
+        ->get(route('products.card-preview', ['search' => $product->name]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('products/card-preview')
+            ->has('products.data', 1)
+            ->where('products.data.0.id', $product->id)
+            ->where('filters.search', $product->name),
+        );
+});
+
+test('authenticated users can open the v3 product card preview', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create(['name' => 'Card v3 em teste']);
+
+    $this->actingAs($user)
+        ->get(route('products.card-preview-v3', ['search' => $product->name]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('products/card-preview-v3')
+            ->has('products.data', 1)
+            ->where('products.data.0.id', $product->id)
+            ->where('filters.search', $product->name),
         );
 });
 

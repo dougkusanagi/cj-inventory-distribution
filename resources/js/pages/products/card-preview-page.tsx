@@ -1,18 +1,16 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
-    ChevronDown,
     ChevronLeft,
     ChevronRight,
-    Info,
+    ArrowUpRight,
+    ChevronDown,
+    Pencil,
     ImageOff,
     LayoutGrid,
-    Package,
-    Pencil,
     Plus,
     Search,
     Shirt,
     SlidersHorizontal,
-    Tag,
     Table2,
     Trash2,
     X,
@@ -25,7 +23,6 @@ import {
     type ReactNode,
 } from 'react';
 import { destroy } from '@/actions/App/Http/Controllers/ProductController';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -34,11 +31,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from '@/components/ui/collapsible';
 import {
     Drawer,
     DrawerClose,
@@ -58,6 +50,11 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { Label } from '@/components/ui/label';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -68,21 +65,12 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import {
-    Popover,
-    PopoverContent,
-    PopoverDescription,
-    PopoverHeader,
-    PopoverTitle,
-    PopoverTrigger,
-} from '@/components/ui/popover';
 import TextLink from '@/components/text-link';
 import ProductImageGallery from '@/components/products/product-image-gallery';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
-    index as productsIndex,
     edit as productEdit,
     create as productCreate,
 } from '@/routes/products';
@@ -106,11 +94,9 @@ export type ProductsIndexProps = {
     categories: Category[];
 };
 
-type ProductCardVariant = 'default' | 'refined' | 'v3';
-
-type ProductsIndexComponentProps = ProductsIndexProps & {
-    cardVariant?: ProductCardVariant;
-    indexUrl?: string;
+type PreviewProps = ProductsIndexProps & {
+    listingUrl: string;
+    variant: 'v4' | 'v5';
 };
 
 type ProductView = 'table' | 'cards';
@@ -360,33 +346,6 @@ function productSizes(product: Product): string[] {
     );
 }
 
-function productSizeBreakdown(
-    product: Product,
-): Array<{ size: string; quantity: number | null }> {
-    const sizes = new Map<string, number | null>();
-
-    product.stock_volumes
-        .filter((volume) => volume.status === 'Disponível')
-        .forEach((volume) => {
-            volume.items
-                .filter((item) => item.is_active)
-                .forEach((item) => {
-                    const currentQuantity = sizes.get(item.size);
-
-                    sizes.set(
-                        item.size,
-                        currentQuantity === undefined
-                            ? item.quantity
-                            : currentQuantity === null || item.quantity === null
-                              ? null
-                              : currentQuantity + item.quantity,
-                    );
-                });
-        });
-
-    return Array.from(sizes, ([size, quantity]) => ({ size, quantity }));
-}
-
 function ProductSizes({ product }: { product: Product }) {
     const sizes = productSizes(product);
 
@@ -419,12 +378,6 @@ const productLineLabels: Record<ProductLine, string> = {
     plus: 'Plus',
 };
 
-const stockOfferTypeCardLabels: Record<StockOfferType, string> = {
-    replenishment: 'Reposição',
-    new_grade: 'Grade Nova',
-    broken_grade: 'Grade Furada',
-};
-
 function ProductClassification({ product }: { product: Product }) {
     const stockOfferType = product.stock_offer_type;
     const productLine = product.line;
@@ -455,586 +408,365 @@ function ProductClassification({ product }: { product: Product }) {
     );
 }
 
-function productClassificationLabels(product: Product): string {
-    return [
-        product.category?.name,
-        product.line ? productLineLabels[product.line] : null,
-    ]
-        .filter((label): label is string => label !== null)
-        .join(' · ');
-}
-
-function RefinedProductCard({
-    product,
-    onDelete,
-    onOpenGallery,
-}: {
-    product: Product;
-    onDelete: (product: Product) => void;
-    onOpenGallery: (product: Product) => void;
-}) {
-    const availableQuantity = product.available_quantity ?? 0;
-    const physicalQuantity = product.physical_quantity ?? 0;
-    const reservedQuantity = product.reserved_quantity ?? 0;
-    const consumedQuantity = product.consumed_quantity ?? 0;
-    const availableVolumeCount = product.available_stock_volume_count ?? 0;
-    const hasStock =
-        product.total_quantity !== null && product.total_quantity !== undefined;
-    const isAvailable =
-        Boolean(product.is_active) &&
-        Boolean(product.available_for_distribution);
-    const statusLabel = !product.is_active
-        ? 'Inativo'
-        : product.available_for_distribution
-          ? 'Disponível'
-          : product.stock_offer_type === 'new_grade'
-            ? 'Uso interno'
-            : 'Indisponível';
-    const classification = productClassificationLabels(product);
-    const sizes = productSizeBreakdown(product);
-    const showSizesLabel = sizes.some(({ quantity }) => quantity !== null);
-
-    return (
-        <article
-            data-testid="product-card-refined"
-            className="group flex min-w-0 gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm transition-[border-color,box-shadow] duration-200 focus-within:border-ring hover:border-foreground/20 hover:shadow-md sm:gap-4 sm:p-4"
-        >
-            <div className="aspect-[4/5] w-20 shrink-0 self-start overflow-hidden rounded-xl border border-border bg-featured-card sm:w-24 lg:w-28">
-                <ProductImageButton
-                    product={product}
-                    onOpenGallery={onOpenGallery}
-                    showImageCount={false}
-                    className="transition-transform duration-300 group-hover:scale-105"
-                    iconClassName="size-6"
-                />
-            </div>
-
-            <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-                <div className="min-w-0">
-                    <TextLink
-                        href={productEdit(product.id)}
-                        className="line-clamp-2 rounded-sm text-base leading-6 font-semibold tracking-tight text-card-foreground no-underline hover:underline sm:text-lg"
-                    >
-                        {product.name}
-                    </TextLink>
-                    <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
-                        {product.code}
-                        {product.model && ` · Mod. ${product.model}`}
-                    </p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge
-                        variant="outline"
-                        className={cn(
-                            'rounded-full',
-                            isAvailable
-                                ? 'border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-400/30 dark:text-emerald-400'
-                                : 'border-border bg-muted text-muted-foreground',
-                        )}
-                    >
-                        <span
-                            className={cn(
-                                'size-1.5 shrink-0 rounded-full',
-                                isAvailable
-                                    ? 'bg-emerald-600 dark:bg-emerald-400'
-                                    : 'bg-muted-foreground',
-                            )}
-                            aria-hidden="true"
-                        />
-                        {statusLabel}
-                    </Badge>
-                    {product.stock_offer_type && (
-                        <Badge variant="secondary" className="rounded-full">
-                            {stockOfferTypeCardLabels[product.stock_offer_type]}
-                        </Badge>
-                    )}
-                    {classification && (
-                        <span className="min-w-0 truncate text-xs text-muted-foreground">
-                            {classification}
-                        </span>
-                    )}
-                </div>
-
-                <div className="grid gap-1.5">
-                    {showSizesLabel && (
-                        <p className="text-xs text-muted-foreground">
-                            Tamanhos
-                        </p>
-                    )}
-                    <StockSizeBreakdown sizes={sizes} compact />
-                </div>
-
-                {product.notes && (
-                    <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
-                        {product.notes}
-                    </p>
-                )}
-
-                <div className="mt-auto flex flex-wrap items-end justify-between gap-3 border-t border-border pt-3">
-                    <div className="min-w-0">
-                        {hasStock ? (
-                            <>
-                                <p className="text-sm font-semibold text-card-foreground tabular-nums">
-                                    {availableQuantity} peças disponíveis
-                                </p>
-                                <p className="mt-0.5 text-xs leading-4 text-muted-foreground tabular-nums">
-                                    Físico: {physicalQuantity} peças ·{' '}
-                                    {availableVolumeCount}{' '}
-                                    {availableVolumeCount === 1
-                                        ? 'saco disponível'
-                                        : 'sacos disponíveis'}
-                                    {reservedQuantity > 0 &&
-                                        ` · Reservado: ${reservedQuantity}`}
-                                    {consumedQuantity > 0 &&
-                                        ` · Baixado: ${consumedQuantity}`}
-                                </p>
-                            </>
-                        ) : (
-                            <p className="text-sm font-semibold text-muted-foreground">
-                                Sem oferta de estoque
-                            </p>
-                        )}
-                    </div>
-                    <div className="ml-auto flex shrink-0 items-center gap-1">
-                        <Button
-                            asChild
-                            variant="ghost"
-                            size="icon"
-                            aria-label={`Editar ${product.name}`}
-                        >
-                            <Link href={productEdit(product.id)}>
-                                <Pencil />
-                            </Link>
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => onDelete(product)}
-                            aria-label={`Excluir ${product.name}`}
-                        >
-                            <Trash2 />
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        </article>
+function availableProductSizes(product: Product): Array<{
+    size: string;
+    quantity: number | null;
+}> {
+    const availableVolumes = product.stock_volumes.filter(
+        (volume) => volume.status === 'Disponível' && volume.total_quantity > 0,
     );
-}
+    return Array.from(
+        availableVolumes
+            .flatMap((volume) => volume.items)
+            .filter((item) => item.is_active)
+            .reduce((bySize, item) => {
+                const previous = bySize.get(item.size);
 
-function ProductCardV3({
-    product,
-    onDelete,
-    onOpenGallery,
-}: {
-    product: Product;
-    onDelete: (product: Product) => void;
-    onOpenGallery: (product: Product) => void;
-}) {
-    const [detailsOpen, setDetailsOpen] = useState(false);
-    const availableQuantity = product.available_quantity ?? 0;
-    const physicalQuantity = product.physical_quantity ?? 0;
-    const reservedQuantity = product.reserved_quantity ?? 0;
-    const consumedQuantity = product.consumed_quantity ?? 0;
-    const availableVolumeCount = product.available_stock_volume_count ?? 0;
-    const hasStock =
-        product.total_quantity !== null && product.total_quantity !== undefined;
-    const isAvailable =
-        Boolean(product.is_active) &&
-        Boolean(product.available_for_distribution);
-    const isInternalUse =
-        Boolean(product.is_active) && product.stock_offer_type === 'new_grade';
-    const sizes = productSizeBreakdown(product);
-    const volumes = product.stock_volumes;
+                bySize.set(item.size, {
+                    size: item.size,
+                    quantity:
+                        previous === undefined
+                            ? item.quantity
+                            : previous.quantity === null ||
+                                item.quantity === null
+                              ? null
+                              : previous.quantity + item.quantity,
+                });
 
-    return (
-        <article
-            data-testid="product-card-v3"
-            aria-label={product.name}
-            className="group flex min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-border bg-card shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-foreground/20 hover:shadow-md"
-        >
-            <div
-                className={cn(
-                    'relative aspect-[6/5] overflow-hidden bg-muted/60',
-                    !product.is_active && '[&_img]:grayscale',
-                )}
-            >
-                <ProductImageButton
-                    product={product}
-                    onOpenGallery={onOpenGallery}
-                    className="transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none"
-                    iconClassName="size-8"
-                />
-                {product.notes && (
-                    <Popover modal={false}>
-                        <PopoverTrigger asChild>
-                            <button
-                                type="button"
-                                className="absolute top-3 right-3 z-10 flex size-9 items-center justify-center rounded-full border border-white/50 bg-card/90 text-foreground shadow-sm backdrop-blur transition hover:bg-card focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                aria-label={`Ver observação de ${product.name}`}
-                            >
-                                <Info className="size-4" aria-hidden="true" />
-                            </button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                            align="end"
-                            side="bottom"
-                            sideOffset={8}
-                            className="w-64"
-                        >
-                            <PopoverHeader>
-                                <PopoverTitle>
-                                    Observação do produto
-                                </PopoverTitle>
-                                <PopoverDescription className="whitespace-pre-wrap">
-                                    {product.notes}
-                                </PopoverDescription>
-                            </PopoverHeader>
-                        </PopoverContent>
-                    </Popover>
-                )}
-                {product.category && (
-                    <span className="pointer-events-none absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] truncate rounded-full border border-white/50 bg-card/90 px-3 py-1 text-xs font-semibold shadow-sm backdrop-blur">
-                        {product.category.name}
-                    </span>
-                )}
-            </div>
-
-            <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
-                <div className="min-w-0">
-                    <p className="truncate font-mono text-xs text-muted-foreground">
-                        {product.code}
-                        {product.model && ` · Mod. ${product.model}`}
-                    </p>
-                    <TextLink
-                        href={productEdit(product.id)}
-                        className="mt-1 line-clamp-2 rounded-sm text-lg leading-7 font-semibold tracking-tight text-card-foreground no-underline hover:underline"
-                    >
-                        {product.name}
-                    </TextLink>
-                </div>
-
-                {hasStock ? (
-                    <div
-                        className={cn(
-                            'flex items-center justify-between gap-3 rounded-xl px-3.5 py-3.5',
-                            isAvailable
-                                ? 'bg-emerald-950 text-white dark:bg-emerald-950/80'
-                                : isInternalUse
-                                  ? 'bg-amber-100 text-amber-950 dark:bg-amber-400/15 dark:text-amber-100'
-                                  : 'bg-muted',
-                        )}
-                    >
-                        <div className="min-w-0">
-                            <p className="text-2xl leading-7 font-bold tabular-nums">
-                                {availableQuantity}{' '}
-                                <span className="text-sm font-semibold text-current/75">
-                                    peças
-                                </span>
-                            </p>
-                            <p className="mt-1 text-xs leading-4 text-current/70 tabular-nums">
-                                Físico: {physicalQuantity} peças ·{' '}
-                                {availableVolumeCount}{' '}
-                                {availableVolumeCount === 1
-                                    ? 'saco disponível'
-                                    : 'sacos disponíveis'}
-                                {reservedQuantity > 0 &&
-                                    ` · Reservado: ${reservedQuantity}`}
-                                {consumedQuantity > 0 &&
-                                    ` · Baixado: ${consumedQuantity}`}
-                            </p>
-                        </div>
-                        <span
-                            className={cn(
-                                'flex size-11 shrink-0 items-center justify-center rounded-full',
-                                isAvailable
-                                    ? 'bg-emerald-400/20 text-emerald-100'
-                                    : 'bg-background text-muted-foreground',
-                            )}
-                            aria-hidden="true"
-                        >
-                            <Package className="size-5" />
-                        </span>
-                    </div>
-                ) : (
-                    <p className="rounded-xl bg-muted px-3.5 py-3 text-sm font-semibold text-muted-foreground">
-                        Sem oferta de estoque
-                    </p>
-                )}
-
-                {(product.stock_offer_type ||
-                    product.line ||
-                    sizes.length > 0) && (
-                    <div className="grid gap-3 rounded-xl bg-muted/30 p-3">
-                        {(product.stock_offer_type || product.line) && (
-                            <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-muted-foreground">
-                                {product.stock_offer_type && (
-                                    <span className="inline-flex min-w-0 items-center gap-1.5 truncate font-medium">
-                                        <LayoutGrid
-                                            className="size-4 shrink-0"
-                                            aria-hidden="true"
-                                        />
-                                        <span className="truncate">
-                                            {
-                                                stockOfferTypeCardLabels[
-                                                    product.stock_offer_type
-                                                ]
-                                            }
-                                        </span>
-                                    </span>
-                                )}
-                                {product.line && (
-                                    <span className="inline-flex min-w-0 items-center gap-1.5 truncate font-medium">
-                                        <Tag
-                                            className="size-4 shrink-0"
-                                            aria-hidden="true"
-                                        />
-                                        <span className="truncate">
-                                            Linha{' '}
-                                            {productLineLabels[product.line]}
-                                        </span>
-                                    </span>
-                                )}
-                            </div>
-                        )}
-
-                        {sizes.length > 0 && (
-                            <div className="grid gap-1.5">
-                                <p className="text-xs font-medium text-muted-foreground">
-                                    Tamanhos
-                                </p>
-                                <StockSizeBreakdown sizes={sizes} sizesOnly />
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                <Collapsible
-                    open={detailsOpen}
-                    onOpenChange={setDetailsOpen}
-                    className="-mx-4 mt-auto -mb-4 sm:-mx-5 sm:-mb-5"
-                >
-                    <div className="flex items-center justify-between gap-2 px-4 py-2.5 sm:px-5">
-                        <CollapsibleTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="px-1 text-muted-foreground"
-                                aria-label={
-                                    detailsOpen
-                                        ? `Ocultar mais informações de ${product.name}`
-                                        : `Ver mais informações de ${product.name}`
-                                }
-                            >
-                                Mais
-                                <ChevronDown
-                                    className={cn(
-                                        'transition-transform duration-200',
-                                        detailsOpen && 'rotate-180',
-                                    )}
-                                    aria-hidden="true"
-                                />
-                            </Button>
-                        </CollapsibleTrigger>
-                        <Button asChild variant="secondary" size="sm">
-                            <Link
-                                href={productEdit(product.id)}
-                                aria-label={`Editar ${product.name}`}
-                            >
-                                <Pencil />
-                                Editar
-                            </Link>
-                        </Button>
-                    </div>
-                    <CollapsibleContent
-                        data-testid="product-card-v3-details"
-                        className="border-t border-border px-4 py-4 sm:px-5"
-                    >
-                        <div className="grid gap-4 text-xs text-muted-foreground">
-                            {volumes.length > 0 && (
-                                <div className="grid gap-2">
-                                    <p className="font-medium text-card-foreground">
-                                        Quantidade por saco
-                                    </p>
-                                    <div className="grid gap-2">
-                                        {volumes.map((volume, index) => {
-                                            const volumeSizes = volume.items
-                                                .filter(
-                                                    (item) => item.is_active,
-                                                )
-                                                .map(({ size, quantity }) => ({
-                                                    size,
-                                                    quantity,
-                                                }));
-
-                                            return (
-                                                <div
-                                                    key={volume.id}
-                                                    className="grid gap-2 rounded-lg border border-border/70 bg-muted/40 px-3 py-2.5"
-                                                >
-                                                    <p className="flex items-center justify-between gap-2">
-                                                        <span className="min-w-0 truncate font-semibold text-card-foreground">
-                                                            Saco {index + 1}
-                                                            {volume.code && (
-                                                                <span className="font-mono font-normal text-muted-foreground">
-                                                                    {' '}
-                                                                    ·{' '}
-                                                                    {
-                                                                        volume.code
-                                                                    }
-                                                                </span>
-                                                            )}
-                                                        </span>
-                                                        <span className="shrink-0 tabular-nums">
-                                                            {volume.status &&
-                                                                `${volume.status} · `}
-                                                            {
-                                                                volume.total_quantity
-                                                            }{' '}
-                                                            {volume.total_quantity ===
-                                                            1
-                                                                ? 'peça'
-                                                                : 'peças'}
-                                                        </span>
-                                                    </p>
-                                                    <StockSizeBreakdown
-                                                        sizes={volumeSizes}
-                                                        compact
-                                                        showUnknownAsCards
-                                                    />
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="w-fit px-1 text-destructive hover:text-destructive"
-                                onClick={() => onDelete(product)}
-                                aria-label={`Excluir ${product.name}`}
-                            >
-                                <Trash2 />
-                                Excluir produto
-                            </Button>
-                        </div>
-                    </CollapsibleContent>
-                </Collapsible>
-            </div>
-        </article>
-    );
+                return bySize;
+            }, new Map<string, { size: string; quantity: number | null }>()),
+    ).map(([, size]) => size);
 }
 
 function ProductCard({
     product,
     onDelete,
     onOpenGallery,
-    variant = 'default',
 }: {
     product: Product;
     onDelete: (product: Product) => void;
     onOpenGallery: (product: Product) => void;
-    variant?: ProductCardVariant;
 }) {
-    if (variant === 'v3') {
-        return (
-            <ProductCardV3
-                product={product}
-                onDelete={onDelete}
-                onOpenGallery={onOpenGallery}
-            />
-        );
-    }
-
-    if (variant === 'refined') {
-        return (
-            <RefinedProductCard
-                product={product}
-                onDelete={onDelete}
-                onOpenGallery={onOpenGallery}
-            />
-        );
-    }
+    const sizes = availableProductSizes(product);
 
     return (
         <article
             data-testid="product-card"
-            className="group flex min-h-full flex-col overflow-hidden rounded-[1.75rem] border border-border/80 bg-card shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
+            className="flex min-h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md"
         >
-            <div className="relative aspect-[4/5] overflow-hidden bg-featured-card">
-                <ProductImageButton
-                    product={product}
-                    onOpenGallery={onOpenGallery}
-                    className="transition duration-500 group-hover:scale-105"
-                    iconClassName="size-8"
-                />
-                <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between p-4">
-                    <span className="rounded-full bg-background/90 px-3 py-1 font-mono text-[11px] font-semibold tracking-[0.12em] text-foreground shadow-sm backdrop-blur">
+            <div className="flex gap-4 p-4 sm:gap-5 sm:p-5">
+                <div className="aspect-[4/5] w-24 shrink-0 overflow-hidden rounded-xl border border-border bg-muted sm:w-28">
+                    <ProductImageButton
+                        product={product}
+                        onOpenGallery={onOpenGallery}
+                        iconClassName="size-8"
+                    />
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
+                    <span className="font-mono text-xs font-medium tracking-wide text-muted-foreground">
                         {product.code}
+                    </span>
+                    <TextLink
+                        href={productEdit(product.id)}
+                        className="line-clamp-2 text-lg leading-snug font-semibold break-words text-card-foreground sm:text-xl"
+                    >
+                        {product.name}
+                    </TextLink>
+                    {product.model && (
+                        <span className="text-sm text-muted-foreground">
+                            Modelo {product.model}
+                        </span>
+                    )}
+                    <span
+                        className={cn(
+                            'mt-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium',
+                            product.available_for_distribution
+                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                : 'bg-muted text-muted-foreground',
+                        )}
+                    >
+                        <span
+                            className={cn(
+                                'size-1.5 rounded-full',
+                                product.available_for_distribution
+                                    ? 'bg-emerald-600 dark:bg-emerald-300'
+                                    : 'bg-muted-foreground',
+                            )}
+                            aria-hidden="true"
+                        />
+                        {product.available_for_distribution
+                            ? 'Disponível'
+                            : !product.is_active
+                              ? 'Inativo'
+                              : product.stock_offer_type === 'new_grade'
+                                ? 'Apenas equipe'
+                                : 'Sem estoque disponível'}
                     </span>
                 </div>
             </div>
 
-            <div className="flex flex-1 flex-col gap-5 p-5">
-                <div className="grid gap-2">
-                    <div className="flex items-start justify-between gap-3">
-                        <TextLink
-                            href={productEdit(product.id)}
-                            className="text-xl leading-tight font-semibold tracking-tight text-card-foreground"
-                        >
-                            {product.name}
-                        </TextLink>
+            <div className="flex flex-1 flex-col gap-4 border-t border-border px-4 py-4 sm:px-5">
+                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    {product.category && (
+                        <span className="rounded-md bg-muted px-2 py-1 text-foreground">
+                            {product.category.name}
+                        </span>
+                    )}
+                    {product.line && (
+                        <span className="rounded-md bg-muted px-2 py-1 text-foreground">
+                            {productLineLabels[product.line]}
+                        </span>
+                    )}
+                    {product.stock_offer_type && (
+                        <span className="rounded-md bg-muted px-2 py-1 text-foreground">
+                            {stockOfferTypeLabels[product.stock_offer_type]}
+                        </span>
+                    )}
+                </div>
+                <div className="flex items-end justify-between gap-3 rounded-xl bg-muted/70 px-4 py-3">
+                    <div>
+                        <p className="text-xs font-medium text-muted-foreground">
+                            Estoque disponível
+                        </p>
+                        <p className="mt-0.5 text-2xl leading-none font-semibold text-foreground tabular-nums">
+                            {product.available_quantity ?? 0}{' '}
+                            <span className="text-sm font-normal text-muted-foreground">
+                                peças
+                            </span>
+                        </p>
+                    </div>
+                    <span className="text-right text-xs text-muted-foreground">
+                        {product.available_stock_volume_count ?? 0}{' '}
+                        {(product.available_stock_volume_count ?? 0) === 1
+                            ? 'saco disponível'
+                            : 'sacos disponíveis'}
+                    </span>
+                </div>
+                <div>
+                    {sizes.length > 0 ? (
+                        <StockSizeBreakdown sizes={sizes} showUnknownAsCards />
+                    ) : (
+                        <p className="text-sm text-muted-foreground">
+                            Nenhum tamanho com estoque disponível.
+                        </p>
+                    )}
+                </div>
+                {product.notes && (
+                    <p className="line-clamp-2 text-sm leading-5 text-muted-foreground">
+                        {product.notes}
+                    </p>
+                )}
+            </div>
+            <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-3 sm:px-5">
+                <Button asChild variant="secondary" size="sm">
+                    <Link href={productEdit(product.id)}>
+                        <Pencil />
+                        Editar produto
+                        <ArrowUpRight className="ml-1 opacity-60" />
+                    </Link>
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => onDelete(product)}
+                    aria-label={`Excluir ${product.name}`}
+                >
+                    <Trash2 />
+                </Button>
+            </div>
+        </article>
+    );
+}
+
+function ProductCardV5({
+    product,
+    onDelete,
+    onOpenGallery,
+}: {
+    product: Product;
+    onDelete: (product: Product) => void;
+    onOpenGallery: (product: Product) => void;
+}) {
+    const sizes = availableProductSizes(product);
+    const [detailsOpen, setDetailsOpen] = useState(false);
+    const availableQuantity = product.available_quantity ?? 0;
+    const availableSacks = product.available_stock_volume_count ?? 0;
+    const status = !product.is_active
+        ? 'Inativo'
+        : product.stock_offer_type === 'new_grade'
+          ? 'Uso interno'
+          : product.available_for_distribution
+            ? 'Disponível'
+            : 'Sem estoque livre';
+
+    return (
+        <article
+            data-testid="product-card-v5"
+            className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-md"
+        >
+            <div className="flex gap-3 p-4">
+                <div className="aspect-[4/5] w-20 shrink-0 overflow-hidden rounded-lg border border-border bg-muted sm:w-24">
+                    <ProductImageButton
+                        product={product}
+                        onOpenGallery={onOpenGallery}
+                        iconClassName="size-7"
+                    />
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
+                    <span className="max-w-full truncate font-mono text-[11px] text-muted-foreground">
+                        {product.code}
+                        {product.model && ` · Mod. ${product.model}`}
+                    </span>
+                    <TextLink
+                        href={productEdit(product.id)}
+                        className="line-clamp-2 text-base leading-5 font-semibold text-card-foreground sm:text-lg"
+                    >
+                        {product.name}
+                    </TextLink>
+                    <span
+                        className={cn(
+                            'mt-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium',
+                            product.available_for_distribution &&
+                                product.is_active
+                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                : 'bg-muted text-muted-foreground',
+                        )}
+                    >
                         <span
-                            className="mt-1 size-2 shrink-0 rounded-full bg-muted-foreground/60"
+                            className={cn(
+                                'size-1.5 rounded-full',
+                                product.available_for_distribution &&
+                                    product.is_active
+                                    ? 'bg-emerald-600 dark:bg-emerald-300'
+                                    : 'bg-muted-foreground',
+                            )}
                             aria-hidden="true"
                         />
+                        {status}
+                    </span>
+                </div>
+            </div>
+
+            <div className="grid gap-3 border-t border-border px-4 py-3">
+                <div className="flex items-end justify-between gap-3">
+                    <div>
+                        <p className="text-xs text-muted-foreground">
+                            Estoque livre
+                        </p>
+                        <p className="text-2xl leading-tight font-semibold text-foreground tabular-nums">
+                            {availableQuantity}{' '}
+                            <span className="text-sm font-normal text-muted-foreground">
+                                {availableQuantity === 1 ? 'peça' : 'peças'}
+                            </span>
+                        </p>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                        {product.model
-                            ? `Modelo ${product.model}`
-                            : 'Modelo não informado'}
+                    <p className="pb-1 text-right text-sm font-medium text-foreground tabular-nums">
+                        {availableSacks}{' '}
+                        {availableSacks === 1 ? 'saco livre' : 'sacos livres'}
                     </p>
-                    <ProductClassification product={product} />
                 </div>
-
-                <div className="flex min-h-7 flex-wrap gap-1.5">
-                    <ProductSizes product={product} />
-                </div>
-
-                <div className="mt-auto grid gap-4 border-t border-border pt-4">
-                    <p className="line-clamp-2 min-h-10 text-sm leading-5 text-muted-foreground">
-                        {product.notes ?? 'Nenhuma observação registrada.'}
+                {sizes.length > 0 ? (
+                    <div className="grid gap-1.5">
+                        <p className="text-xs text-muted-foreground">
+                            Tamanhos nos sacos livres
+                        </p>
+                        <StockSizeBreakdown
+                            sizes={sizes}
+                            compact
+                            showUnknownAsCards
+                        />
+                    </div>
+                ) : (
+                    <p className="text-xs text-muted-foreground">
+                        Nenhum tamanho com estoque livre.
                     </p>
-                    <div className="grid gap-1 text-sm">
-                        <span className="font-semibold text-card-foreground">
-                            {product.available_quantity ?? 0} peças disponíveis
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                            Físico: {product.physical_quantity ?? 0} peças ·{' '}
-                            {product.physical_stock_volume_count ?? 0}{' '}
-                            {(product.physical_stock_volume_count ?? 0) === 1
-                                ? 'saco'
-                                : 'sacos'}
+                )}
+            </div>
+
+            <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+                <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-2.5">
+                    <CollapsibleTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="px-1 text-muted-foreground"
+                        >
+                            Detalhes
+                            <ChevronDown
+                                className={cn(
+                                    'transition-transform',
+                                    detailsOpen && 'rotate-180',
+                                )}
+                            />
+                        </Button>
+                    </CollapsibleTrigger>
+                    <Button asChild variant="secondary" size="sm">
+                        <Link href={productEdit(product.id)}>
+                            <Pencil />
+                            Editar produto
+                        </Link>
+                    </Button>
+                </div>
+                <CollapsibleContent className="border-t border-border px-4 py-4">
+                    <div className="grid gap-3 text-xs text-muted-foreground">
+                        <p>
+                            {[
+                                product.category?.name,
+                                product.line
+                                    ? productLineLabels[product.line]
+                                    : null,
+                                product.stock_offer_type
+                                    ? stockOfferTypeLabels[
+                                          product.stock_offer_type
+                                      ]
+                                    : null,
+                            ]
+                                .filter(Boolean)
+                                .join(' · ') || 'Sem classificação adicional'}
+                        </p>
+                        <p className="tabular-nums">
+                            Físico: {product.physical_quantity ?? 0} peças
                             {(product.reserved_quantity ?? 0) > 0 &&
                                 ` · Reservado: ${product.reserved_quantity}`}
                             {(product.consumed_quantity ?? 0) > 0 &&
                                 ` · Baixado: ${product.consumed_quantity}`}
-                        </span>
+                        </p>
+                        {product.notes && <p>{product.notes}</p>}
+                        {product.stock_volumes.length > 0 && (
+                            <div className="grid max-h-48 gap-1.5 overflow-y-auto">
+                                {product.stock_volumes.map((volume) => (
+                                    <div
+                                        key={volume.id}
+                                        className="flex justify-between gap-2 rounded-lg bg-muted px-3 py-2"
+                                    >
+                                        <span className="min-w-0 truncate">
+                                            {volume.code ??
+                                                `Saco ${volume.sort_order + 1}`}
+                                        </span>
+                                        <span className="shrink-0 tabular-nums">
+                                            {volume.status} ·{' '}
+                                            {volume.total_quantity}{' '}
+                                            {volume.total_quantity === 1
+                                                ? 'peça'
+                                                : 'peças'}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                         <Button
                             variant="ghost"
-                            size="icon"
-                            className="ml-auto text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            size="sm"
+                            className="w-fit px-1 text-destructive hover:text-destructive"
                             onClick={() => onDelete(product)}
-                            aria-label={`Excluir ${product.name}`}
                         >
                             <Trash2 />
+                            Excluir produto
                         </Button>
                     </div>
-                </div>
-            </div>
+                </CollapsibleContent>
+            </Collapsible>
         </article>
     );
 }
@@ -1191,20 +923,15 @@ function ProductTable({
     );
 }
 
-export default function ProductsIndex({
+export default function ProductsCardPreview({
     products,
     filters,
     categories,
-    cardVariant = 'default',
-    indexUrl = productsIndex.url(),
-}: ProductsIndexComponentProps) {
-    const isRefinedCardPreview = cardVariant === 'refined';
-    const isV3CardPreview = cardVariant === 'v3';
-    const isCardPreview = isRefinedCardPreview || isV3CardPreview;
+    listingUrl,
+    variant,
+}: PreviewProps) {
     const isMobile = useIsMobile();
-    const [view, setView] = useState<ProductView>(
-        isCardPreview ? 'cards' : 'table',
-    );
+    const [view, setView] = useState<ProductView>('table');
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [mobileSearch, setMobileSearch] = useState(filters.search);
     const [galleryProduct, setGalleryProduct] = useState<Product | null>(null);
@@ -1225,7 +952,7 @@ export default function ProductsIndex({
 
     const applyFilters = (values: ProductFilterValues) => {
         setMobileSearch(values.search);
-        router.get(indexUrl, values, {
+        router.get(listingUrl, values, {
             preserveState: true,
             replace: true,
             onSuccess: () => setFiltersOpen(false),
@@ -1310,25 +1037,17 @@ export default function ProductsIndex({
     return (
         <>
             <Head
-                title={
-                    isV3CardPreview
-                        ? 'Cards v3 — Produtos'
-                        : isRefinedCardPreview
-                          ? 'Cards refinados — Produtos'
-                          : 'Produtos'
-                }
+                title={variant === 'v5' ? 'Cards v5 — Produtos' : 'Produtos'}
             />
 
-            <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
-                <header className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="grid gap-3">
-                        <p className="text-xs font-semibold tracking-[0.22em] text-highlight uppercase">
-                            {isCardPreview
-                                ? 'Painel de distribuição / revisão visual'
-                                : 'Painel de distribuição / catálogo'}
+            <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+                <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="grid gap-2">
+                        <p className="text-xs font-semibold tracking-[0.16em] text-highlight uppercase">
+                            Catálogo interno
                         </p>
-                        <div className="flex flex-wrap items-center gap-3">
-                            <h1 className="text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-3xl font-semibold tracking-[-0.04em] sm:text-5xl">
                                 Produtos
                             </h1>
                             <span className="rounded-full bg-primary px-3 py-1 font-mono text-xs font-bold text-primary-foreground">
@@ -1336,29 +1055,11 @@ export default function ProductsIndex({
                                     .toString()
                                     .padStart(2, '0')}
                             </span>
-                            {isRefinedCardPreview && (
-                                <Badge
-                                    variant="outline"
-                                    className="rounded-full font-mono text-[10px] tracking-[0.12em] uppercase"
-                                >
-                                    Card v2
-                                </Badge>
-                            )}
-                            {isV3CardPreview && (
-                                <Badge
-                                    variant="outline"
-                                    className="rounded-full font-mono text-[10px] tracking-[0.12em] uppercase"
-                                >
-                                    Card v3
-                                </Badge>
-                            )}
                         </div>
-                        <p className="max-w-xl text-base leading-7 text-muted-foreground">
-                            {isV3CardPreview
-                                ? 'Foto em cima e leitura em Z: identificação, estoque, grade e sacos no mesmo padrão do catálogo.'
-                                : isRefinedCardPreview
-                                  ? 'Foto, identificação, grade e estoque em uma linha de leitura única, no padrão das listas de catálogo.'
-                                  : 'A identidade de cada peça fica aqui. Depois, ela pode receber diferentes ofertas e condições de estoque.'}
+                        <p className="max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
+                            {variant === 'v5'
+                                ? 'Encontre rápido o saldo, os sacos livres e os tamanhos de cada produto.'
+                                : 'Consulte produtos, tamanhos e estoque em um só lugar.'}
                         </p>
                     </div>
                     <Button asChild size="lg" className="w-full sm:w-fit">
@@ -1377,18 +1078,29 @@ export default function ProductsIndex({
                         className="grid gap-2 rounded-[1.25rem] border border-border/80 bg-card p-3 shadow-sm"
                     >
                         <div className="flex items-center gap-2">
-                            <Input
-                                id="mobile-product-search"
-                                name="search"
-                                type="search"
-                                value={mobileSearch}
-                                placeholder="Buscar por nome"
-                                aria-label="Buscar por nome"
-                                onChange={(event) =>
-                                    setMobileSearch(event.target.value)
-                                }
-                                className="h-11 bg-background"
-                            />
+                            <div className="relative min-w-0 flex-1">
+                                <Input
+                                    id="mobile-product-search"
+                                    name="search"
+                                    type="search"
+                                    value={mobileSearch}
+                                    placeholder="Buscar por nome"
+                                    aria-label="Buscar por nome"
+                                    onChange={(event) =>
+                                        setMobileSearch(event.target.value)
+                                    }
+                                    className="h-11 bg-background pr-11"
+                                />
+                                <Button
+                                    type="submit"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute top-0 right-0 size-11 text-muted-foreground"
+                                    aria-label="Buscar produtos"
+                                >
+                                    <Search />
+                                </Button>
+                            </div>
                             <Button
                                 type="button"
                                 variant="secondary"
@@ -1520,7 +1232,7 @@ export default function ProductsIndex({
 
                 {products.data.length > 0 ? (
                     <>
-                        {!isMobile && !isCardPreview && (
+                        {!isMobile && variant === 'v4' && (
                             <div className="hidden flex-col gap-3 md:flex md:flex-row md:items-center md:justify-between">
                                 <p className="text-sm text-muted-foreground">
                                     Escolha como visualizar seu catálogo.
@@ -1558,40 +1270,29 @@ export default function ProductsIndex({
                             </div>
                         )}
 
-                        {isMobile || isCardPreview || view === 'cards' ? (
+                        {variant === 'v5' || isMobile || view === 'cards' ? (
                             <section
-                                data-testid={
-                                    isV3CardPreview
-                                        ? 'product-cards-v3'
-                                        : isRefinedCardPreview
-                                          ? 'product-cards-refined'
-                                          : 'product-cards'
-                                }
-                                className={cn(
-                                    'grid gap-4',
-                                    isRefinedCardPreview
-                                        ? 'gap-3 lg:grid-cols-2'
-                                        : isV3CardPreview
-                                          ? 'gap-4 sm:grid-cols-2 xl:grid-cols-3'
-                                          : 'gap-5 sm:grid-cols-2 xl:grid-cols-3',
-                                )}
-                                aria-label={
-                                    isV3CardPreview
-                                        ? 'Produtos cadastrados em cards v3'
-                                        : isRefinedCardPreview
-                                          ? 'Produtos cadastrados em cards refinados'
-                                          : 'Produtos cadastrados'
-                                }
+                                data-testid="product-cards"
+                                className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
+                                aria-label="Produtos cadastrados"
                             >
-                                {products.data.map((product) => (
-                                    <ProductCard
-                                        key={product.id}
-                                        product={product}
-                                        onDelete={setProductToDelete}
-                                        onOpenGallery={openProductGallery}
-                                        variant={cardVariant}
-                                    />
-                                ))}
+                                {products.data.map((product) =>
+                                    variant === 'v5' ? (
+                                        <ProductCardV5
+                                            key={product.id}
+                                            product={product}
+                                            onDelete={setProductToDelete}
+                                            onOpenGallery={openProductGallery}
+                                        />
+                                    ) : (
+                                        <ProductCard
+                                            key={product.id}
+                                            product={product}
+                                            onDelete={setProductToDelete}
+                                            onOpenGallery={openProductGallery}
+                                        />
+                                    ),
+                                )}
                             </section>
                         ) : (
                             <ProductTable
@@ -1601,6 +1302,23 @@ export default function ProductsIndex({
                             />
                         )}
                     </>
+                ) : hasAppliedFilters ? (
+                    <Card className="items-center rounded-2xl border-dashed px-5 py-12 text-center shadow-none">
+                        <CardHeader className="items-center">
+                            <CardTitle className="text-xl">
+                                Nenhum produto encontrado
+                            </CardTitle>
+                            <CardDescription>
+                                Tente outro nome ou remova os filtros para ver
+                                todos os produtos.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Button variant="secondary" onClick={clearFilters}>
+                                Limpar filtros
+                            </Button>
+                        </CardContent>
+                    </Card>
                 ) : (
                     <Card className="rounded-[2rem] border-dashed shadow-sm">
                         <CardHeader className="items-center pt-12 text-center">
@@ -1727,12 +1445,3 @@ export default function ProductsIndex({
         </>
     );
 }
-
-ProductsIndex.layout = {
-    breadcrumbs: [
-        {
-            title: 'Produtos',
-            href: productsIndex(),
-        },
-    ],
-};
