@@ -58,10 +58,10 @@ it('selects, counts, and confirms a stock balance, applying its adjustment', fun
     expect($size->fresh()->quantity)->toBe(10)
         ->and($countItem->fresh()->counted_total)->toBe(8);
 
-    $page->script('window.confirm = () => false;');
-
     $page
         ->press('Confirmar balanço')
+        ->assertVisible('[role="dialog"]')
+        ->click('[role="dialog"] button:has-text("Voltar")')
         ->assertSee('Em andamento')
         ->assertEnabled('Confirmar balanço');
 
@@ -69,10 +69,10 @@ it('selects, counts, and confirms a stock balance, applying its adjustment', fun
     expect(StockMovement::query()->count())->toBe(0);
     expect($volume->refresh()->total_quantity)->toBe(10);
 
-    $page->script('window.confirm = () => true;');
-
     $page
         ->press('Confirmar balanço')
+        ->assertVisible('[role="dialog"]')
+        ->click('[role="dialog"] button:has-text("Confirmar balanço")')
         ->assertSee('Confirmado');
 
     $movement = StockMovement::query()->sole();

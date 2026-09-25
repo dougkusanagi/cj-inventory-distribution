@@ -8,6 +8,7 @@ import {
 } from '@/components/products/recount-fields';
 import type { RecountItem } from '@/components/products/recount-fields';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
+import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -44,6 +45,10 @@ type Inventory = {
     version: number;
     items: CountItem[];
 };
+
+type InventoryConfirmation =
+    | { kind: 'submit'; operation: 'confirm' | 'cancel' }
+    | { kind: 'refresh'; item: CountItem };
 
 function CountEditor({
     inventory,
@@ -131,6 +136,8 @@ export default function InventoryShow({ inventory }: { inventory: Inventory }) {
         inventory.status === 'draft' ? (firstPendingItem?.id ?? null) : null,
     );
     const form = useForm({ version: inventory.version });
+    const [confirmation, setConfirmation] =
+        useState<InventoryConfirmation | null>(null);
     const draft = inventory.status === 'draft';
     const counted = inventory.items.filter(
         (item) => item.counted_total !== null,
@@ -145,19 +152,41 @@ export default function InventoryShow({ inventory }: { inventory: Inventory }) {
         : 0;
     const allCounted = counted.length === inventory.items.length;
     const submit = (operation: 'confirm' | 'cancel') => {
-        if (
-            !window.confirm(
-                operation === 'confirm'
-                    ? 'Confirmar o balanço e aplicar todas as diferenças ao estoque?'
-                    : 'Cancelar este balanço? Nenhum saldo será alterado.',
-            )
-        )
+        setConfirmation({ kind: 'submit', operation });
+    };
+    const confirmPendingAction = () => {
+        if (!confirmation) {
             return;
-        form.transform(() => ({ version: inventory.version }));
-        form.post(
-            operation === 'confirm'
-                ? confirm.url(inventory.id)
-                : cancel.url(inventory.id),
+        }
+
+        if (confirmation.kind === 'submit') {
+            const operation = confirmation.operation;
+
+            setConfirmation(null);
+            form.transform(() => ({ version: inventory.version }));
+            form.post(
+                operation === 'confirm'
+                    ? confirm.url(inventory.id)
+                    : cancel.url(inventory.id),
+            );
+
+            return;
+        }
+
+        const item = confirmation.item;
+
+        setConfirmation(null);
+        router.post(
+            refreshItem.url({
+                inventory: inventory.id,
+                item: item.id,
+            }),
+            { version: inventory.version },
+            {
+                preserveScroll: true,
+                onSuccess: () => setEditing(null),
+                onError: (errors) => form.setError(errors),
+            },
         );
     };
     return (
@@ -286,27 +315,12 @@ export default function InventoryShow({ inventory }: { inventory: Inventory }) {
                                 </Button>
                                 <Button
                                     variant="ghost"
-                                    onClick={() => {
-                                        if (
-                                            window.confirm(
-                                                'Atualizar a referência e descartar a contagem salva deste saco?',
-                                            )
-                                        )
-                                            router.post(
-                                                refreshItem.url({
-                                                    inventory: inventory.id,
-                                                    item: item.id,
-                                                }),
-                                                { version: inventory.version },
-                                                {
-                                                    preserveScroll: true,
-                                                    onSuccess: () =>
-                                                        setEditing(null),
-                                                    onError: (errors) =>
-                                                        form.setError(errors),
-                                                },
-                                            );
-                                    }}
+                                    onClick={() =>
+                                        setConfirmation({
+                                            kind: 'refresh',
+                                            item,
+                                        })
+                                    }
                                 >
                                     Atualizar referência
                                 </Button>
@@ -369,6 +383,45 @@ export default function InventoryShow({ inventory }: { inventory: Inventory }) {
                     </div>
                 )}
             </div>
+            <ConfirmationDialog
+                open={confirmation !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setConfirmation(null);
+                    }
+                }}
+                title={
+                    confirmation?.kind === 'refresh'
+                        ? 'Atualizar a referência deste saco?'
+                        : confirmation?.kind === 'submit' &&
+                            confirmation.operation === 'confirm'
+                          ? 'Confirmar o balanço?'
+                          : 'Cancelar este balanço?'
+                }
+                description={
+                    confirmation?.kind === 'refresh'
+                        ? 'A contagem salva deste saco será descartada e a referência atual do estoque será carregada.'
+                        : confirmation?.kind === 'submit' &&
+                            confirmation.operation === 'confirm'
+                          ? 'Todas as diferenças serão aplicadas ao estoque e o balanço será encerrado.'
+                          : 'Nenhum saldo será alterado e este balanço será marcado como cancelado.'
+                }
+                confirmLabel={
+                    confirmation?.kind === 'refresh'
+                        ? 'Atualizar referência'
+                        : confirmation?.kind === 'submit' &&
+                            confirmation.operation === 'confirm'
+                          ? 'Confirmar balanço'
+                          : 'Cancelar balanço'
+                }
+                destructive={
+                    confirmation?.kind === 'refresh' ||
+                    (confirmation?.kind === 'submit' &&
+                        confirmation.operation === 'cancel')
+                }
+                disabled={form.processing}
+                onConfirm={confirmPendingAction}
+            />
         </>
     );
 }

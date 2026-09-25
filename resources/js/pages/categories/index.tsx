@@ -1,10 +1,12 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import type { FormEvent } from 'react';
+import { useState } from 'react';
 import { destroy } from '@/actions/App/Http/Controllers/CategoryController';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import { Input } from '@/components/ui/input';
 import { create, edit, index } from '@/routes/categories';
 import type { Category, Paginated } from '@/types';
@@ -16,6 +18,10 @@ export default function CategoriesIndex({
     categories: Paginated<Category>;
     filters: { search: string };
 }) {
+    const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(
+        null,
+    );
+
     const submitSearch = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -108,16 +114,9 @@ export default function CategoriesIndex({
                                         (category.products_count ?? 0) > 0
                                     }
                                     className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                    onClick={() => {
-                                        if (
-                                            window.confirm(
-                                                `Excluir a categoria ${category.name}?`,
-                                            )
-                                        )
-                                            router.delete(
-                                                destroy.url(category.id),
-                                            );
-                                    }}
+                                    onClick={() =>
+                                        setCategoryToDelete(category)
+                                    }
                                     aria-label={`Excluir ${category.name}`}
                                 >
                                     <Trash2 />
@@ -126,8 +125,37 @@ export default function CategoriesIndex({
                         </Card>
                     ))}
                     {categories.data.length === 0 && (
-                        <Card className="p-8 text-center text-sm text-muted-foreground">
-                            Nenhuma categoria encontrada.
+                        <Card className="grid justify-items-center gap-4 p-8 text-center shadow-sm">
+                            <p className="text-sm text-muted-foreground">
+                                {filters.search
+                                    ? 'Nenhuma categoria encontrada para esta busca.'
+                                    : 'Nenhuma categoria cadastrada ainda.'}
+                            </p>
+                            {filters.search ? (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() =>
+                                        router.get(
+                                            index.url(),
+                                            { search: '' },
+                                            {
+                                                preserveState: true,
+                                                replace: true,
+                                            },
+                                        )
+                                    }
+                                >
+                                    Limpar busca
+                                </Button>
+                            ) : (
+                                <Button asChild>
+                                    <Link href={create()}>
+                                        <Plus />
+                                        Criar primeira categoria
+                                    </Link>
+                                </Button>
+                            )}
                         </Card>
                     )}
                 </div>
@@ -156,6 +184,28 @@ export default function CategoriesIndex({
                     )}
                 </nav>
             </div>
+            <ConfirmationDialog
+                open={categoryToDelete !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setCategoryToDelete(null);
+                    }
+                }}
+                title={`Excluir a categoria ${categoryToDelete?.name ?? ''}?`}
+                description="A categoria será removida do catálogo. Produtos existentes não serão excluídos."
+                confirmLabel="Excluir categoria"
+                destructive
+                onConfirm={() => {
+                    if (!categoryToDelete) {
+                        return;
+                    }
+
+                    const categoryId = categoryToDelete.id;
+
+                    setCategoryToDelete(null);
+                    router.delete(destroy.url(categoryId));
+                }}
+            />
         </>
     );
 }

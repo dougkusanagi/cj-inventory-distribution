@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
 use Database\Seeders\CatalogDemoSeeder;
+use Database\Seeders\FullSizeCatalogDemoSeeder;
 use Illuminate\Support\Facades\Vite;
 
 beforeEach(function (): void {
@@ -23,13 +24,17 @@ it('replaces the starter home with a searchable catalog and never shows new grad
         ->assertDontSee('Produtos ilustrativos')
         ->assertDontSee('Grade Nova')
         ->assertDontSee('Produto interno de grade nova')
+        ->type('#catalog-search', 'blusa')
+        ->assertSee('1 encontrado')
+        ->assertScript('document.body.innerText.includes("Grade Furada")')
         ->type('#catalog-search', 'calca')
-        ->assertSee('2 produtos encontrados')
+        ->assertSee('2 encontrados')
+        ->assertScript('document.body.innerText.includes("Grade Reposição")')
         ->assertDontSee('Bermuda Jeans')
         ->type('#catalog-search', 'referencia-inexistente')
         ->assertSee('Nenhum produto encontrado')
         ->click('Ver todos os produtos')
-        ->assertSee('7 produtos encontrados')
+        ->assertSee('9 encontrados')
         ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
         ->assertNoJavaScriptErrors();
 });
@@ -47,21 +52,25 @@ it('loads the next product batch without depending on translated pagination labe
         ->resize(1280, 900)
         ->assertCount('[data-testid="catalog-product"]', 12)
         ->click('Carregar mais produtos')
-        ->assertCount('[data-testid="catalog-product"]', 20)
+        ->assertCount('[data-testid="catalog-product"]', 22)
         ->assertSee('ZZ Produto adicional 13')
         ->assertNoJavaScriptErrors();
 });
 
-it('renders a generated photo for each visible product card', function () {
+it('renders generated photos and a compact fallback for visible product cards', function () {
     $wideLeg = Product::query()->where('code', 'DEMO-CJ-0001')->firstOrFail();
 
     expect($wideLeg->getMedia(Product::MEDIA_COLLECTION))->toHaveCount(2);
 
     visit(route('catalog', [], false))
         ->resize(1280, 900)
-        ->assertCount('[data-testid="catalog-product"]', 7)
-        ->assertCount('img[data-testid^="catalog-product-image-"]', 8)
-        ->assertScript("(() => Array.from(document.querySelectorAll('[data-testid=\"catalog-product\"]')).every((card) => card.querySelector('img[data-testid^=\"catalog-product-image-\"]') !== null))()")
+        ->assertCount('[data-testid="catalog-product"]', 9)
+        ->assertCount('img[data-testid^="catalog-product-image-"]', 9)
+        ->assertSee('Produto sem foto')
+        ->assertSee('Tamanhos não informados')
+        ->assertPresent('[aria-label="Tamanhos não informados"]')
+        ->assertVisible('button[aria-label="Imagem indisponível. Ver sacos de Blusa sem foto"]')
+        ->assertScript("(() => Array.from(document.querySelectorAll('[data-testid=\"catalog-product\"]')).every((card) => card.querySelector('img[data-testid^=\"catalog-product-image-\"]') !== null || card.textContent?.includes('Produto sem foto')))()")
         ->assertScript("(() => Array.from(document.querySelectorAll('img[data-testid^=\"catalog-product-image-\"]')).every((image) => image.getAttribute('src')?.includes('/storage/')))()")
         ->assertAttributeContains(
             'img[data-testid="catalog-product-image-1"]',
@@ -128,18 +137,28 @@ it('combines category and line filters and clears them', function () {
         ->click('[role="option"]:has-text("Calça")')
         ->click('#catalog-line')
         ->click('[role="option"]:has-text("Plus")')
-        ->assertSee('1 produto encontrado')
+        ->assertSee('1 encontrado')
         ->assertSee('Calça Reta')
         ->assertDontSee('Calça Wide Leg')
         ->click('Limpar filtros')
-        ->assertSee('7 produtos encontrados')
+        ->assertSee('9 encontrados')
+        ->assertNoJavaScriptErrors();
+});
+
+it('keeps the complete numeric size grid on one row in the mobile card', function () {
+    $this->seed(FullSizeCatalogDemoSeeder::class);
+
+    visit(route('catalog', [], false))
+        ->resize(390, 844)
+        ->assertSee('Calça Jeans 34 a 46')
+        ->assertScript("(() => { const card = [...document.querySelectorAll('[data-testid=\"catalog-product\"]')].find((item) => item.textContent?.includes('Calça Jeans 34 a 46')); const sizes = card?.querySelector('[aria-label=\"Tamanhos presentes\"]'); const button = card?.querySelector('button[aria-label=\"Adicionar Calça Jeans 34 a 46 ao pedido\"]'); const chips = sizes ? [...sizes.children] : []; return chips.length === 7 && new Set(chips.map((chip) => Math.round(chip.getBoundingClientRect().top))).size === 1 && button !== null && button.getBoundingClientRect().top - sizes.getBoundingClientRect().bottom >= 12; })()")
         ->assertNoJavaScriptErrors();
 });
 
 it('opens product selection in a side panel on desktop', function () {
     visit(route('catalog', [], false))
         ->resize(1280, 900)
-        ->click('button[aria-label="Ver sacos de Calça Wide Leg"]')
+        ->click('button[aria-label="Adicionar Calça Wide Leg ao pedido"]')
         ->assertVisible('[data-slot="sheet-content"]')
         ->assertSee('Escolha os sacos completos.')
         ->assertScript("(() => { const panel = document.querySelector('[data-slot=\"sheet-content\"][data-state=\"open\"]'); return panel !== null && panel.getBoundingClientRect().left > window.innerWidth / 2 && panel.getBoundingClientRect().right <= window.innerWidth; })()")
@@ -204,7 +223,7 @@ it('requires opening WhatsApp before confirming a catalog order', function () {
 it('removes a selected sack from the product panel without closing it', function () {
     visit(route('home', [], false))
         ->resize(390, 844)
-        ->click('button[aria-label="Ver sacos de Short Mom"]')
+        ->click('button[aria-label="Adicionar Short Mom ao pedido"]')
         ->click('button[aria-label="Adicionar Saco 02"]')
         ->assertVisible('[data-slot="drawer-content"]')
         ->click('button[aria-label="Remover Saco 02 da sacola"]')

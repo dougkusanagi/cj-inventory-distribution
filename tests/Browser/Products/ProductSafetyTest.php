@@ -220,5 +220,23 @@ it('requires confirmation before deleting a product and allows cancellation', fu
         ->assertSee('Produto excluído.')
         ->assertNoJavaScriptErrors();
 
-    expect(Product::query()->whereKey($product->id)->exists())->toBeFalse();
+    $this->assertSoftDeleted('products', ['id' => $product->id]);
+});
+
+it('explains why a product with available stock cannot be moved to the trash', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create(['name' => 'Produto com estoque ativo E2E']);
+    $offer = $product->offers()->create(['type' => StockOfferType::Replenishment]);
+    $offer->stockVolumes()->create(['total_quantity' => 5]);
+
+    $this->actingAs($user);
+
+    visit(route('products.index', [], false))
+        ->click('button[aria-label="Excluir Produto com estoque ativo E2E"]')
+        ->press('Excluir produto')
+        ->assertSee('Produto com estoque disponível ou reservado não pode ser excluído.')
+        ->assertSee($product->name)
+        ->assertNoJavaScriptErrors();
+
+    expect($product->refresh()->trashed())->toBeFalse();
 });

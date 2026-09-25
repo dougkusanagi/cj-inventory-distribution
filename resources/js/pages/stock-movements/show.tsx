@@ -9,6 +9,7 @@ import {
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { store as reverseMovement } from '@/actions/App/Http/Controllers/StockMovementReversalController';
+import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import {
     StockMovementReasonField,
     stockReversalReasons,
@@ -115,6 +116,8 @@ export default function StockMovementShow({
     movement: StockMovement;
 }) {
     const [showReverse, setShowReverse] = useState(false);
+    const [reverseConfirmationOpen, setReverseConfirmationOpen] =
+        useState(false);
     const form = useForm({ reason: '' });
     const Icon =
         movement.type === 'in'
@@ -127,16 +130,14 @@ export default function StockMovementShow({
 
     const submitReverse = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        setReverseConfirmationOpen(true);
+    };
 
-        if (
-            !window.confirm(
-                'Estornar esta movimentação? O estoque será ajustado e o registro original será mantido.',
-            )
-        ) {
-            return;
-        }
-
-        form.post(reverseMovement.url(movement.id), { preserveScroll: true });
+    const confirmReverse = () => {
+        setReverseConfirmationOpen(false);
+        form.post(reverseMovement.url(movement.id), {
+            preserveScroll: true,
+        });
     };
 
     return (
@@ -447,6 +448,16 @@ export default function StockMovementShow({
                     </aside>
                 </div>
             </div>
+            <ConfirmationDialog
+                open={reverseConfirmationOpen}
+                onOpenChange={setReverseConfirmationOpen}
+                title="Estornar esta movimentação?"
+                description="O estoque será ajustado e o registro original será mantido no histórico."
+                confirmLabel="Confirmar estorno"
+                destructive
+                disabled={form.processing}
+                onConfirm={confirmReverse}
+            />
         </>
     );
 }

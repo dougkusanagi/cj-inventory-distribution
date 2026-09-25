@@ -3,12 +3,14 @@ import {
     Check,
     Grid2X2,
     Grid3X3,
+    ImageOff,
     LayoutGrid,
+    ListFilter,
+    LoaderCircle,
     MessageCircle,
     Search,
     Shirt,
     ShoppingBag,
-    SlidersHorizontal,
     Tag,
     Trash2,
     X,
@@ -34,6 +36,7 @@ import {
 } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
     Select,
     SelectContent,
@@ -76,7 +79,7 @@ type CatalogBagSnapshot = {
 };
 
 function catalogOfferTypeLabel(type: string): string {
-    return type.replace(/^Grade\s+/i, '');
+    return type === 'Reposição' ? 'Grade Reposição' : type;
 }
 
 function isValidStoredVolumeId(value: unknown): value is number {
@@ -194,7 +197,12 @@ function ProductPhoto({
               : [product.image];
 
     return (
-        <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-t-[1.5rem] bg-muted/60 [&_img]:transition-transform [&_img]:duration-500 [&_img]:ease-out group-hover:[&_img]:scale-[1.035] motion-reduce:[&_img]:transition-none">
+        <div
+            className={cn(
+                'relative flex items-center justify-center overflow-hidden rounded-t-[1.5rem] bg-muted/60 [&_img]:transition-transform [&_img]:duration-500 [&_img]:ease-out group-hover:[&_img]:scale-[1.035] motion-reduce:[&_img]:transition-none',
+                images.length > 0 ? 'aspect-[4/5]' : 'min-h-32 sm:min-h-36',
+            )}
+        >
             {images.length > 0 ? (
                 <ImageCarousel
                     images={images}
@@ -212,16 +220,55 @@ function ProductPhoto({
             ) : (
                 <button
                     type="button"
-                    className="size-full px-6 text-center text-sm text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                    className="flex min-h-32 w-full flex-col items-center justify-center gap-2 px-6 text-center text-sm text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:min-h-36"
                     onClick={onOpenSelection}
-                    aria-label={`Ver sacos de ${product.name}`}
+                    aria-label={`Imagem indisponível. Ver sacos de ${product.name}`}
                 >
-                    Produto sem foto
+                    <ImageOff
+                        className="size-7 text-muted-foreground/70"
+                        aria-hidden="true"
+                    />
+                    <span>Produto sem foto</span>
                 </button>
             )}
             <span className="absolute right-3 bottom-3 rounded-full border border-white/50 bg-card/90 px-3 py-1 text-xs font-semibold shadow-sm backdrop-blur">
                 {product.category}
             </span>
+        </div>
+    );
+}
+
+function CatalogProductSkeleton() {
+    return (
+        <div
+            data-testid="catalog-product-skeleton"
+            aria-hidden="true"
+            className="overflow-hidden rounded-[1.5rem] border border-border bg-card shadow-sm"
+        >
+            <Skeleton className="aspect-[4/5] w-full rounded-none" />
+            <div className="grid gap-4 p-4 sm:p-5">
+                <div className="grid gap-2">
+                    <Skeleton className="h-3 w-2/5" />
+                    <Skeleton className="h-6 w-4/5" />
+                </div>
+                <div className="grid grid-cols-2 gap-2 border-t border-border/70 pt-3">
+                    {Array.from({ length: 4 }).map((_, index) => (
+                        <Skeleton key={index} className="h-4 w-3/4" />
+                    ))}
+                </div>
+                <div className="grid gap-2">
+                    <Skeleton className="h-4 w-16" />
+                    <div className="flex gap-1.5">
+                        {Array.from({ length: 4 }).map((_, index) => (
+                            <Skeleton
+                                key={index}
+                                className="size-8 rounded-lg"
+                            />
+                        ))}
+                    </div>
+                </div>
+                <Skeleton className="h-12 w-full" />
+            </div>
         </div>
     );
 }
@@ -698,6 +745,7 @@ export default function Catalog({
     const [bagOpen, setBagOpen] = useState(false);
     const [feedback, setFeedback] = useState('');
     const [loadingMore, setLoadingMore] = useState(false);
+    const [filtering, setFiltering] = useState(false);
     const filterKey = JSON.stringify({
         search: filters.search,
         category: filters.category,
@@ -828,6 +876,7 @@ export default function Catalog({
         }
 
         const timeout = window.setTimeout(() => {
+            setFiltering(true);
             router.get(
                 catalogRoute.url({
                     query: {
@@ -843,6 +892,7 @@ export default function Catalog({
                     preserveScroll: true,
                     preserveState: true,
                     replace: true,
+                    onFinish: () => setFiltering(false),
                 },
             );
         }, 300);
@@ -1059,7 +1109,7 @@ export default function Catalog({
                             <div className="flex items-end gap-3 sm:contents">
                                 <div className="grid min-w-0 flex-1 gap-2">
                                     <Label htmlFor="catalog-search">
-                                        O que você procura?
+                                        Buscar produtos
                                     </Label>
                                     <div className="relative">
                                         <Search className="pointer-events-none absolute top-3.5 left-3 size-4 text-muted-foreground" />
@@ -1077,15 +1127,23 @@ export default function Catalog({
                                 </div>
                                 <Button
                                     variant="secondary"
-                                    className="h-11 shrink-0 sm:hidden"
+                                    size="icon"
+                                    className="relative size-11 shrink-0 sm:hidden"
                                     aria-expanded={filtersOpen}
                                     aria-controls="catalog-filters"
+                                    aria-label={`${filtersOpen ? 'Fechar' : 'Abrir'} opções de busca${filterCount > 0 ? `, ${filterCount} selecionadas` : ''}`}
+                                    title="Mais opções de busca"
+                                    data-testid="catalog-filters-trigger"
                                     onClick={() =>
                                         setFiltersOpen((current) => !current)
                                     }
                                 >
-                                    <SlidersHorizontal /> Filtros
-                                    {filterCount > 0 && ` (${filterCount})`}
+                                    <ListFilter aria-hidden="true" />
+                                    {filterCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 flex min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] leading-5 font-bold text-primary-foreground">
+                                            {filterCount}
+                                        </span>
+                                    )}
                                 </Button>
                             </div>
                             <div
@@ -1116,74 +1174,96 @@ export default function Catalog({
                                     onChange={setLine}
                                 />
                             </div>
+                            <div
+                                className="flex min-h-9 flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3 text-sm text-muted-foreground sm:col-span-3"
+                                aria-busy={filtering}
+                            >
+                                <p
+                                    role="status"
+                                    className="flex items-center gap-2"
+                                >
+                                    {filtering && (
+                                        <LoaderCircle
+                                            className="size-4 animate-spin"
+                                            aria-hidden="true"
+                                        />
+                                    )}
+                                    <strong className="text-foreground">
+                                        {products.meta.total}
+                                    </strong>{' '}
+                                    {products.meta.total === 1
+                                        ? 'encontrado'
+                                        : 'encontrados'}
+                                </p>
+                                {hasFilters && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={clearFilters}
+                                    >
+                                        <X /> Limpar filtros
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     </section>
 
-                    <div className="mb-4 flex min-h-11 flex-wrap items-center justify-between gap-2">
-                        <p
-                            role="status"
-                            className="text-sm text-muted-foreground"
+                    <div className="mb-4 hidden justify-end xl:flex">
+                        <div
+                            role="group"
+                            aria-label="Colunas do catálogo"
+                            className="flex items-center gap-1 rounded-xl border border-border bg-card p-1"
                         >
-                            <strong className="text-foreground">
-                                {products.meta.total}
-                            </strong>{' '}
-                            {products.meta.total === 1
-                                ? 'produto encontrado'
-                                : 'produtos encontrados'}
-                            {filterCount > 0 &&
-                                ` · ${filterCount} ${filterCount === 1 ? 'filtro aplicado' : 'filtros aplicados'}`}
-                        </p>
-                        <div className="flex items-center gap-2">
-                            {hasFilters && (
-                                <Button
-                                    variant="ghost"
-                                    className="h-11"
-                                    onClick={clearFilters}
-                                >
-                                    <X /> Limpar filtros
-                                </Button>
-                            )}
-                            <div
-                                role="group"
-                                aria-label="Colunas do catálogo"
-                                className="hidden items-center gap-1 rounded-xl border border-border bg-card p-1 xl:flex"
+                            <button
+                                type="button"
+                                aria-label="Visualizar 3 produtos por linha"
+                                aria-pressed={gridColumns === 3}
+                                onClick={() => changeGridColumns(3)}
+                                className={cn(
+                                    'ds-press flex size-9 items-center justify-center rounded-lg text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                                    gridColumns === 3 &&
+                                        'bg-secondary text-foreground shadow-sm',
+                                )}
                             >
-                                <button
-                                    type="button"
-                                    aria-label="Visualizar 3 produtos por linha"
-                                    aria-pressed={gridColumns === 3}
-                                    onClick={() => changeGridColumns(3)}
-                                    className={cn(
-                                        'ds-press flex size-9 items-center justify-center rounded-lg text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-                                        gridColumns === 3 &&
-                                            'bg-secondary text-foreground shadow-sm',
-                                    )}
-                                >
-                                    <Grid2X2
-                                        className="size-4"
-                                        aria-hidden="true"
-                                    />
-                                </button>
-                                <button
-                                    type="button"
-                                    aria-label="Visualizar 4 produtos por linha"
-                                    aria-pressed={gridColumns === 4}
-                                    onClick={() => changeGridColumns(4)}
-                                    className={cn(
-                                        'ds-press flex size-9 items-center justify-center rounded-lg text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-                                        gridColumns === 4 &&
-                                            'bg-secondary text-foreground shadow-sm',
-                                    )}
-                                >
-                                    <Grid3X3
-                                        className="size-4"
-                                        aria-hidden="true"
-                                    />
-                                </button>
-                            </div>
+                                <Grid2X2
+                                    className="size-4"
+                                    aria-hidden="true"
+                                />
+                            </button>
+                            <button
+                                type="button"
+                                aria-label="Visualizar 4 produtos por linha"
+                                aria-pressed={gridColumns === 4}
+                                onClick={() => changeGridColumns(4)}
+                                className={cn(
+                                    'ds-press flex size-9 items-center justify-center rounded-lg text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                                    gridColumns === 4 &&
+                                        'bg-secondary text-foreground shadow-sm',
+                                )}
+                            >
+                                <Grid3X3
+                                    className="size-4"
+                                    aria-hidden="true"
+                                />
+                            </button>
                         </div>
                     </div>
-                    {loadedProducts.length === 0 ? (
+                    {filtering ? (
+                        <div
+                            className={cn(
+                                'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3',
+                                gridColumns === 4 && 'xl:grid-cols-4 xl:gap-4',
+                            )}
+                            aria-busy="true"
+                            aria-label="Carregando produtos"
+                        >
+                            {Array.from({
+                                length: gridColumns === 4 ? 4 : 3,
+                            }).map((_, index) => (
+                                <CatalogProductSkeleton key={index} />
+                            ))}
+                        </div>
+                    ) : loadedProducts.length === 0 ? (
                         <div className="ds-reveal grid justify-items-center gap-3 rounded-[1.5rem] border border-dashed border-border bg-card px-4 py-16 text-center">
                             <Search className="size-8 text-muted-foreground" />
                             <h2 className="text-xl font-semibold">
@@ -1262,7 +1342,7 @@ export default function Catalog({
                                                     className={cn(
                                                         'ds-display mt-1 text-xl leading-snug',
                                                         gridColumns === 4 &&
-                                                            'xl:min-h-11 xl:text-lg',
+                                                            'xl:text-lg',
                                                     )}
                                                 >
                                                     {product.name}
@@ -1386,74 +1466,96 @@ export default function Catalog({
                                                     </div>
                                                 </div>
                                             </TooltipProvider>
-                                            <div className="mt-4 grid gap-1">
-                                                <p className="text-sm text-muted-foreground">
-                                                    Tamanhos
-                                                </p>
-                                                <div
-                                                    className={cn(
-                                                        'flex flex-wrap gap-1.5',
-                                                        gridColumns === 4 &&
-                                                            'xl:gap-1',
-                                                    )}
-                                                    aria-label="Tamanhos presentes"
-                                                >
-                                                    {sizes.map((size) => (
-                                                        <span
-                                                            key={size}
-                                                            className={cn(
-                                                                'inline-flex min-w-9 items-center justify-center rounded-lg border border-border/70 bg-muted px-2.5 py-1 text-sm font-semibold tabular-nums',
-                                                                gridColumns ===
-                                                                    4 &&
-                                                                    'xl:min-w-7 xl:rounded-md xl:px-1.5 xl:py-0.5 xl:text-xs',
-                                                            )}
-                                                        >
-                                                            {size}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <Button
-                                                className={cn(
-                                                    'mt-auto h-12 w-full',
-                                                    gridColumns === 4
-                                                        ? 'xl:mt-4 xl:h-11'
-                                                        : 'mt-4',
-                                                )}
-                                                onClick={() =>
-                                                    setSelectedProduct(product)
-                                                }
-                                                aria-label={`Adicionar ${product.name} ao pedido`}
-                                            >
-                                                {selectedCount > 0 ? (
-                                                    <Check />
-                                                ) : (
-                                                    <PaperBag />
-                                                )}
-                                                {selectedCount > 0 ? (
+                                            <div className="mt-4 grid gap-2">
+                                                {sizes.length > 0 ? (
                                                     <>
-                                                        <span
+                                                        <p className="text-sm text-muted-foreground">
+                                                            Tamanhos
+                                                        </p>
+                                                        <div
                                                             className={cn(
+                                                                'flex flex-nowrap gap-1.5 overflow-x-auto pb-1',
                                                                 gridColumns ===
                                                                     4 &&
-                                                                    'xl:hidden',
+                                                                    'xl:gap-1',
                                                             )}
+                                                            aria-label="Tamanhos presentes"
                                                         >
-                                                            Ver sacos ·{' '}
-                                                            {selectedCount} na
-                                                            sacola
-                                                        </span>
-                                                        {gridColumns === 4 && (
-                                                            <span className="hidden xl:inline">
-                                                                Ver sacos ·{' '}
-                                                                {selectedCount}
-                                                            </span>
-                                                        )}
+                                                            {sizes.map(
+                                                                (size) => (
+                                                                    <span
+                                                                        key={
+                                                                            size
+                                                                        }
+                                                                        className={cn(
+                                                                            'inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-muted px-1.5 py-0 text-xs font-semibold whitespace-nowrap tabular-nums',
+                                                                            gridColumns ===
+                                                                                4 &&
+                                                                                'xl:h-7 xl:min-w-7 xl:rounded-md xl:px-1',
+                                                                        )}
+                                                                    >
+                                                                        {size}
+                                                                    </span>
+                                                                ),
+                                                            )}
+                                                        </div>
                                                     </>
                                                 ) : (
-                                                    'Adicionar ao pedido'
+                                                    <span
+                                                        aria-label="Tamanhos não informados"
+                                                        className="inline-flex w-fit items-center rounded-full border border-border/70 bg-muted/60 px-2.5 py-1 text-xs font-medium text-muted-foreground"
+                                                    >
+                                                        Tamanhos não informados
+                                                    </span>
                                                 )}
-                                            </Button>
+                                            </div>
+                                            <div className="mt-auto pt-4">
+                                                <Button
+                                                    className={cn(
+                                                        'h-12 w-full',
+                                                        gridColumns === 4 &&
+                                                            'xl:h-11',
+                                                    )}
+                                                    onClick={() =>
+                                                        setSelectedProduct(
+                                                            product,
+                                                        )
+                                                    }
+                                                    aria-label={`Adicionar ${product.name} ao pedido`}
+                                                >
+                                                    {selectedCount > 0 ? (
+                                                        <Check />
+                                                    ) : (
+                                                        <PaperBag />
+                                                    )}
+                                                    {selectedCount > 0 ? (
+                                                        <>
+                                                            <span
+                                                                className={cn(
+                                                                    gridColumns ===
+                                                                        4 &&
+                                                                        'xl:hidden',
+                                                                )}
+                                                            >
+                                                                Ver sacos ·{' '}
+                                                                {selectedCount}{' '}
+                                                                na sacola
+                                                            </span>
+                                                            {gridColumns ===
+                                                                4 && (
+                                                                <span className="hidden xl:inline">
+                                                                    Ver sacos ·{' '}
+                                                                    {
+                                                                        selectedCount
+                                                                    }
+                                                                </span>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        'Adicionar ao pedido'
+                                                    )}
+                                                </Button>
+                                            </div>
                                         </div>
                                     </article>
                                 );
