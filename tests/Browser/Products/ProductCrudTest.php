@@ -42,7 +42,7 @@ it('shows the grade type, commercial line, and category in product cards and tab
         ->assertSee('Calças')
         ->assertSee('3 peças disponíveis')
         ->click('button[aria-label="Visualização em cards"]')
-        ->assertSee('Grade: Furada')
+        ->assertSee('Grade Furada')
         ->assertSee('Slim')
         ->assertSee('Calças')
         ->assertNoJavaScriptErrors();
@@ -191,7 +191,7 @@ it('uses only product cards on mobile', function () {
     visit(route('products.index', [], false))
         ->resize(390, 844)
         ->assertPresent('[data-testid="product-cards"]')
-        ->assertPresent('[data-testid="product-card"]')
+        ->assertPresent('[data-testid="product-card-v3"]')
         ->assertSee($product->name)
         ->assertMissing('table[aria-label="Produtos cadastrados"]')
         ->assertMissing('button[aria-label="Visualização em tabela"]')

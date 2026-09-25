@@ -103,9 +103,16 @@ export function StockSizeBreakdown({
                                     'text-xs leading-4 text-muted-foreground',
                                     compact && 'text-[10px] leading-3',
                                 )}
+                                title={
+                                    quantity === null
+                                        ? 'Quantidade não informada'
+                                        : undefined
+                                }
                             >
                                 {quantity === null
-                                    ? 'Não informada'
+                                    ? compact
+                                        ? '—'
+                                        : 'Não informada'
                                     : `${quantity} ${quantity === 1 ? 'pç' : 'pçs'}`}
                             </dd>
                         </div>
