@@ -8,7 +8,6 @@ import {
     Layers,
     Ruler,
     Save,
-    Scale,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
@@ -21,7 +20,6 @@ import InputError from '@/components/input-error';
 import { PaperBag } from '@/components/icons/paper-bag';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
 import { create as stockExit } from '@/routes/stock-exits';
-import { index as inventoryIndex } from '@/routes/inventory';
 import { index as productsIndex } from '@/routes/products';
 import { ProductPhotoManager } from '@/components/products/product-photo-manager';
 import type { ProductCoverPreview } from '@/components/products/product-photo-manager';
@@ -814,7 +812,7 @@ export function ProductForm({
                                             type="button"
                                             onClick={onRegisterEntry}
                                             data-testid="open-stock-entry"
-                                            className="h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
+                                            className="col-span-2 h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
                                         >
                                             <ArrowDownToLine />
                                             Registrar entrada
@@ -842,16 +840,6 @@ export function ProductForm({
                                     >
                                         <Ruler />
                                         Recontar saco
-                                    </Button>
-                                    <Button
-                                        asChild
-                                        variant="secondary"
-                                        className="h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
-                                    >
-                                        <Link href={inventoryIndex()}>
-                                            <Scale />
-                                            Balanço
-                                        </Link>
                                     </Button>
                                 </div>
                             </CardHeader>
