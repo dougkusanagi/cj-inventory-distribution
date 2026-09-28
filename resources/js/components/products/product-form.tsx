@@ -1,7 +1,7 @@
 import { Link, router, useForm } from '@inertiajs/react';
 import {
-    ArrowDownToLine,
-    ArrowUpFromLine,
+    CirclePlus,
+    CircleMinus,
     FileText,
     ImagePlus,
     Images,
@@ -814,7 +814,7 @@ export function ProductForm({
                                             data-testid="open-stock-entry"
                                             className="col-span-2 h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
                                         >
-                                            <ArrowDownToLine />
+                                            <CirclePlus />
                                             Registrar entrada
                                         </Button>
                                     )}
@@ -828,7 +828,7 @@ export function ProductForm({
                                                 query: { product: product.id },
                                             })}
                                         >
-                                            <ArrowUpFromLine />
+                                            <CircleMinus />
                                             Registrar saída
                                         </Link>
                                     </Button>
