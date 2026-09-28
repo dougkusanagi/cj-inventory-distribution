@@ -1,5 +1,14 @@
 import { Link, router, useForm } from '@inertiajs/react';
-import { FileText, ImagePlus, Images, Layers, Save } from 'lucide-react';
+import {
+    CirclePlus,
+    CircleMinus,
+    ClipboardCheck,
+    FileText,
+    ImagePlus,
+    Images,
+    Layers,
+    Save,
+} from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
@@ -11,10 +20,17 @@ import InputError from '@/components/input-error';
 import { PaperBag } from '@/components/icons/paper-bag';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
 import { create as stockExit } from '@/routes/stock-exits';
-import { index as inventoryIndex } from '@/routes/inventory';
+import { index as productsIndex } from '@/routes/products';
 import { ProductPhotoManager } from '@/components/products/product-photo-manager';
 import type { ProductCoverPreview } from '@/components/products/product-photo-manager';
-import { StockOfferTypeSelector } from '@/components/products/stock-offer-type-selector';
+import {
+    StockOfferTotalsFields,
+    volumesForOfferType,
+} from '@/components/products/stock-offer-totals-fields';
+import {
+    StockOfferTypeSelector,
+    stockOfferTypeTracksSizes,
+} from '@/components/products/stock-offer-type-selector';
 import { StockOfferVolumeEditor } from '@/components/products/stock-offer-volume-editor';
 import type { StockOfferVolumeFormItem } from '@/components/products/stock-offer-volume-editor';
 import { Button } from '@/components/ui/button';
@@ -147,6 +163,7 @@ export function ProductForm({
     const [activeTab, setActiveTab] = useState<ProductFormTab>('details');
     const [clearStockConfirmationOpen, setClearStockConfirmationOpen] =
         useState(false);
+    const [stockFieldsVersion, setStockFieldsVersion] = useState(0);
     const [coverPreview, setCoverPreview] =
         useState<ProductCoverPreview | null>(() => {
             const cover = product?.images[0];
@@ -188,9 +205,6 @@ export function ProductForm({
 
     const changeTab = (tab: ProductFormTab) => {
         setActiveTab(tab);
-        window.requestAnimationFrame(() => {
-            formRef.current?.scrollIntoView({ block: 'start' });
-        });
     };
 
     const handleCoverChange = useCallback(
@@ -263,6 +277,12 @@ export function ProductForm({
             .map((volume) => volume.id) ?? [];
     const hasLockedVolumes = lockedVolumeIds.length > 0;
     const hasAvailableVolumes = form.data.stock_volumes.length > 0;
+    const tracksSizes = stockOfferTypeTracksSizes(form.data.stock_offer_type);
+    const isVisibleToSellers =
+        form.data.is_active &&
+        hasAvailableVolumes &&
+        hasPositiveTotal &&
+        form.data.stock_offer_type !== 'new_grade';
     const distributionStatus = !form.data.is_active
         ? 'Não aparece para as vendedoras: produto oculto.'
         : !hasAvailableVolumes
@@ -271,9 +291,18 @@ export function ProductForm({
             ? 'Não aparece para as vendedoras: Grade Nova é somente para uso interno.'
             : !hasPositiveTotal
               ? 'Não aparece para as vendedoras: estoque zerado.'
-              : !hasAvailableVolumes
-                ? 'Não aparece para as vendedoras: sem sacos disponíveis.'
-                : 'Aparece para as vendedoras.';
+              : 'Aparece para as vendedoras.';
+
+    const changeOfferType = (type: StockOfferType) => {
+        form.setData((previousData) => ({
+            ...previousData,
+            stock_offer_type: type,
+            stock_volumes: volumesForOfferType(
+                previousData.stock_volumes,
+                stockOfferTypeTracksSizes(type),
+            ),
+        }));
+    };
 
     const clearCurrentStock = () => {
         if (hasLockedVolumes) {
@@ -288,6 +317,7 @@ export function ProductForm({
             ...previousData,
             stock_volumes: [],
         }));
+        setStockFieldsVersion((version) => version + 1);
         setClearStockConfirmationOpen(false);
     };
 
@@ -731,82 +761,147 @@ export function ProductForm({
             >
                 {product ? (
                     <div className="grid gap-5">
-                        <div className="grid gap-2">
-                            <h2 className="text-xl font-semibold">
-                                Estoque do produto
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                                Todos os sacos e ofertas. Entradas, saídas e
-                                recontagens ficam registradas no histórico.
-                            </p>
-                            <p className="text-sm">
-                                Disponível: {product.available_quantity ?? 0}{' '}
-                                peças · Reservado:{' '}
-                                {product.reserved_quantity ?? 0} peças
-                            </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {onRegisterEntry && (
-                                <Button
-                                    type="button"
-                                    onClick={onRegisterEntry}
-                                    data-testid="open-stock-entry"
-                                >
-                                    Registrar entrada
-                                </Button>
-                            )}
-                            <Button asChild variant="outline">
-                                <Link
-                                    href={stockExit({
-                                        query: { product: product.id },
-                                    })}
-                                >
-                                    Registrar saída
-                                </Link>
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={onAdjustStock}
-                            >
-                                Ajustar estoque por tamanho
-                            </Button>
-                            <Button asChild variant="ghost">
-                                <Link href={inventoryIndex()}>
-                                    Balanço de estoque
-                                </Link>
-                            </Button>
-                        </div>
-                        {product.stock_volumes.map((volume) => (
-                            <div
-                                key={volume.id}
-                                className="grid gap-3 rounded-xl border p-4"
-                            >
-                                <div className="flex flex-wrap justify-between gap-2">
-                                    <h3 className="font-semibold">
-                                        Saco {volume.sort_order + 1} ·{' '}
-                                        {volume.code}
-                                    </h3>
-                                    <span>
-                                        {volume.total_quantity} peças ·{' '}
-                                        {volume.status}
-                                    </span>
+                        <Card className="gap-0 rounded-2xl border-border p-0 shadow-none">
+                            <CardHeader className="gap-4 p-5 sm:p-6">
+                                <div className="grid gap-1.5">
+                                    <h2 className="text-xl font-semibold tracking-tight">
+                                        Estoque do produto
+                                    </h2>
+                                    <CardDescription className="text-sm leading-6">
+                                        Todos os sacos e ofertas. Entradas,
+                                        saídas e recontagens ficam registradas
+                                        no histórico.
+                                    </CardDescription>
                                 </div>
-                                <p className="text-sm text-muted-foreground">
-                                    {volume.offer_type}
-                                </p>
-                                <StockSizeBreakdown
-                                    sizes={volume.items.filter(
-                                        (item) => item.is_active,
+                                <dl className="grid grid-cols-3 gap-2">
+                                    {(
+                                        [
+                                            [
+                                                'Disponível',
+                                                product.available_quantity ?? 0,
+                                            ],
+                                            [
+                                                'Reservado',
+                                                product.reserved_quantity ?? 0,
+                                            ],
+                                            [
+                                                'Sacos',
+                                                product.stock_volumes.length,
+                                            ],
+                                        ] as const
+                                    ).map(([label, value]) => (
+                                        <div
+                                            key={label}
+                                            className="grid gap-0.5 rounded-xl bg-muted/60 px-3 py-2.5"
+                                        >
+                                            <dt className="text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                                                {label}
+                                            </dt>
+                                            <dd className="font-mono text-xl font-semibold text-foreground tabular-nums">
+                                                {value}
+                                            </dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                                    {onRegisterEntry && (
+                                        <Button
+                                            type="button"
+                                            onClick={onRegisterEntry}
+                                            data-testid="open-stock-entry"
+                                            className="col-span-2 h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
+                                        >
+                                            <CirclePlus />
+                                            Registrar entrada
+                                        </Button>
                                     )}
-                                />
+                                    <Button
+                                        asChild
+                                        variant="secondary"
+                                        className="h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
+                                    >
+                                        <Link
+                                            href={stockExit({
+                                                query: { product: product.id },
+                                            })}
+                                        >
+                                            <CircleMinus />
+                                            Registrar saída
+                                        </Link>
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        onClick={onAdjustStock}
+                                        className="h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
+                                    >
+                                        <ClipboardCheck />
+                                        Recontar saco
+                                    </Button>
+                                </div>
+                            </CardHeader>
+                        </Card>
+
+                        {product.stock_volumes.length > 0 ? (
+                            <div className="grid gap-3 md:grid-cols-2">
+                                {product.stock_volumes.map((volume) => {
+                                    const activeSizes = volume.items.filter(
+                                        (item) => item.is_active,
+                                    );
+
+                                    return (
+                                        <div
+                                            key={volume.id}
+                                            className="grid content-start gap-3 rounded-2xl border border-border bg-card p-4"
+                                        >
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="grid min-w-0 gap-0.5">
+                                                    <h3 className="font-semibold">
+                                                        Saco{' '}
+                                                        {volume.sort_order + 1}
+                                                        <span className="font-mono text-sm font-normal text-muted-foreground">
+                                                            {' '}
+                                                            · {volume.code}
+                                                        </span>
+                                                    </h3>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {volume.offer_type}
+                                                    </p>
+                                                </div>
+                                                <span
+                                                    className={cn(
+                                                        'shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums',
+                                                        volume.status ===
+                                                            'Disponível'
+                                                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                                            : 'bg-muted text-muted-foreground',
+                                                    )}
+                                                >
+                                                    {volume.total_quantity}{' '}
+                                                    peças · {volume.status}
+                                                </span>
+                                            </div>
+                                            {activeSizes.length > 0 ? (
+                                                <StockSizeBreakdown
+                                                    sizes={activeSizes}
+                                                />
+                                            ) : (
+                                                <p className="text-xs text-muted-foreground">
+                                                    Sem quantidade por tamanho.
+                                                </p>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
-                        ))}
-                        {product.stock_volumes.length === 0 && (
-                            <p className="text-sm text-muted-foreground">
-                                Nenhum saco cadastrado. Registre uma entrada
-                                para disponibilizar estoque.
-                            </p>
+                        ) : (
+                            <div className="grid justify-items-center gap-2 rounded-2xl border border-dashed border-border p-8 text-center">
+                                <PaperBag className="size-8 text-muted-foreground" />
+                                <p className="text-sm text-muted-foreground">
+                                    Nenhum saco cadastrado. Registre uma entrada
+                                    para disponibilizar estoque.
+                                </p>
+                            </div>
                         )}
                     </div>
                 ) : (
@@ -819,78 +914,105 @@ export function ProductForm({
                                             <Layers className="size-4" />
                                         </span>
                                         <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
-                                            Disponibilidade em estoque
+                                            Estoque inicial (opcional)
                                         </p>
                                     </div>
                                     <h2 className="text-xl font-semibold tracking-tight">
                                         Estoque organizado por sacos
                                     </h2>
                                     <CardDescription className="text-sm leading-6">
-                                        Cada saco tem sua própria grade e total.
-                                        O total da oferta é a soma dos sacos e é
-                                        recalculado no servidor.
+                                        Escolha o tipo de grade e informe os
+                                        sacos. Se preferir, deixe em branco e
+                                        registre uma entrada depois.
                                     </CardDescription>
-                                    <p className="text-sm font-medium text-foreground">
-                                        {distributionStatus}
-                                    </p>
-                                    {product && onAdjustStock && (
-                                        <Button
-                                            type="button"
-                                            onClick={onAdjustStock}
-                                            className="mt-2 h-11 w-full sm:w-fit"
-                                        >
-                                            Ajustar estoque por tamanho
-                                        </Button>
-                                    )}
                                 </div>
                             </CardHeader>
                             <CardContent className="grid gap-6 p-5 pt-0 sm:p-6 sm:pt-0">
                                 <StockOfferTypeSelector
                                     value={form.data.stock_offer_type}
-                                    onChange={(value) =>
-                                        form.setData('stock_offer_type', value)
-                                    }
+                                    onChange={changeOfferType}
                                     disabled={hasLockedVolumes}
                                     error={error('stock_offer_type')}
                                 />
+
+                                {!tracksSizes && (
+                                    <StockOfferTotalsFields
+                                        key={`${form.data.stock_offer_type}-${stockFieldsVersion}`}
+                                        volumes={form.data.stock_volumes}
+                                        errors={
+                                            form.errors as Record<
+                                                string,
+                                                string
+                                            >
+                                        }
+                                        onChange={(volumes) =>
+                                            form.setData(
+                                                'stock_volumes',
+                                                volumes,
+                                            )
+                                        }
+                                    />
+                                )}
+
+                                <p
+                                    className={cn(
+                                        'flex items-center gap-2 text-sm font-medium',
+                                        isVisibleToSellers
+                                            ? 'text-foreground'
+                                            : 'text-muted-foreground',
+                                    )}
+                                    aria-live="polite"
+                                >
+                                    <span
+                                        className={cn(
+                                            'size-2 shrink-0 rounded-full',
+                                            isVisibleToSellers
+                                                ? 'bg-emerald-600 dark:bg-emerald-400'
+                                                : 'bg-muted-foreground/60',
+                                        )}
+                                        aria-hidden="true"
+                                    />
+                                    {distributionStatus}
+                                </p>
                             </CardContent>
                         </Card>
 
-                        <StockOfferVolumeEditor
-                            volumes={form.data.stock_volumes}
-                            errors={form.errors as Record<string, string>}
-                            lockedVolumeIds={lockedVolumeIds}
-                            onChange={(volumes) =>
-                                form.setData('stock_volumes', volumes)
-                            }
-                        />
-
-                        <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="grid gap-1">
-                                <p className="text-sm font-semibold text-foreground">
-                                    Encerrar estoque atual
-                                </p>
-                                <p className="text-sm leading-5 text-muted-foreground">
-                                    {hasLockedVolumes
-                                        ? 'Sacos já movimentados precisam permanecer no histórico. Use o histórico de movimentações para novas entradas, saídas ou estornos.'
-                                        : 'Remove a oferta e seus sacos deste produto ao salvar.'}
-                                </p>
-                            </div>
-                            <Button
-                                type="button"
-                                variant="destructive"
-                                data-testid="end-current-stock"
-                                onClick={clearCurrentStock}
-                                disabled={
-                                    form.data.stock_volumes.length === 0 ||
-                                    hasLockedVolumes
+                        {tracksSizes && (
+                            <StockOfferVolumeEditor
+                                key={stockFieldsVersion}
+                                volumes={form.data.stock_volumes}
+                                errors={form.errors as Record<string, string>}
+                                lockedVolumeIds={lockedVolumeIds}
+                                onChange={(volumes) =>
+                                    form.setData('stock_volumes', volumes)
                                 }
-                                className="h-11 shrink-0"
-                            >
-                                <PaperBag />
-                                Encerrar estoque
-                            </Button>
-                        </div>
+                            />
+                        )}
+
+                        {form.data.stock_volumes.length > 0 && (
+                            <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="grid gap-1">
+                                    <p className="text-sm font-semibold text-foreground">
+                                        Cadastrar sem estoque
+                                    </p>
+                                    <p className="text-sm leading-5 text-muted-foreground">
+                                        Remove os sacos informados. Você pode
+                                        registrar uma entrada depois.
+                                    </p>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    data-testid="end-current-stock"
+                                    onClick={clearCurrentStock}
+                                    disabled={hasLockedVolumes}
+                                    className="h-11 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                    <PaperBag />
+                                    Remover sacos
+                                </Button>
+                            </div>
+                        )}
                     </>
                 )}
             </section>
@@ -905,11 +1027,23 @@ export function ProductForm({
                             : 'md:left-(--sidebar-width)'),
                 )}
             >
-                <div className="mx-auto flex w-full max-w-7xl justify-center sm:justify-end">
+                <div className="mx-auto flex w-full max-w-7xl items-center justify-center gap-2 sm:justify-end">
+                    {form.isDirty && (
+                        <p className="mr-auto hidden text-sm text-muted-foreground sm:block">
+                            Alterações não salvas
+                        </p>
+                    )}
+                    <Button
+                        asChild
+                        variant="ghost"
+                        className="h-12 shrink-0 text-base sm:text-sm"
+                    >
+                        <Link href={productsIndex()}>Cancelar</Link>
+                    </Button>
                     <Button
                         type="submit"
                         disabled={form.processing || processingImages}
-                        className="h-12 w-full min-w-44 text-base font-semibold sm:w-auto sm:text-sm"
+                        className="h-12 min-w-0 flex-1 text-base font-semibold sm:w-auto sm:min-w-44 sm:flex-none sm:text-sm"
                     >
                         {form.processing || processingImages ? (
                             <Spinner />
@@ -929,9 +1063,9 @@ export function ProductForm({
             <ConfirmationDialog
                 open={clearStockConfirmationOpen}
                 onOpenChange={setClearStockConfirmationOpen}
-                title="Encerrar o estoque atual?"
-                description="A oferta de estoque e os sacos deste produto serão removidos ao salvar. O histórico de movimentações será preservado."
-                confirmLabel="Encerrar estoque"
+                title="Remover os sacos informados?"
+                description="O produto será cadastrado sem estoque. Você pode registrar uma entrada depois."
+                confirmLabel="Remover sacos"
                 destructive
                 onConfirm={confirmClearCurrentStock}
             />

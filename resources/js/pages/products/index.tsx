@@ -6,6 +6,7 @@ import {
     Info,
     ImageOff,
     LayoutGrid,
+    LayoutList,
     Package,
     Pencil,
     Plus,
@@ -113,7 +114,13 @@ type ProductsIndexComponentProps = ProductsIndexProps & {
     indexUrl?: string;
 };
 
-type ProductView = 'table' | 'cards';
+type ProductView = 'table' | 'cards' | 'compact';
+
+const productViewStorageKey = 'products-index-view';
+
+function isProductView(value: unknown): value is ProductView {
+    return value === 'table' || value === 'cards' || value === 'compact';
+}
 
 type ProductFilterValues = {
     search: string;
@@ -928,6 +935,150 @@ function ProductCardV3({
     );
 }
 
+function ProductCompactCard({
+    product,
+    onDelete,
+    onOpenGallery,
+}: {
+    product: Product;
+    onDelete: (product: Product) => void;
+    onOpenGallery: (product: Product) => void;
+}) {
+    const availableQuantity = product.available_quantity ?? 0;
+    const availableVolumeCount = product.available_stock_volume_count ?? 0;
+    const hasStock =
+        product.total_quantity !== null && product.total_quantity !== undefined;
+    const isAvailable =
+        Boolean(product.is_active) &&
+        Boolean(product.available_for_distribution);
+    const statusLabel = !product.is_active
+        ? 'Inativo'
+        : product.available_for_distribution
+          ? 'Disponível'
+          : product.stock_offer_type === 'new_grade'
+            ? 'Uso interno'
+            : 'Indisponível';
+    const sizes = productSizeBreakdown(product);
+
+    return (
+        <article
+            data-testid="product-card-compact"
+            aria-label={product.name}
+            className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card transition-colors duration-200 hover:border-foreground/30 lg:flex-row"
+        >
+            <div
+                className={cn(
+                    'relative aspect-[4/5] shrink-0 overflow-hidden bg-muted/60 lg:aspect-auto lg:w-44',
+                    !product.is_active && '[&_img]:grayscale',
+                )}
+            >
+                <ProductImageButton
+                    product={product}
+                    onOpenGallery={onOpenGallery}
+                    className="transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none"
+                    iconClassName="size-7"
+                />
+                <span
+                    className={cn(
+                        'pointer-events-none absolute top-2 left-2 inline-flex max-w-[calc(100%-1rem)] items-center gap-1.5 truncate rounded-full border px-2 py-0.5 text-[11px] font-semibold shadow-sm backdrop-blur',
+                        isAvailable
+                            ? 'border-emerald-600/30 bg-emerald-50/95 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-950/85 dark:text-emerald-200'
+                            : 'border-border bg-card/90 text-muted-foreground',
+                    )}
+                >
+                    <span
+                        className={cn(
+                            'size-1.5 shrink-0 rounded-full',
+                            isAvailable
+                                ? 'bg-emerald-600 dark:bg-emerald-400'
+                                : 'bg-muted-foreground',
+                        )}
+                        aria-hidden="true"
+                    />
+                    {statusLabel}
+                </span>
+            </div>
+
+            <div className="flex min-w-0 flex-1 flex-col gap-3 p-3 sm:p-4">
+                <div className="min-w-0">
+                    <p className="truncate font-mono text-[10px] text-muted-foreground sm:text-xs">
+                        {product.code}
+                        {product.model && ` · ${product.model}`}
+                    </p>
+                    <TextLink
+                        href={productEdit(product.id)}
+                        className="mt-1 line-clamp-2 rounded-sm text-base leading-5 font-semibold tracking-tight text-card-foreground no-underline hover:underline sm:text-lg sm:leading-6"
+                    >
+                        {product.name}
+                    </TextLink>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                    {product.stock_offer_type && (
+                        <Badge
+                            variant="secondary"
+                            className="rounded-full px-2 text-[11px] sm:text-xs"
+                        >
+                            {stockOfferTypeCardLabels[product.stock_offer_type]}
+                        </Badge>
+                    )}
+                    {product.line && (
+                        <span>{productLineLabels[product.line]}</span>
+                    )}
+                </div>
+
+                {hasStock ? (
+                    <p className="border-t border-border/70 pt-3 text-sm leading-5 text-muted-foreground tabular-nums">
+                        <strong className="text-xl font-bold text-card-foreground sm:text-2xl">
+                            {availableQuantity}
+                        </strong>{' '}
+                        {availableQuantity === 1 ? 'peça' : 'peças'}
+                        <span className="block text-[11px] sm:inline sm:text-xs">
+                            <span className="hidden sm:inline"> · </span>
+                            {availableVolumeCount}{' '}
+                            {availableVolumeCount === 1 ? 'saco' : 'sacos'}
+                        </span>
+                    </p>
+                ) : (
+                    <p className="text-xs font-medium text-muted-foreground">
+                        Sem oferta de estoque
+                    </p>
+                )}
+
+                {sizes.length > 0 && (
+                    <StockSizeBreakdown sizes={sizes} sizesOnly />
+                )}
+
+                <div className="mt-auto flex items-center gap-1 border-t border-border/70 pt-3">
+                    <Button
+                        asChild
+                        variant="secondary"
+                        size="sm"
+                        className="h-10 min-w-0 flex-1"
+                    >
+                        <Link
+                            href={productEdit(product.id)}
+                            aria-label={`Editar ${product.name}`}
+                        >
+                            <Pencil />
+                            Editar
+                        </Link>
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-10 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => onDelete(product)}
+                        aria-label={`Excluir ${product.name}`}
+                    >
+                        <Trash2 />
+                    </Button>
+                </div>
+            </div>
+        </article>
+    );
+}
+
 function ProductCard({
     product,
     onDelete,
@@ -1125,6 +1276,28 @@ export default function ProductsIndex({
         isCardPreview ? 'cards' : 'table',
     );
     const [filtersOpen, setFiltersOpen] = useState(false);
+
+    useEffect(() => {
+        if (isCardPreview) {
+            return;
+        }
+
+        const storedView = window.localStorage.getItem(productViewStorageKey);
+
+        if (isProductView(storedView)) {
+            setView(storedView);
+        }
+    }, [isCardPreview]);
+
+    const changeView = (nextView: ProductView) => {
+        setView(nextView);
+        window.localStorage.setItem(productViewStorageKey, nextView);
+    };
+    const visibleView: ProductView = isCardPreview
+        ? 'cards'
+        : isMobile && view === 'table'
+          ? 'cards'
+          : view;
     const [mobileSearch, setMobileSearch] = useState(filters.search);
     const [galleryProduct, setGalleryProduct] = useState<Product | null>(null);
     const [galleryImageIndex, setGalleryImageIndex] = useState(0);
@@ -1439,17 +1612,17 @@ export default function ProductsIndex({
 
                 {products.data.length > 0 ? (
                     <>
-                        {!isMobile && !isCardPreview && (
-                            <div className="hidden flex-col gap-3 md:flex md:flex-row md:items-center md:justify-between">
-                                <p className="text-sm text-muted-foreground">
+                        {!isCardPreview && (
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                <p className="hidden text-sm text-muted-foreground md:block">
                                     Escolha como visualizar seu catálogo.
                                 </p>
                                 <ToggleGroup
                                     type="single"
-                                    value={view}
+                                    value={visibleView}
                                     onValueChange={(value) => {
-                                        if (value) {
-                                            setView(value as ProductView);
+                                        if (isProductView(value)) {
+                                            changeView(value);
                                         }
                                     }}
                                     variant="outline"
@@ -1457,27 +1630,51 @@ export default function ProductsIndex({
                                     aria-label="Escolher visualização dos produtos"
                                     className="w-full md:w-fit"
                                 >
-                                    <ToggleGroupItem
-                                        value="table"
-                                        aria-label="Visualização em tabela"
-                                        className="flex-1 px-3 data-[state=on]:bg-secondary md:flex-none"
-                                    >
-                                        <Table2 />
-                                        Tabela
-                                    </ToggleGroupItem>
+                                    {!isMobile && (
+                                        <ToggleGroupItem
+                                            value="table"
+                                            aria-label="Visualização em tabela"
+                                            className="flex-1 px-3 data-[state=on]:bg-secondary md:flex-none"
+                                        >
+                                            <Table2 />
+                                            Tabela
+                                        </ToggleGroupItem>
+                                    )}
                                     <ToggleGroupItem
                                         value="cards"
                                         aria-label="Visualização em cards"
                                         className="flex-1 px-3 data-[state=on]:bg-secondary md:flex-none"
                                     >
-                                        <LayoutGrid />
+                                        <LayoutList />
                                         Cards
+                                    </ToggleGroupItem>
+                                    <ToggleGroupItem
+                                        value="compact"
+                                        aria-label="Visualização com 2 cards por linha"
+                                        className="flex-1 px-3 data-[state=on]:bg-secondary md:flex-none"
+                                    >
+                                        <LayoutGrid />2 por linha
                                     </ToggleGroupItem>
                                 </ToggleGroup>
                             </div>
                         )}
 
-                        {isMobile || isCardPreview || view === 'cards' ? (
+                        {visibleView === 'compact' ? (
+                            <section
+                                data-testid="product-cards-compact"
+                                className="grid grid-cols-2 gap-3 sm:gap-4"
+                                aria-label="Produtos cadastrados em 2 cards por linha"
+                            >
+                                {products.data.map((product) => (
+                                    <ProductCompactCard
+                                        key={product.id}
+                                        product={product}
+                                        onDelete={setProductToDelete}
+                                        onOpenGallery={openProductGallery}
+                                    />
+                                ))}
+                            </section>
+                        ) : visibleView === 'cards' ? (
                             <section
                                 data-testid={
                                     isV3CardPreview

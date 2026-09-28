@@ -1,8 +1,8 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
-    ArrowDownToLine,
+    CirclePlus,
     ArrowLeftRight,
-    ArrowUpFromLine,
+    CircleMinus,
     Search,
     SlidersHorizontal,
 } from 'lucide-react';
@@ -33,9 +33,9 @@ import type {
 
 function movementIcon(type: StockMovementType) {
     return type === 'in'
-        ? ArrowDownToLine
+        ? CirclePlus
         : type === 'out'
-          ? ArrowUpFromLine
+          ? CircleMinus
           : ArrowLeftRight;
 }
 
@@ -128,13 +128,13 @@ export default function StockMovementsIndex({
                     <div className="flex flex-col gap-2 sm:flex-row">
                         <Button asChild variant="outline">
                             <Link href={createExit()}>
-                                <ArrowUpFromLine />
+                                <CircleMinus />
                                 Registrar saída
                             </Link>
                         </Button>
                         <Button asChild>
                             <Link href={createEntry()}>
-                                <ArrowDownToLine />
+                                <CirclePlus />
                                 Registrar entrada
                             </Link>
                         </Button>

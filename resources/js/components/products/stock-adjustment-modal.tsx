@@ -183,7 +183,7 @@ export function StockAdjustmentModal({
         </div>
     );
     const description =
-        'Confira o conteúdo físico. A confirmação registra a diferença no histórico.';
+        'Conte as peças que estão no saco e informe a quantidade certa. O estoque será corrigido e a mudança fica salva no histórico.';
     if (isMobile)
         return (
             <Drawer open={open} onOpenChange={onOpenChange}>

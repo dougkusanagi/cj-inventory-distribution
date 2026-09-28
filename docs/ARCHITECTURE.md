@@ -220,7 +220,10 @@ sacos inteiros, com snapshots do produto, oferta, saco, grade e estados
 anterior/posterior. As duas entidades são imutáveis e não usam `SoftDeletes`.
 
 Entradas e saídas manuais exigem usuário da equipe, motivo e chave de
-idempotência. A finalização de pedido cria uma única saída na mesma transação
+idempotência. Entradas de Grade Nova e Reposição pedem apenas o total de sacos
+e de peças: o formulário distribui as peças entre os sacos e o servidor grava
+o motivo padrão `Entrada de <tipo>`. Entradas de Grade Furada continuam
+exigindo motivo e permitem informar a grade de cada saco. A finalização de pedido cria uma única saída na mesma transação
 que consome os sacos e conclui o pedido; cancelamento apenas libera a reserva.
 O catálogo e o dashboard consultam os sacos disponíveis e reservados, nunca
 somam o histórico para derivar saldo.

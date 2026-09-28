@@ -33,7 +33,12 @@ class StoreStockEntryRequest extends FormRequest
                 Rule::exists(Product::class, 'id')->whereNull('deleted_at'),
             ],
             'stock_offer_type' => ['required', Rule::enum(StockOfferType::class)],
-            'reason' => ['required', 'string', 'max:5000'],
+            'reason' => [
+                'nullable',
+                Rule::requiredIf(fn (): bool => $this->input('stock_offer_type') === StockOfferType::BrokenGrade->value),
+                'string',
+                'max:5000',
+            ],
             'notes' => ['nullable', 'string', 'max:5000'],
             'idempotency_key' => ['required', 'string', 'max:160', 'regex:/^[A-Za-z0-9._:-]+$/'],
             'stock_volumes' => ['required', 'array', 'min:1', 'max:50'],

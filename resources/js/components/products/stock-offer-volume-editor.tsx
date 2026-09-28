@@ -113,7 +113,7 @@ function hasKnownItemQuantity(volume: StockOfferVolumeFormItem): boolean {
     return volume.items.some(hasItemQuantity);
 }
 
-function volumeTotal(volume: StockOfferVolumeFormItem): number {
+export function volumeTotal(volume: StockOfferVolumeFormItem): number {
     if (hasKnownItemQuantity(volume)) {
         return volume.items.reduce(
             (total, item) =>
@@ -123,6 +123,20 @@ function volumeTotal(volume: StockOfferVolumeFormItem): number {
     }
 
     return Number(volume.total_quantity) || 0;
+}
+
+/**
+ * Gives sacks registered only by their totals the default size list, so they
+ * can be detailed by size without losing the informed total.
+ */
+export function withDefaultSizeGrid(
+    volumes: StockOfferVolumeFormItem[],
+): StockOfferVolumeFormItem[] {
+    return volumes.map((volume) =>
+        volume.items.length > 0
+            ? volume
+            : { ...volume, items: emptyItems(sizePresets[0].sizes) },
+    );
 }
 
 function detectPreset(items: StockOfferVolumeItemFormItem[]): SizePresetId {

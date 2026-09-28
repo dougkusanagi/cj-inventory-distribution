@@ -13,14 +13,14 @@ export type StockOfferTypeOption = {
 
 export const stockOfferTypeOptions: StockOfferTypeOption[] = [
     {
-        id: 'replenishment',
-        label: 'Reposição',
-        description: 'Distribuição em sacos.',
-    },
-    {
         id: 'new_grade',
         label: 'Nova',
         description: 'Grade completa.',
+    },
+    {
+        id: 'replenishment',
+        label: 'Reposição',
+        description: 'Distribuição em sacos.',
     },
     {
         id: 'broken_grade',
@@ -28,6 +28,14 @@ export const stockOfferTypeOptions: StockOfferTypeOption[] = [
         description: 'Grade incompleta.',
     },
 ];
+
+/**
+ * Only Grade Furada needs the sizes of each sack; the other offers are
+ * registered by their number of sacks and total of pieces.
+ */
+export function stockOfferTypeTracksSizes(type: StockOfferType | ''): boolean {
+    return type === 'broken_grade';
+}
 
 type StockOfferTypeSelectorProps = {
     value: StockOfferType | '';
@@ -60,8 +68,8 @@ export function StockOfferTypeSelector({
                 Tipo de Grade <span className="text-destructive">*</span>
             </legend>
             <p className="text-sm leading-5 text-muted-foreground">
-                Todos os tipos usam pelo menos um saco; a diferença está na
-                classificação da oferta.
+                Nova e Reposição pedem só o total de sacos e de peças. Furada
+                pede os tamanhos de cada saco.
             </p>
             <RadioGroup
                 value={value}

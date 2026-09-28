@@ -1,9 +1,9 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import {
-    ArrowDownToLine,
+    CirclePlus,
     ArrowLeftRight,
     ArrowRight,
-    ArrowUpFromLine,
+    CircleMinus,
     RotateCcw,
 } from 'lucide-react';
 import type { FormEvent } from 'react';
@@ -121,9 +121,9 @@ export default function StockMovementShow({
     const form = useForm({ reason: '' });
     const Icon =
         movement.type === 'in'
-            ? ArrowDownToLine
+            ? CirclePlus
             : movement.type === 'out'
-              ? ArrowUpFromLine
+              ? CircleMinus
               : ArrowLeftRight;
     const canReverse =
         movement.source === 'manual' && movement.reversal_id === null;

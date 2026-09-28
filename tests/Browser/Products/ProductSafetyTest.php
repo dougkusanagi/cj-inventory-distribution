@@ -20,6 +20,7 @@ it('shows validation feedback and does not save an invalid stock offer', functio
     $page = visit(route('products.create', [], false))
         ->type('#product-name', '   ')
         ->click('#product-tab-stock')
+        ->click('#stock-offer-type-broken_grade')
         ->press('Adicionar saco');
 
     $page->script('window.scrollTo(0, document.body.scrollHeight);');
@@ -89,7 +90,7 @@ it('opens product stock entry in a dialog or drawer with grade cards', function 
         ->assertPresent('[data-testid="stock-entry-form"]')
         ->assertPresent('[data-testid="entry-stock-offer-type-selector"]')
         ->assertPresent('#entry-stock-offer-type-new_grade')
-        ->press('Cancelar')
+        ->click('[data-testid="stock-entry-form"] button:has-text("Cancelar")')
         ->assertMissing('[data-testid="stock-entry-dialog"]')
         ->resize(390, 844)
         ->click('[data-testid="open-stock-entry"]')
@@ -108,18 +109,41 @@ it('registers stock from the product dialog and returns to the product', functio
     $page = visit(route('products.edit', [$product->id], false))
         ->click('#product-tab-stock')
         ->click('[data-testid="open-stock-entry"]')
-        ->press('Adicionar saco')
-        ->type('#volume-total-0', '8')
-        ->click('#entry-reason')
-        ->click('[role="option"]:has-text("Recebimento da fábrica")')
+        ->assertMissing('#entry-reason')
+        ->assertMissing('#volume-total-0')
+        ->type('#entry-stock-totals-bag-count', '2')
+        ->type('#entry-stock-totals-piece-count', '15')
+        ->assertSee('15 peças em 2 sacos')
         ->click('[data-testid="stock-entry-form"] button[type="submit"]')
         ->assertRoute('products.edit', [$product->id])
         ->assertSee('8 peças · Disponível')
+        ->assertSee('7 peças · Disponível')
         ->assertSee('Entrada de estoque registrada.')
         ->assertNoJavaScriptErrors();
 
     expect(StockMovement::query()->count())->toBe(1)
-        ->and(StockOfferVolume::query()->count())->toBe(1);
+        ->and(StockMovement::query()->sole()->reason)->toBe('Entrada de Reposição')
+        ->and(StockOfferVolume::query()->count())->toBe(2);
+});
+
+it('asks for the reason and sizes only for grade furada entries', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create(['name' => 'Produto com grade furada']);
+
+    $this->actingAs($user);
+
+    visit(route('products.edit', [$product->id], false))
+        ->click('#product-tab-stock')
+        ->click('[data-testid="open-stock-entry"]')
+        ->click('#entry-stock-offer-type-broken_grade')
+        ->assertPresent('#entry-reason')
+        ->press('Adicionar saco')
+        ->assertPresent('#volume-0-active-0')
+        ->click('#entry-stock-offer-type-new_grade')
+        ->assertMissing('#entry-reason')
+        ->assertPresent('#entry-stock-totals-bag-count')
+        ->assertValue('#entry-stock-totals-bag-count', '1')
+        ->assertNoJavaScriptErrors();
 });
 
 it('uses the grade cards on the standalone stock entry form', function () {
@@ -138,6 +162,7 @@ it('opens the stock tab when saving from the details tab returns stock errors', 
     $page = visit(route('products.create', [], false))
         ->type('#product-name', 'Produto com estoque incompleto')
         ->click('#product-tab-stock')
+        ->click('#stock-offer-type-broken_grade')
         ->press('Adicionar saco')
         ->click('#product-tab-details');
 
@@ -158,6 +183,7 @@ it('opens the details tab for native validation when saving from stock', functio
 
     $page = visit(route('products.create', [], false))
         ->click('#product-tab-stock')
+        ->click('#stock-offer-type-broken_grade')
         ->press('Adicionar saco')
         ->type('#volume-total-0', '12');
 

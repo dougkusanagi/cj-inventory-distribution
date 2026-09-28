@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { ArrowDownToLine } from 'lucide-react';
+import { CirclePlus } from 'lucide-react';
 import { StockEntryForm } from '@/components/products/stock-entry-form';
 import { index } from '@/routes/stock-movements';
 
@@ -24,7 +24,7 @@ export default function StockEntry({
             <div className="mx-auto grid w-full max-w-5xl gap-6 px-4 py-8 sm:px-6 lg:px-8">
                 <header className="flex items-start gap-3">
                     <span className="mt-1 flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                        <ArrowDownToLine className="size-5" />
+                        <CirclePlus className="size-5" />
                     </span>
                     <div className="grid gap-1.5">
                         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
