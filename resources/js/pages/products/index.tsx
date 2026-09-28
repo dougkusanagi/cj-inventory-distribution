@@ -964,7 +964,7 @@ function ProductCompactCard({
         <article
             data-testid="product-card-compact"
             aria-label={product.name}
-            className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-foreground/20 hover:shadow-md lg:flex-row"
+            className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card transition-colors duration-200 hover:border-foreground/30 lg:flex-row"
         >
             <div
                 className={cn(
@@ -999,21 +999,21 @@ function ProductCompactCard({
                 </span>
             </div>
 
-            <div className="flex min-w-0 flex-1 flex-col gap-2 p-3 sm:gap-3 sm:p-4">
+            <div className="flex min-w-0 flex-1 flex-col gap-3 p-3 sm:p-4">
                 <div className="min-w-0">
-                    <p className="truncate font-mono text-[11px] text-muted-foreground sm:text-xs">
+                    <p className="truncate font-mono text-[10px] text-muted-foreground sm:text-xs">
                         {product.code}
                         {product.model && ` · ${product.model}`}
                     </p>
                     <TextLink
                         href={productEdit(product.id)}
-                        className="mt-0.5 line-clamp-2 rounded-sm text-sm leading-5 font-semibold tracking-tight text-card-foreground no-underline hover:underline sm:text-base sm:leading-6"
+                        className="mt-1 line-clamp-2 rounded-sm text-base leading-5 font-semibold tracking-tight text-card-foreground no-underline hover:underline sm:text-lg sm:leading-6"
                     >
                         {product.name}
                     </TextLink>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground sm:text-xs">
+                <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                     {product.stock_offer_type && (
                         <Badge
                             variant="secondary"
@@ -1028,8 +1028,8 @@ function ProductCompactCard({
                 </div>
 
                 {hasStock ? (
-                    <p className="text-sm leading-5 text-muted-foreground tabular-nums">
-                        <strong className="text-lg font-bold text-card-foreground sm:text-xl">
+                    <p className="border-t border-border/70 pt-3 text-sm leading-5 text-muted-foreground tabular-nums">
+                        <strong className="text-xl font-bold text-card-foreground sm:text-2xl">
                             {availableQuantity}
                         </strong>{' '}
                         {availableQuantity === 1 ? 'peça' : 'peças'}
@@ -1049,12 +1049,12 @@ function ProductCompactCard({
                     <StockSizeBreakdown sizes={sizes} sizesOnly />
                 )}
 
-                <div className="mt-auto flex items-center gap-1 pt-1">
+                <div className="mt-auto flex items-center gap-1 border-t border-border/70 pt-3">
                     <Button
                         asChild
                         variant="secondary"
                         size="sm"
-                        className="h-9 min-w-0 flex-1"
+                        className="h-10 min-w-0 flex-1"
                     >
                         <Link
                             href={productEdit(product.id)}
@@ -1067,7 +1067,7 @@ function ProductCompactCard({
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="size-9 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        className="size-10 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => onDelete(product)}
                         aria-label={`Excluir ${product.name}`}
                     >

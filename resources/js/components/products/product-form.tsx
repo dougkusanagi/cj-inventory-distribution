@@ -2,11 +2,11 @@ import { Link, router, useForm } from '@inertiajs/react';
 import {
     CirclePlus,
     CircleMinus,
+    ClipboardCheck,
     FileText,
     ImagePlus,
     Images,
     Layers,
-    Ruler,
     Save,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -205,9 +205,6 @@ export function ProductForm({
 
     const changeTab = (tab: ProductFormTab) => {
         setActiveTab(tab);
-        window.requestAnimationFrame(() => {
-            formRef.current?.scrollIntoView({ block: 'start' });
-        });
     };
 
     const handleCoverChange = useCallback(
@@ -838,7 +835,7 @@ export function ProductForm({
                                         onClick={onAdjustStock}
                                         className="h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
                                     >
-                                        <Ruler />
+                                        <ClipboardCheck />
                                         Recontar saco
                                     </Button>
                                 </div>

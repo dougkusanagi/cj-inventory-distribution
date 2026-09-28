@@ -403,10 +403,34 @@ export function PhotoEditor({
     };
 
     const content = (
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pt-2 sm:pt-0">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto pt-2 sm:pt-0">
+            {isMobile ? (
+                <DrawerHeader className="shrink-0 px-4 py-4">
+                    <DrawerTitle>
+                        {queueProgress
+                            ? `Ajustando foto ${queueProgress.current} de ${queueProgress.total}`
+                            : 'Ajustar foto'}
+                    </DrawerTitle>
+                    <DrawerDescription>
+                        Defina o enquadramento que será usado no catálogo.
+                    </DrawerDescription>
+                </DrawerHeader>
+            ) : (
+                <DialogHeader className="shrink-0 pb-4 text-left">
+                    <DialogTitle>
+                        {queueProgress
+                            ? `Ajustando foto ${queueProgress.current} de ${queueProgress.total}`
+                            : 'Ajustar foto'}
+                    </DialogTitle>
+                    <DialogDescription>
+                        Defina o enquadramento que será usado no catálogo.
+                    </DialogDescription>
+                </DialogHeader>
+            )}
+
             <div
                 data-vaul-no-drag
-                className="relative mx-auto aspect-[4/5] w-full max-w-[min(calc(100%_-_2rem),25.6rem)] shrink-0 overflow-hidden rounded-2xl bg-muted"
+                className="relative mx-auto aspect-[4/5] h-[min(44dvh,28rem)] max-w-[calc(100%_-_2rem)] shrink-0 overflow-hidden rounded-2xl bg-muted"
             >
                 <Cropper
                     image={source.url}
@@ -464,31 +488,7 @@ export function PhotoEditor({
                 />
             </div>
 
-            {isMobile ? (
-                <DrawerHeader className="shrink-0 px-4 py-4">
-                    <DrawerTitle>
-                        {queueProgress
-                            ? `Ajustando foto ${queueProgress.current} de ${queueProgress.total}`
-                            : 'Ajustar foto'}
-                    </DrawerTitle>
-                    <DrawerDescription>
-                        Defina o enquadramento que será usado no catálogo.
-                    </DrawerDescription>
-                </DrawerHeader>
-            ) : (
-                <DialogHeader className="shrink-0 pt-4 text-left">
-                    <DialogTitle>
-                        {queueProgress
-                            ? `Ajustando foto ${queueProgress.current} de ${queueProgress.total}`
-                            : 'Ajustar foto'}
-                    </DialogTitle>
-                    <DialogDescription>
-                        Defina o enquadramento que será usado no catálogo.
-                    </DialogDescription>
-                </DialogHeader>
-            )}
-
-            <div className="grid shrink-0 gap-4 px-4 py-5 sm:px-0 sm:pb-6">
+            <div className="grid min-w-0 shrink-0 gap-4 px-4 py-5 sm:px-0 sm:pb-6">
                 <div className="grid gap-2">
                     <label
                         htmlFor="product-photo-zoom"
@@ -510,13 +510,13 @@ export function PhotoEditor({
                     />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="grid min-w-0 grid-cols-2 gap-2">
                     <Button
                         type="button"
                         variant="outline"
                         onClick={() => rotate(-90)}
                         disabled={isApplying}
-                        className="h-12"
+                        className="h-auto min-h-12 min-w-0 text-center whitespace-normal"
                     >
                         <RotateCcw />
                         Girar à esquerda
@@ -526,7 +526,7 @@ export function PhotoEditor({
                         variant="outline"
                         onClick={() => rotate(90)}
                         disabled={isApplying}
-                        className="h-12"
+                        className="h-auto min-h-12 min-w-0 text-center whitespace-normal"
                     >
                         <RotateCw />
                         Girar à direita
@@ -542,7 +542,7 @@ export function PhotoEditor({
                         }
                         disabled={isApplying}
                         aria-pressed={flip.horizontal}
-                        className="h-12"
+                        className="h-auto min-h-12 min-w-0 text-center whitespace-normal"
                     >
                         <FlipHorizontal2 />
                         Espelhar
@@ -558,23 +558,22 @@ export function PhotoEditor({
                         }
                         disabled={isApplying}
                         aria-pressed={flip.vertical}
-                        className="h-12"
+                        className="h-auto min-h-12 min-w-0 text-center whitespace-normal"
                     >
                         <FlipVertical2 />
                         Virar na vertical
                     </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={reset}
+                        disabled={isApplying}
+                        className="col-span-2 h-12"
+                    >
+                        <Undo2 />
+                        Restaurar enquadramento
+                    </Button>
                 </div>
-
-                <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={reset}
-                    disabled={isApplying}
-                    className="h-12"
-                >
-                    <Undo2 />
-                    Restaurar enquadramento
-                </Button>
 
                 {error && (
                     <p
@@ -585,7 +584,7 @@ export function PhotoEditor({
                     </p>
                 )}
 
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid grid-cols-2 gap-2">
                     {source.origin === 'camera' && onRetake ? (
                         <Button
                             type="button"

@@ -200,7 +200,7 @@ function ProductPhoto({
         <div
             className={cn(
                 'relative flex items-center justify-center overflow-hidden rounded-t-[1.5rem] bg-muted/60 [&_img]:transition-transform [&_img]:duration-500 [&_img]:ease-out group-hover:[&_img]:scale-[1.035] motion-reduce:[&_img]:transition-none',
-                images.length > 0 ? 'aspect-[4/5]' : 'min-h-32 sm:min-h-36',
+                'aspect-[4/5]',
             )}
         >
             {images.length > 0 ? (
@@ -220,7 +220,7 @@ function ProductPhoto({
             ) : (
                 <button
                     type="button"
-                    className="flex min-h-32 w-full flex-col items-center justify-center gap-2 px-6 text-center text-sm text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset sm:min-h-36"
+                    className="flex size-full flex-col items-center justify-center gap-2 px-6 text-center text-sm text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                     onClick={onOpenSelection}
                     aria-label={`Imagem indisponível. Ver sacos de ${product.name}`}
                 >
@@ -1306,7 +1306,7 @@ export default function Catalog({
                                         key={product.id}
                                         data-testid="catalog-product"
                                         className={cn(
-                                            'group ds-reveal ds-lift flex min-w-0 flex-col rounded-[1.5rem] border bg-card shadow-sm',
+                                            'group ds-reveal ds-lift flex min-w-0 flex-col overflow-hidden rounded-[1.5rem] border bg-card',
                                             selectedCount > 0
                                                 ? 'border-highlight'
                                                 : 'border-border hover:border-input',
@@ -1340,7 +1340,7 @@ export default function Catalog({
                                                 </p>
                                                 <h2
                                                     className={cn(
-                                                        'ds-display mt-1 text-xl leading-snug',
+                                                        'ds-display mt-1 line-clamp-2 text-xl leading-snug',
                                                         gridColumns === 4 &&
                                                             'xl:text-lg',
                                                     )}
