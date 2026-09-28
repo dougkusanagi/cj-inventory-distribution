@@ -814,7 +814,7 @@ export function ProductForm({
                                             type="button"
                                             onClick={onRegisterEntry}
                                             data-testid="open-stock-entry"
-                                            className="h-11 sm:h-9"
+                                            className="h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
                                         >
                                             <ArrowDownToLine />
                                             Registrar entrada
@@ -823,7 +823,7 @@ export function ProductForm({
                                     <Button
                                         asChild
                                         variant="secondary"
-                                        className="h-11 sm:h-9"
+                                        className="h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
                                     >
                                         <Link
                                             href={stockExit({
@@ -838,19 +838,19 @@ export function ProductForm({
                                         type="button"
                                         variant="secondary"
                                         onClick={onAdjustStock}
-                                        className="h-11 sm:h-9"
+                                        className="h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
                                     >
                                         <Ruler />
-                                        Ajustar por tamanho
+                                        Recontar saco
                                     </Button>
                                     <Button
                                         asChild
-                                        variant="ghost"
-                                        className="h-11 sm:h-9"
+                                        variant="secondary"
+                                        className="h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
                                     >
                                         <Link href={inventoryIndex()}>
                                             <Scale />
-                                            Balanço de estoque
+                                            Balanço
                                         </Link>
                                     </Button>
                                 </div>

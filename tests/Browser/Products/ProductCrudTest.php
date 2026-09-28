@@ -501,7 +501,7 @@ it('saves a product recount and records its stock adjustment', function () {
         ->assertSee('Saco 1')
         ->assertSee('4 peças · Disponível')
         ->assertMissing('#volume-0-quantity-0')
-        ->press('Ajustar por tamanho')
+        ->press('Recontar saco')
         ->assertSee('Recontar saco')
         ->click('button[role="combobox"]:has-text("Selecione o saco")')
         ->click('[role="option"]:has-text("SC-000001")')
