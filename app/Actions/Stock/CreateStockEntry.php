@@ -33,7 +33,8 @@ class CreateStockEntry
         $type = $this->movementType($data['stock_offer_type'] ?? null);
         $volumes = $this->normalizeVolumes($data['stock_volumes'] ?? []);
         $notes = $this->normalizeText($data['notes'] ?? null);
-        $reason = $this->normalizeText($data['reason'] ?? null);
+        $reason = $this->normalizeText($data['reason'] ?? null)
+            ?? ($type === StockOfferType::BrokenGrade ? null : 'Entrada de '.$type->label());
         $idempotencyKey = $this->normalizeText($data['idempotency_key'] ?? null);
 
         if ($reason === null) {

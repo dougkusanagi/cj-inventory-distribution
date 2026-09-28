@@ -195,8 +195,57 @@ it('uses only product cards on mobile', function () {
         ->assertSee($product->name)
         ->assertMissing('table[aria-label="Produtos cadastrados"]')
         ->assertMissing('button[aria-label="Visualização em tabela"]')
-        ->assertMissing('button[aria-label="Visualização em cards"]')
+        ->assertPresent('button[aria-label="Visualização em cards"]')
+        ->assertPresent('button[aria-label="Visualização com 2 cards por linha"]')
         ->assertNoJavaScriptErrors();
+});
+
+it('shows two product cards per row and remembers the chosen view', function () {
+    $user = User::factory()->create();
+    Product::factory()->count(3)->create();
+
+    $this->actingAs($user);
+
+    $page = visit(route('products.index', [], false))
+        ->resize(390, 844)
+        ->click('button[aria-label="Visualização com 2 cards por linha"]')
+        ->assertPresent('[data-testid="product-cards-compact"]')
+        ->assertMissing('[data-testid="product-card-v3"]')
+        ->assertScript("(() => { const cards = [...document.querySelectorAll('[data-testid=\"product-card-compact\"]')]; return cards.length === 3 && Math.round(cards[0].getBoundingClientRect().top) === Math.round(cards[1].getBoundingClientRect().top) && cards[2].getBoundingClientRect().top > cards[0].getBoundingClientRect().top; })()")
+        ->assertScript('document.documentElement.scrollWidth <= document.documentElement.clientWidth');
+
+    $page->navigate(route('products.index', [], false))
+        ->assertPresent('[data-testid="product-cards-compact"]')
+        ->resize(1280, 900)
+        ->assertScript("(() => { const cards = [...document.querySelectorAll('[data-testid=\"product-card-compact\"]')]; return Math.round(cards[0].getBoundingClientRect().top) === Math.round(cards[1].getBoundingClientRect().top) && cards[2].getBoundingClientRect().top > cards[0].getBoundingClientRect().top; })()")
+        ->assertNoJavaScriptErrors();
+});
+
+it('creates a grade nova product with only the sack and piece totals', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user);
+
+    $page = visit(route('products.create', [], false))
+        ->type('#product-name', 'Calça grade nova E2E')
+        ->click('#product-tab-stock')
+        ->type('#stock-totals-bag-count', '2')
+        ->type('#stock-totals-piece-count', '25')
+        ->assertSee('25 peças em 2 sacos');
+
+    $page->submit();
+
+    $page
+        ->assertRoute('products.index')
+        ->assertSee('Calça grade nova E2E')
+        ->assertSee('Produto cadastrado.')
+        ->assertNoJavaScriptErrors();
+
+    $offer = Product::query()->sole()->latestOffer()->with('stockVolumes.items')->sole();
+
+    expect($offer->type)->toBe(StockOfferType::NewGrade)
+        ->and($offer->stockVolumes->pluck('total_quantity')->sort()->values()->all())->toBe([12, 13])
+        ->and($offer->stockVolumes->flatMap->items)->toBeEmpty();
 });
 
 it('opens a product image gallery and changes the selected image', function () {
@@ -270,12 +319,17 @@ it('renders the product creation form for an authenticated user', function () {
         ->click('#product-tab-stock')
         ->assertSee('Estoque organizado por sacos')
         ->assertDontSee('O estoque é organizado por saco')
-        ->assertSee('recalculado no servidor')
         ->assertSee('Distribuição em sacos.')
         ->assertSee('Grade completa.')
         ->assertSee('Grade incompleta.')
         ->assertDontSee('Mostrar oferta no catálogo')
         ->assertDontSee('Oferta de estoque ativa')
+        ->assertScript("document.querySelector('label[for^=\"stock-offer-type-\"]').getAttribute('for') === 'stock-offer-type-new_grade'")
+        ->assertAttribute('#stock-offer-type-new_grade', 'aria-checked', 'true')
+        ->assertPresent('#stock-totals-bag-count')
+        ->assertPresent('#stock-totals-piece-count')
+        ->assertMissing('#stock-size-preset-numeric-female')
+        ->click('#stock-offer-type-broken_grade')
         ->assertAttribute(
             '#stock-size-preset-numeric-female',
             'aria-checked',
@@ -323,6 +377,7 @@ it('keeps a stock quantity when disabling a size is cancelled', function () {
     $page = visit(route('products.create', [], false))
         ->type('#product-name', 'Blusa com grade E2E')
         ->click('#product-tab-stock')
+        ->click('#stock-offer-type-broken_grade')
         ->press('Adicionar saco')
         ->click('#stock-size-preset-letters')
         ->click('#volume-0-active-2')
@@ -346,7 +401,7 @@ it('keeps a stock quantity when disabling a size is cancelled', function () {
     $page
         ->assertRoute('products.index')
         ->assertSee('Blusa com grade E2E')
-        ->assertSee('Grade: Nova')
+        ->assertSee('Grade: Furada')
         ->assertSee('7')
         ->assertSee('1 saco')
         ->assertSee('Produto cadastrado.')
@@ -356,7 +411,7 @@ it('keeps a stock quantity when disabling a size is cancelled', function () {
 
     $this->assertModelExists($product);
     expect($product->latestOffer)->not->toBeNull();
-    expect($product->latestOffer->type)->toBe(StockOfferType::NewGrade);
+    expect($product->latestOffer->type)->toBe(StockOfferType::BrokenGrade);
     expect($product->latestOffer->calculatedTotalQuantity())->toBe(7);
     expect($product->latestOffer->stockVolumes)->toHaveCount(1);
 
@@ -446,7 +501,7 @@ it('saves a product recount and records its stock adjustment', function () {
         ->assertSee('Saco 1')
         ->assertSee('4 peças · Disponível')
         ->assertMissing('#volume-0-quantity-0')
-        ->press('Ajustar estoque por tamanho')
+        ->press('Ajustar por tamanho')
         ->assertSee('Recontar saco')
         ->click('button[role="combobox"]:has-text("Selecione o saco")')
         ->click('[role="option"]:has-text("SC-000001")')
@@ -576,6 +631,7 @@ it('keeps the product form usable on a narrow mobile viewport', function () {
         ->assertSee('Tipo de Grade')
         ->assertSee('Nova')
         ->assertSee('Furada')
+        ->click('#stock-offer-type-broken_grade')
         ->assertScript("(() => { const cards = [...document.querySelectorAll('label[for^=\"stock-offer-type-\"]')]; return cards.length === 3 && new Set(cards.map((card) => Math.round(card.getBoundingClientRect().top))).size === 1; })()")
         ->assertScript("(() => { const cards = [...document.querySelectorAll('label[for^=\"stock-offer-type-\"]')]; return cards.every((card) => { const radio = card.querySelector('[role=\"radio\"]'); const content = card.querySelector('span.grid'); if (!radio || !content) { return false; } const cardRect = card.getBoundingClientRect(); const radioRect = radio.getBoundingClientRect(); const contentRect = content.getBoundingClientRect(); const paddingLeft = Number.parseFloat(getComputedStyle(card).paddingLeft); return Math.abs((radioRect.left + radioRect.width / 2) - (cardRect.left + cardRect.width / 2)) <= 1 && contentRect.top >= radioRect.bottom && Math.abs(contentRect.left - (cardRect.left + paddingLeft)) <= 1 && getComputedStyle(content).textAlign === 'left'; }); })()")
         ->press('Adicionar saco')

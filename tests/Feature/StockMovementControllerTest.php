@@ -58,6 +58,44 @@ test('staff can register a whole-sack entry and retries are idempotent', functio
         ->and(StockOfferVolume::query()->count())->toBe(1);
 });
 
+test('grade nova and reposição entries only need sack totals', function (StockOfferType $type) {
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+
+    $this->actingAs($user)->post(route('stock-entries.store'), [
+        'product_id' => $product->id,
+        'stock_offer_type' => $type->value,
+        'idempotency_key' => 'entry-totals-'.$type->value,
+        'stock_volumes' => [
+            ['total_quantity' => 13, 'items' => []],
+            ['total_quantity' => 12, 'items' => []],
+        ],
+    ])->assertSessionHasNoErrors();
+
+    $movement = StockMovement::query()->sole();
+
+    expect($movement->reason)->toBe('Entrada de '.$type->label())
+        ->and(StockOfferVolume::query()->sum('total_quantity'))->toBe(25)
+        ->and(StockOfferVolume::query()->count())->toBe(2);
+})->with([
+    'grade nova' => [StockOfferType::NewGrade],
+    'reposição' => [StockOfferType::Replenishment],
+]);
+
+test('grade furada entries still require a reason', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+
+    $this->actingAs($user)->post(route('stock-entries.store'), [
+        'product_id' => $product->id,
+        'stock_offer_type' => StockOfferType::BrokenGrade->value,
+        'idempotency_key' => 'entry-broken-without-reason',
+        'stock_volumes' => [['total_quantity' => 5, 'items' => []]],
+    ])->assertSessionHasErrors(['reason' => 'Informe o motivo da entrada.']);
+
+    expect(StockMovement::query()->count())->toBe(0);
+});
+
 test('staff can register a manual exit only for an available sack', function () {
     $user = User::factory()->create();
     $volume = movementVolume();

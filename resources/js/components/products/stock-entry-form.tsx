@@ -8,7 +8,14 @@ import {
     StockMovementReasonField,
     stockEntryReasons,
 } from '@/components/stock-movement-reason-field';
-import { StockOfferTypeSelector } from '@/components/products/stock-offer-type-selector';
+import {
+    StockOfferTotalsFields,
+    volumesForOfferType,
+} from '@/components/products/stock-offer-totals-fields';
+import {
+    StockOfferTypeSelector,
+    stockOfferTypeTracksSizes,
+} from '@/components/products/stock-offer-type-selector';
 import { StockOfferVolumeEditor } from '@/components/products/stock-offer-volume-editor';
 import type { StockOfferVolumeFormItem } from '@/components/products/stock-offer-volume-editor';
 import { Button } from '@/components/ui/button';
@@ -71,6 +78,19 @@ export function StockEntryForm({
         idempotency_key: `entry-${formId}`,
         stock_volumes: [],
     });
+    const tracksSizes = stockOfferTypeTracksSizes(form.data.stock_offer_type);
+
+    const changeOfferType = (type: StockOfferType) => {
+        form.setData((previousData) => ({
+            ...previousData,
+            stock_offer_type: type,
+            reason: stockOfferTypeTracksSizes(type) ? previousData.reason : '',
+            stock_volumes: volumesForOfferType(
+                previousData.stock_volumes,
+                stockOfferTypeTracksSizes(type),
+            ),
+        }));
+    };
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -166,25 +186,25 @@ export function StockEntryForm({
 
                     <StockOfferTypeSelector
                         value={form.data.stock_offer_type}
-                        onChange={(value) =>
-                            form.setData('stock_offer_type', value)
-                        }
+                        onChange={changeOfferType}
                         error={form.errors.stock_offer_type}
                         idPrefix="entry-stock-offer-type"
                         className="sm:col-span-2"
                     />
 
-                    <div className="sm:col-span-2">
-                        <StockMovementReasonField
-                            id="entry-reason"
-                            value={form.data.reason}
-                            options={stockEntryReasons}
-                            onChange={(reason) =>
-                                form.setData('reason', reason)
-                            }
-                            error={form.errors.reason}
-                        />
-                    </div>
+                    {tracksSizes && (
+                        <div className="sm:col-span-2">
+                            <StockMovementReasonField
+                                id="entry-reason"
+                                value={form.data.reason}
+                                options={stockEntryReasons}
+                                onChange={(reason) =>
+                                    form.setData('reason', reason)
+                                }
+                                error={form.errors.reason}
+                            />
+                        </div>
+                    )}
                     <div className="grid gap-2 sm:col-span-2">
                         <Label htmlFor="entry-notes">
                             Observações (opcional)
@@ -206,19 +226,31 @@ export function StockEntryForm({
                 <CardHeader>
                     <CardTitle>Sacos recebidos</CardTitle>
                     <CardDescription>
-                        Informe o total de cada saco. Se você preencher as
-                        quantidades por tamanho, o total será calculado
-                        automaticamente.
+                        {tracksSizes
+                            ? 'Informe o total de cada saco. Se você preencher as quantidades por tamanho, o total será calculado automaticamente.'
+                            : 'Informe quantos sacos chegaram e o total de peças.'}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <StockOfferVolumeEditor
-                        volumes={form.data.stock_volumes}
-                        errors={form.errors as Record<string, string>}
-                        onChange={(volumes) =>
-                            form.setData('stock_volumes', volumes)
-                        }
-                    />
+                    {tracksSizes ? (
+                        <StockOfferVolumeEditor
+                            volumes={form.data.stock_volumes}
+                            errors={form.errors as Record<string, string>}
+                            onChange={(volumes) =>
+                                form.setData('stock_volumes', volumes)
+                            }
+                        />
+                    ) : (
+                        <StockOfferTotalsFields
+                            key={form.data.stock_offer_type}
+                            volumes={form.data.stock_volumes}
+                            errors={form.errors as Record<string, string>}
+                            onChange={(volumes) =>
+                                form.setData('stock_volumes', volumes)
+                            }
+                            idPrefix="entry-stock-totals"
+                        />
+                    )}
                 </CardContent>
             </Card>
 
