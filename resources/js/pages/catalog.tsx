@@ -8,7 +8,6 @@ import {
     Search,
     Shirt,
     ShoppingBag,
-    SlidersHorizontal,
     Tag,
     Trash2,
     X,
@@ -21,6 +20,7 @@ import { PaperBag } from '@/components/icons/paper-bag';
 import ImageCarousel from '@/components/image-carousel';
 import InputError from '@/components/input-error';
 import ProductImageGallery from '@/components/products/product-image-gallery';
+import { SearchFilterBar } from '@/components/search-filter-bar';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,13 +34,6 @@ import {
 } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import {
     Sheet,
     SheetContent,
@@ -139,42 +132,6 @@ function persistBag(snapshots: CatalogBagSnapshot[]): void {
     } catch {
         return;
     }
-}
-
-function CatalogFilter({
-    id,
-    label,
-    value,
-    options,
-    onChange,
-}: {
-    id: string;
-    label: string;
-    value: string;
-    options: Array<{ value: string; label: string }>;
-    onChange: (value: string) => void;
-}) {
-    return (
-        <div className="grid min-w-0 gap-2">
-            <Label htmlFor={id}>{label}</Label>
-            <Select value={value} onValueChange={onChange}>
-                <SelectTrigger
-                    id={id}
-                    className="h-11 w-full bg-card data-[size=default]:h-11"
-                >
-                    <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="all">Todas as opções</SelectItem>
-                    {options.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
-    );
 }
 
 function ProductPhoto({
@@ -678,7 +635,6 @@ export default function Catalog({
         filters.category?.toString() ?? 'all',
     );
     const [line, setLine] = useState(filters.line || 'all');
-    const [filtersOpen, setFiltersOpen] = useState(false);
     const [gridColumns, setGridColumns] = useState<3 | 4>(3);
     const [selectedProduct, setSelectedProduct] =
         useState<CatalogPreviewProduct | null>(null);
@@ -881,7 +837,6 @@ export default function Catalog({
     const filterCount = [category, line].filter(
         (value) => value !== 'all',
     ).length;
-    const hasFilters = query !== '' || filterCount > 0;
 
     function openProductImage(product: CatalogPreviewProduct) {
         setSelectedImageIndex(0);
@@ -981,7 +936,7 @@ export default function Catalog({
     return (
         <>
             <Head title="Catálogo para lojistas" />
-            <div className="ds-ambient min-h-svh bg-background text-foreground selection:bg-primary/30">
+            <div className="min-h-svh bg-background text-foreground selection:bg-primary/30">
                 <a
                     href="#produtos"
                     className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:p-3 focus:text-primary-foreground"
@@ -1051,78 +1006,45 @@ export default function Catalog({
                         </div>
                     </div>
 
-                    <section
-                        aria-label="Buscar e filtrar produtos"
-                        className="ds-reveal mt-6 mb-3 rounded-[1.5rem] border border-border/70 bg-card p-4 shadow-sm [--reveal-delay:60ms] sm:p-5"
-                    >
-                        <div className="grid gap-3 sm:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)_minmax(0,1fr)] sm:items-end">
-                            <div className="flex items-end gap-3 sm:contents">
-                                <div className="grid min-w-0 flex-1 gap-2">
-                                    <Label htmlFor="catalog-search">
-                                        O que você procura?
-                                    </Label>
-                                    <div className="relative">
-                                        <Search className="pointer-events-none absolute top-3.5 left-3 size-4 text-muted-foreground" />
-                                        <Input
-                                            id="catalog-search"
-                                            type="search"
-                                            value={query}
-                                            onChange={(event) =>
-                                                setQuery(event.target.value)
-                                            }
-                                            placeholder="Nome, modelo ou código"
-                                            className="h-11 bg-card pl-10 text-base"
-                                        />
-                                    </div>
-                                </div>
-                                <Button
-                                    variant="secondary"
-                                    className="h-11 shrink-0 sm:hidden"
-                                    aria-expanded={filtersOpen}
-                                    aria-controls="catalog-filters"
-                                    onClick={() =>
-                                        setFiltersOpen((current) => !current)
-                                    }
-                                >
-                                    <SlidersHorizontal /> Filtros
-                                    {filterCount > 0 && ` (${filterCount})`}
-                                </Button>
-                            </div>
-                            <div
-                                id="catalog-filters"
-                                className={cn(
-                                    'contents',
-                                    !filtersOpen && 'hidden sm:contents',
-                                )}
-                            >
-                                <CatalogFilter
-                                    id="catalog-category"
-                                    label="Categoria"
-                                    value={category}
-                                    options={categories.map((option) => ({
-                                        value: option.id.toString(),
-                                        label: option.name,
-                                    }))}
-                                    onChange={setCategory}
-                                />
-                                <CatalogFilter
-                                    id="catalog-line"
-                                    label="Linha"
-                                    value={line}
-                                    options={lines.map((option) => ({
-                                        value: option.value,
-                                        label: option.label,
-                                    }))}
-                                    onChange={setLine}
-                                />
-                            </div>
-                        </div>
-                    </section>
+                    <SearchFilterBar
+                        idPrefix="catalog"
+                        className="ds-reveal mt-6 mb-3 [--reveal-delay:60ms]"
+                        search={query}
+                        onSearchChange={setQuery}
+                        fields={[
+                            {
+                                name: 'category',
+                                label: 'Categoria',
+                                value: category,
+                                allLabel: 'Todas as categorias',
+                                display: 'combobox',
+                                options: categories.map((option) => ({
+                                    value: option.id.toString(),
+                                    label: option.name,
+                                })),
+                            },
+                            {
+                                name: 'line',
+                                label: 'Linha',
+                                value: line,
+                                allLabel: 'Todas as linhas',
+                                display: 'cards',
+                                options: lines,
+                            },
+                        ]}
+                        onFieldChange={(name, value) =>
+                            name === 'category'
+                                ? setCategory(value)
+                                : setLine(value)
+                        }
+                        onClear={clearFilters}
+                        resultCount={products.meta.total}
+                    />
 
                     <div className="mb-4 flex min-h-11 flex-wrap items-center justify-between gap-2">
                         <p
                             role="status"
-                            className="text-sm text-muted-foreground"
+                            className="hidden text-sm text-muted-foreground md:block"
                         >
                             <strong className="text-foreground">
                                 {products.meta.total}
@@ -1134,15 +1056,6 @@ export default function Catalog({
                                 ` · ${filterCount} ${filterCount === 1 ? 'filtro aplicado' : 'filtros aplicados'}`}
                         </p>
                         <div className="flex items-center gap-2">
-                            {hasFilters && (
-                                <Button
-                                    variant="ghost"
-                                    className="h-11"
-                                    onClick={clearFilters}
-                                >
-                                    <X /> Limpar filtros
-                                </Button>
-                            )}
                             <div
                                 role="group"
                                 aria-label="Colunas do catálogo"
