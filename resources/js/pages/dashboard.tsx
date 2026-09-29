@@ -106,7 +106,7 @@ export default function Dashboard({ stats }: DashboardProps) {
         <>
             <Head title="Painel" />
 
-            <div className="ds-ambient mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+            <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
                 <header className="ds-reveal relative overflow-hidden rounded-[2rem] bg-featured-card px-6 py-8 text-featured-card-foreground shadow-lg shadow-foreground/10 sm:px-8 sm:py-10">
                     <div className="pointer-events-none absolute -top-24 -right-16 size-64 rounded-full border-[24px] border-primary/15" />
                     <div className="pointer-events-none absolute -right-8 -bottom-20 size-56 rounded-full bg-primary/10 blur-3xl" />

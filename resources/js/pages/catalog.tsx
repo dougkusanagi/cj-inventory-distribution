@@ -5,8 +5,6 @@ import {
     Grid3X3,
     ImageOff,
     LayoutGrid,
-    ListFilter,
-    LoaderCircle,
     MessageCircle,
     Search,
     Shirt,
@@ -23,6 +21,7 @@ import { PaperBag } from '@/components/icons/paper-bag';
 import ImageCarousel from '@/components/image-carousel';
 import InputError from '@/components/input-error';
 import ProductImageGallery from '@/components/products/product-image-gallery';
+import { SearchFilterBar } from '@/components/search-filter-bar';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,13 +36,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import {
     Sheet,
     SheetContent,
@@ -142,42 +134,6 @@ function persistBag(snapshots: CatalogBagSnapshot[]): void {
     } catch {
         return;
     }
-}
-
-function CatalogFilter({
-    id,
-    label,
-    value,
-    options,
-    onChange,
-}: {
-    id: string;
-    label: string;
-    value: string;
-    options: Array<{ value: string; label: string }>;
-    onChange: (value: string) => void;
-}) {
-    return (
-        <div className="grid min-w-0 gap-2">
-            <Label htmlFor={id}>{label}</Label>
-            <Select value={value} onValueChange={onChange}>
-                <SelectTrigger
-                    id={id}
-                    className="h-11 w-full bg-card data-[size=default]:h-11"
-                >
-                    <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="all">Todas as opções</SelectItem>
-                    {options.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
-    );
 }
 
 function ProductPhoto({
@@ -725,7 +681,6 @@ export default function Catalog({
         filters.category?.toString() ?? 'all',
     );
     const [line, setLine] = useState(filters.line || 'all');
-    const [filtersOpen, setFiltersOpen] = useState(false);
     const [gridColumns, setGridColumns] = useState<3 | 4>(3);
     const [selectedProduct, setSelectedProduct] =
         useState<CatalogPreviewProduct | null>(null);
@@ -931,7 +886,6 @@ export default function Catalog({
     const filterCount = [category, line].filter(
         (value) => value !== 'all',
     ).length;
-    const hasFilters = query !== '' || filterCount > 0;
 
     function openProductImage(product: CatalogPreviewProduct) {
         setSelectedImageIndex(0);
@@ -1031,7 +985,7 @@ export default function Catalog({
     return (
         <>
             <Head title="Catálogo para lojistas" />
-            <div className="ds-ambient min-h-svh bg-background text-foreground selection:bg-primary/30">
+            <div className="min-h-svh bg-background text-foreground selection:bg-primary/30">
                 <a
                     href="#produtos"
                     className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:p-3 focus:text-primary-foreground"
@@ -1101,118 +1055,59 @@ export default function Catalog({
                         </div>
                     </div>
 
-                    <section
-                        aria-label="Buscar e filtrar produtos"
-                        className="ds-reveal mt-6 mb-3 rounded-[1.5rem] border border-border/70 bg-card p-4 shadow-sm [--reveal-delay:60ms] sm:p-5"
-                    >
-                        <div className="grid gap-3 sm:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)_minmax(0,1fr)] sm:items-end">
-                            <div className="flex items-end gap-3 sm:contents">
-                                <div className="grid min-w-0 flex-1 gap-2">
-                                    <Label htmlFor="catalog-search">
-                                        Buscar produtos
-                                    </Label>
-                                    <div className="relative">
-                                        <Search className="pointer-events-none absolute top-3.5 left-3 size-4 text-muted-foreground" />
-                                        <Input
-                                            id="catalog-search"
-                                            type="search"
-                                            value={query}
-                                            onChange={(event) =>
-                                                setQuery(event.target.value)
-                                            }
-                                            placeholder="Nome, modelo ou código"
-                                            className="h-11 bg-card pl-10 text-base"
-                                        />
-                                    </div>
-                                </div>
-                                <Button
-                                    variant="secondary"
-                                    size="icon"
-                                    className="relative size-11 shrink-0 sm:hidden"
-                                    aria-expanded={filtersOpen}
-                                    aria-controls="catalog-filters"
-                                    aria-label={`${filtersOpen ? 'Fechar' : 'Abrir'} opções de busca${filterCount > 0 ? `, ${filterCount} selecionadas` : ''}`}
-                                    title="Mais opções de busca"
-                                    data-testid="catalog-filters-trigger"
-                                    onClick={() =>
-                                        setFiltersOpen((current) => !current)
-                                    }
-                                >
-                                    <ListFilter aria-hidden="true" />
-                                    {filterCount > 0 && (
-                                        <span className="absolute -top-1 -right-1 flex min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] leading-5 font-bold text-primary-foreground">
-                                            {filterCount}
-                                        </span>
-                                    )}
-                                </Button>
-                            </div>
-                            <div
-                                id="catalog-filters"
-                                className={cn(
-                                    'contents',
-                                    !filtersOpen && 'hidden sm:contents',
-                                )}
-                            >
-                                <CatalogFilter
-                                    id="catalog-category"
-                                    label="Categoria"
-                                    value={category}
-                                    options={categories.map((option) => ({
-                                        value: option.id.toString(),
-                                        label: option.name,
-                                    }))}
-                                    onChange={setCategory}
-                                />
-                                <CatalogFilter
-                                    id="catalog-line"
-                                    label="Linha"
-                                    value={line}
-                                    options={lines.map((option) => ({
-                                        value: option.value,
-                                        label: option.label,
-                                    }))}
-                                    onChange={setLine}
-                                />
-                            </div>
-                            <div
-                                className="flex min-h-9 flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3 text-sm text-muted-foreground sm:col-span-3"
-                                aria-busy={filtering}
-                            >
-                                <p
-                                    role="status"
-                                    className="flex items-center gap-2"
-                                >
-                                    {filtering && (
-                                        <LoaderCircle
-                                            className="size-4 animate-spin"
-                                            aria-hidden="true"
-                                        />
-                                    )}
-                                    <strong className="text-foreground">
-                                        {products.meta.total}
-                                    </strong>{' '}
-                                    {products.meta.total === 1
-                                        ? 'encontrado'
-                                        : 'encontrados'}
-                                </p>
-                                {hasFilters && (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={clearFilters}
-                                    >
-                                        <X /> Limpar filtros
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                    </section>
+                    <SearchFilterBar
+                        idPrefix="catalog"
+                        className="ds-reveal mt-6 mb-3 [--reveal-delay:60ms]"
+                        search={query}
+                        onSearchChange={setQuery}
+                        fields={[
+                            {
+                                name: 'category',
+                                label: 'Categoria',
+                                value: category,
+                                allLabel: 'Todas as categorias',
+                                display: 'combobox',
+                                options: categories.map((option) => ({
+                                    value: option.id.toString(),
+                                    label: option.name,
+                                })),
+                            },
+                            {
+                                name: 'line',
+                                label: 'Linha',
+                                value: line,
+                                allLabel: 'Todas as linhas',
+                                display: 'cards',
+                                options: lines,
+                            },
+                        ]}
+                        onFieldChange={(name, value) =>
+                            name === 'category'
+                                ? setCategory(value)
+                                : setLine(value)
+                        }
+                        onClear={clearFilters}
+                        resultCount={products.meta.total}
+                    />
 
-                    <div className="mb-4 hidden justify-end xl:flex">
+                    <div className="mb-4 flex min-h-11 flex-wrap items-center justify-between gap-2">
+                        <p
+                            role="status"
+                            className="hidden text-sm text-muted-foreground md:block"
+                        >
+                            <strong className="text-foreground">
+                                {products.meta.total}
+                            </strong>{' '}
+                            {products.meta.total === 1
+                                ? 'produto encontrado'
+                                : 'produtos encontrados'}
+                            {filterCount > 0 &&
+                                ` · ${filterCount} ${filterCount === 1 ? 'filtro aplicado' : 'filtros aplicados'}`}
+                        </p>
                         <div
                             role="group"
                             aria-label="Colunas do catálogo"
-                            className="flex items-center gap-1 rounded-xl border border-border bg-card p-1"
+                            className="hidden items-center gap-1 rounded-xl border border-border bg-card p-1 xl:flex"
                         >
                             <button
                                 type="button"

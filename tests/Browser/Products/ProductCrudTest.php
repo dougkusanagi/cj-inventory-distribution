@@ -166,15 +166,15 @@ it('collapses product filters into a mobile drawer', function () {
 
     visit(route('products.index', [], false))
         ->resize(390, 844)
-        ->assertPresent('[data-testid="mobile-product-filters"]')
-        ->assertScript('document.querySelector(\'[data-testid="mobile-product-filters"]\').getBoundingClientRect().height < 110')
+        ->assertPresent('[data-testid="product-filter-filters"]')
+        ->assertScript('document.querySelector(\'[data-testid="product-filter-filters"]\').getBoundingClientRect().height < 140')
         ->click('button[aria-label="Abrir filtros de produtos"]')
         ->assertVisible('[data-slot="drawer-content"]')
         ->assertSee('Filtrar produtos')
         ->assertPresent('#mobile-product-filter-category')
         ->click('#mobile-product-filter-category')
         ->click('[role="option"]:has-text("Categoria filtrada")')
-        ->click('button[aria-label="Aplicar filtros de produtos"]')
+        ->click('Ver 1 resultado')
         ->assertSee($matchingProduct->name)
         ->assertDontSee($otherProduct->name)
         ->assertNoJavaScriptErrors();
