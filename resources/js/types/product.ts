@@ -33,6 +33,8 @@ export type Product = {
     code: string;
     model: string | null;
     name: string;
+    wash_type_id?: number | null;
+    wash_type?: WashType | null;
     category_id: number | null;
     category: Category | null;
     line: ProductLine | null;
@@ -58,6 +60,14 @@ export type Product = {
 export type ProductLine = 'slim' | 'plus';
 
 export type Category = {
+    id: number;
+    name: string;
+    is_active: boolean;
+    slug?: string;
+    products_count?: number;
+};
+
+export type WashType = {
     id: number;
     name: string;
     is_active: boolean;

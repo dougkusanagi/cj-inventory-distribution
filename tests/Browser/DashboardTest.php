@@ -47,7 +47,7 @@ it('groups stock operations under the stock navigation', function () {
     $this->actingAs(User::factory()->create());
 
     visit(route('dashboard', [], false))
-        ->assertScript("Array.from(document.querySelectorAll('[data-sidebar=\"content\"] [data-sidebar=\"menu-button\"] span')).map((item) => item.textContent?.trim()).join('|') === 'Painel|Produtos|Categorias|Pedidos|Estoque'")
+        ->assertScript("Array.from(document.querySelectorAll('[data-sidebar=\"content\"] [data-sidebar=\"menu-button\"] span')).map((item) => item.textContent?.trim()).join('|') === 'Painel|Produtos|Categorias|Tipos de lavagem|Pedidos|Estoque'")
         ->click('[data-sidebar="menu-button"]:has-text("Estoque")')
         ->assertScript("Array.from(document.querySelectorAll('[data-sidebar=\"content\"] [data-sidebar=\"menu-sub-button\"] span')).map((item) => item.textContent?.trim()).join('|') === 'Balanço de estoque|Histórico de estoque'")
         ->assertNoJavaScriptErrors();

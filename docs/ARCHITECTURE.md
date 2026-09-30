@@ -83,6 +83,20 @@ Um produto também pode ser salvo sem uma oferta de estoque. A oferta é criada
 ao adicionar o primeiro saco e removida ao encerrar o estoque. Toda oferta
 possui ao menos um saco.
 
+## Tipos de lavagem
+
+Os tipos de lavagem possuem cadastro próprio (`WashType`, ADR 0020), com nome único,
+ativação e exclusão lógica. O produto guarda um vínculo opcional
+`wash_type_id`. O formulário oferece seleção com busca por texto e cadastro
+rápido pelo botão “+”; produtos e catálogo podem ser filtrados por lavagem.
+Tipos inativos permanecem nos vínculos existentes, mas não podem receber
+novas atribuições. Tipos vinculados a produtos, inclusive excluídos
+logicamente, devem ser desativados em vez de excluídos.
+
+O cadastro de lavagens é independente do produto e poderá ser referenciado
+pela futura ficha técnica, preservando os IDs. A ficha técnica e a ordem de
+produção continuam fora do escopo atual.
+
 ## Tamanhos por saco
 
 O tamanho pertence a um `StockOfferVolumeItem`, e não ao produto.
@@ -235,7 +249,7 @@ actions de estoque e são representados por estornos vinculados.
 ## Auditoria administrativa
 
 `AuditLog` registra criação, alteração, exclusão lógica, restauração e exclusão
-definitiva de produtos, categorias, ofertas, sacos, tamanhos, configurações e
+definitiva de produtos, categorias, tipos de lavagem, ofertas, sacos, tamanhos, configurações e
 usuários. O registro é imutável, não usa `SoftDeletes` e remove atributos de
 autenticação dos snapshots. Ele não substitui `OrderEvent` nem participa do
 cálculo de estoque.

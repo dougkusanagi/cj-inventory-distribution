@@ -12,6 +12,7 @@ use App\Http\Requests\Products\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\WashType;
 use App\Support\NormalizedSearch;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -67,6 +68,7 @@ class ProductController extends Controller
 
         return Inertia::render('products/create', [
             'categories' => $this->categoryOptions(),
+            'washTypes' => WashType::options(),
         ]);
     }
 
@@ -100,9 +102,11 @@ class ProductController extends Controller
                 },
                 'offers.stockVolumes.items',
                 'category:id,name,is_active',
+                'washType:id,name,is_active',
                 'media',
             ]))->resolve(),
             'categories' => $this->categoryOptions($product->category_id),
+            'washTypes' => WashType::options($product->wash_type_id),
         ]);
     }
 
@@ -143,6 +147,7 @@ class ProductController extends Controller
 
         $search = trim($request->string('search')->toString());
         $categoryId = $request->integer('category');
+        $washTypeId = $request->integer('wash_type');
         $line = $request->string('line')->toString();
         $image = $request->string('image')->toString();
         $stockOfferType = $request->string('stock_offer_type')->toString();
@@ -153,9 +158,10 @@ class ProductController extends Controller
         }
 
         $products = Product::query()
-            ->select(['id', 'code', 'model', 'name', 'category_id', 'line', 'notes', 'is_active', 'created_at', 'updated_at'])
+            ->select(['id', 'code', 'model', 'name', 'category_id', 'wash_type_id', 'line', 'notes', 'is_active', 'created_at', 'updated_at'])
             ->with([
                 'category:id,name,is_active',
+                'washType:id,name,is_active',
                 'offers.stockVolumes' => function (Relation $query): void {
                     $query->select([
                         'id',
@@ -176,6 +182,7 @@ class ProductController extends Controller
             ->when($search !== '', function (Builder $query) use ($search): void {
                 NormalizedSearch::apply($query, $search, ['name', 'model', 'code']);
             })
+            ->when($washTypeId > 0, fn (Builder $query) => $query->where('wash_type_id', $washTypeId))
             ->when($categoryId > 0, fn (Builder $query) => $query->where('category_id', $categoryId))
             ->when(in_array($line, array_column(ProductLine::cases(), 'value'), true), fn (Builder $query) => $query->where('line', $line))
             ->when(in_array($stockOfferType, array_column(StockOfferType::cases(), 'value'), true), fn (Builder $query) => $query->whereHas('offers', fn (Builder $query) => $query->where('type', $stockOfferType)))
@@ -199,11 +206,13 @@ class ProductController extends Controller
             'filters' => [
                 'search' => $search,
                 'category' => $categoryId > 0 ? $categoryId : null,
+                'wash_type' => $washTypeId > 0 ? $washTypeId : null,
                 'line' => $line,
                 'stock_offer_type' => $stockOfferType,
                 'image' => $image,
                 'status' => $status,
             ],
+            'washTypes' => WashType::query()->orderBy('name')->get(['id', 'name', 'is_active'])->toArray(),
             'categories' => Category::query()
                 ->orderBy('name')
                 ->get(['id', 'name', 'is_active'])

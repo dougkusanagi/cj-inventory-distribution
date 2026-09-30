@@ -39,6 +39,7 @@ class UpdateProduct
                     'name' => $data['name'],
                     'model' => $data['model'] ?? null,
                     'category_id' => $data['category_id'] ?? null,
+                    'wash_type_id' => array_key_exists('wash_type_id', $data) ? $data['wash_type_id'] : $lockedProduct->wash_type_id,
                     'line' => $data['line'] ?? null,
                     'notes' => $data['notes'] ?? null,
                     'is_active' => $data['is_active'] ?? true,

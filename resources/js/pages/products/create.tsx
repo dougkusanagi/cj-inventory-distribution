@@ -2,12 +2,14 @@ import { Head } from '@inertiajs/react';
 import { TShirtIcon } from '@phosphor-icons/react';
 import { ProductForm } from '@/components/products/product-form';
 import { index as productsIndex } from '@/routes/products';
-import type { Category } from '@/types';
+import type { Category, WashType } from '@/types';
 
 export default function CreateProduct({
     categories,
+    washTypes,
 }: {
     categories: Category[];
+    washTypes: WashType[];
 }) {
     return (
         <>
@@ -31,7 +33,7 @@ export default function CreateProduct({
                     </div>
                 </header>
 
-                <ProductForm categories={categories} />
+                <ProductForm categories={categories} washTypes={washTypes} />
             </div>
         </>
     );

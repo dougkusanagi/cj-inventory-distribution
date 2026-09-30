@@ -23,6 +23,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property string $code
  * @property string|null $model
  * @property string $name
+ * @property int|null $wash_type_id
  * @property int|null $category_id
  * @property ProductLine|null $line
  * @property string|null $notes
@@ -31,7 +32,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['code', 'model', 'name', 'category_id', 'line', 'notes', 'is_active'])]
+#[Fillable(['code', 'model', 'name', 'category_id', 'wash_type_id', 'line', 'notes', 'is_active'])]
 class Product extends Model implements HasMedia
 {
     /** @use HasFactory<ProductFactory> */
@@ -81,6 +82,12 @@ class Product extends Model implements HasMedia
     protected $attributes = [
         'is_active' => true,
     ];
+
+    /** @return BelongsTo<WashType, $this> */
+    public function washType(): BelongsTo
+    {
+        return $this->belongsTo(WashType::class);
+    }
 
     /**
      * Get the category assigned to the product.

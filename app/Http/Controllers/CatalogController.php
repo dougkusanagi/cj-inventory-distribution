@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
 use App\Models\StockOfferVolumeItem;
+use App\Models\WashType;
 use App\Support\NormalizedSearch;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -28,6 +29,7 @@ class CatalogController extends Controller
     {
         $search = trim($request->string('search')->toString());
         $categoryId = $request->integer('category');
+        $washTypeId = $request->integer('wash_type');
         $line = $request->string('line')->toString();
         $bagVolumeIds = collect($this->normalizeBagVolumeIds($request->input('bag', [])));
 
@@ -36,10 +38,12 @@ class CatalogController extends Controller
             ->when($search !== '', function (Builder $query) use ($search): void {
                 NormalizedSearch::apply($query, $search, ['name', 'model', 'code']);
             })
+            ->when($washTypeId > 0, fn (Builder $query) => $query->where('wash_type_id', $washTypeId))
             ->when($categoryId > 0, fn (Builder $query) => $query->where('category_id', $categoryId))
             ->when(in_array($line, array_column(ProductLine::cases(), 'value'), true), fn (Builder $query) => $query->where('line', $line))
             ->with([
                 'category:id,name',
+                'washType:id,name',
                 'media',
                 'latestAvailableOffer.stockVolumes' => function (Relation $query): void {
                     $query->where('total_quantity', '>', 0)
@@ -81,6 +85,7 @@ class CatalogController extends Controller
                 ->whereIn('id', $availableBagVolumeIds)
                 ->with([
                     'offer.product.category',
+                    'offer.product.washType',
                     'offer.product.media',
                     'items' => function (Relation $query): void {
                         $query->where('is_active', true);
@@ -113,8 +118,10 @@ class CatalogController extends Controller
             'filters' => [
                 'search' => $search,
                 'category' => $categoryId > 0 ? $categoryId : null,
+                'wash_type' => $washTypeId > 0 ? $washTypeId : null,
                 'line' => $line,
             ],
+            'washTypes' => WashType::query()->orderBy('name')->get(['id', 'name'])->toArray(),
             'categories' => Category::query()
                 ->orderBy('name')
                 ->get(['id', 'name'])
@@ -163,6 +170,7 @@ class CatalogController extends Controller
                 ? 'Sem categoria'
                 : ($category === null ? 'Sem categoria' : $category->name),
             'category_id' => $product->category_id,
+            'wash_type' => $product->washType?->name,
             'line' => $product->line?->label(),
             'type' => $offer->type->label(),
             'volumes' => $stockVolumes->map(fn (StockOfferVolume $volume): array => [

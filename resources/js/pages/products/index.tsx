@@ -23,10 +23,12 @@ import {
     XIcon,
 } from '@phosphor-icons/react';
 import { Fragment, useEffect, useRef, useState } from 'react';
+import { WashTypeCreateDialog } from '@/components/wash-types/wash-type-create-dialog';
 import { destroy } from '@/actions/App/Http/Controllers/ProductController';
 import { Badge } from '@/components/ui/badge';
 import {
     categoryFilterField,
+    washTypeFilterField,
     lineFilterField,
 } from '@/components/products/product-filter-fields';
 import { StockQuantityDetails } from '@/components/products/stock-quantity-details';
@@ -87,6 +89,7 @@ import type {
     Product,
     ProductLine,
     StockOfferType,
+    WashType,
 } from '@/types';
 
 export type ProductsIndexProps = {
@@ -94,12 +97,14 @@ export type ProductsIndexProps = {
     filters: {
         search: string;
         category: number | null;
+        wash_type: number | null;
         line: string;
         stock_offer_type: string;
         image: string;
         status: 'active' | 'inactive' | 'all';
     };
     categories: Category[];
+    washTypes: WashType[];
 };
 
 type ProductCardVariant = 'default' | 'refined' | 'v3';
@@ -120,6 +125,7 @@ function isProductView(value: unknown): value is ProductView {
 type ProductFilterValues = {
     search: string;
     category: string;
+    wash_type: string;
     line: string;
     stock_offer_type: string;
     image: string;
@@ -312,6 +318,7 @@ function ProductClassification({ product }: { product: Product }) {
         `Grade: ${stockOfferType ? stockOfferTypeLabels[stockOfferType] : 'Sem oferta'}`,
         productLine ? productLineLabels[productLine] : null,
         product.category?.name ?? null,
+        product.wash_type?.name ?? null,
     ].filter(
         (classification): classification is string => classification !== null,
     );
@@ -336,6 +343,7 @@ function ProductClassification({ product }: { product: Product }) {
 function productClassificationLabels(product: Product): string {
     return [
         product.category?.name,
+        product.wash_type?.name,
         product.line ? productLineLabels[product.line] : null,
     ]
         .filter((label): label is string => label !== null)
@@ -1161,9 +1169,17 @@ export default function ProductsIndex({
     products,
     filters,
     categories,
+    washTypes,
     cardVariant = 'default',
     indexUrl = productsIndex.url(),
 }: ProductsIndexComponentProps) {
+    const [washTypeCreateOpen, setWashTypeCreateOpen] = useState(false);
+    const [createdWashTypes, setCreatedWashTypes] = useState<WashType[]>([]);
+    const allWashTypes = Array.from(
+        new Map(
+            [...washTypes, ...createdWashTypes].map((type) => [type.id, type]),
+        ).values(),
+    );
     const isRefinedCardPreview = cardVariant === 'refined';
     const isV3CardPreview = cardVariant === 'v3';
     const isCardPreview = isRefinedCardPreview || isV3CardPreview;
@@ -1196,6 +1212,7 @@ export default function ProductsIndex({
     const [filterValues, setFilterValues] = useState<ProductFilterValues>({
         search: filters.search,
         category: filters.category?.toString() ?? 'all',
+        wash_type: filters.wash_type?.toString() ?? 'all',
         line: filters.line || 'all',
         stock_offer_type: filters.stock_offer_type || 'all',
         image: filters.image || 'all',
@@ -1255,6 +1272,11 @@ export default function ProductsIndex({
             ],
         },
         categoryFilterField(filterValues.category, categories),
+        {
+            ...washTypeFilterField(filterValues.wash_type, allWashTypes),
+            onAdd: () => setWashTypeCreateOpen(true),
+            addLabel: 'Cadastrar tipo de lavagem',
+        },
         lineFilterField(filterValues.line, [
             { value: 'slim', label: 'Slim' },
             { value: 'plus', label: 'Plus' },
@@ -1395,6 +1417,7 @@ export default function ProductsIndex({
                         setFilterValues({
                             search: '',
                             category: 'all',
+                            wash_type: 'all',
                             line: 'all',
                             stock_offer_type: 'all',
                             image: 'all',
@@ -1604,6 +1627,18 @@ export default function ProductsIndex({
                 )}
             </div>
 
+            <WashTypeCreateDialog
+                key={String(washTypeCreateOpen)}
+                open={washTypeCreateOpen}
+                onOpenChange={setWashTypeCreateOpen}
+                onCreated={(created) => {
+                    setCreatedWashTypes((current) => [...current, created]);
+                    setFilterValues((current) => ({
+                        ...current,
+                        wash_type: created.id.toString(),
+                    }));
+                }}
+            />
             <Dialog
                 open={productToDelete !== null}
                 onOpenChange={(open) => !open && setProductToDelete(null)}

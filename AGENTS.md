@@ -80,6 +80,10 @@ No frontend, prefira componentes shadcn existentes ou bibliotecas React maduras 
 
 - Escolhas únicas em formato de cartão usam `@/components/ui/radio-card`.
   Não recrie cartões de rádio com `Label` e `RadioGroupItem` locais.
+  Grupos dessas escolhas usam `@/components/ui/radio-card-group`, compartilhado
+  entre filtros e formulários. Para três opções, preserve os três cartões lado
+  a lado com ícone e indicador, inclusive no celular. Não troque por uma
+  variante em linha nem remova os ícones em uma tela sem requisito explícito.
 
 Ao implementar a captura de foto, aceite:
 

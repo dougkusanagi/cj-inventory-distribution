@@ -67,6 +67,17 @@ abstract class ProductRequest extends FormRequest
                 'integer',
                 Rule::exists('categories', 'id')->whereNull('deleted_at'),
             ],
+            'wash_type_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('wash_types', 'id')->whereNull('deleted_at')->where(function ($query): void {
+                    $query->where('is_active', true);
+                    $product = $this->route('product');
+                    if ($product instanceof Product && $product->wash_type_id !== null) {
+                        $query->orWhere('id', $product->wash_type_id);
+                    }
+                }),
+            ],
             'line' => ['nullable', Rule::enum(ProductLine::class)],
             'notes' => ['nullable', 'string', 'max:5000'],
             'is_active' => ['required', 'boolean'],
@@ -116,6 +127,7 @@ abstract class ProductRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'wash_type_id.exists' => 'Selecione um tipo de lavagem ativo.',
             'name.required' => 'Informe o nome do produto.',
             'name.max' => 'O nome do produto deve ter no máximo 80 caracteres.',
             'model.max' => 'O modelo deve ter no máximo 100 caracteres.',
