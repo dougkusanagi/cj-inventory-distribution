@@ -6,6 +6,7 @@ import {
     SquaresFourIcon,
     TShirtIcon,
     TagIcon,
+    DropIcon,
     WarehouseIcon,
 } from '@phosphor-icons/react';
 import AppLogo from '@/components/app-logo';
@@ -24,6 +25,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { index as productsIndex } from '@/routes/products';
+import { index as washTypesIndex } from '@/routes/wash-types';
 import { index as categoriesIndex } from '@/routes/categories';
 import { index as ordersIndex } from '@/routes/orders';
 import { index as stockMovementsIndex } from '@/routes/stock-movements';
@@ -47,6 +49,7 @@ const mainNavItems: NavItem[] = [
         href: categoriesIndex(),
         icon: TagIcon,
     },
+    { title: 'Tipos de lavagem', href: washTypesIndex(), icon: DropIcon },
     {
         title: 'Pedidos',
         href: ordersIndex(),

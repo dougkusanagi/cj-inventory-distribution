@@ -46,3 +46,5 @@ ADRs iniciais:
 - [0016 — Movimentações imutáveis para o estoque físico](0016-stock-movements.md)
 - [0017 — Trilha de auditoria administrativa](0017-application-audit-log.md)
 - [0019 — Phosphor duotone como biblioteca de ícones](0019-phosphor-duotone-icons.md)
+
+- [0020 — Tipos de lavagem independentes do produto](0020-independent-wash-types.md)

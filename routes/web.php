@@ -12,6 +12,7 @@ use App\Http\Controllers\StockEntryController;
 use App\Http\Controllers\StockExitController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\StockMovementReversalController;
+use App\Http\Controllers\WashTypeController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', CatalogController::class)->name('home');
@@ -44,6 +45,10 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('painel')->group(functi
         ->except('show');
     Route::post('produtos/{product}/ajustes-estoque', ProductStockAdjustmentController::class)
         ->name('products.stock-adjustments.store');
+    Route::resource('lavagens', WashTypeController::class)
+        ->names('wash-types')
+        ->parameters(['lavagens' => 'washType'])
+        ->except('show');
     Route::resource('categorias', CategoryController::class)
         ->names('categories')
         ->parameters(['categorias' => 'category'])

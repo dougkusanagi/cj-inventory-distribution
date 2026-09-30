@@ -47,6 +47,20 @@ cropped) e uma linha comercial: `Slim` ou `Plus`. Esses campos são opcionais
 durante a transição dos produtos antigos e serão usados pelos filtros do
 catálogo.
 
+### Tipos de lavagem
+
+Os tipos de lavagem possuem cadastro próprio (`WashType`), com nome único,
+ativação e exclusão lógica. O produto guarda um vínculo opcional
+`wash_type_id`. O formulário oferece seleção com busca por texto e cadastro
+rápido pelo botão “+”; produtos e catálogo podem ser filtrados por lavagem.
+Tipos inativos permanecem nos vínculos existentes, mas não podem receber
+novas atribuições. Tipos vinculados a produtos, inclusive excluídos
+logicamente, devem ser desativados em vez de excluídos.
+
+O cadastro de lavagens é independente do produto e poderá ser referenciado
+pela futura ficha técnica, preservando os IDs. A ficha técnica e a ordem de
+produção continuam fora do escopo atual.
+
 ### Tamanho
 
 Representa um tamanho presente em um saco de uma oferta.

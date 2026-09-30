@@ -16,6 +16,7 @@ import {
     store,
 } from '@/actions/App/Http/Controllers/ProductController';
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
+import { WashTypeSelector } from '@/components/wash-types/wash-type-selector';
 import InputError from '@/components/input-error';
 import { PaperBag } from '@/components/icons/paper-bag';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
@@ -43,8 +44,8 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioCard } from '@/components/ui/radio-card';
-import { RadioGroup } from '@/components/ui/radio-group';
+import { RadioCardGroup } from '@/components/ui/radio-card-group';
+import { SlimTee, PlusTee, SlimPlusTee } from '@/components/icons/shirt-fit';
 import {
     Select,
     SelectContent,
@@ -57,11 +58,18 @@ import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import type { Category, Product, ProductLine, StockOfferType } from '@/types';
+import type {
+    Category,
+    Product,
+    ProductLine,
+    StockOfferType,
+    WashType,
+} from '@/types';
 
 type ProductFormData = {
     name: string;
     model: string;
+    wash_type_id: string;
     category_id: string;
     line: ProductLine | '';
     notes: string;
@@ -77,6 +85,7 @@ type ProductFormData = {
 type ProductFormProps = {
     product?: Product;
     categories: Category[];
+    washTypes: WashType[];
     onAdjustStock?: () => void;
     onRegisterEntry?: () => void;
 };
@@ -156,6 +165,7 @@ function volumeTotal(volume: StockOfferVolumeFormItem): number {
 export function ProductForm({
     product,
     categories,
+    washTypes,
     onAdjustStock,
     onRegisterEntry,
 }: ProductFormProps) {
@@ -185,6 +195,7 @@ export function ProductForm({
         name: product?.name ?? '',
         model: product?.model ?? '',
         category_id: product?.category_id?.toString() ?? '',
+        wash_type_id: product?.wash_type_id?.toString() ?? '',
         line: product?.line ?? '',
         notes: product?.notes ?? '',
         is_active: product?.is_active ?? true,
@@ -626,13 +637,22 @@ export function ProductForm({
                                         message={error('category_id')}
                                     />
                                 </div>
+                                <WashTypeSelector
+                                    washTypes={washTypes}
+                                    value={form.data.wash_type_id}
+                                    onValueChange={(value) =>
+                                        form.setData('wash_type_id', value)
+                                    }
+                                    error={error('wash_type_id')}
+                                    disabled={form.processing}
+                                />
                             </div>
 
                             <fieldset className="min-w-0">
                                 <legend className="mb-2 text-sm font-medium">
                                     Linha comercial
                                 </legend>
-                                <RadioGroup
+                                <RadioCardGroup
                                     value={form.data.line || 'none'}
                                     onValueChange={(value) =>
                                         form.setData(
@@ -646,21 +666,25 @@ export function ProductForm({
                                     aria-invalid={
                                         error('line') ? true : undefined
                                     }
-                                    className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3"
-                                >
-                                    {[
-                                        ['none', 'Não informada'],
-                                        ['slim', 'Slim'],
-                                        ['plus', 'Plus'],
-                                    ].map(([value, label]) => (
-                                        <RadioCard
-                                            key={value}
-                                            value={value}
-                                            label={label}
-                                            layout="inline"
-                                        />
-                                    ))}
-                                </RadioGroup>
+                                    idPrefix="product-line"
+                                    options={[
+                                        {
+                                            value: 'none',
+                                            label: 'Não informada',
+                                            icon: SlimPlusTee,
+                                        },
+                                        {
+                                            value: 'slim',
+                                            label: 'Slim',
+                                            icon: SlimTee,
+                                        },
+                                        {
+                                            value: 'plus',
+                                            label: 'Plus',
+                                            icon: PlusTee,
+                                        },
+                                    ]}
+                                />
                                 <InputError
                                     message={error('line')}
                                     className="mt-2"

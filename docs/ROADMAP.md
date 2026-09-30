@@ -13,7 +13,7 @@ contatos ou envio automático continuam fora do MVP. As fases históricas abaixo
 não significam conclusão desses módulos.
 
 Regra definitiva: Grade Nova nunca aparece no catálogo; não há filtro por tipo.
-Busca, categoria e linha Slim/Plus são os filtros da interface. Pedidos por saco
+Busca, categoria, tipo de lavagem e linha Slim/Plus são os filtros da interface. Pedidos por saco
 inteiro, reserva transacional e conferência da equipe são as regras vigentes do
 fluxo implementado.
 

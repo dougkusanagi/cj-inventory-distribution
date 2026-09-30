@@ -9,6 +9,7 @@ use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
 use App\Models\StockOfferVolumeItem;
 use App\Models\User;
+use App\Models\WashType;
 use App\Observers\ModelAuditObserver;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -38,6 +39,7 @@ class AppServiceProvider extends ServiceProvider
         foreach ([
             Product::class,
             Category::class,
+            WashType::class,
             StockOffer::class,
             StockOfferVolume::class,
             StockOfferVolumeItem::class,

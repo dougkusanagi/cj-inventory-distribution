@@ -4,8 +4,8 @@ import {
     CameraPlusIcon,
     CaretDownIcon,
     CaretUpIcon,
-    DotsSixVerticalIcon,
     InfoIcon,
+    ImagesIcon,
     PencilSimpleIcon,
     StarIcon,
     TrashIcon,
@@ -773,12 +773,12 @@ export function ProductPhotoManager({
                         <div className="flex justify-center sm:justify-end">
                             <Button
                                 type="button"
-                                variant="outline"
+                                variant="secondary"
                                 onClick={() => setOrganizerOpen(true)}
                                 disabled={processing}
                                 className="h-10 w-full rounded-xl px-3 text-xs sm:w-auto"
                             >
-                                <DotsSixVerticalIcon weight="bold" />
+                                <ImagesIcon />
                                 Organizar fotos
                             </Button>
                         </div>
@@ -1036,7 +1036,7 @@ function PhotoRow({
                         size="icon"
                         onClick={onSetCover}
                         disabled={processing}
-                        className="absolute right-2 bottom-2 size-8 rounded-full border-primary text-primary shadow-sm backdrop-blur hover:bg-primary/10"
+                        className="absolute right-2 bottom-2 size-10 rounded-full border-black/15 bg-white text-stone-900 shadow-md hover:bg-stone-100 hover:text-stone-950"
                         aria-label={`Definir a foto ${index + 1} como capa`}
                     >
                         <StarIcon className="size-5" />

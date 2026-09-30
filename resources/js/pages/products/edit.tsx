@@ -5,14 +5,16 @@ import { ProductForm } from '@/components/products/product-form';
 import { StockAdjustmentModal } from '@/components/products/stock-adjustment-modal';
 import { StockEntryModal } from '@/components/products/stock-entry-modal';
 import { index as productsIndex } from '@/routes/products';
-import type { Category, Product } from '@/types';
+import type { Category, Product, WashType } from '@/types';
 
 export default function EditProduct({
     product,
     categories,
+    washTypes,
 }: {
     product: Product;
     categories: Category[];
+    washTypes: WashType[];
 }) {
     const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
     const [isEntryOpen, setIsEntryOpen] = useState(false);
@@ -45,6 +47,7 @@ export default function EditProduct({
                 <ProductForm
                     product={product}
                     categories={categories}
+                    washTypes={washTypes}
                     onAdjustStock={() => setIsAdjustmentOpen(true)}
                     onRegisterEntry={() => setIsEntryOpen(true)}
                 />

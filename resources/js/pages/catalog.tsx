@@ -23,6 +23,7 @@ import InputError from '@/components/input-error';
 import ProductImageGallery from '@/components/products/product-image-gallery';
 import {
     categoryFilterField,
+    washTypeFilterField,
     lineFilterField,
 } from '@/components/products/product-filter-fields';
 import { SearchFilterBar } from '@/components/search-filter-bar';
@@ -664,6 +665,7 @@ export default function Catalog({
     products,
     filters,
     categories,
+    washTypes,
     lines,
     bag: bagStatus,
     canPlaceOrder,
@@ -672,9 +674,11 @@ export default function Catalog({
     filters: {
         search: string;
         category: number | null;
+        wash_type: number | null;
         line: string;
     };
     categories: Array<{ id: number; name: string }>;
+    washTypes: Array<{ id: number; name: string }>;
     lines: Array<{ value: string; label: string }>;
     bag: CatalogBagStatus;
     canPlaceOrder: boolean;
@@ -683,6 +687,9 @@ export default function Catalog({
     const [query, setQuery] = useState(filters.search);
     const [category, setCategory] = useState(
         filters.category?.toString() ?? 'all',
+    );
+    const [washType, setWashType] = useState(
+        filters.wash_type?.toString() ?? 'all',
     );
     const [line, setLine] = useState(filters.line || 'all');
     const [gridColumns, setGridColumns] = useState<3 | 4>(3);
@@ -708,6 +715,7 @@ export default function Catalog({
     const filterKey = JSON.stringify({
         search: filters.search,
         category: filters.category,
+        wash_type: filters.wash_type,
         line: filters.line,
     });
     const previousFilterKey = useRef(filterKey);
@@ -842,6 +850,8 @@ export default function Catalog({
                         search: query || undefined,
                         category:
                             category === 'all' ? undefined : Number(category),
+                        wash_type:
+                            washType === 'all' ? undefined : Number(washType),
                         line: line === 'all' ? undefined : line,
                         bag: selectedVolumeIdsRef.current,
                     },
@@ -857,7 +867,7 @@ export default function Catalog({
         }, 300);
 
         return () => window.clearTimeout(timeout);
-    }, [category, line, query]);
+    }, [category, washType, line, query]);
 
     useEffect(() => {
         selectedVolumeIdsRef.current = selectedVolumeIds;
@@ -887,7 +897,7 @@ export default function Catalog({
     const bagDescription = selectedVolumeIds.length
         ? `${selectedVolumeIds.length} ${selectedVolumeIds.length === 1 ? 'saco' : 'sacos'} · ${totalPieces} ${unavailableVolumeIds.length > 0 ? 'peças disponíveis' : 'peças no total'}`
         : 'Escolha os sacos para reabastecer sua loja.';
-    const filterCount = [category, line].filter(
+    const filterCount = [category, washType, line].filter(
         (value) => value !== 'all',
     ).length;
 
@@ -899,6 +909,7 @@ export default function Catalog({
     function clearFilters() {
         setQuery('');
         setCategory('all');
+        setWashType('all');
         setLine('all');
     }
 
@@ -1055,12 +1066,15 @@ export default function Catalog({
                         onSearchChange={setQuery}
                         fields={[
                             categoryFilterField(category, categories),
+                            washTypeFilterField(washType, washTypes),
                             lineFilterField(line, lines),
                         ]}
                         onFieldChange={(name, value) =>
                             name === 'category'
                                 ? setCategory(value)
-                                : setLine(value)
+                                : name === 'wash_type'
+                                  ? setWashType(value)
+                                  : setLine(value)
                         }
                         onClear={clearFilters}
                         resultCount={products.meta.total}

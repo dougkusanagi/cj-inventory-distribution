@@ -1,11 +1,11 @@
 import {
-    CaretDownIcon,
-    CheckIcon,
     MagnifyingGlassIcon,
     FunnelIcon,
+    PlusCircleIcon,
     XIcon,
 } from '@phosphor-icons/react';
 import { useState } from 'react';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import type { ComponentProps, ComponentType, CSSProperties } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,22 +18,8 @@ import {
     DrawerTitle,
 } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from '@/components/ui/command';
 import { Label } from '@/components/ui/label';
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover';
-import { RadioCard } from '@/components/ui/radio-card';
-import { RadioGroup } from '@/components/ui/radio-group';
+import { RadioCardGroup } from '@/components/ui/radio-card-group';
 import {
     Select,
     SelectContent,
@@ -58,6 +44,8 @@ export type FilterField = {
     allIcon?: FilterIcon;
     options: FilterOption[];
     /** `cards` só afeta o drawer mobile com até três escolhas; no desktop vira select. */
+    onAdd?: () => void;
+    addLabel?: string;
     display?: 'select' | 'cards' | 'combobox';
 };
 
@@ -174,71 +162,35 @@ function FilterCombobox({
     labelled: boolean;
     onChange: (value: string) => void;
 }) {
-    const [open, setOpen] = useState(false);
-    const options: FilterOption[] = [
-        { value: 'all', label: field.allLabel },
-        ...field.options,
-    ];
-    const selected = options.find((option) => option.value === field.value);
-
     const combobox = (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
+        <div className="flex min-w-0 gap-2">
+            <SearchableSelect
+                id={id}
+                label={field.label}
+                value={field.value}
+                options={[
+                    { value: 'all', label: field.allLabel },
+                    ...field.options,
+                ]}
+                onValueChange={onChange}
+                className={cn(
+                    filterTriggerClassName,
+                    'min-w-0 flex-1',
+                    labelled && filterTriggerLabelledClassName,
+                )}
+            />
+            {field.onAdd && (
                 <Button
-                    id={id}
                     type="button"
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={open}
-                    aria-label={field.label}
-                    className={cn(
-                        filterTriggerClassName,
-                        labelled && filterTriggerLabelledClassName,
-                    )}
+                    variant="secondary"
+                    className={cn('size-10 shrink-0', labelled && 'size-11')}
+                    aria-label={field.addLabel}
+                    onClick={field.onAdd}
                 >
-                    <span className="truncate">{selected?.label}</span>
-                    <CaretDownIcon
-                        weight="bold"
-                        className="size-5 shrink-0 opacity-50"
-                    />
+                    <PlusCircleIcon />
                 </Button>
-            </PopoverTrigger>
-            <PopoverContent
-                align="start"
-                className="w-(--radix-popover-trigger-width) p-0"
-            >
-                <Command>
-                    <CommandInput
-                        placeholder={`Buscar ${field.label.toLowerCase()}`}
-                    />
-                    <CommandList
-                        data-vaul-no-drag
-                        onWheel={(event) => event.stopPropagation()}
-                    >
-                        <CommandEmpty>Nenhuma opção encontrada.</CommandEmpty>
-                        <CommandGroup>
-                            {options.map((option) => (
-                                <CommandItem
-                                    key={option.value}
-                                    value={option.label}
-                                    onSelect={() => {
-                                        onChange(option.value);
-                                        setOpen(false);
-                                    }}
-                                >
-                                    <span className="flex-1">
-                                        {option.label}
-                                    </span>
-                                    {option.value === field.value && (
-                                        <CheckIcon weight="bold" />
-                                    )}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
-            </PopoverContent>
-        </Popover>
+            )}
+        </div>
     );
 
     if (!labelled) {
@@ -271,28 +223,16 @@ function FilterCards({
         ...field.options,
     ];
 
-    const columns = options.length === 3;
-
     return (
         <div className="grid gap-2">
             <Label id={`${id}-label`}>{field.label}</Label>
-            <RadioGroup
+            <RadioCardGroup
+                idPrefix={id}
                 value={field.value}
                 onValueChange={onChange}
                 aria-labelledby={`${id}-label`}
-                className={cn('gap-2', columns && 'grid-cols-3')}
-            >
-                {options.map((option) => (
-                    <RadioCard
-                        key={option.value}
-                        id={`${id}-${option.value}`}
-                        value={option.value}
-                        label={option.label}
-                        icon={option.icon}
-                        layout={columns ? 'stacked' : 'inline'}
-                    />
-                ))}
-            </RadioGroup>
+                options={options}
+            />
         </div>
     );
 }
@@ -313,6 +253,15 @@ export function SearchFilterBar({
     ).length;
     const hasFilters = search !== '' || activeCount > 0;
     const drawerId = `${idPrefix}-filter-drawer`;
+    const controlFields = fields.map((field) => ({
+        ...field,
+        onAdd: field.onAdd
+            ? () => {
+                  setDrawerOpen(false);
+                  field.onAdd?.();
+              }
+            : undefined,
+    }));
     const desktopStyle = {
         '--filter-columns': `minmax(0,1.4fr) repeat(${fields.length}, minmax(9rem,1fr)) auto`,
     } as CSSProperties;
@@ -365,7 +314,7 @@ export function SearchFilterBar({
                 className={cn(
                     'hidden gap-3 md:grid md:grid-cols-2 lg:grid-cols-3',
                     fields.length > 4
-                        ? '2xl:[grid-template-columns:var(--filter-columns)]'
+                        ? 'xl:grid-cols-4'
                         : 'xl:[grid-template-columns:var(--filter-columns)]',
                 )}
             >
@@ -375,7 +324,7 @@ export function SearchFilterBar({
                     onChange={(event) => onSearchChange(event.target.value)}
                     onClear={() => onSearchChange('')}
                 />
-                {fields.map((field) => {
+                {controlFields.map((field) => {
                     const Control =
                         field.display === 'combobox'
                             ? FilterCombobox
@@ -422,7 +371,7 @@ export function SearchFilterBar({
                     </DrawerHeader>
                     <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 sm:px-6">
                         <div className="grid gap-4">
-                            {fields.map((field) => {
+                            {controlFields.map((field) => {
                                 const id = `mobile-${idPrefix}-${field.name}`;
                                 const onChange = (value: string) =>
                                     onFieldChange(field.name, value);

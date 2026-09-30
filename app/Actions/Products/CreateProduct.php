@@ -34,6 +34,7 @@ class CreateProduct
                     'name' => $data['name'],
                     'model' => $data['model'] ?? null,
                     'category_id' => $data['category_id'] ?? null,
+                    'wash_type_id' => $data['wash_type_id'] ?? null,
                     'line' => $data['line'] ?? null,
                     'notes' => $data['notes'] ?? null,
                     'is_active' => $data['is_active'] ?? true,

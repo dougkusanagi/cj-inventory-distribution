@@ -60,6 +60,12 @@ class ProductResource extends JsonResource
             'code' => $this->code,
             'model' => $this->model,
             'name' => $this->name,
+            'wash_type_id' => $this->wash_type_id,
+            'wash_type' => $this->whenLoaded('washType', fn () => $this->washType === null ? null : [
+                'id' => $this->washType->id,
+                'name' => $this->washType->name,
+                'is_active' => $this->washType->is_active,
+            ]),
             'category_id' => $this->category_id,
             'category' => $this->whenLoaded('category', fn () => $this->category === null ? null : [
                 'id' => $this->category->id,

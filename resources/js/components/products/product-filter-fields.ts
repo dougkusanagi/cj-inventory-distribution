@@ -40,3 +40,20 @@ export function lineFilterField(
         })),
     };
 }
+
+export function washTypeFilterField(
+    value: string,
+    washTypes: Array<{ id: number; name: string }>,
+): FilterField {
+    return {
+        name: 'wash_type',
+        label: 'Tipo de lavagem',
+        value,
+        allLabel: 'Todas as lavagens',
+        display: 'combobox',
+        options: washTypes.map((type) => ({
+            value: type.id.toString(),
+            label: type.name,
+        })),
+    };
+}
