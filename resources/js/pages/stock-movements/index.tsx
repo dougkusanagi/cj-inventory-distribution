@@ -1,3 +1,4 @@
+import { Pagination } from '@/components/pagination';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowsLeftRightIcon,
@@ -394,29 +395,7 @@ export default function StockMovementsIndex({
                     )}
                 </div>
 
-                <nav className="flex flex-wrap gap-2" aria-label="Paginação">
-                    {movements.links.map(
-                        (link) =>
-                            link.url && (
-                                <Button
-                                    key={link.label}
-                                    asChild
-                                    variant={
-                                        link.active ? 'default' : 'outline'
-                                    }
-                                    size="sm"
-                                >
-                                    <Link href={link.url}>
-                                        {link.label
-                                            .replace('&laquo;', '')
-                                            .replace('&raquo;', '')
-                                            .replace('Previous', 'Anterior')
-                                            .replace('Next', 'Próxima')}
-                                    </Link>
-                                </Button>
-                            ),
-                    )}
-                </nav>
+                <Pagination links={movements.links} />
             </div>
         </>
     );

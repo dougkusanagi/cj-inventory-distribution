@@ -1,7 +1,13 @@
+import { Pagination } from '@/components/pagination';
+import { ConfirmationDialog } from '@/components/confirmation-dialog';
+import { ProductImageButton } from '@/components/products/product-image';
+import {
+    ProductClassification,
+    productLineLabels,
+} from '@/components/products/product-classification';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowsClockwiseIcon,
-    CaretLeftIcon,
     CaretRightIcon,
     CheckCircleIcon,
     ImageBrokenIcon,
@@ -22,7 +28,7 @@ import {
     TrashIcon,
     XIcon,
 } from '@phosphor-icons/react';
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { WashTypeCreateDialog } from '@/components/wash-types/wash-type-create-dialog';
 import { destroy } from '@/actions/App/Http/Controllers/ProductController';
 import { Badge } from '@/components/ui/badge';
@@ -54,15 +60,6 @@ import {
     DrawerTitle,
     DrawerTrigger,
 } from '@/components/ui/drawer';
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
@@ -87,7 +84,6 @@ import type {
     Category,
     Paginated,
     Product,
-    ProductLine,
     StockOfferType,
     WashType,
 } from '@/types';
@@ -132,108 +128,6 @@ type ProductFilterValues = {
     status: string;
 };
 
-function paginationLabel(label: string): string {
-    if (
-        label === 'pagination.previous' ||
-        label.includes('Previous') ||
-        label.includes('laquo')
-    ) {
-        return 'Anterior';
-    }
-
-    if (
-        label === 'pagination.next' ||
-        label.includes('Next') ||
-        label.includes('raquo')
-    ) {
-        return 'Próxima';
-    }
-
-    return label;
-}
-
-function ProductImage({
-    product,
-    className,
-    iconClassName,
-}: {
-    product: Product;
-    className?: string;
-    iconClassName?: string;
-}) {
-    const coverImage = product.images[0];
-
-    if (coverImage) {
-        return (
-            <img
-                src={coverImage.thumb_url ?? coverImage.url}
-                alt={product.name}
-                className={cn('size-full object-cover', className)}
-                loading="lazy"
-                decoding="async"
-            />
-        );
-    }
-
-    return (
-        <div
-            className={cn(
-                'flex size-full items-center justify-center text-featured-card-muted',
-                className,
-            )}
-            aria-label="Produto sem foto"
-        >
-            <ImageBrokenIcon className={cn('size-5', iconClassName)} />
-        </div>
-    );
-}
-
-function ProductImageButton({
-    product,
-    onOpenGallery,
-    showImageCount = true,
-    className,
-    iconClassName,
-}: {
-    product: Product;
-    onOpenGallery: (product: Product) => void;
-    showImageCount?: boolean;
-    className?: string;
-    iconClassName?: string;
-}) {
-    const coverImage = product.images[0];
-
-    if (!coverImage) {
-        return (
-            <ProductImage
-                product={product}
-                className={className}
-                iconClassName={iconClassName}
-            />
-        );
-    }
-
-    return (
-        <button
-            type="button"
-            data-testid={`abrir-galeria-produto-${product.id}`}
-            aria-label={`Abrir galeria de imagens de ${product.name}`}
-            onClick={() => onOpenGallery(product)}
-            className={cn(
-                'group/image relative block size-full overflow-hidden text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none',
-                className,
-            )}
-        >
-            <ProductImage product={product} />
-            {showImageCount && product.images.length > 1 && (
-                <span className="pointer-events-none absolute right-2 bottom-2 inline-flex items-center gap-1 rounded-full bg-foreground/75 px-2 py-1 text-[10px] font-semibold text-background tabular-nums backdrop-blur-sm">
-                    {product.images.length} fotos
-                </span>
-            )}
-        </button>
-    );
-}
-
 function productSizes(product: Product): string[] {
     return Array.from(
         new Set(
@@ -271,74 +165,11 @@ function productSizeBreakdown(
     return Array.from(sizes, ([size, quantity]) => ({ size, quantity }));
 }
 
-function ProductSizes({ product }: { product: Product }) {
-    const sizes = productSizes(product);
-
-    if (sizes.length === 0) {
-        return (
-            <span className="text-xs text-muted-foreground">
-                Sem grade cadastrada
-            </span>
-        );
-    }
-
-    return sizes.map((size) => (
-        <span
-            key={size}
-            className="rounded-md bg-muted px-2 py-1 font-mono text-xs font-medium break-words text-foreground"
-        >
-            {size}
-        </span>
-    ));
-}
-
-const stockOfferTypeLabels: Record<StockOfferType, string> = {
-    replenishment: 'Reposição',
-    new_grade: 'Nova',
-    broken_grade: 'Furada',
-};
-
-const productLineLabels: Record<ProductLine, string> = {
-    slim: 'Slim',
-    plus: 'Plus',
-};
-
 const stockOfferTypeCardLabels: Record<StockOfferType, string> = {
     replenishment: 'Reposição',
     new_grade: 'Grade Nova',
     broken_grade: 'Grade Furada',
 };
-
-function ProductClassification({ product }: { product: Product }) {
-    const stockOfferType = product.stock_offer_type;
-    const productLine = product.line;
-
-    const classifications = [
-        product.is_active ? 'Ativo' : 'Inativo',
-        `Grade: ${stockOfferType ? stockOfferTypeLabels[stockOfferType] : 'Sem oferta'}`,
-        productLine ? productLineLabels[productLine] : null,
-        product.category?.name ?? null,
-        product.wash_type?.name ?? null,
-    ].filter(
-        (classification): classification is string => classification !== null,
-    );
-
-    return (
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
-            {classifications.map((classification, index) => (
-                <Fragment key={`${classification}-${index}`}>
-                    {index > 0 && (
-                        <span
-                            className="size-1 rounded-full bg-muted-foreground/60"
-                            aria-hidden="true"
-                        />
-                    )}
-                    <span>{classification}</span>
-                </Fragment>
-            ))}
-        </div>
-    );
-}
 
 function productClassificationLabels(product: Product): string {
     return [
@@ -1105,7 +936,15 @@ function ProductTable({
                                     Tamanhos
                                 </span>
                                 <div className="flex max-w-full flex-wrap gap-1.5">
-                                    <ProductSizes product={product} />
+                                    <StockSizeBreakdown
+                                        sizes={productSizes(product).map(
+                                            (size) => ({
+                                                size,
+                                                quantity: null,
+                                            }),
+                                        )}
+                                        sizesOnly
+                                    />
                                 </div>
                             </td>
                             <td className="block p-0 lg:table-cell lg:px-5 lg:py-4 lg:align-middle">
@@ -1573,57 +1412,11 @@ export default function ProductsIndex({
                 />
 
                 {products.links.length > 3 && (
-                    <nav
-                        className="flex items-center justify-center gap-1"
-                        aria-label="Paginação de produtos"
-                    >
-                        {products.links.map((link) => {
-                            const isPrevious =
-                                link.label === 'pagination.previous' ||
-                                link.label.includes('Previous') ||
-                                link.label.includes('laquo');
-                            const isNext =
-                                link.label === 'pagination.next' ||
-                                link.label.includes('Next') ||
-                                link.label.includes('raquo');
-
-                            return (
-                                <Button
-                                    key={`${link.label}-${link.url ?? 'disabled'}`}
-                                    variant={
-                                        link.active ? 'secondary' : 'ghost'
-                                    }
-                                    size="sm"
-                                    asChild={link.url !== null}
-                                    disabled={link.url === null}
-                                    aria-label={paginationLabel(link.label)}
-                                >
-                                    {link.url ? (
-                                        <Link href={link.url} preserveScroll>
-                                            {isPrevious ? (
-                                                <CaretLeftIcon weight="bold" />
-                                            ) : isNext ? (
-                                                <CaretRightIcon weight="bold" />
-                                            ) : null}
-                                            <span
-                                                className={
-                                                    isPrevious || isNext
-                                                        ? 'hidden sm:inline'
-                                                        : undefined
-                                                }
-                                            >
-                                                {paginationLabel(link.label)}
-                                            </span>
-                                        </Link>
-                                    ) : (
-                                        <span>
-                                            {paginationLabel(link.label)}
-                                        </span>
-                                    )}
-                                </Button>
-                            );
-                        })}
-                    </nav>
+                    <Pagination
+                        links={products.links}
+                        compact
+                        ariaLabel="Paginação de produtos"
+                    />
                 )}
             </div>
 
@@ -1639,36 +1432,23 @@ export default function ProductsIndex({
                     }));
                 }}
             />
-            <Dialog
+            <ConfirmationDialog
                 open={productToDelete !== null}
                 onOpenChange={(open) => !open && setProductToDelete(null)}
-            >
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Excluir produto?</DialogTitle>
-                        <DialogDescription>
-                            {productToDelete
-                                ? `“${productToDelete.name}” será movido para a lixeira, junto com suas fotos, tamanhos e estoque.`
-                                : ''}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant="ghost" disabled={deleting}>
-                                Cancelar
-                            </Button>
-                        </DialogClose>
-                        <Button
-                            variant="destructive"
-                            onClick={handleDelete}
-                            disabled={deleting}
-                        >
-                            <TrashIcon />
-                            {deleting ? 'Excluindo...' : 'Excluir produto'}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                title="Excluir produto?"
+                description={
+                    productToDelete
+                        ? `“${productToDelete.name}” será movido para a lixeira, junto com suas fotos, tamanhos e estoque.`
+                        : ''
+                }
+                confirmLabel={deleting ? 'Excluindo...' : 'Excluir produto'}
+                confirmIcon={<TrashIcon />}
+                cancelLabel="Cancelar"
+                cancelVariant="ghost"
+                onConfirm={handleDelete}
+                destructive
+                disabled={deleting}
+            />
         </>
     );
 }

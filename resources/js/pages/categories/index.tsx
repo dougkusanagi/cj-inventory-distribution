@@ -1,14 +1,10 @@
+import { TaxonomyCard } from '@/components/taxonomy-card';
+import { Pagination } from '@/components/pagination';
 import { Head, Link, router } from '@inertiajs/react';
-import {
-    MagnifyingGlassIcon,
-    PencilSimpleIcon,
-    PlusCircleIcon,
-    TrashIcon,
-} from '@phosphor-icons/react';
+import { MagnifyingGlassIcon, PlusCircleIcon } from '@phosphor-icons/react';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { destroy } from '@/actions/App/Http/Controllers/CategoryController';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
@@ -76,58 +72,17 @@ export default function CategoriesIndex({
                 </form>
                 <div className="grid gap-3">
                     {categories.data.map((category) => (
-                        <Card
+                        <TaxonomyCard
                             key={category.id}
-                            className="flex-row items-center justify-between gap-4 rounded-2xl p-4 shadow-sm"
-                        >
-                            <div className="grid gap-1">
-                                <div className="flex items-center gap-2">
-                                    <h2 className="font-semibold">
-                                        {category.name}
-                                    </h2>
-                                    <Badge
-                                        variant={
-                                            category.is_active
-                                                ? 'secondary'
-                                                : 'outline'
-                                        }
-                                    >
-                                        {category.is_active
-                                            ? 'Ativa'
-                                            : 'Inativa'}
-                                    </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">
-                                    {category.products_count ?? 0} produtos
-                                    vinculados
-                                </p>
-                            </div>
-                            <div className="flex gap-1">
-                                <Button asChild variant="ghost" size="icon">
-                                    <Link
-                                        href={edit(category.id)}
-                                        aria-label={`Editar ${category.name}`}
-                                    >
-                                        <PencilSimpleIcon />
-                                    </Link>
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    disabled={
-                                        (category.products_count ?? 0) > 0
-                                    }
-                                    className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                    onClick={() =>
-                                        setCategoryToDelete(category)
-                                    }
-                                    aria-label={`Excluir ${category.name}`}
-                                >
-                                    <TrashIcon />
-                                </Button>
-                            </div>
-                        </Card>
+                            name={category.name}
+                            active={category.is_active}
+                            activeLabel="Ativa"
+                            inactiveLabel="Inativa"
+                            productsCount={category.products_count ?? 0}
+                            editHref={edit(category.id)}
+                            deleteDisabled={(category.products_count ?? 0) > 0}
+                            onDelete={() => setCategoryToDelete(category)}
+                        />
                     ))}
                     {categories.data.length === 0 && (
                         <Card className="grid justify-items-center gap-4 p-8 text-center shadow-sm">
@@ -165,29 +120,7 @@ export default function CategoriesIndex({
                     )}
                 </div>
 
-                <nav className="flex flex-wrap gap-2" aria-label="Paginação">
-                    {categories.links.map(
-                        (link) =>
-                            link.url && (
-                                <Button
-                                    key={link.label}
-                                    asChild
-                                    variant={
-                                        link.active ? 'default' : 'outline'
-                                    }
-                                    size="sm"
-                                >
-                                    <Link href={link.url}>
-                                        {link.label
-                                            .replace('&laquo;', '')
-                                            .replace('&raquo;', '')
-                                            .replace('Previous', 'Anterior')
-                                            .replace('Next', 'Próxima')}
-                                    </Link>
-                                </Button>
-                            ),
-                    )}
-                </nav>
+                <Pagination links={categories.links} />
             </div>
             <ConfirmationDialog
                 open={categoryToDelete !== null}

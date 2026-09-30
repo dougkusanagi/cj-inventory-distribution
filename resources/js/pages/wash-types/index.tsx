@@ -1,14 +1,10 @@
+import { TaxonomyCard } from '@/components/taxonomy-card';
+import { Pagination } from '@/components/pagination';
 import { Head, Link, router } from '@inertiajs/react';
-import {
-    MagnifyingGlassIcon,
-    PencilSimpleIcon,
-    PlusCircleIcon,
-    TrashIcon,
-} from '@phosphor-icons/react';
+import { MagnifyingGlassIcon, PlusCircleIcon } from '@phosphor-icons/react';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { destroy } from '@/actions/App/Http/Controllers/WashTypeController';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
@@ -73,58 +69,17 @@ export default function WashTypesIndex({
                 </form>
                 <div className="grid gap-3">
                     {washTypes.data.map((washType) => (
-                        <Card
+                        <TaxonomyCard
                             key={washType.id}
-                            className="flex-row items-center justify-between gap-4 rounded-2xl p-4 shadow-sm"
-                        >
-                            <div className="grid gap-1">
-                                <div className="flex items-center gap-2">
-                                    <h2 className="font-semibold">
-                                        {washType.name}
-                                    </h2>
-                                    <Badge
-                                        variant={
-                                            washType.is_active
-                                                ? 'secondary'
-                                                : 'outline'
-                                        }
-                                    >
-                                        {washType.is_active
-                                            ? 'Ativo'
-                                            : 'Inativo'}
-                                    </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">
-                                    {washType.products_count ?? 0} produtos
-                                    vinculados
-                                </p>
-                            </div>
-                            <div className="flex gap-1">
-                                <Button asChild variant="ghost" size="icon">
-                                    <Link
-                                        href={edit(washType.id)}
-                                        aria-label={`Editar ${washType.name}`}
-                                    >
-                                        <PencilSimpleIcon />
-                                    </Link>
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    disabled={
-                                        (washType.products_count ?? 0) > 0
-                                    }
-                                    className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                    onClick={() =>
-                                        setWashTypeToDelete(washType)
-                                    }
-                                    aria-label={`Excluir ${washType.name}`}
-                                >
-                                    <TrashIcon />
-                                </Button>
-                            </div>
-                        </Card>
+                            name={washType.name}
+                            active={washType.is_active}
+                            activeLabel="Ativo"
+                            inactiveLabel="Inativo"
+                            productsCount={washType.products_count ?? 0}
+                            editHref={edit(washType.id)}
+                            deleteDisabled={(washType.products_count ?? 0) > 0}
+                            onDelete={() => setWashTypeToDelete(washType)}
+                        />
                     ))}
                     {washTypes.data.length === 0 && (
                         <Card className="grid justify-items-center gap-4 p-8 text-center shadow-sm">
@@ -162,29 +117,7 @@ export default function WashTypesIndex({
                     )}
                 </div>
 
-                <nav className="flex flex-wrap gap-2" aria-label="Paginação">
-                    {washTypes.links.map(
-                        (link) =>
-                            link.url && (
-                                <Button
-                                    key={link.label}
-                                    asChild
-                                    variant={
-                                        link.active ? 'default' : 'outline'
-                                    }
-                                    size="sm"
-                                >
-                                    <Link href={link.url}>
-                                        {link.label
-                                            .replace('&laquo;', '')
-                                            .replace('&raquo;', '')
-                                            .replace('Previous', 'Anterior')
-                                            .replace('Next', 'Próxima')}
-                                    </Link>
-                                </Button>
-                            ),
-                    )}
-                </nav>
+                <Pagination links={washTypes.links} />
             </div>
             <ConfirmationDialog
                 open={washTypeToDelete !== null}

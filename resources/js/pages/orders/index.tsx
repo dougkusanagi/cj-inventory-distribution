@@ -1,3 +1,4 @@
+import { Pagination } from '@/components/pagination';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     MagnifyingGlassIcon,
@@ -18,26 +19,6 @@ import {
 } from '@/components/ui/select';
 import { create, index } from '@/routes/orders';
 import type { Order, Paginated } from '@/types';
-
-function paginationLabel(label: string): string {
-    if (
-        label === 'pagination.previous' ||
-        label.includes('Previous') ||
-        label.includes('laquo')
-    ) {
-        return 'Anterior';
-    }
-
-    if (
-        label === 'pagination.next' ||
-        label.includes('Next') ||
-        label.includes('raquo')
-    ) {
-        return 'Próxima';
-    }
-
-    return label;
-}
 
 export default function OrdersIndex({
     orders,
@@ -171,25 +152,7 @@ export default function OrdersIndex({
                         </Card>
                     )}
                 </div>
-                <nav className="flex flex-wrap gap-2" aria-label="Paginação">
-                    {orders.links.map(
-                        (link) =>
-                            link.url && (
-                                <Button
-                                    key={link.label}
-                                    asChild
-                                    variant={
-                                        link.active ? 'default' : 'outline'
-                                    }
-                                    size="sm"
-                                >
-                                    <Link href={link.url}>
-                                        {paginationLabel(link.label)}
-                                    </Link>
-                                </Button>
-                            ),
-                    )}
-                </nav>
+                <Pagination links={orders.links} />
             </div>
         </>
     );
