@@ -1,10 +1,10 @@
 import {
-    FlipHorizontal2,
-    FlipVertical2,
-    RotateCcw,
-    RotateCw,
-    Undo2,
-} from 'lucide-react';
+    ArrowClockwiseIcon,
+    ArrowCounterClockwiseIcon,
+    ArrowUUpLeftIcon,
+    FlipHorizontalIcon,
+    FlipVerticalIcon,
+} from '@phosphor-icons/react';
 import { useMemo, useRef, useState } from 'react';
 import Cropper from 'react-easy-crop';
 import type { Area, MediaSize, Point, Size } from 'react-easy-crop';
@@ -518,7 +518,7 @@ export function PhotoEditor({
                         disabled={isApplying}
                         className="h-auto min-h-12 min-w-0 text-center whitespace-normal"
                     >
-                        <RotateCcw />
+                        <ArrowCounterClockwiseIcon />
                         Girar à esquerda
                     </Button>
                     <Button
@@ -528,7 +528,7 @@ export function PhotoEditor({
                         disabled={isApplying}
                         className="h-auto min-h-12 min-w-0 text-center whitespace-normal"
                     >
-                        <RotateCw />
+                        <ArrowClockwiseIcon />
                         Girar à direita
                     </Button>
                     <Button
@@ -544,7 +544,7 @@ export function PhotoEditor({
                         aria-pressed={flip.horizontal}
                         className="h-auto min-h-12 min-w-0 text-center whitespace-normal"
                     >
-                        <FlipHorizontal2 />
+                        <FlipHorizontalIcon />
                         Espelhar
                     </Button>
                     <Button
@@ -560,7 +560,7 @@ export function PhotoEditor({
                         aria-pressed={flip.vertical}
                         className="h-auto min-h-12 min-w-0 text-center whitespace-normal"
                     >
-                        <FlipVertical2 />
+                        <FlipVerticalIcon />
                         Virar na vertical
                     </Button>
                     <Button
@@ -570,7 +570,7 @@ export function PhotoEditor({
                         disabled={isApplying}
                         className="col-span-2 h-12"
                     >
-                        <Undo2 />
+                        <ArrowUUpLeftIcon />
                         Restaurar enquadramento
                     </Button>
                 </div>

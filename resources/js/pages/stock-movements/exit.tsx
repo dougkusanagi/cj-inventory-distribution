@@ -1,5 +1,5 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { CircleMinus, Save } from 'lucide-react';
+import { FloppyDiskIcon, MinusCircleIcon } from '@phosphor-icons/react';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { idempotencyKey } from '@/lib/idempotency-key';
@@ -86,7 +86,7 @@ export default function StockExit({
             <div className="mx-auto grid w-full max-w-5xl gap-6 px-4 py-8 sm:px-6 lg:px-8">
                 <header className="flex items-start gap-3">
                     <span className="mt-1 flex size-11 shrink-0 items-center justify-center rounded-xl bg-orange-500 text-white">
-                        <CircleMinus className="size-5" />
+                        <MinusCircleIcon className="size-6" />
                     </span>
                     <div className="grid gap-1.5">
                         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -264,7 +264,7 @@ export default function StockExit({
                                 form.data.volume_ids.length === 0
                             }
                         >
-                            <Save />
+                            <FloppyDiskIcon />
                             {form.processing
                                 ? 'Registrando...'
                                 : 'Registrar saída'}

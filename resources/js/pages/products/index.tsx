@@ -1,32 +1,39 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
-    ChevronDown,
-    ChevronLeft,
-    ChevronRight,
-    Info,
-    ImageOff,
-    LayoutGrid,
-    LayoutList,
-    Package,
-    Pencil,
-    Plus,
-    Search,
-    Shirt,
-    SlidersHorizontal,
-    Tag,
-    Table2,
-    Trash2,
-    X,
-} from 'lucide-react';
-import {
-    Fragment,
-    useEffect,
-    useState,
-    type FormEvent,
-    type ReactNode,
-} from 'react';
+    ArrowsClockwiseIcon,
+    CaretLeftIcon,
+    CaretRightIcon,
+    CheckCircleIcon,
+    ImageBrokenIcon,
+    ImageIcon,
+    ImagesIcon,
+    InfoIcon,
+    ListBulletsIcon,
+    PackageIcon,
+    PencilSimpleIcon,
+    PlusCircleIcon,
+    ProhibitInsetIcon,
+    RowsIcon,
+    SparkleIcon,
+    SquaresFourIcon,
+    TShirtIcon,
+    TableIcon,
+    TagIcon,
+    TrashIcon,
+    XIcon,
+} from '@phosphor-icons/react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { destroy } from '@/actions/App/Http/Controllers/ProductController';
 import { Badge } from '@/components/ui/badge';
+import {
+    categoryFilterField,
+    lineFilterField,
+} from '@/components/products/product-filter-fields';
+import { StockQuantityDetails } from '@/components/products/stock-quantity-details';
+import {
+    SearchFilterBar,
+    type FilterField,
+} from '@/components/search-filter-bar';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -36,11 +43,6 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import {
     Drawer,
     DrawerClose,
     DrawerContent,
@@ -48,6 +50,7 @@ import {
     DrawerFooter,
     DrawerHeader,
     DrawerTitle,
+    DrawerTrigger,
 } from '@/components/ui/drawer';
 import {
     Dialog,
@@ -58,16 +61,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useIsMobile } from '@/hooks/use-mobile';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
     Popover,
@@ -103,6 +97,7 @@ export type ProductsIndexProps = {
         line: string;
         stock_offer_type: string;
         image: string;
+        status: 'active' | 'inactive' | 'all';
     };
     categories: Category[];
 };
@@ -128,13 +123,8 @@ type ProductFilterValues = {
     line: string;
     stock_offer_type: string;
     image: string;
+    status: string;
 };
-
-function formValue(data: FormData, name: string): string {
-    const value = data.get(name);
-
-    return typeof value === 'string' ? value : '';
-}
 
 function paginationLabel(label: string): string {
     if (
@@ -154,122 +144,6 @@ function paginationLabel(label: string): string {
     }
 
     return label;
-}
-
-function ProductFilterSelect({
-    name,
-    id,
-    defaultValue,
-    placeholder,
-    label,
-    children,
-    triggerClassName,
-}: {
-    name: string;
-    id: string;
-    defaultValue: string;
-    placeholder: string;
-    label?: string;
-    children: ReactNode;
-    triggerClassName?: string;
-}) {
-    const select = (
-        <Select name={name} defaultValue={defaultValue}>
-            <SelectTrigger
-                id={id}
-                aria-label={label ?? placeholder}
-                className={cn('w-full', triggerClassName)}
-            >
-                <SelectValue placeholder={placeholder} />
-            </SelectTrigger>
-            <SelectContent>{children}</SelectContent>
-        </Select>
-    );
-
-    if (!label) {
-        return select;
-    }
-
-    return (
-        <div className="grid gap-2">
-            <Label htmlFor={id}>{label}</Label>
-            {select}
-        </div>
-    );
-}
-
-function ProductFilterFields({
-    categories,
-    idPrefix,
-    values,
-    labelled = false,
-}: {
-    categories: Category[];
-    idPrefix: string;
-    values: Omit<ProductFilterValues, 'search'>;
-    labelled?: boolean;
-}) {
-    const triggerClassName = labelled ? 'h-11' : undefined;
-
-    return (
-        <>
-            <ProductFilterSelect
-                name="category"
-                id={`${idPrefix}-category`}
-                defaultValue={values.category || 'all'}
-                placeholder="Todas as categorias"
-                label={labelled ? 'Categoria' : undefined}
-                triggerClassName={triggerClassName}
-            >
-                <SelectItem value="all">Todas as categorias</SelectItem>
-                {categories.map((category) => (
-                    <SelectItem
-                        key={category.id}
-                        value={category.id.toString()}
-                    >
-                        {category.name}
-                    </SelectItem>
-                ))}
-            </ProductFilterSelect>
-            <ProductFilterSelect
-                name="line"
-                id={`${idPrefix}-line`}
-                defaultValue={values.line || 'all'}
-                placeholder="Slim ou Plus"
-                label={labelled ? 'Linha comercial' : undefined}
-                triggerClassName={triggerClassName}
-            >
-                <SelectItem value="all">Slim e Plus</SelectItem>
-                <SelectItem value="slim">Slim</SelectItem>
-                <SelectItem value="plus">Plus</SelectItem>
-            </ProductFilterSelect>
-            <ProductFilterSelect
-                name="stock_offer_type"
-                id={`${idPrefix}-stock-offer-type`}
-                defaultValue={values.stock_offer_type || 'all'}
-                placeholder="Tipo de grade"
-                label={labelled ? 'Tipo de grade' : undefined}
-                triggerClassName={triggerClassName}
-            >
-                <SelectItem value="all">Todas as grades</SelectItem>
-                <SelectItem value="replenishment">Reposição</SelectItem>
-                <SelectItem value="new_grade">Grade Nova</SelectItem>
-                <SelectItem value="broken_grade">Grade Furada</SelectItem>
-            </ProductFilterSelect>
-            <ProductFilterSelect
-                name="image"
-                id={`${idPrefix}-image`}
-                defaultValue={values.image || 'all'}
-                placeholder="Fotos"
-                label={labelled ? 'Fotos' : undefined}
-                triggerClassName={triggerClassName}
-            >
-                <SelectItem value="all">Com ou sem foto</SelectItem>
-                <SelectItem value="with">Com foto</SelectItem>
-                <SelectItem value="without">Sem foto</SelectItem>
-            </ProductFilterSelect>
-        </>
-    );
 }
 
 function ProductImage({
@@ -303,10 +177,7 @@ function ProductImage({
             )}
             aria-label="Produto sem foto"
         >
-            <ImageOff
-                className={cn('size-5', iconClassName)}
-                strokeWidth={1.25}
-            />
+            <ImageBrokenIcon className={cn('size-5', iconClassName)} />
         </div>
     );
 }
@@ -585,17 +456,13 @@ function RefinedProductCard({
                                 <p className="text-sm font-semibold text-card-foreground tabular-nums">
                                     {availableQuantity} peças disponíveis
                                 </p>
-                                <p className="mt-0.5 text-xs leading-4 text-muted-foreground tabular-nums">
-                                    Físico: {physicalQuantity} peças ·{' '}
-                                    {availableVolumeCount}{' '}
-                                    {availableVolumeCount === 1
-                                        ? 'saco disponível'
-                                        : 'sacos disponíveis'}
-                                    {reservedQuantity > 0 &&
-                                        ` · Reservado: ${reservedQuantity}`}
-                                    {consumedQuantity > 0 &&
-                                        ` · Baixado: ${consumedQuantity}`}
-                                </p>
+                                <StockQuantityDetails
+                                    className="mt-1 text-muted-foreground"
+                                    physicalQuantity={physicalQuantity}
+                                    availableSackCount={availableVolumeCount}
+                                    reservedQuantity={reservedQuantity}
+                                    consumedQuantity={consumedQuantity}
+                                />
                             </>
                         ) : (
                             <p className="text-sm font-semibold text-muted-foreground">
@@ -611,7 +478,7 @@ function RefinedProductCard({
                             aria-label={`Editar ${product.name}`}
                         >
                             <Link href={productEdit(product.id)}>
-                                <Pencil />
+                                <PencilSimpleIcon />
                             </Link>
                         </Button>
                         <Button
@@ -621,7 +488,13 @@ function RefinedProductCard({
                             onClick={() => onDelete(product)}
                             aria-label={`Excluir ${product.name}`}
                         >
-                            <Trash2 />
+                            <TrashIcon />
+                        </Button>
+                        <Button asChild variant="outline">
+                            <Link href={productEdit(product.id)}>
+                                <PencilSimpleIcon />
+                                Editar
+                            </Link>
                         </Button>
                     </div>
                 </div>
@@ -652,7 +525,6 @@ function ProductCardV3({
         Boolean(product.available_for_distribution);
     const isInternalUse =
         Boolean(product.is_active) && product.stock_offer_type === 'new_grade';
-    const sizes = productSizeBreakdown(product);
     const volumes = product.stock_volumes;
 
     return (
@@ -681,7 +553,10 @@ function ProductCardV3({
                                 className="absolute top-3 right-3 z-10 flex size-9 items-center justify-center rounded-full border border-white/50 bg-card/90 text-foreground shadow-sm backdrop-blur transition hover:bg-card focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                 aria-label={`Ver observação de ${product.name}`}
                             >
-                                <Info className="size-4" aria-hidden="true" />
+                                <InfoIcon
+                                    className="size-5"
+                                    aria-hidden="true"
+                                />
                             </button>
                         </PopoverTrigger>
                         <PopoverContent
@@ -710,13 +585,13 @@ function ProductCardV3({
 
             <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
                 <div className="min-w-0">
-                    <p className="truncate font-mono text-xs text-muted-foreground">
+                    <p className="truncate font-mono text-xs leading-4 text-muted-foreground">
                         {product.code}
                         {product.model && ` · Mod. ${product.model}`}
                     </p>
                     <TextLink
                         href={productEdit(product.id)}
-                        className="mt-1 line-clamp-2 rounded-sm text-lg leading-7 font-semibold tracking-tight text-card-foreground no-underline hover:underline"
+                        className="line-clamp-2 rounded-sm text-lg leading-6 font-semibold tracking-tight text-card-foreground no-underline hover:underline"
                     >
                         {product.name}
                     </TextLink>
@@ -725,7 +600,7 @@ function ProductCardV3({
                 {hasStock ? (
                     <div
                         className={cn(
-                            'flex items-center justify-between gap-3 rounded-xl px-3.5 py-3.5',
+                            'grid gap-2 rounded-xl px-3.5 py-3',
                             isAvailable
                                 ? 'bg-emerald-950 text-white dark:bg-emerald-950/80'
                                 : isInternalUse
@@ -733,36 +608,30 @@ function ProductCardV3({
                                   : 'bg-muted',
                         )}
                     >
-                        <div className="min-w-0">
-                            <p className="text-2xl leading-7 font-bold tabular-nums">
+                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                            <p className="min-w-0 flex-1 text-xs leading-4 font-semibold text-current/80">
+                                {isAvailable
+                                    ? 'Disponível para lojistas'
+                                    : isInternalUse
+                                      ? 'Uso interno da equipe'
+                                      : (product.distribution_status ??
+                                        'Indisponível')}
+                            </p>
+                            <p className="shrink-0 text-2xl leading-7 font-bold whitespace-nowrap tabular-nums">
                                 {availableQuantity}{' '}
                                 <span className="text-sm font-semibold text-current/75">
                                     peças
                                 </span>
                             </p>
-                            <p className="mt-1 text-xs leading-4 text-current/70 tabular-nums">
-                                Físico: {physicalQuantity} peças ·{' '}
-                                {availableVolumeCount}{' '}
-                                {availableVolumeCount === 1
-                                    ? 'saco disponível'
-                                    : 'sacos disponíveis'}
-                                {reservedQuantity > 0 &&
-                                    ` · Reservado: ${reservedQuantity}`}
-                                {consumedQuantity > 0 &&
-                                    ` · Baixado: ${consumedQuantity}`}
-                            </p>
                         </div>
-                        <span
-                            className={cn(
-                                'flex size-11 shrink-0 items-center justify-center rounded-full',
-                                isAvailable
-                                    ? 'bg-emerald-400/20 text-emerald-100'
-                                    : 'bg-background text-muted-foreground',
-                            )}
-                            aria-hidden="true"
-                        >
-                            <Package className="size-5" />
-                        </span>
+                        <StockQuantityDetails
+                            layout="columns"
+                            className="border-t border-current/15 pt-2 text-current/80"
+                            physicalQuantity={physicalQuantity}
+                            availableSackCount={availableVolumeCount}
+                            reservedQuantity={reservedQuantity}
+                            consumedQuantity={consumedQuantity}
+                        />
                     </div>
                 ) : (
                     <p className="rounded-xl bg-muted px-3.5 py-3 text-sm font-semibold text-muted-foreground">
@@ -770,101 +639,106 @@ function ProductCardV3({
                     </p>
                 )}
 
-                {(product.stock_offer_type ||
-                    product.line ||
-                    sizes.length > 0) && (
-                    <div className="grid gap-3 rounded-xl bg-muted/30 p-3">
-                        {(product.stock_offer_type || product.line) && (
-                            <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-muted-foreground">
-                                {product.stock_offer_type && (
-                                    <span className="inline-flex min-w-0 items-center gap-1.5 truncate font-medium">
-                                        <LayoutGrid
-                                            className="size-4 shrink-0"
-                                            aria-hidden="true"
-                                        />
-                                        <span className="truncate">
-                                            {
-                                                stockOfferTypeCardLabels[
-                                                    product.stock_offer_type
-                                                ]
-                                            }
-                                        </span>
-                                    </span>
-                                )}
-                                {product.line && (
-                                    <span className="inline-flex min-w-0 items-center gap-1.5 truncate font-medium">
-                                        <Tag
-                                            className="size-4 shrink-0"
-                                            aria-hidden="true"
-                                        />
-                                        <span className="truncate">
-                                            Linha{' '}
-                                            {productLineLabels[product.line]}
-                                        </span>
-                                    </span>
-                                )}
-                            </div>
+                {(product.stock_offer_type || product.line) && (
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-xl bg-muted/30 p-3 text-xs text-muted-foreground">
+                        {product.stock_offer_type && (
+                            <span className="inline-flex min-w-0 items-center gap-1.5 truncate font-medium">
+                                <SquaresFourIcon
+                                    className="size-5 shrink-0"
+                                    aria-hidden="true"
+                                />
+                                <span className="truncate">
+                                    {
+                                        stockOfferTypeCardLabels[
+                                            product.stock_offer_type
+                                        ]
+                                    }
+                                </span>
+                            </span>
                         )}
-
-                        {sizes.length > 0 && (
-                            <div className="grid gap-1.5">
-                                <p className="text-xs font-medium text-muted-foreground">
-                                    Tamanhos
-                                </p>
-                                <StockSizeBreakdown sizes={sizes} sizesOnly />
-                            </div>
+                        {product.line && (
+                            <span className="inline-flex min-w-0 items-center gap-1.5 truncate font-medium">
+                                <TagIcon
+                                    className="size-5 shrink-0"
+                                    aria-hidden="true"
+                                />
+                                <span className="truncate">
+                                    Linha {productLineLabels[product.line]}
+                                </span>
+                            </span>
                         )}
                     </div>
                 )}
 
-                <Collapsible
+                <Drawer
+                    direction="right"
                     open={detailsOpen}
                     onOpenChange={setDetailsOpen}
-                    className="-mx-4 mt-auto -mb-4 sm:-mx-5 sm:-mb-5"
                 >
-                    <div className="flex items-center justify-between gap-2 px-4 py-2.5 sm:px-5">
-                        <CollapsibleTrigger asChild>
+                    <div className="-mx-4 mt-auto -mb-4 flex items-center justify-between gap-2 border-t border-border px-4 py-2.5 sm:-mx-5 sm:-mb-5 sm:px-5">
+                        <DrawerTrigger asChild>
                             <Button
                                 variant="ghost"
                                 size="sm"
                                 className="px-1 text-muted-foreground"
-                                aria-label={
-                                    detailsOpen
-                                        ? `Ocultar mais informações de ${product.name}`
-                                        : `Ver mais informações de ${product.name}`
-                                }
+                                aria-label={`Ver mais informações de ${product.name}`}
                             >
                                 Mais
-                                <ChevronDown
-                                    className={cn(
-                                        'transition-transform duration-200',
-                                        detailsOpen && 'rotate-180',
-                                    )}
+                                <CaretRightIcon
+                                    weight="bold"
                                     aria-hidden="true"
                                 />
                             </Button>
-                        </CollapsibleTrigger>
+                        </DrawerTrigger>
                         <Button asChild variant="secondary" size="sm">
                             <Link
                                 href={productEdit(product.id)}
                                 aria-label={`Editar ${product.name}`}
                             >
-                                <Pencil />
+                                <PencilSimpleIcon />
                                 Editar
                             </Link>
                         </Button>
                     </div>
-                    <CollapsibleContent
+                    <DrawerContent
+                        side="right"
                         data-testid="product-card-v3-details"
-                        className="border-t border-border px-4 py-4 sm:px-5"
+                        className="gap-0"
                     >
-                        <div className="grid gap-4 text-xs text-muted-foreground">
-                            {volumes.length > 0 && (
-                                <div className="grid gap-2">
-                                    <p className="font-medium text-card-foreground">
+                        <DrawerHeader className="relative border-b border-border p-5 pr-14 text-left">
+                            <p className="truncate font-mono text-xs text-muted-foreground">
+                                {product.code}
+                                {product.model && ` · Mod. ${product.model}`}
+                            </p>
+                            <DrawerTitle className="text-lg leading-snug text-balance break-words">
+                                {product.name}
+                            </DrawerTitle>
+                            <DrawerDescription>
+                                {product.distribution_status ??
+                                    'Detalhes do estoque por saco.'}
+                            </DrawerDescription>
+                        </DrawerHeader>
+                        <DrawerClose asChild>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute top-3 right-3 text-muted-foreground"
+                                aria-label="Fechar detalhes do produto"
+                            >
+                                <XIcon weight="bold" />
+                            </Button>
+                        </DrawerClose>
+                        <div
+                            data-vaul-no-drag
+                            className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto p-5 text-xs text-muted-foreground"
+                        >
+                            {volumes.length > 0 ? (
+                                <div className="grid gap-3">
+                                    <p className="text-sm font-medium text-card-foreground">
                                         Quantidade por saco
                                     </p>
-                                    <div className="grid gap-2">
+                                    <div className="grid gap-2.5">
                                         {volumes.map((volume, index) => {
                                             const volumeSizes = volume.items
                                                 .filter(
@@ -878,24 +752,45 @@ function ProductCardV3({
                                             return (
                                                 <div
                                                     key={volume.id}
-                                                    className="grid gap-2 rounded-lg border border-border/70 bg-muted/40 px-3 py-2.5"
+                                                    className="grid gap-2.5 rounded-xl border border-border/70 bg-muted/40 px-3.5 py-3"
                                                 >
-                                                    <p className="flex items-center justify-between gap-2">
-                                                        <span className="min-w-0 truncate font-semibold text-card-foreground">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <p className="min-w-0 font-semibold text-card-foreground">
                                                             Saco {index + 1}
                                                             {volume.code && (
-                                                                <span className="font-mono font-normal text-muted-foreground">
-                                                                    {' '}
-                                                                    ·{' '}
+                                                                <span className="block truncate font-mono text-[11px] font-normal text-muted-foreground">
                                                                     {
                                                                         volume.code
                                                                     }
                                                                 </span>
                                                             )}
-                                                        </span>
-                                                        <span className="shrink-0 tabular-nums">
-                                                            {volume.status &&
-                                                                `${volume.status} · `}
+                                                        </p>
+                                                        {volume.status && (
+                                                            <Badge
+                                                                variant="outline"
+                                                                className={cn(
+                                                                    'shrink-0',
+                                                                    volume.status ===
+                                                                        'Disponível'
+                                                                        ? 'border-emerald-600/30 bg-emerald-500/10 text-emerald-800 dark:border-emerald-400/30 dark:text-emerald-200'
+                                                                        : volume.status ===
+                                                                            'Reservado'
+                                                                          ? 'border-amber-600/30 bg-amber-500/10 text-amber-900 dark:border-amber-400/30 dark:text-amber-200'
+                                                                          : 'border-border bg-muted text-muted-foreground',
+                                                                )}
+                                                            >
+                                                                {volume.status}
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                    <StockSizeBreakdown
+                                                        sizes={volumeSizes}
+                                                        compact
+                                                        showUnknownAsCards
+                                                    />
+                                                    <p className="tabular-nums">
+                                                        Total do saco:{' '}
+                                                        <strong className="text-card-foreground">
                                                             {
                                                                 volume.total_quantity
                                                             }{' '}
@@ -903,20 +798,21 @@ function ProductCardV3({
                                                             1
                                                                 ? 'peça'
                                                                 : 'peças'}
-                                                        </span>
+                                                        </strong>
                                                     </p>
-                                                    <StockSizeBreakdown
-                                                        sizes={volumeSizes}
-                                                        compact
-                                                        showUnknownAsCards
-                                                    />
                                                 </div>
                                             );
                                         })}
                                     </div>
                                 </div>
+                            ) : (
+                                <p>
+                                    Este produto ainda não tem sacos
+                                    cadastrados.
+                                </p>
                             )}
-
+                        </div>
+                        <DrawerFooter className="border-t border-border p-5">
                             <Button
                                 variant="ghost"
                                 size="sm"
@@ -924,12 +820,12 @@ function ProductCardV3({
                                 onClick={() => onDelete(product)}
                                 aria-label={`Excluir ${product.name}`}
                             >
-                                <Trash2 />
+                                <TrashIcon />
                                 Excluir produto
                             </Button>
-                        </div>
-                    </CollapsibleContent>
-                </Collapsible>
+                        </DrawerFooter>
+                    </DrawerContent>
+                </Drawer>
             </div>
         </article>
     );
@@ -1060,7 +956,7 @@ function ProductCompactCard({
                             href={productEdit(product.id)}
                             aria-label={`Editar ${product.name}`}
                         >
-                            <Pencil />
+                            <PencilSimpleIcon />
                             Editar
                         </Link>
                     </Button>
@@ -1071,7 +967,7 @@ function ProductCompactCard({
                         onClick={() => onDelete(product)}
                         aria-label={`Excluir ${product.name}`}
                     >
-                        <Trash2 />
+                        <TrashIcon />
                     </Button>
                 </div>
             </div>
@@ -1214,22 +1110,22 @@ function ProductTable({
                                             {product.available_quantity ?? 0}{' '}
                                             peças disponíveis
                                         </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            Físico: {product.physical_quantity}{' '}
-                                            peças ·{' '}
-                                            {product.available_stock_volume_count ??
-                                                0}{' '}
-                                            {(product.available_stock_volume_count ??
-                                                0) === 1
-                                                ? 'saco disponível'
-                                                : 'sacos disponíveis'}
-                                            {(product.reserved_quantity ?? 0) >
-                                                0 &&
-                                                ` · Reservado: ${product.reserved_quantity}`}
-                                            {(product.consumed_quantity ?? 0) >
-                                                0 &&
-                                                ` · Baixado: ${product.consumed_quantity}`}
-                                        </p>
+                                        <StockQuantityDetails
+                                            className="mt-1 text-muted-foreground"
+                                            physicalQuantity={
+                                                product.physical_quantity
+                                            }
+                                            availableSackCount={
+                                                product.available_stock_volume_count ??
+                                                0
+                                            }
+                                            reservedQuantity={
+                                                product.reserved_quantity ?? 0
+                                            }
+                                            consumedQuantity={
+                                                product.consumed_quantity ?? 0
+                                            }
+                                        />
                                     </>
                                 ) : (
                                     <span className="text-muted-foreground">
@@ -1249,7 +1145,7 @@ function ProductTable({
                                         onClick={() => onDelete(product)}
                                         aria-label={`Excluir ${product.name}`}
                                     >
-                                        <Trash2 />
+                                        <TrashIcon />
                                     </Button>
                                 </div>
                             </td>
@@ -1275,7 +1171,6 @@ export default function ProductsIndex({
     const [view, setView] = useState<ProductView>(
         isCardPreview ? 'cards' : 'table',
     );
-    const [filtersOpen, setFiltersOpen] = useState(false);
 
     useEffect(() => {
         if (isCardPreview) {
@@ -1298,7 +1193,15 @@ export default function ProductsIndex({
         : isMobile && view === 'table'
           ? 'cards'
           : view;
-    const [mobileSearch, setMobileSearch] = useState(filters.search);
+    const [filterValues, setFilterValues] = useState<ProductFilterValues>({
+        search: filters.search,
+        category: filters.category?.toString() ?? 'all',
+        line: filters.line || 'all',
+        stock_offer_type: filters.stock_offer_type || 'all',
+        image: filters.image || 'all',
+        status: filters.status,
+    });
+    const filtersMounted = useRef(false);
     const [galleryProduct, setGalleryProduct] = useState<Product | null>(null);
     const [galleryImageIndex, setGalleryImageIndex] = useState(0);
     const [productToDelete, setProductToDelete] = useState<Product | null>(
@@ -1315,68 +1218,82 @@ export default function ProductsIndex({
         setGalleryProduct(product);
     };
 
-    const applyFilters = (values: ProductFilterValues) => {
-        setMobileSearch(values.search);
-        router.get(indexUrl, values, {
-            preserveState: true,
-            replace: true,
-            onSuccess: () => setFiltersOpen(false),
-        });
-    };
-
-    const submitFilters = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        const data = new FormData(event.currentTarget);
-
-        applyFilters({
-            search: formValue(data, 'search'),
-            category: formValue(data, 'category'),
-            line: formValue(data, 'line'),
-            stock_offer_type: formValue(data, 'stock_offer_type'),
-            image: formValue(data, 'image'),
-        });
-    };
-
     useEffect(() => {
-        setMobileSearch(filters.search);
-    }, [filters.search]);
+        if (!filtersMounted.current) {
+            filtersMounted.current = true;
 
-    const submitMobileSearch = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        const data = new FormData(event.currentTarget);
+            return;
+        }
 
-        applyFilters({
-            search: formValue(data, 'search'),
-            category: filters.category?.toString() ?? 'all',
-            line: filters.line || 'all',
-            stock_offer_type: filters.stock_offer_type || 'all',
-            image: filters.image || 'all',
-        });
-    };
+        const timeout = window.setTimeout(() => {
+            router.get(indexUrl, filterValues, {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            });
+        }, 300);
 
-    const clearFilters = () => {
-        applyFilters({
-            search: '',
-            category: '',
-            line: '',
-            stock_offer_type: '',
-            image: '',
-        });
-    };
+        return () => window.clearTimeout(timeout);
+    }, [filterValues]);
 
-    const filterValues: Omit<ProductFilterValues, 'search'> = {
-        category: filters.category?.toString() ?? 'all',
-        line: filters.line || 'all',
-        stock_offer_type: filters.stock_offer_type || 'all',
-        image: filters.image || 'all',
-    };
-    const activeFilterCount = [
-        filters.category !== null,
-        filters.line !== '' && filters.line !== 'all',
-        filters.stock_offer_type !== '' && filters.stock_offer_type !== 'all',
-        filters.image !== '' && filters.image !== 'all',
-    ].filter(Boolean).length;
-    const hasAppliedFilters = filters.search !== '' || activeFilterCount > 0;
+    const filterFields: FilterField[] = [
+        {
+            name: 'status',
+            label: 'Status do produto',
+            value: filterValues.status,
+            defaultValue: 'active',
+            allLabel: 'Todos',
+            allIcon: ListBulletsIcon,
+            display: 'cards',
+            options: [
+                { value: 'active', label: 'Ativos', icon: CheckCircleIcon },
+                {
+                    value: 'inactive',
+                    label: 'Inativos',
+                    icon: ProhibitInsetIcon,
+                },
+            ],
+        },
+        categoryFilterField(filterValues.category, categories),
+        lineFilterField(filterValues.line, [
+            { value: 'slim', label: 'Slim' },
+            { value: 'plus', label: 'Plus' },
+        ]),
+        {
+            name: 'stock_offer_type',
+            label: 'Tipo de grade',
+            value: filterValues.stock_offer_type,
+            allLabel: 'Todas as grades',
+            allIcon: SquaresFourIcon,
+            display: 'cards',
+            options: [
+                {
+                    value: 'replenishment',
+                    label: 'Reposição',
+                    icon: ArrowsClockwiseIcon,
+                },
+                { value: 'new_grade', label: 'Grade Nova', icon: SparkleIcon },
+                {
+                    value: 'broken_grade',
+                    label: 'Grade Furada',
+                    icon: PackageIcon,
+                },
+            ],
+        },
+        {
+            name: 'image',
+            label: 'Fotos',
+            value: filterValues.image,
+            allLabel: 'Com ou sem foto',
+            allCardLabel: 'Todas',
+            allIcon: ImagesIcon,
+            display: 'cards',
+            options: [
+                { value: 'with', label: 'Com foto', icon: ImageIcon },
+                { value: 'without', label: 'Sem foto', icon: ImageBrokenIcon },
+            ],
+        },
+    ];
 
     const handleDelete = () => {
         if (!productToDelete) {
@@ -1455,160 +1372,37 @@ export default function ProductsIndex({
                     </div>
                     <Button asChild size="lg" className="w-full sm:w-fit">
                         <Link href={productCreate()}>
-                            <Plus />
+                            <PlusCircleIcon />
                             Novo produto
                         </Link>
                     </Button>
                 </header>
 
-                <div className="md:hidden">
-                    <form
-                        onSubmit={submitMobileSearch}
-                        data-testid="mobile-product-filters"
-                        aria-label="Buscar produtos"
-                        className="grid gap-2 rounded-[1.25rem] border border-border/80 bg-card p-3 shadow-sm"
-                    >
-                        <div className="flex items-center gap-2">
-                            <Input
-                                id="mobile-product-search"
-                                name="search"
-                                type="search"
-                                value={mobileSearch}
-                                placeholder="Buscar por nome"
-                                aria-label="Buscar por nome"
-                                onChange={(event) =>
-                                    setMobileSearch(event.target.value)
-                                }
-                                className="h-11 bg-background"
-                            />
-                            <Button
-                                type="button"
-                                variant="secondary"
-                                className="h-11 shrink-0 gap-2 px-3"
-                                aria-expanded={filtersOpen}
-                                aria-controls="mobile-product-filter-drawer"
-                                aria-label="Abrir filtros de produtos"
-                                onClick={() => setFiltersOpen(true)}
-                            >
-                                <SlidersHorizontal />
-                                <span>Filtros</span>
-                                {activeFilterCount > 0 && (
-                                    <span className="flex min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs font-bold text-primary-foreground">
-                                        {activeFilterCount}
-                                    </span>
-                                )}
-                            </Button>
-                        </div>
-                        {hasAppliedFilters && activeFilterCount > 0 && (
-                            <p className="px-1 text-xs text-muted-foreground">
-                                {activeFilterCount}{' '}
-                                {activeFilterCount === 1
-                                    ? 'filtro aplicado'
-                                    : 'filtros aplicados'}
-                            </p>
-                        )}
-                    </form>
-
-                    <Drawer open={filtersOpen} onOpenChange={setFiltersOpen}>
-                        <DrawerContent
-                            id="mobile-product-filter-drawer"
-                            className="mx-auto max-w-2xl"
-                        >
-                            <form
-                                onSubmit={submitFilters}
-                                className="flex min-h-0 flex-1 flex-col"
-                            >
-                                <DrawerHeader className="relative shrink-0 px-4 pt-5 pr-16 pb-4 text-left sm:px-6">
-                                    <DrawerTitle>Filtrar produtos</DrawerTitle>
-                                    <DrawerDescription>
-                                        Refine a lista e aplique todos os
-                                        filtros de uma vez.
-                                    </DrawerDescription>
-                                    <DrawerClose asChild>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            className="absolute top-4 right-4 size-11"
-                                            aria-label="Fechar filtros de produtos"
-                                        >
-                                            <X />
-                                        </Button>
-                                    </DrawerClose>
-                                </DrawerHeader>
-                                <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 sm:px-6">
-                                    <div className="grid gap-4">
-                                        <input
-                                            type="hidden"
-                                            name="search"
-                                            value={mobileSearch}
-                                            readOnly
-                                        />
-                                        <ProductFilterFields
-                                            key={`mobile-${Object.values(filterValues).join('-')}`}
-                                            categories={categories}
-                                            idPrefix="mobile-product-filter"
-                                            values={filterValues}
-                                            labelled
-                                        />
-                                    </div>
-                                </div>
-                                <DrawerFooter className="shrink-0 border-t border-border px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">
-                                    <Button
-                                        type="submit"
-                                        className="h-11"
-                                        aria-label="Aplicar filtros de produtos"
-                                    >
-                                        <Search />
-                                        Aplicar filtros
-                                    </Button>
-                                    {hasAppliedFilters && (
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            className="h-11"
-                                            onClick={clearFilters}
-                                        >
-                                            Limpar filtros
-                                        </Button>
-                                    )}
-                                </DrawerFooter>
-                            </form>
-                        </DrawerContent>
-                    </Drawer>
-                </div>
-
-                <form
-                    onSubmit={submitFilters}
-                    className="hidden gap-3 rounded-[1.75rem] border border-border/80 bg-card p-4 shadow-sm md:grid xl:grid-cols-[minmax(0,1.4fr)_minmax(11rem,1fr)_minmax(9rem,.75fr)_minmax(10rem,.9fr)_minmax(10rem,.8fr)_auto]"
-                >
-                    <Input
-                        name="search"
-                        defaultValue={filters.search}
-                        placeholder="Buscar por nome"
-                        aria-label="Buscar por nome"
-                    />
-                    <ProductFilterFields
-                        key={`desktop-${Object.values(filterValues).join('-')}`}
-                        categories={categories}
-                        idPrefix="desktop-product-filter"
-                        values={filterValues}
-                    />
-                    <Button type="submit" variant="secondary">
-                        <Search />
-                        Filtrar
-                    </Button>
-                    {hasAppliedFilters && (
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={clearFilters}
-                        >
-                            <X />
-                            Limpar filtros
-                        </Button>
-                    )}
-                </form>
+                <SearchFilterBar
+                    idPrefix="product-filter"
+                    search={filterValues.search}
+                    onSearchChange={(search) =>
+                        setFilterValues((current) => ({ ...current, search }))
+                    }
+                    fields={filterFields}
+                    onFieldChange={(name, value) =>
+                        setFilterValues((current) => ({
+                            ...current,
+                            [name]: value,
+                        }))
+                    }
+                    onClear={() =>
+                        setFilterValues({
+                            search: '',
+                            category: 'all',
+                            line: 'all',
+                            stock_offer_type: 'all',
+                            image: 'all',
+                            status: 'active',
+                        })
+                    }
+                    resultCount={products.meta.total}
+                />
 
                 {products.data.length > 0 ? (
                     <>
@@ -1636,7 +1430,7 @@ export default function ProductsIndex({
                                             aria-label="Visualização em tabela"
                                             className="flex-1 px-3 data-[state=on]:bg-secondary md:flex-none"
                                         >
-                                            <Table2 />
+                                            <TableIcon />
                                             Tabela
                                         </ToggleGroupItem>
                                     )}
@@ -1645,7 +1439,7 @@ export default function ProductsIndex({
                                         aria-label="Visualização em cards"
                                         className="flex-1 px-3 data-[state=on]:bg-secondary md:flex-none"
                                     >
-                                        <LayoutList />
+                                        <RowsIcon />
                                         Cards
                                     </ToggleGroupItem>
                                     <ToggleGroupItem
@@ -1653,7 +1447,7 @@ export default function ProductsIndex({
                                         aria-label="Visualização com 2 cards por linha"
                                         className="flex-1 px-3 data-[state=on]:bg-secondary md:flex-none"
                                     >
-                                        <LayoutGrid />2 por linha
+                                        <SquaresFourIcon />2 por linha
                                     </ToggleGroupItem>
                                 </ToggleGroup>
                             </div>
@@ -1721,7 +1515,7 @@ export default function ProductsIndex({
                     <Card className="rounded-[2rem] border-dashed shadow-sm">
                         <CardHeader className="items-center pt-12 text-center">
                             <span className="mb-2 flex size-16 items-center justify-center rounded-3xl bg-primary text-primary-foreground">
-                                <Shirt className="size-7" />
+                                <TShirtIcon className="size-8" />
                             </span>
                             <CardTitle className="text-2xl tracking-tight">
                                 Seu catálogo começa aqui
@@ -1735,7 +1529,7 @@ export default function ProductsIndex({
                         <CardContent className="flex justify-center pb-12">
                             <Button asChild>
                                 <Link href={productCreate()}>
-                                    <Plus />
+                                    <PlusCircleIcon />
                                     Cadastrar primeiro produto
                                 </Link>
                             </Button>
@@ -1784,9 +1578,9 @@ export default function ProductsIndex({
                                     {link.url ? (
                                         <Link href={link.url} preserveScroll>
                                             {isPrevious ? (
-                                                <ChevronLeft />
+                                                <CaretLeftIcon weight="bold" />
                                             ) : isNext ? (
-                                                <ChevronRight />
+                                                <CaretRightIcon weight="bold" />
                                             ) : null}
                                             <span
                                                 className={
@@ -1834,7 +1628,7 @@ export default function ProductsIndex({
                             onClick={handleDelete}
                             disabled={deleting}
                         >
-                            <Trash2 />
+                            <TrashIcon />
                             {deleting ? 'Excluindo...' : 'Excluir produto'}
                         </Button>
                     </DialogFooter>

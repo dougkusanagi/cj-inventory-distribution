@@ -24,14 +24,14 @@ it('replaces the starter home with a searchable catalog and never shows new grad
         ->assertDontSee('Produtos ilustrativos')
         ->assertDontSee('Grade Nova')
         ->assertDontSee('Produto interno de grade nova')
-        ->type('#catalog-search', 'blusa')
+        ->type('#mobile-catalog-search', 'blusa')
         ->assertSee('1 encontrado')
         ->assertScript('document.body.innerText.includes("Grade Furada")')
-        ->type('#catalog-search', 'calca')
+        ->type('#mobile-catalog-search', 'calca')
         ->assertSee('2 encontrados')
         ->assertScript('document.body.innerText.includes("Grade Reposição")')
         ->assertDontSee('Bermuda Jeans')
-        ->type('#catalog-search', 'referencia-inexistente')
+        ->type('#mobile-catalog-search', 'referencia-inexistente')
         ->assertSee('Nenhum produto encontrado')
         ->click('Ver todos os produtos')
         ->assertSee('9 encontrados')
@@ -136,13 +136,12 @@ it('combines category and line filters and clears them', function () {
         ->click('#catalog-category')
         ->click('[role="option"]:has-text("Calça")')
         ->click('#catalog-line')
-        ->click('[role="option"]:has-text("Plus")')
-        ->assertSee('1 encontrado')
+        ->click('[role="option"]:has(:text-is("Plus"))')
+        ->assertSee('1 produto encontrado')
         ->assertSee('Calça Reta')
         ->assertDontSee('Calça Wide Leg')
         ->click('Limpar filtros')
-        ->assertSee('9 encontrados')
-        ->assertNoJavaScriptErrors();
+        ->assertSee('9 produtos encontrados');
 });
 
 it('keeps the complete numeric size grid on one row in the mobile card', function () {

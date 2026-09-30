@@ -29,16 +29,26 @@ function DrawerOverlay({ className, ...props }: React.ComponentProps<typeof Draw
     );
 }
 
-function DrawerContent({ className, children, ...props }: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+function DrawerContent({
+    className,
+    children,
+    side = 'bottom',
+    ...props
+}: React.ComponentProps<typeof DrawerPrimitive.Content> & { side?: 'bottom' | 'right' }) {
     return (
         <DrawerPortal>
             <DrawerOverlay />
             <DrawerPrimitive.Content
                 data-slot="drawer-content"
-                className={cn('bg-background fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col rounded-t-[2rem] border-t shadow-2xl outline-none', className)}
+                className={cn(
+                    'bg-background fixed z-50 flex flex-col shadow-2xl outline-none',
+                    side === 'bottom' && 'inset-x-0 bottom-0 max-h-[85vh] rounded-t-[2rem] border-t',
+                    side === 'right' && 'inset-y-2 right-2 w-[calc(100%-3.5rem)] max-w-md rounded-2xl border after:hidden!',
+                    className,
+                )}
                 {...props}
             >
-                <div className="bg-muted-foreground/35 mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full" />
+                {side === 'bottom' && <div className="bg-muted-foreground/35 mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full" />}
                 {children}
             </DrawerPrimitive.Content>
         </DrawerPortal>

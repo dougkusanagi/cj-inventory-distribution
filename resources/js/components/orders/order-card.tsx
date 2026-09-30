@@ -1,5 +1,10 @@
 import { Link } from '@inertiajs/react';
-import { CalendarDays, Eye, Shirt, User } from 'lucide-react';
+import {
+    CalendarDotsIcon,
+    EyeIcon,
+    TShirtIcon,
+    UserIcon,
+} from '@phosphor-icons/react';
 import { PaperBag } from '@/components/icons/paper-bag';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -68,8 +73,8 @@ export function OrderCard({ order }: { order: Order }) {
                         <div className="flex min-w-0 items-center">
                             <dt className="sr-only">Responsável</dt>
                             <dd className="flex min-w-0 items-center gap-1.5">
-                                <User
-                                    className="size-4 shrink-0"
+                                <UserIcon
+                                    className="size-5 shrink-0"
                                     aria-hidden="true"
                                 />
                                 <span className="truncate">
@@ -91,8 +96,8 @@ export function OrderCard({ order }: { order: Order }) {
                         <div className="flex items-center">
                             <dt className="sr-only">Peças</dt>
                             <dd className="flex items-center gap-1.5 tabular-nums">
-                                <Shirt
-                                    className="size-4 shrink-0"
+                                <TShirtIcon
+                                    className="size-5 shrink-0"
                                     aria-hidden="true"
                                 />
                                 {order.total_quantity}{' '}
@@ -102,8 +107,8 @@ export function OrderCard({ order }: { order: Order }) {
                         <div className="flex items-center">
                             <dt className="sr-only">Enviado em</dt>
                             <dd className="flex items-center gap-1.5">
-                                <CalendarDays
-                                    className="size-4 shrink-0"
+                                <CalendarDotsIcon
+                                    className="size-5 shrink-0"
                                     aria-hidden="true"
                                 />
                                 <time
@@ -132,7 +137,7 @@ export function OrderCard({ order }: { order: Order }) {
                 </div>
                 <Button asChild variant="outline" className="w-full sm:w-auto">
                     <Link href={show(order.id)}>
-                        <Eye />
+                        <EyeIcon />
                         Ver pedido
                     </Link>
                 </Button>

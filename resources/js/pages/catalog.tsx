@@ -1,28 +1,31 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import {
-    Check,
-    Grid2X2,
-    Grid3X3,
-    ImageOff,
-    LayoutGrid,
-    ListFilter,
-    LoaderCircle,
-    MessageCircle,
-    Search,
-    Shirt,
-    ShoppingBag,
-    Tag,
-    Trash2,
-    X,
-} from 'lucide-react';
+    CheckIcon,
+    GridNineIcon,
+    ImageBrokenIcon,
+    MagnifyingGlassIcon,
+    ShoppingBagIcon,
+    SquaresFourIcon,
+    TShirtIcon,
+    TagIcon,
+    TrashIcon,
+    WhatsappLogoIcon,
+    XIcon,
+} from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, FormEvent } from 'react';
 import CatalogOrderController from '@/actions/App/Http/Controllers/CatalogOrderController';
 import AppearanceToggleTab from '@/components/appearance-tabs';
 import { PaperBag } from '@/components/icons/paper-bag';
+import { PageHero } from '@/components/page-hero';
 import ImageCarousel from '@/components/image-carousel';
 import InputError from '@/components/input-error';
 import ProductImageGallery from '@/components/products/product-image-gallery';
+import {
+    categoryFilterField,
+    lineFilterField,
+} from '@/components/products/product-filter-fields';
+import { SearchFilterBar } from '@/components/search-filter-bar';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,13 +40,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import {
     Sheet,
     SheetContent,
@@ -144,42 +140,6 @@ function persistBag(snapshots: CatalogBagSnapshot[]): void {
     }
 }
 
-function CatalogFilter({
-    id,
-    label,
-    value,
-    options,
-    onChange,
-}: {
-    id: string;
-    label: string;
-    value: string;
-    options: Array<{ value: string; label: string }>;
-    onChange: (value: string) => void;
-}) {
-    return (
-        <div className="grid min-w-0 gap-2">
-            <Label htmlFor={id}>{label}</Label>
-            <Select value={value} onValueChange={onChange}>
-                <SelectTrigger
-                    id={id}
-                    className="h-11 w-full bg-card data-[size=default]:h-11"
-                >
-                    <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="all">Todas as opções</SelectItem>
-                    {options.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
-    );
-}
-
 function ProductPhoto({
     product,
     onOpenSelection,
@@ -224,8 +184,8 @@ function ProductPhoto({
                     onClick={onOpenSelection}
                     aria-label={`Imagem indisponível. Ver sacos de ${product.name}`}
                 >
-                    <ImageOff
-                        className="size-7 text-muted-foreground/70"
+                    <ImageBrokenIcon
+                        className="size-8 text-muted-foreground/70"
                         aria-hidden="true"
                     />
                     <span>Produto sem foto</span>
@@ -347,7 +307,7 @@ function ProductVolumeOptions({
                                         : `Adicionar ${volume.name}`
                                 }
                             >
-                                {selected ? <Trash2 /> : <PaperBag />}
+                                {selected ? <TrashIcon /> : <PaperBag />}
                                 {selected ? 'Remover saco' : 'Adicionar saco'}
                             </Button>
                         </section>
@@ -410,7 +370,7 @@ function BagItems({
         >
             {bag.length === 0 && unavailableVolumeIds.length === 0 ? (
                 <div className="grid justify-items-center gap-3 py-10 text-center">
-                    <ShoppingBag className="size-10 text-muted-foreground" />
+                    <ShoppingBagIcon className="size-10 text-muted-foreground" />
                     <p>Sua sacola está vazia.</p>
                 </div>
             ) : (
@@ -455,7 +415,7 @@ function BagItems({
                                     onClick={() => onRemoveVolume(volumeId)}
                                     aria-label={`Remover saco indisponível ${volumeId} da sacola`}
                                 >
-                                    <Trash2 />
+                                    <TrashIcon />
                                 </Button>
                             </article>
                         );
@@ -486,7 +446,7 @@ function BagItems({
                                 onClick={() => onRemoveVolume(volume.id)}
                                 aria-label={`Remover ${volume.name} de ${product.name}`}
                             >
-                                <Trash2 />
+                                <TrashIcon />
                             </Button>
                         </article>
                     ))}
@@ -553,7 +513,7 @@ function CatalogCheckout({
         return (
             <div className="grid gap-4 border-t border-border p-4 text-center sm:p-6">
                 <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/15 text-highlight">
-                    <MessageCircle className="size-6" />
+                    <WhatsappLogoIcon className="size-7" />
                 </div>
                 <div className="grid gap-2">
                     <h3 className="text-lg font-semibold">
@@ -576,7 +536,7 @@ function CatalogCheckout({
                         data-testid="finalizar-whatsapp"
                         onClick={() => setWhatsappOpened(true)}
                     >
-                        <MessageCircle />
+                        <WhatsappLogoIcon />
                         Abrir WhatsApp
                     </a>
                 </Button>
@@ -689,7 +649,7 @@ function CatalogCheckout({
                     !canPlaceOrder
                 }
             >
-                <MessageCircle />
+                <WhatsappLogoIcon />
                 {form.processing ? 'Registrando pedido...' : 'Registrar pedido'}
             </Button>
             <p className="text-center text-xs leading-5 text-muted-foreground">
@@ -725,7 +685,6 @@ export default function Catalog({
         filters.category?.toString() ?? 'all',
     );
     const [line, setLine] = useState(filters.line || 'all');
-    const [filtersOpen, setFiltersOpen] = useState(false);
     const [gridColumns, setGridColumns] = useState<3 | 4>(3);
     const [selectedProduct, setSelectedProduct] =
         useState<CatalogPreviewProduct | null>(null);
@@ -931,7 +890,6 @@ export default function Catalog({
     const filterCount = [category, line].filter(
         (value) => value !== 'all',
     ).length;
-    const hasFilters = query !== '' || filterCount > 0;
 
     function openProductImage(product: CatalogPreviewProduct) {
         setSelectedImageIndex(0);
@@ -1031,7 +989,7 @@ export default function Catalog({
     return (
         <>
             <Head title="Catálogo para lojistas" />
-            <div className="ds-ambient min-h-svh bg-background text-foreground selection:bg-primary/30">
+            <div className="min-h-svh bg-background text-foreground selection:bg-primary/30">
                 <a
                     href="#produtos"
                     className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:p-3 focus:text-primary-foreground"
@@ -1067,7 +1025,7 @@ export default function Catalog({
                                 onClick={() => setBagOpen(true)}
                                 aria-label={`Ver sacola, ${selectedVolumeIds.length} sacos`}
                             >
-                                <ShoppingBag aria-hidden="true" />
+                                <ShoppingBagIcon aria-hidden="true" />
                                 <span>Sacola</span>
                                 <span
                                     className="flex min-w-6 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-bold text-primary-foreground transition-transform duration-200 motion-reduce:transition-none"
@@ -1084,135 +1042,48 @@ export default function Catalog({
                     id="produtos"
                     className="mx-auto max-w-7xl scroll-mt-24 px-4 pt-5 pb-12 sm:px-6 sm:pt-8 lg:px-8"
                 >
-                    <div className="ds-reveal relative flex flex-col gap-3 overflow-hidden rounded-[2rem] border border-border/70 bg-card px-5 py-8 shadow-sm sm:flex-row sm:items-end sm:justify-between sm:px-8 sm:py-10">
-                        <div className="pointer-events-none absolute -top-28 -right-20 size-72 rounded-full border-[32px] border-primary/15" />
-                        <div className="pointer-events-none absolute right-24 -bottom-24 size-48 rounded-full bg-brand-expressive/10 blur-3xl" />
-                        <div className="grid gap-2">
-                            <p className="ds-eyebrow relative text-highlight">
-                                Crônicas Jeans · para lojistas
-                            </p>
-                            <h1 className="ds-display relative max-w-2xl text-4xl sm:text-5xl">
-                                Reabasteça sua loja
-                            </h1>
-                            <p className="relative max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
-                                Encontre a peça e escolha os sacos com os
-                                tamanhos que sua loja precisa.
-                            </p>
-                        </div>
-                    </div>
+                    <PageHero
+                        eyebrow="Crônicas Jeans · para lojistas"
+                        title="Reabasteça sua loja"
+                        description="Encontre a peça e escolha os sacos com os tamanhos que sua loja precisa."
+                    />
 
-                    <section
-                        aria-label="Buscar e filtrar produtos"
-                        className="ds-reveal mt-6 mb-3 rounded-[1.5rem] border border-border/70 bg-card p-4 shadow-sm [--reveal-delay:60ms] sm:p-5"
-                    >
-                        <div className="grid gap-3 sm:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)_minmax(0,1fr)] sm:items-end">
-                            <div className="flex items-end gap-3 sm:contents">
-                                <div className="grid min-w-0 flex-1 gap-2">
-                                    <Label htmlFor="catalog-search">
-                                        Buscar produtos
-                                    </Label>
-                                    <div className="relative">
-                                        <Search className="pointer-events-none absolute top-3.5 left-3 size-4 text-muted-foreground" />
-                                        <Input
-                                            id="catalog-search"
-                                            type="search"
-                                            value={query}
-                                            onChange={(event) =>
-                                                setQuery(event.target.value)
-                                            }
-                                            placeholder="Nome, modelo ou código"
-                                            className="h-11 bg-card pl-10 text-base"
-                                        />
-                                    </div>
-                                </div>
-                                <Button
-                                    variant="secondary"
-                                    size="icon"
-                                    className="relative size-11 shrink-0 sm:hidden"
-                                    aria-expanded={filtersOpen}
-                                    aria-controls="catalog-filters"
-                                    aria-label={`${filtersOpen ? 'Fechar' : 'Abrir'} opções de busca${filterCount > 0 ? `, ${filterCount} selecionadas` : ''}`}
-                                    title="Mais opções de busca"
-                                    data-testid="catalog-filters-trigger"
-                                    onClick={() =>
-                                        setFiltersOpen((current) => !current)
-                                    }
-                                >
-                                    <ListFilter aria-hidden="true" />
-                                    {filterCount > 0 && (
-                                        <span className="absolute -top-1 -right-1 flex min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] leading-5 font-bold text-primary-foreground">
-                                            {filterCount}
-                                        </span>
-                                    )}
-                                </Button>
-                            </div>
-                            <div
-                                id="catalog-filters"
-                                className={cn(
-                                    'contents',
-                                    !filtersOpen && 'hidden sm:contents',
-                                )}
-                            >
-                                <CatalogFilter
-                                    id="catalog-category"
-                                    label="Categoria"
-                                    value={category}
-                                    options={categories.map((option) => ({
-                                        value: option.id.toString(),
-                                        label: option.name,
-                                    }))}
-                                    onChange={setCategory}
-                                />
-                                <CatalogFilter
-                                    id="catalog-line"
-                                    label="Linha"
-                                    value={line}
-                                    options={lines.map((option) => ({
-                                        value: option.value,
-                                        label: option.label,
-                                    }))}
-                                    onChange={setLine}
-                                />
-                            </div>
-                            <div
-                                className="flex min-h-9 flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3 text-sm text-muted-foreground sm:col-span-3"
-                                aria-busy={filtering}
-                            >
-                                <p
-                                    role="status"
-                                    className="flex items-center gap-2"
-                                >
-                                    {filtering && (
-                                        <LoaderCircle
-                                            className="size-4 animate-spin"
-                                            aria-hidden="true"
-                                        />
-                                    )}
-                                    <strong className="text-foreground">
-                                        {products.meta.total}
-                                    </strong>{' '}
-                                    {products.meta.total === 1
-                                        ? 'encontrado'
-                                        : 'encontrados'}
-                                </p>
-                                {hasFilters && (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={clearFilters}
-                                    >
-                                        <X /> Limpar filtros
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                    </section>
+                    <SearchFilterBar
+                        idPrefix="catalog"
+                        className="ds-reveal mt-6 mb-3 [--reveal-delay:60ms]"
+                        search={query}
+                        onSearchChange={setQuery}
+                        fields={[
+                            categoryFilterField(category, categories),
+                            lineFilterField(line, lines),
+                        ]}
+                        onFieldChange={(name, value) =>
+                            name === 'category'
+                                ? setCategory(value)
+                                : setLine(value)
+                        }
+                        onClear={clearFilters}
+                        resultCount={products.meta.total}
+                    />
 
-                    <div className="mb-4 hidden justify-end xl:flex">
+                    <div className="mb-4 flex min-h-11 flex-wrap items-center justify-between gap-2">
+                        <p
+                            role="status"
+                            className="hidden text-sm text-muted-foreground md:block"
+                        >
+                            <strong className="text-foreground">
+                                {products.meta.total}
+                            </strong>{' '}
+                            {products.meta.total === 1
+                                ? 'produto encontrado'
+                                : 'produtos encontrados'}
+                            {filterCount > 0 &&
+                                ` · ${filterCount} ${filterCount === 1 ? 'filtro aplicado' : 'filtros aplicados'}`}
+                        </p>
                         <div
                             role="group"
                             aria-label="Colunas do catálogo"
-                            className="flex items-center gap-1 rounded-xl border border-border bg-card p-1"
+                            className="hidden items-center gap-1 rounded-xl border border-border bg-card p-1 xl:flex"
                         >
                             <button
                                 type="button"
@@ -1225,8 +1096,8 @@ export default function Catalog({
                                         'bg-secondary text-foreground shadow-sm',
                                 )}
                             >
-                                <Grid2X2
-                                    className="size-4"
+                                <SquaresFourIcon
+                                    className="size-5"
                                     aria-hidden="true"
                                 />
                             </button>
@@ -1241,8 +1112,8 @@ export default function Catalog({
                                         'bg-secondary text-foreground shadow-sm',
                                 )}
                             >
-                                <Grid3X3
-                                    className="size-4"
+                                <GridNineIcon
+                                    className="size-5"
                                     aria-hidden="true"
                                 />
                             </button>
@@ -1265,7 +1136,7 @@ export default function Catalog({
                         </div>
                     ) : loadedProducts.length === 0 ? (
                         <div className="ds-reveal grid justify-items-center gap-3 rounded-[1.5rem] border border-dashed border-border bg-card px-4 py-16 text-center">
-                            <Search className="size-8 text-muted-foreground" />
+                            <MagnifyingGlassIcon className="size-10 text-muted-foreground" />
                             <h2 className="text-xl font-semibold">
                                 Nenhum produto encontrado
                             </h2>
@@ -1359,8 +1230,8 @@ export default function Catalog({
                                                                     tabIndex={0}
                                                                     className="inline-flex min-w-0 items-center gap-1.5 font-medium text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                                                 >
-                                                                    <LayoutGrid
-                                                                        className="size-4"
+                                                                    <SquaresFourIcon
+                                                                        className="size-5"
                                                                         aria-hidden="true"
                                                                     />
                                                                     {catalogOfferTypeLabel(
@@ -1384,8 +1255,8 @@ export default function Catalog({
                                                                         }
                                                                         className="row-start-2 inline-flex min-w-0 items-center gap-1.5 font-medium text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                                                     >
-                                                                        <Tag
-                                                                            className="size-4"
+                                                                        <TagIcon
+                                                                            className="size-5"
                                                                             aria-hidden="true"
                                                                         />
                                                                         Linha{' '}
@@ -1441,8 +1312,8 @@ export default function Catalog({
                                                                     tabIndex={0}
                                                                     className="col-start-2 row-start-2 inline-flex min-w-0 items-center gap-1.5 tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                                                 >
-                                                                    <Shirt
-                                                                        className="size-4"
+                                                                    <TShirtIcon
+                                                                        className="size-5"
                                                                         aria-hidden="true"
                                                                     />
                                                                     {product.volumes.reduce(
@@ -1524,7 +1395,7 @@ export default function Catalog({
                                                     aria-label={`Adicionar ${product.name} ao pedido`}
                                                 >
                                                     {selectedCount > 0 ? (
-                                                        <Check />
+                                                        <CheckIcon weight="bold" />
                                                     ) : (
                                                         <PaperBag />
                                                     )}
@@ -1640,7 +1511,7 @@ export default function Catalog({
                                         className="absolute top-4 right-4 size-11"
                                         aria-label="Fechar seleção de sacos"
                                     >
-                                        <X />
+                                        <XIcon weight="bold" />
                                     </Button>
                                 </DrawerClose>
                             </DrawerHeader>
@@ -1725,7 +1596,7 @@ export default function Catalog({
                                         className="absolute top-4 right-4 size-11"
                                         aria-label="Fechar sacola"
                                     >
-                                        <X />
+                                        <XIcon weight="bold" />
                                     </Button>
                                 </DrawerClose>
                             </DrawerHeader>

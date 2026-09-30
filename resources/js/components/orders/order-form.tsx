@@ -1,5 +1,5 @@
 import { Link, useForm, type InertiaLinkProps } from '@inertiajs/react';
-import { Save, X } from 'lucide-react';
+import { FloppyDiskIcon, XIcon } from '@phosphor-icons/react';
 import type { FormEvent } from 'react';
 import { store, update } from '@/actions/App/Http/Controllers/OrderController';
 import { PaperBag } from '@/components/icons/paper-bag';
@@ -239,7 +239,7 @@ export function OrderForm({
                         asChild
                     >
                         <Link href={cancelHref} data-testid="cancelar-edicao">
-                            <X />
+                            <XIcon weight="bold" />
                             Cancelar
                         </Link>
                     </Button>
@@ -252,7 +252,7 @@ export function OrderForm({
                     }
                     className="h-11"
                 >
-                    <Save />
+                    <FloppyDiskIcon />
                     {form.processing
                         ? 'Salvando...'
                         : order

@@ -170,6 +170,11 @@
         background: color-mix(in oklab, var(--action) 36%, transparent);
         color: var(--foreground);
     }
+
+    /* A Phosphor fixa a camada secundária do duotone em 20%, o que some em 16px. */
+    svg path[opacity='0.2'] {
+        opacity: 0.34;
+    }
 }
 
 @layer components {
@@ -226,20 +231,6 @@
 
     .ds-press:active:not(:disabled) {
         transform: scale(0.975);
-    }
-
-    .ds-ambient {
-        background-image:
-            radial-gradient(
-                circle at 88% 0%,
-                color-mix(in oklab, var(--action) 13%, transparent),
-                transparent 34%
-            ),
-            radial-gradient(
-                circle at 5% 45%,
-                color-mix(in oklab, var(--brand-expressive) 6%, transparent),
-                transparent 40%
-            );
     }
 }
 

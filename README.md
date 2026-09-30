@@ -39,6 +39,9 @@ Campos principais:
 - observação
 - status ativo/inativo independente do estoque
 
+A listagem administrativa inicia com produtos ativos e permite filtrar por
+ativos, inativos ou todos. Limpar os filtros restaura a seleção de ativos.
+
 Cada produto pode receber uma categoria (por exemplo, calça, bermuda, short ou
 cropped) e uma linha comercial: `Slim` ou `Plus`. Esses campos são opcionais
 durante a transição dos produtos antigos e serão usados pelos filtros do

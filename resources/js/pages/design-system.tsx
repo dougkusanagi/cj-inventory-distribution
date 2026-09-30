@@ -1,13 +1,14 @@
 import { Head } from '@inertiajs/react';
 import {
-    CircleAlert,
-    FolderOpen,
-    LayoutPanelTop,
-    PanelRight,
-    Plus,
-    Sparkles,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+    FolderOpenIcon,
+    LayoutIcon,
+    PlusCircleIcon,
+    SidebarSimpleIcon,
+    SparkleIcon,
+    WarningCircleIcon,
+} from '@phosphor-icons/react';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
+
 import AppearanceToggleTab from '@/components/appearance-tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -80,7 +81,7 @@ function OverlayPreview({
     title,
     description,
 }: {
-    icon: LucideIcon;
+    icon: PhosphorIcon;
     kind: 'dialog' | 'drawer' | 'sheet';
     title: string;
     description: string;
@@ -176,7 +177,7 @@ export default function DesignSystem() {
                         <div className="grid items-end gap-10 py-16 lg:grid-cols-[1.25fr_0.75fr] lg:py-24">
                             <div>
                                 <div className="inline-flex items-center gap-2 rounded-full border border-brand/35 bg-background/55 px-3 py-1.5 text-xs font-semibold tracking-wide text-brand shadow-sm backdrop-blur">
-                                    <Sparkles className="size-3.5" />
+                                    <SparkleIcon className="size-4" />
                                     Linguagem visual unificada
                                 </div>
                                 <h1 className="mt-6 max-w-3xl text-4xl leading-[1.04] font-semibold tracking-[-0.045em] text-foreground sm:text-6xl sm:leading-none">
@@ -261,7 +262,7 @@ export default function DesignSystem() {
                         <Card className="rounded-[2rem] py-0">
                             <CardContent className="flex flex-wrap items-center gap-3 p-6 sm:p-8">
                                 <Button>
-                                    <Plus /> Salvar produto
+                                    <PlusCircleIcon /> Salvar produto
                                 </Button>
                                 <Button variant="secondary">
                                     Salvar rascunho
@@ -384,7 +385,7 @@ export default function DesignSystem() {
                                         </Label>
                                     </div>
                                     <Alert variant="destructive">
-                                        <CircleAlert />
+                                        <WarningCircleIcon />
                                         <AlertTitle>
                                             Campo obrigatório
                                         </AlertTitle>
@@ -459,7 +460,7 @@ export default function DesignSystem() {
                                         className="h-auto w-full justify-start rounded-2xl p-4 text-left"
                                     >
                                         <OverlayPreview
-                                            icon={LayoutPanelTop}
+                                            icon={LayoutIcon}
                                             kind="dialog"
                                             title="Dialog"
                                             description="Tarefa concentrada ou confirmação no desktop."
@@ -500,7 +501,7 @@ export default function DesignSystem() {
                                         className="h-auto w-full justify-start rounded-2xl p-4 text-left"
                                     >
                                         <OverlayPreview
-                                            icon={FolderOpen}
+                                            icon={FolderOpenIcon}
                                             kind="drawer"
                                             title="Drawer"
                                             description="Ações e formulários ao alcance do polegar no mobile."
@@ -541,7 +542,7 @@ export default function DesignSystem() {
                                         className="h-auto w-full justify-start rounded-2xl p-4 text-left"
                                     >
                                         <OverlayPreview
-                                            icon={PanelRight}
+                                            icon={SidebarSimpleIcon}
                                             kind="sheet"
                                             title="Sheet"
                                             description="Navegação, filtros e conteúdo complementar."

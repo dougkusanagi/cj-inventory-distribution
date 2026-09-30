@@ -1,15 +1,15 @@
 import {
-    Camera,
-    ChevronDown,
-    ChevronUp,
-    GripVertical,
-    Info,
-    ImagePlus,
-    Pencil,
-    Star,
-    Trash2,
-    Undo2,
-} from 'lucide-react';
+    ArrowUUpLeftIcon,
+    CameraIcon,
+    CameraPlusIcon,
+    CaretDownIcon,
+    CaretUpIcon,
+    DotsSixVerticalIcon,
+    InfoIcon,
+    PencilSimpleIcon,
+    StarIcon,
+    TrashIcon,
+} from '@phosphor-icons/react';
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import InputError from '@/components/input-error';
@@ -744,7 +744,7 @@ export function ProductPhotoManager({
                         }
                         className="h-12 w-full"
                     >
-                        <ImagePlus />
+                        <CameraPlusIcon />
                         Adicionar fotos
                     </Button>
                 </div>
@@ -758,7 +758,7 @@ export function ProductPhotoManager({
                     className="flex min-h-36 w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-muted/20 p-5 text-center transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
                     <span className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        <ImagePlus className="size-5" />
+                        <CameraPlusIcon className="size-6" />
                     </span>
                     <span className="text-sm font-semibold text-foreground">
                         Adicione fotos da peça
@@ -778,13 +778,13 @@ export function ProductPhotoManager({
                                 disabled={processing}
                                 className="h-10 w-full rounded-xl px-3 text-xs sm:w-auto"
                             >
-                                <GripVertical />
+                                <DotsSixVerticalIcon weight="bold" />
                                 Organizar fotos
                             </Button>
                         </div>
                     )}
                     <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground sm:justify-start">
-                        <Info className="size-3.5" />
+                        <InfoIcon className="size-4" />
                         Toque em uma foto para ampliar ou ajustar.
                     </p>
                     <div className="grid grid-cols-2 gap-0 sm:grid-cols-1 sm:gap-3">
@@ -797,7 +797,7 @@ export function ProductPhotoManager({
                                     >
                                         <div className="flex min-w-0 items-center gap-3">
                                             <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                                                <Undo2 className="size-5" />
+                                                <ArrowUUpLeftIcon className="size-6" />
                                             </div>
                                             <div className="grid min-w-0 gap-0.5">
                                                 <p className="text-sm font-semibold text-foreground">
@@ -818,7 +818,7 @@ export function ProductPhotoManager({
                                             disabled={processing}
                                             className="h-12 shrink-0 px-3"
                                         >
-                                            <Undo2 />
+                                            <ArrowUUpLeftIcon />
                                             Desfazer
                                         </Button>
                                     </div>
@@ -956,7 +956,7 @@ export function ProductPhotoManager({
                             variant="destructive"
                             onClick={confirmRemoval}
                         >
-                            <Trash2 />
+                            <TrashIcon />
                             Remover foto
                         </Button>
                     </DialogFooter>
@@ -1018,13 +1018,13 @@ function PhotoRow({
                         />
                     ) : (
                         <div className="flex size-full items-center justify-center text-muted-foreground">
-                            <ImagePlus className="size-5" />
+                            <CameraPlusIcon className="size-6" />
                         </div>
                     )}
                     <span className="absolute inset-0 bg-foreground/0 transition-colors group-hover:bg-foreground/15" />
                     {index === 0 && (
                         <span className="absolute inset-x-1 bottom-1 flex items-center justify-center gap-1 rounded-md bg-background/65 px-1 py-1 text-[9px] font-bold tracking-[0.08em] text-foreground uppercase backdrop-blur-sm">
-                            <Star className="size-3 text-primary" />
+                            <StarIcon className="size-3.5 text-primary" />
                             Capa
                         </span>
                     )}
@@ -1039,7 +1039,7 @@ function PhotoRow({
                         className="absolute right-2 bottom-2 size-8 rounded-full border-primary text-primary shadow-sm backdrop-blur hover:bg-primary/10"
                         aria-label={`Definir a foto ${index + 1} como capa`}
                     >
-                        <Star className="size-4" />
+                        <StarIcon className="size-5" />
                     </Button>
                 )}
                 {item.kind === 'new' && (
@@ -1057,7 +1057,7 @@ function PhotoRow({
                     disabled={processing}
                     className="h-10 w-full min-w-0 justify-start px-2 text-[11px] sm:h-12 sm:px-3 sm:text-sm"
                 >
-                    <Pencil />
+                    <PencilSimpleIcon />
                     Ajustar
                 </Button>
 
@@ -1068,7 +1068,7 @@ function PhotoRow({
                     disabled={processing}
                     className="h-9 w-full min-w-0 justify-start px-2 text-[11px] sm:h-10 sm:px-3 sm:text-sm"
                 >
-                    <Trash2 className="size-4" />
+                    <TrashIcon className="size-5" />
                     Remover
                 </Button>
 
@@ -1170,7 +1170,7 @@ function PhotoSourcePicker({
                 onClick={onCamera}
                 className="h-14 justify-start px-4 text-base"
             >
-                <Camera />
+                <CameraIcon />
                 Tirar foto
             </Button>
             <Button
@@ -1179,7 +1179,7 @@ function PhotoSourcePicker({
                 onClick={onGallery}
                 className="h-14 justify-start px-4 text-base"
             >
-                <ImagePlus />
+                <CameraPlusIcon />
                 Escolher da galeria
             </Button>
         </div>
@@ -1271,7 +1271,7 @@ function PhotoOrganizer({
                                     'Mover foto ' + (index + 1) + ' para cima'
                                 }
                             >
-                                <ChevronUp />
+                                <CaretUpIcon weight="bold" />
                             </Button>
                             <Button
                                 type="button"
@@ -1283,7 +1283,7 @@ function PhotoOrganizer({
                                     'Mover foto ' + (index + 1) + ' para baixo'
                                 }
                             >
-                                <ChevronDown />
+                                <CaretDownIcon weight="bold" />
                             </Button>
                         </div>
                     </div>

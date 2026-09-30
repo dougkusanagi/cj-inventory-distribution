@@ -1,15 +1,15 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import {
-    AlertTriangle,
-    Ban,
-    Check,
-    CheckCircle2,
-    ClipboardCheck,
-    Ellipsis,
-    History,
-    Pencil,
-    RotateCcw,
-} from 'lucide-react';
+    ArrowCounterClockwiseIcon,
+    CheckCircleIcon,
+    CheckIcon,
+    ClipboardTextIcon,
+    ClockCounterClockwiseIcon,
+    DotsThreeIcon,
+    PencilSimpleIcon,
+    ProhibitIcon,
+    WarningIcon,
+} from '@phosphor-icons/react';
 import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import {
@@ -54,8 +54,8 @@ import type { Order, OrderItem } from '@/types';
 type OrderTab = 'details' | 'history';
 
 const orderTabs = [
-    { id: 'details', label: 'Pedido', icon: ClipboardCheck },
-    { id: 'history', label: 'Histórico', icon: History },
+    { id: 'details', label: 'Pedido', icon: ClipboardTextIcon },
+    { id: 'history', label: 'Histórico', icon: ClockCounterClockwiseIcon },
 ] as const;
 
 export default function ShowOrder({ order }: { order: Order }) {
@@ -111,7 +111,10 @@ export default function ShowOrder({ order }: { order: Order }) {
             (divergenceAction === 'report'
                 ? reportDivergence
                 : resolveDivergence
-            ).url({ order: order.id, item: divergenceItem.id }),
+            ).url({
+                order: order.id,
+                item: divergenceItem.id,
+            }),
             {
                 preserveScroll: true,
                 onSuccess: () => {
@@ -184,7 +187,7 @@ export default function ShowOrder({ order }: { order: Order }) {
                                     aria-label="Mais ações do pedido"
                                     data-testid="menu-acoes-pedido"
                                 >
-                                    <Ellipsis />
+                                    <DotsThreeIcon weight="bold" />
                                     Mais ações
                                 </Button>
                             </DropdownMenuTrigger>
@@ -201,7 +204,7 @@ export default function ShowOrder({ order }: { order: Order }) {
                                         href={edit(order.id)}
                                         data-testid="editar-pedido"
                                     >
-                                        <Pencil />
+                                        <PencilSimpleIcon />
                                         Editar pedido
                                     </Link>
                                 </DropdownMenuItem>
@@ -210,7 +213,7 @@ export default function ShowOrder({ order }: { order: Order }) {
                                     data-testid="cancelar-pedido"
                                     onSelect={() => setCancelDialogOpen(true)}
                                 >
-                                    <Ban />
+                                    <ProhibitIcon />
                                     Cancelar pedido
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -431,7 +434,7 @@ export default function ShowOrder({ order }: { order: Order }) {
                                                             aria-label={`Mais ações para ${item.volume_code}`}
                                                             data-testid={`menu-acoes-saco-${item.id}`}
                                                         >
-                                                            <Ellipsis />
+                                                            <DotsThreeIcon weight="bold" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent
@@ -453,7 +456,7 @@ export default function ShowOrder({ order }: { order: Order }) {
                                                                 progressForm.processing
                                                             }
                                                         >
-                                                            <AlertTriangle />
+                                                            <WarningIcon />
                                                             {hasOpenDivergence
                                                                 ? 'Atualizar divergência'
                                                                 : 'Registrar divergência'}
@@ -470,7 +473,7 @@ export default function ShowOrder({ order }: { order: Order }) {
                                                                     progressForm.processing
                                                                 }
                                                             >
-                                                                <Check />
+                                                                <CheckIcon weight="bold" />
                                                                 Resolver
                                                                 divergência
                                                             </DropdownMenuItem>
@@ -525,7 +528,7 @@ export default function ShowOrder({ order }: { order: Order }) {
                                                         progressForm.processing
                                                     }
                                                 >
-                                                    <Check />
+                                                    <CheckIcon weight="bold" />
                                                     Marcar como separado
                                                 </Button>
                                             )}
@@ -547,7 +550,7 @@ export default function ShowOrder({ order }: { order: Order }) {
                                                             progressForm.processing
                                                         }
                                                     >
-                                                        <CheckCircle2 />
+                                                        <CheckCircleIcon />
                                                         Conferir saco
                                                     </Button>
                                                 )}
@@ -568,7 +571,7 @@ export default function ShowOrder({ order }: { order: Order }) {
                                                         progressForm.processing
                                                     }
                                                 >
-                                                    <RotateCcw />
+                                                    <ArrowCounterClockwiseIcon />
                                                     Desfazer separação
                                                 </Button>
                                             )}
@@ -589,7 +592,7 @@ export default function ShowOrder({ order }: { order: Order }) {
                                                         progressForm.processing
                                                     }
                                                 >
-                                                    <RotateCcw />
+                                                    <ArrowCounterClockwiseIcon />
                                                     Desfazer conferência
                                                 </Button>
                                             )}
@@ -627,7 +630,7 @@ export default function ShowOrder({ order }: { order: Order }) {
                                                 : undefined
                                         }
                                     >
-                                        <CheckCircle2 />
+                                        <CheckCircleIcon />
                                         Finalizar pedido
                                     </Button>
                                 </DialogTrigger>
@@ -653,7 +656,7 @@ export default function ShowOrder({ order }: { order: Order }) {
                                             onClick={confirmCompletion}
                                             disabled={completeForm.processing}
                                         >
-                                            <CheckCircle2 />
+                                            <CheckCircleIcon />
                                             Confirmar finalização
                                         </Button>
                                     </DialogFooter>

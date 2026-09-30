@@ -67,6 +67,20 @@ No frontend, prefira componentes shadcn existentes ou bibliotecas React maduras 
   componente Switch do shadcn/Radix. Não reimplemente um switch usando
   `TogglePrimitive` ou markup visual próprio.
 
+- Todos os ícones vêm de `@phosphor-icons/react` no peso `duotone`, definido
+  uma vez por `IconContext` em `resources/js/app.tsx` (ADR 0019). Não importe
+  `lucide-react` nem outra biblioteca de ícones, e não passe `weight` nem
+  `strokeWidth` em ícones comuns. Importe os nomes com sufixo `Icon`
+  (`TShirtIcon`) e tipe ícones recebidos por props com
+  `Icon as PhosphorIcon`. Exceções, sempre com `weight="bold"`: indicadores
+  sem significado próprio (`Check`, `Caret*`, `X`, setas, reticências). Para
+  "adicionar" e "remover" use `PlusCircleIcon` e `MinusCircleIcon`. Ícones sem
+  equivalente na biblioteca ficam em `resources/js/components/icons`, desenhados
+  em duotone com o mesmo padrão (traço mais preenchimento suave).
+
+- Escolhas únicas em formato de cartão usam `@/components/ui/radio-card`.
+  Não recrie cartões de rádio com `Label` e `RadioGroupItem` locais.
+
 Ao implementar a captura de foto, aceite:
 
 - upload;

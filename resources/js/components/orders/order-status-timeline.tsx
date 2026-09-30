@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { Check, ChevronDown, ChevronUp, X } from 'lucide-react';
+import {
+    CaretDownIcon,
+    CaretUpIcon,
+    CheckIcon,
+    XIcon,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import {
     Collapsible,
@@ -110,9 +115,9 @@ function TimelineDot({
             )}
         >
             {step.state === 'done' ? (
-                <Check className="size-4" />
+                <CheckIcon weight="bold" className="size-5" />
             ) : step.state === 'canceled' ? (
-                <X className="size-4" />
+                <XIcon weight="bold" className="size-5" />
             ) : (
                 index + 1
             )}
@@ -210,7 +215,11 @@ function VerticalTimeline({ steps }: { steps: OrderTimelineStep[] }) {
                             data-testid="alternar-estados"
                         >
                             {open ? 'Ocultar estados' : 'Ver estados'}
-                            {open ? <ChevronUp /> : <ChevronDown />}
+                            {open ? (
+                                <CaretUpIcon weight="bold" />
+                            ) : (
+                                <CaretDownIcon weight="bold" />
+                            )}
                         </Button>
                     </CollapsibleTrigger>
                 </div>

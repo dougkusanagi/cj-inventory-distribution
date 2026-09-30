@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react';
-import { KeyRound } from 'lucide-react';
+import { KeyIcon } from '@phosphor-icons/react';
 import { destroy } from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyRegistrationController';
 import Heading from '@/components/heading';
 import PasskeyItem from '@/components/passkey-item';
@@ -15,7 +15,7 @@ const EmptyState = () => {
     return (
         <div className="p-8 text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
-                <KeyRound className="h-7 w-7 text-muted-foreground" />
+                <KeyIcon className="h-8 w-8 text-muted-foreground" />
             </div>
             <p className="font-medium">Nenhuma chave de acesso cadastrada</p>
             <p className="mt-1 text-sm text-muted-foreground">

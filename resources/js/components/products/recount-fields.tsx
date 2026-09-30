@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { PlusCircleIcon, TrashIcon } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -105,7 +105,7 @@ export function RecountFields({
                                     onItems(items.filter((_, i) => i !== index))
                                 }
                             >
-                                <Trash2 />
+                                <TrashIcon />
                                 Remover
                             </Button>
                         )}
@@ -124,7 +124,7 @@ export function RecountFields({
                     ])
                 }
             >
-                <Plus />
+                <PlusCircleIcon />
                 Adicionar tamanho encontrado
             </Button>
             <div className="grid max-w-xs gap-2">

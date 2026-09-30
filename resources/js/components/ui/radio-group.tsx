@@ -1,5 +1,5 @@
 import * as RadioGroupPrimitive from '@radix-ui/react-radio-group';
-import { CircleIcon } from 'lucide-react';
+import { CircleIcon } from '@phosphor-icons/react';
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
@@ -33,7 +33,7 @@ function RadioGroupItem({
                 data-slot="radio-group-indicator"
                 className="flex items-center justify-center text-current"
             >
-                <CircleIcon className="size-2 fill-current text-primary-foreground" />
+                <CircleIcon weight="fill" className="size-2 text-primary-foreground" />
             </RadioGroupPrimitive.Indicator>
         </RadioGroupPrimitive.Item>
     );

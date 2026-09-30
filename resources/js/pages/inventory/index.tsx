@@ -1,16 +1,17 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
-    ArrowRight,
-    Check,
-    ClipboardCheck,
-    History,
-    ListChecks,
-    Search,
-    X,
-} from 'lucide-react';
+    ArrowRightIcon,
+    CheckIcon,
+    ClipboardTextIcon,
+    ClockCounterClockwiseIcon,
+    ListChecksIcon,
+    MagnifyingGlassIcon,
+    XIcon,
+} from '@phosphor-icons/react';
 import { useState } from 'react';
 import { PaperBag } from '@/components/icons/paper-bag';
 import InputError from '@/components/input-error';
+import { PageHero } from '@/components/page-hero';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -98,28 +99,15 @@ export default function InventoryIndex({
         <>
             <Head title="Balanço de estoque" />
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
-                <header className="relative overflow-hidden rounded-[2rem] bg-featured-card px-6 py-8 text-featured-card-foreground shadow-sm sm:px-8 sm:py-10">
-                    <div className="pointer-events-none absolute -top-24 -right-16 size-64 rounded-full border-[24px] border-primary/15" />
-                    <div className="pointer-events-none absolute -right-8 -bottom-20 size-56 rounded-full bg-primary/10 blur-3xl" />
-                    <div className="relative grid gap-7 lg:grid-cols-[minmax(0,1fr)_25rem] lg:items-end">
-                        <div className="grid gap-3">
-                            <p className="text-xs font-semibold tracking-[0.22em] text-primary uppercase">
-                                Estoque / conferência física
-                            </p>
-                            <h1 className="flex max-w-2xl items-center gap-3 text-4xl font-semibold tracking-[-0.05em] sm:text-5xl">
-                                <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground sm:size-14">
-                                    <ClipboardCheck className="size-6 sm:size-7" />
-                                </span>
-                                <span>Balanço de estoque</span>
-                            </h1>
-                            <p className="max-w-xl text-sm leading-6 text-featured-card-muted sm:text-base">
-                                Confira os sacos disponíveis, registre o que foi
-                                encontrado e aplique as diferenças somente após
-                                revisar tudo.
-                            </p>
-                        </div>
-                        <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
-                            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+                <PageHero
+                    eyebrow="Estoque / conferência física"
+                    title="Balanço de estoque"
+                    icon={ClipboardTextIcon}
+                    description="Confira os sacos disponíveis, registre o que foi encontrado e aplique as diferenças somente após revisar tudo."
+                    asideClassName="grid gap-2 sm:grid-cols-3 lg:w-96 lg:grid-cols-1"
+                    aside={
+                        <>
+                            <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-muted/40 p-3">
                                 <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary font-semibold text-primary-foreground">
                                     1
                                 </span>
@@ -127,38 +115,38 @@ export default function InventoryIndex({
                                     <strong className="text-sm">
                                         Selecione
                                     </strong>
-                                    <span className="text-xs text-featured-card-muted">
+                                    <span className="text-xs text-muted-foreground">
                                         os sacos disponíveis
                                     </span>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
-                                <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-white/10 font-semibold text-primary">
+                            <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-muted/40 p-3">
+                                <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-muted font-semibold text-highlight">
                                     2
                                 </span>
                                 <div className="grid gap-0.5">
                                     <strong className="text-sm">Conte</strong>
-                                    <span className="text-xs text-featured-card-muted">
+                                    <span className="text-xs text-muted-foreground">
                                         cada saco selecionado
                                     </span>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
-                                <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-white/10 font-semibold text-primary">
+                            <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-muted/40 p-3">
+                                <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-muted font-semibold text-highlight">
                                     3
                                 </span>
                                 <div className="grid gap-0.5">
                                     <strong className="text-sm">
                                         Confirme
                                     </strong>
-                                    <span className="text-xs text-featured-card-muted">
+                                    <span className="text-xs text-muted-foreground">
                                         depois de revisar
                                     </span>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </header>
+                        </>
+                    }
+                />
 
                 <section
                     className="grid gap-3 sm:grid-cols-3 sm:gap-4"
@@ -185,7 +173,7 @@ export default function InventoryIndex({
                     <Card className="rounded-[1.5rem] border-border/80 shadow-sm">
                         <CardContent className="flex items-center gap-4 p-4 sm:p-5">
                             <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                                <History className="size-5" />
+                                <ClockCounterClockwiseIcon className="size-6" />
                             </span>
                             <div className="grid min-w-0 gap-0.5">
                                 <span className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
@@ -203,7 +191,7 @@ export default function InventoryIndex({
                     <Card className="rounded-[1.5rem] border-primary/25 bg-primary/10 shadow-none">
                         <CardContent className="flex items-center gap-4 p-4 sm:p-5">
                             <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-                                <ClipboardCheck className="size-5" />
+                                <ClipboardTextIcon className="size-6" />
                             </span>
                             <div className="grid min-w-0 gap-0.5">
                                 <span className="text-xs font-semibold tracking-[0.16em] text-highlight uppercase">
@@ -226,7 +214,7 @@ export default function InventoryIndex({
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex min-w-0 items-start gap-3">
                                     <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-                                        <ListChecks className="size-5" />
+                                        <ListChecksIcon className="size-6" />
                                     </span>
                                     <div className="grid min-w-0 gap-1">
                                         <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
@@ -289,7 +277,7 @@ export default function InventoryIndex({
                                                 aria-label={`Remover ${volume.code}`}
                                             >
                                                 {volume.code}
-                                                <X />
+                                                <XIcon weight="bold" />
                                             </Button>
                                         ))}
                                     </div>
@@ -338,14 +326,16 @@ export default function InventoryIndex({
                                         {form.processing
                                             ? 'Iniciando...'
                                             : 'Começar a contar'}
-                                        {!form.processing && <ArrowRight />}
+                                        {!form.processing && (
+                                            <ArrowRightIcon weight="bold" />
+                                        )}
                                     </Button>
                                 </div>
                             )}
 
                             {selected.length === 0 && (
                                 <div className="flex items-start gap-3 rounded-2xl border border-dashed border-primary/35 bg-primary/5 p-4">
-                                    <ClipboardCheck className="mt-0.5 size-5 shrink-0 text-primary" />
+                                    <ClipboardTextIcon className="mt-0.5 size-6 shrink-0 text-primary" />
                                     <div className="grid gap-1">
                                         <p className="font-medium">
                                             Comece selecionando os sacos
@@ -368,8 +358,8 @@ export default function InventoryIndex({
                                 role="search"
                             >
                                 <div className="relative min-w-0 flex-1">
-                                    <Search
-                                        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                                    <MagnifyingGlassIcon
+                                        className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground"
                                         aria-hidden="true"
                                     />
                                     <Input
@@ -449,8 +439,9 @@ export default function InventoryIndex({
                                                 </span>
                                             </span>
                                             {checked && (
-                                                <Check
-                                                    className="size-5 shrink-0 text-primary"
+                                                <CheckIcon
+                                                    weight="bold"
+                                                    className="size-6 shrink-0 text-primary"
                                                     aria-hidden="true"
                                                 />
                                             )}
@@ -459,7 +450,7 @@ export default function InventoryIndex({
                                 })}
                                 {volumes.data.length === 0 && (
                                     <div className="grid justify-items-center gap-2 rounded-2xl border border-dashed p-8 text-center">
-                                        <ClipboardCheck className="size-8 text-muted-foreground" />
+                                        <ClipboardTextIcon className="size-10 text-muted-foreground" />
                                         <p className="font-medium">
                                             Nenhum saco disponível
                                         </p>
@@ -552,7 +543,7 @@ export default function InventoryIndex({
                                         <div className="flex items-start justify-between gap-3">
                                             <span className="flex items-center gap-2 text-sm font-semibold">
                                                 <span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                                                    <History className="size-4" />
+                                                    <ClockCounterClockwiseIcon className="size-5" />
                                                 </span>
                                                 <span className="tabular-nums">
                                                     Balanço #{count.id}
@@ -582,7 +573,7 @@ export default function InventoryIndex({
                                 ))}
                                 {counts.data.length === 0 && (
                                     <div className="grid justify-items-center gap-2 rounded-2xl border border-dashed p-6 text-center">
-                                        <History className="size-7 text-muted-foreground" />
+                                        <ClockCounterClockwiseIcon className="size-8 text-muted-foreground" />
                                         <p className="font-medium">
                                             Nenhum balanço registrado.
                                         </p>
@@ -646,7 +637,7 @@ export default function InventoryIndex({
                         <Card className="rounded-[1.75rem] border-primary/25 bg-primary/10 shadow-none">
                             <CardContent className="flex items-start gap-3 p-5">
                                 <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                                    <ClipboardCheck className="size-5" />
+                                    <ClipboardTextIcon className="size-6" />
                                 </span>
                                 <div className="grid gap-1">
                                     <p className="text-xs font-semibold tracking-[0.16em] text-highlight uppercase">

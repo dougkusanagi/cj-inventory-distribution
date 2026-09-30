@@ -1,4 +1,5 @@
 import { createInertiaApp } from '@inertiajs/react';
+import { IconContext } from '@phosphor-icons/react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-appearance';
@@ -27,10 +28,14 @@ void createInertiaApp({
     strictMode: true,
     withApp(app) {
         return (
-            <TooltipProvider delayDuration={0}>
-                {app}
-                <Toaster />
-            </TooltipProvider>
+            <IconContext.Provider
+                value={{ size: 24, weight: 'duotone', 'aria-hidden': true }}
+            >
+                <TooltipProvider delayDuration={0}>
+                    {app}
+                    <Toaster />
+                </TooltipProvider>
+            </IconContext.Provider>
         );
     },
     progress: {

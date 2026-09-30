@@ -42,6 +42,5 @@ it('logs in and logs out through the authenticated navigation', function () {
         ->click('@logout-button')
         ->assertRoute('home')
         ->assertSee('Reabasteça sua loja')
-        ->assertSee('Área da equipe')
         ->assertNoJavaScriptErrors();
 });

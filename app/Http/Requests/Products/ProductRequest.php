@@ -60,7 +60,7 @@ abstract class ProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:80'],
             'model' => ['nullable', 'string', 'max:100'],
             'category_id' => [
                 'nullable',
@@ -117,7 +117,7 @@ abstract class ProductRequest extends FormRequest
     {
         return [
             'name.required' => 'Informe o nome do produto.',
-            'name.max' => 'O nome do produto deve ter no máximo 255 caracteres.',
+            'name.max' => 'O nome do produto deve ter no máximo 80 caracteres.',
             'model.max' => 'O modelo deve ter no máximo 100 caracteres.',
             'category_id.exists' => 'Selecione uma categoria válida.',
             'line.enum' => 'Selecione uma linha válida.',

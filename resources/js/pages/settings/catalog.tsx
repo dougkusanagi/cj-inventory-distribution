@@ -1,5 +1,5 @@
 import { Form, Head } from '@inertiajs/react';
-import { MessageCircle } from 'lucide-react';
+import { WhatsappLogoIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import CatalogSettingsController from '@/actions/App/Http/Controllers/Settings/CatalogSettingsController';
 import Heading from '@/components/heading';
@@ -123,7 +123,7 @@ export default function CatalogSettings({
                             </div>
 
                             <Button disabled={processing} className="w-fit">
-                                <MessageCircle />
+                                <WhatsappLogoIcon />
                                 {processing ? 'Salvando...' : 'Salvar WhatsApp'}
                             </Button>
                         </>
