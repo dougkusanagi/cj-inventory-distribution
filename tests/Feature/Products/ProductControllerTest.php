@@ -787,6 +787,23 @@ test('product creation returns validation errors and does not persist invalid da
     expect(Product::query()->count())->toBe(0);
 });
 
+test('product names are limited to 80 characters', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->from(route('products.create'))
+        ->post(route('products.store'), ['name' => str_repeat('a', 81)])
+        ->assertSessionHasErrors(['name' => 'O nome do produto deve ter no máximo 80 caracteres.']);
+
+    expect(Product::query()->count())->toBe(0);
+
+    $this->actingAs($user)
+        ->post(route('products.store'), ['name' => str_repeat('a', 80)])
+        ->assertSessionHasNoErrors();
+
+    expect(Product::query()->count())->toBe(1);
+});
+
 test('product creation rejects non-image uploads', function () {
     $user = User::factory()->create();
 

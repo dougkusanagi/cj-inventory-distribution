@@ -1,10 +1,4 @@
-import {
-    Check,
-    ChevronsUpDown,
-    Search,
-    SlidersHorizontal,
-    X,
-} from 'lucide-react';
+import { Check, ChevronDown, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useState } from 'react';
 import type { ComponentProps, ComponentType, CSSProperties } from 'react';
 import { Button } from '@/components/ui/button';
@@ -53,7 +47,7 @@ export type FilterField = {
     allLabel: string;
     allIcon?: FilterIcon;
     options: FilterOption[];
-    /** `cards` só afeta o drawer mobile; no desktop vira select. `combobox` é um select com busca. */
+    /** `cards` só afeta o drawer mobile com até três escolhas; no desktop vira select. */
     display?: 'select' | 'cards' | 'combobox';
 };
 
@@ -69,6 +63,9 @@ type SearchFilterBarProps = {
 };
 
 const searchPlaceholder = 'Buscar por nome, modelo ou código';
+const filterTriggerClassName =
+    'h-10 w-full justify-between rounded-xl border-input bg-background px-3 text-sm font-normal text-foreground shadow-xs hover:bg-background hover:text-foreground dark:bg-background dark:hover:bg-background data-[size=default]:h-10';
+const filterTriggerLabelledClassName = 'h-11 data-[size=default]:h-11';
 
 function SearchField({
     className,
@@ -126,7 +123,10 @@ function FilterSelect({
             <SelectTrigger
                 id={id}
                 aria-label={field.label}
-                className={cn('w-full bg-background', labelled && 'h-11')}
+                className={cn(
+                    filterTriggerClassName,
+                    labelled && filterTriggerLabelledClassName,
+                )}
             >
                 <SelectValue />
             </SelectTrigger>
@@ -182,12 +182,12 @@ function FilterCombobox({
                     aria-expanded={open}
                     aria-label={field.label}
                     className={cn(
-                        'w-full justify-between bg-background px-3 font-normal',
-                        labelled && 'h-11',
+                        filterTriggerClassName,
+                        labelled && filterTriggerLabelledClassName,
                     )}
                 >
                     <span className="truncate">{selected?.label}</span>
-                    <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
+                    <ChevronDown className="size-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent
@@ -425,7 +425,8 @@ export function SearchFilterBar({
                                 const onChange = (value: string) =>
                                     onFieldChange(field.name, value);
 
-                                return field.display === 'cards' ? (
+                                return field.display === 'cards' &&
+                                    field.options.length + 1 <= 3 ? (
                                     <FilterCards
                                         key={field.name}
                                         id={id}

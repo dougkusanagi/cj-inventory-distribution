@@ -9,6 +9,7 @@ import {
     Shirt,
     Warehouse,
 } from 'lucide-react';
+import { PageHero } from '@/components/page-hero';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -107,23 +108,13 @@ export default function Dashboard({ stats }: DashboardProps) {
             <Head title="Painel" />
 
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
-                <header className="ds-reveal relative overflow-hidden rounded-[2rem] bg-featured-card px-6 py-8 text-featured-card-foreground shadow-lg shadow-foreground/10 sm:px-8 sm:py-10">
-                    <div className="pointer-events-none absolute -top-24 -right-16 size-64 rounded-full border-[24px] border-primary/15" />
-                    <div className="pointer-events-none absolute -right-8 -bottom-20 size-56 rounded-full bg-primary/10 blur-3xl" />
-                    <div className="relative grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
-                        <div className="grid gap-3">
-                            <p className="ds-eyebrow text-primary">
-                                Painel de distribuição / visão geral
-                            </p>
-                            <h1 className="ds-display max-w-2xl text-4xl sm:text-5xl">
-                                O que está acontecendo no estoque?
-                            </h1>
-                            <p className="max-w-xl text-sm leading-6 text-featured-card-muted sm:text-base">
-                                Acompanhe o estoque e acesse o catálogo quando
-                                precisar atualizar uma peça.
-                            </p>
-                        </div>
-                        <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
+                <PageHero
+                    eyebrow="Painel de distribuição / visão geral"
+                    title="O que está acontecendo no estoque?"
+                    description="Acompanhe o estoque e acesse o catálogo quando precisar atualizar uma peça."
+                    asideClassName="flex flex-col gap-2 sm:flex-row lg:flex-col"
+                    aside={
+                        <>
                             <Button asChild className="w-full sm:w-fit">
                                 <Link href={productCreate()}>
                                     <Plus />
@@ -133,16 +124,16 @@ export default function Dashboard({ stats }: DashboardProps) {
                             <Button
                                 asChild
                                 variant="ghost"
-                                className="w-full text-featured-card-foreground hover:bg-white/10 hover:text-featured-card-foreground sm:w-fit"
+                                className="w-full sm:w-fit"
                             >
                                 <Link href={productsIndex()}>
                                     Abrir catálogo
                                     <ArrowRight />
                                 </Link>
                             </Button>
-                        </div>
-                    </div>
-                </header>
+                        </>
+                    }
+                />
 
                 <section
                     className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 [&>*:nth-child(2)]:[--reveal-delay:60ms] [&>*:nth-child(3)]:[--reveal-delay:120ms] [&>*:nth-child(4)]:[--reveal-delay:180ms]"

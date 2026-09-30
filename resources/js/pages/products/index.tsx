@@ -1,6 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
-    ChevronDown,
     ChevronLeft,
     ChevronRight,
     Info,
@@ -19,11 +18,16 @@ import {
     Sparkles,
     Table2,
     Trash2,
+    X,
 } from 'lucide-react';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { destroy } from '@/actions/App/Http/Controllers/ProductController';
 import { Badge } from '@/components/ui/badge';
-import { PlusShirt, SlimShirt } from '@/components/icons/shirt-fit';
+import {
+    categoryFilterField,
+    lineFilterField,
+} from '@/components/products/product-filter-fields';
+import { StockQuantityDetails } from '@/components/products/stock-quantity-details';
 import {
     SearchFilterBar,
     type FilterField,
@@ -37,10 +41,15 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+    Drawer,
+    DrawerClose,
+    DrawerContent,
+    DrawerDescription,
+    DrawerFooter,
+    DrawerHeader,
+    DrawerTitle,
+    DrawerTrigger,
+} from '@/components/ui/drawer';
 import {
     Dialog,
     DialogClose,
@@ -446,17 +455,13 @@ function RefinedProductCard({
                                 <p className="text-sm font-semibold text-card-foreground tabular-nums">
                                     {availableQuantity} peças disponíveis
                                 </p>
-                                <p className="mt-0.5 text-xs leading-4 text-muted-foreground tabular-nums">
-                                    Físico: {physicalQuantity} peças ·{' '}
-                                    {availableVolumeCount}{' '}
-                                    {availableVolumeCount === 1
-                                        ? 'saco disponível'
-                                        : 'sacos disponíveis'}
-                                    {reservedQuantity > 0 &&
-                                        ` · Reservado: ${reservedQuantity}`}
-                                    {consumedQuantity > 0 &&
-                                        ` · Baixado: ${consumedQuantity}`}
-                                </p>
+                                <StockQuantityDetails
+                                    className="mt-1 text-muted-foreground"
+                                    physicalQuantity={physicalQuantity}
+                                    availableSackCount={availableVolumeCount}
+                                    reservedQuantity={reservedQuantity}
+                                    consumedQuantity={consumedQuantity}
+                                />
                             </>
                         ) : (
                             <p className="text-sm font-semibold text-muted-foreground">
@@ -601,23 +606,27 @@ function ProductCardV3({
                         )}
                     >
                         <div className="min-w-0">
+                            <p className="mb-1.5 truncate text-xs font-semibold text-current/80">
+                                {isAvailable
+                                    ? 'Disponível para lojistas'
+                                    : isInternalUse
+                                      ? 'Uso interno da equipe'
+                                      : (product.distribution_status ??
+                                        'Indisponível')}
+                            </p>
                             <p className="text-2xl leading-7 font-bold tabular-nums">
                                 {availableQuantity}{' '}
                                 <span className="text-sm font-semibold text-current/75">
                                     peças
                                 </span>
                             </p>
-                            <p className="mt-1 text-xs leading-4 text-current/70 tabular-nums">
-                                Físico: {physicalQuantity} peças ·{' '}
-                                {availableVolumeCount}{' '}
-                                {availableVolumeCount === 1
-                                    ? 'saco disponível'
-                                    : 'sacos disponíveis'}
-                                {reservedQuantity > 0 &&
-                                    ` · Reservado: ${reservedQuantity}`}
-                                {consumedQuantity > 0 &&
-                                    ` · Baixado: ${consumedQuantity}`}
-                            </p>
+                            <StockQuantityDetails
+                                className="mt-2 text-current/70"
+                                physicalQuantity={physicalQuantity}
+                                availableSackCount={availableVolumeCount}
+                                reservedQuantity={reservedQuantity}
+                                consumedQuantity={consumedQuantity}
+                            />
                         </div>
                         <span
                             className={cn(
@@ -684,33 +693,23 @@ function ProductCardV3({
                     </div>
                 )}
 
-                <Collapsible
+                <Drawer
+                    direction="right"
                     open={detailsOpen}
                     onOpenChange={setDetailsOpen}
-                    className="-mx-4 mt-auto -mb-4 sm:-mx-5 sm:-mb-5"
                 >
-                    <div className="flex items-center justify-between gap-2 px-4 py-2.5 sm:px-5">
-                        <CollapsibleTrigger asChild>
+                    <div className="-mx-4 mt-auto -mb-4 flex items-center justify-between gap-2 border-t border-border px-4 py-2.5 sm:-mx-5 sm:-mb-5 sm:px-5">
+                        <DrawerTrigger asChild>
                             <Button
                                 variant="ghost"
                                 size="sm"
                                 className="px-1 text-muted-foreground"
-                                aria-label={
-                                    detailsOpen
-                                        ? `Ocultar mais informações de ${product.name}`
-                                        : `Ver mais informações de ${product.name}`
-                                }
+                                aria-label={`Ver mais informações de ${product.name}`}
                             >
                                 Mais
-                                <ChevronDown
-                                    className={cn(
-                                        'transition-transform duration-200',
-                                        detailsOpen && 'rotate-180',
-                                    )}
-                                    aria-hidden="true"
-                                />
+                                <ChevronRight aria-hidden="true" />
                             </Button>
-                        </CollapsibleTrigger>
+                        </DrawerTrigger>
                         <Button asChild variant="secondary" size="sm">
                             <Link
                                 href={productEdit(product.id)}
@@ -721,17 +720,45 @@ function ProductCardV3({
                             </Link>
                         </Button>
                     </div>
-                    <CollapsibleContent
+                    <DrawerContent
+                        side="right"
                         data-testid="product-card-v3-details"
-                        className="border-t border-border px-4 py-4 sm:px-5"
+                        className="gap-0"
                     >
-                        <div className="grid gap-4 text-xs text-muted-foreground">
-                            {volumes.length > 0 && (
-                                <div className="grid gap-2">
-                                    <p className="font-medium text-card-foreground">
+                        <DrawerHeader className="relative border-b border-border p-5 pr-14 text-left">
+                            <p className="truncate font-mono text-xs text-muted-foreground">
+                                {product.code}
+                                {product.model && ` · Mod. ${product.model}`}
+                            </p>
+                            <DrawerTitle className="text-lg leading-snug text-balance break-words">
+                                {product.name}
+                            </DrawerTitle>
+                            <DrawerDescription>
+                                {product.distribution_status ??
+                                    'Detalhes do estoque por saco.'}
+                            </DrawerDescription>
+                        </DrawerHeader>
+                        <DrawerClose asChild>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute top-3 right-3 text-muted-foreground"
+                                aria-label="Fechar detalhes do produto"
+                            >
+                                <X />
+                            </Button>
+                        </DrawerClose>
+                        <div
+                            data-vaul-no-drag
+                            className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto p-5 text-xs text-muted-foreground"
+                        >
+                            {volumes.length > 0 ? (
+                                <div className="grid gap-3">
+                                    <p className="text-sm font-medium text-card-foreground">
                                         Quantidade por saco
                                     </p>
-                                    <div className="grid gap-2">
+                                    <div className="grid gap-2.5">
                                         {volumes.map((volume, index) => {
                                             const volumeSizes = volume.items
                                                 .filter(
@@ -745,24 +772,45 @@ function ProductCardV3({
                                             return (
                                                 <div
                                                     key={volume.id}
-                                                    className="grid gap-2 rounded-lg border border-border/70 bg-muted/40 px-3 py-2.5"
+                                                    className="grid gap-2.5 rounded-xl border border-border/70 bg-muted/40 px-3.5 py-3"
                                                 >
-                                                    <p className="flex items-center justify-between gap-2">
-                                                        <span className="min-w-0 truncate font-semibold text-card-foreground">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <p className="min-w-0 font-semibold text-card-foreground">
                                                             Saco {index + 1}
                                                             {volume.code && (
-                                                                <span className="font-mono font-normal text-muted-foreground">
-                                                                    {' '}
-                                                                    ·{' '}
+                                                                <span className="block truncate font-mono text-[11px] font-normal text-muted-foreground">
                                                                     {
                                                                         volume.code
                                                                     }
                                                                 </span>
                                                             )}
-                                                        </span>
-                                                        <span className="shrink-0 tabular-nums">
-                                                            {volume.status &&
-                                                                `${volume.status} · `}
+                                                        </p>
+                                                        {volume.status && (
+                                                            <Badge
+                                                                variant="outline"
+                                                                className={cn(
+                                                                    'shrink-0',
+                                                                    volume.status ===
+                                                                        'Disponível'
+                                                                        ? 'border-emerald-600/30 bg-emerald-500/10 text-emerald-800 dark:border-emerald-400/30 dark:text-emerald-200'
+                                                                        : volume.status ===
+                                                                            'Reservado'
+                                                                          ? 'border-amber-600/30 bg-amber-500/10 text-amber-900 dark:border-amber-400/30 dark:text-amber-200'
+                                                                          : 'border-border bg-muted text-muted-foreground',
+                                                                )}
+                                                            >
+                                                                {volume.status}
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                    <StockSizeBreakdown
+                                                        sizes={volumeSizes}
+                                                        compact
+                                                        showUnknownAsCards
+                                                    />
+                                                    <p className="tabular-nums">
+                                                        Total do saco:{' '}
+                                                        <strong className="text-card-foreground">
                                                             {
                                                                 volume.total_quantity
                                                             }{' '}
@@ -770,20 +818,21 @@ function ProductCardV3({
                                                             1
                                                                 ? 'peça'
                                                                 : 'peças'}
-                                                        </span>
+                                                        </strong>
                                                     </p>
-                                                    <StockSizeBreakdown
-                                                        sizes={volumeSizes}
-                                                        compact
-                                                        showUnknownAsCards
-                                                    />
                                                 </div>
                                             );
                                         })}
                                     </div>
                                 </div>
+                            ) : (
+                                <p>
+                                    Este produto ainda não tem sacos
+                                    cadastrados.
+                                </p>
                             )}
-
+                        </div>
+                        <DrawerFooter className="border-t border-border p-5">
                             <Button
                                 variant="ghost"
                                 size="sm"
@@ -794,9 +843,9 @@ function ProductCardV3({
                                 <Trash2 />
                                 Excluir produto
                             </Button>
-                        </div>
-                    </CollapsibleContent>
-                </Collapsible>
+                        </DrawerFooter>
+                    </DrawerContent>
+                </Drawer>
             </div>
         </article>
     );
@@ -1081,22 +1130,22 @@ function ProductTable({
                                             {product.available_quantity ?? 0}{' '}
                                             peças disponíveis
                                         </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            Físico: {product.physical_quantity}{' '}
-                                            peças ·{' '}
-                                            {product.available_stock_volume_count ??
-                                                0}{' '}
-                                            {(product.available_stock_volume_count ??
-                                                0) === 1
-                                                ? 'saco disponível'
-                                                : 'sacos disponíveis'}
-                                            {(product.reserved_quantity ?? 0) >
-                                                0 &&
-                                                ` · Reservado: ${product.reserved_quantity}`}
-                                            {(product.consumed_quantity ?? 0) >
-                                                0 &&
-                                                ` · Baixado: ${product.consumed_quantity}`}
-                                        </p>
+                                        <StockQuantityDetails
+                                            className="mt-1 text-muted-foreground"
+                                            physicalQuantity={
+                                                product.physical_quantity
+                                            }
+                                            availableSackCount={
+                                                product.available_stock_volume_count ??
+                                                0
+                                            }
+                                            reservedQuantity={
+                                                product.reserved_quantity ?? 0
+                                            }
+                                            consumedQuantity={
+                                                product.consumed_quantity ?? 0
+                                            }
+                                        />
                                     </>
                                 ) : (
                                     <span className="text-muted-foreground">
@@ -1207,29 +1256,11 @@ export default function ProductsIndex({
     }, [filterValues]);
 
     const filterFields: FilterField[] = [
-        {
-            name: 'category',
-            label: 'Categoria',
-            value: filterValues.category,
-            allLabel: 'Todas as categorias',
-            display: 'combobox',
-            options: categories.map((category) => ({
-                value: category.id.toString(),
-                label: category.name,
-            })),
-        },
-        {
-            name: 'line',
-            label: 'Linha comercial',
-            value: filterValues.line,
-            allLabel: 'Slim e Plus',
-            allIcon: Shirt,
-            display: 'cards',
-            options: [
-                { value: 'slim', label: 'Slim', icon: SlimShirt },
-                { value: 'plus', label: 'Plus', icon: PlusShirt },
-            ],
-        },
+        categoryFilterField(filterValues.category, categories),
+        lineFilterField(filterValues.line, [
+            { value: 'slim', label: 'Slim' },
+            { value: 'plus', label: 'Plus' },
+        ]),
         {
             name: 'stock_offer_type',
             label: 'Tipo de grade',

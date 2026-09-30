@@ -468,6 +468,7 @@ export function ProductForm({
                         }
                         aria-invalid={error('name') ? true : undefined}
                         placeholder="Ex.: Calça Wide Leg"
+                        maxLength={80}
                         className="h-11 text-base sm:h-10 sm:text-sm"
                         required
                     />

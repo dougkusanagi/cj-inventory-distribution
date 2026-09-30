@@ -23,6 +23,7 @@ import {
     type ReactNode,
 } from 'react';
 import { destroy } from '@/actions/App/Http/Controllers/ProductController';
+import { StockQuantityDetails } from '@/components/products/stock-quantity-details';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -725,13 +726,14 @@ function ProductCardV5({
                                 .filter(Boolean)
                                 .join(' · ') || 'Sem classificação adicional'}
                         </p>
-                        <p className="tabular-nums">
-                            Físico: {product.physical_quantity ?? 0} peças
-                            {(product.reserved_quantity ?? 0) > 0 &&
-                                ` · Reservado: ${product.reserved_quantity}`}
-                            {(product.consumed_quantity ?? 0) > 0 &&
-                                ` · Baixado: ${product.consumed_quantity}`}
-                        </p>
+                        <StockQuantityDetails
+                            physicalQuantity={product.physical_quantity ?? 0}
+                            availableSackCount={
+                                product.available_stock_volume_count ?? 0
+                            }
+                            reservedQuantity={product.reserved_quantity ?? 0}
+                            consumedQuantity={product.consumed_quantity ?? 0}
+                        />
                         {product.notes && <p>{product.notes}</p>}
                         {product.stock_volumes.length > 0 && (
                             <div className="grid max-h-48 gap-1.5 overflow-y-auto">
@@ -876,22 +878,22 @@ function ProductTable({
                                             {product.available_quantity ?? 0}{' '}
                                             peças disponíveis
                                         </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            Físico: {product.physical_quantity}{' '}
-                                            peças ·{' '}
-                                            {product.available_stock_volume_count ??
-                                                0}{' '}
-                                            {(product.available_stock_volume_count ??
-                                                0) === 1
-                                                ? 'saco disponível'
-                                                : 'sacos disponíveis'}
-                                            {(product.reserved_quantity ?? 0) >
-                                                0 &&
-                                                ` · Reservado: ${product.reserved_quantity}`}
-                                            {(product.consumed_quantity ?? 0) >
-                                                0 &&
-                                                ` · Baixado: ${product.consumed_quantity}`}
-                                        </p>
+                                        <StockQuantityDetails
+                                            className="mt-1 text-muted-foreground"
+                                            physicalQuantity={
+                                                product.physical_quantity
+                                            }
+                                            availableSackCount={
+                                                product.available_stock_volume_count ??
+                                                0
+                                            }
+                                            reservedQuantity={
+                                                product.reserved_quantity ?? 0
+                                            }
+                                            consumedQuantity={
+                                                product.consumed_quantity ?? 0
+                                            }
+                                        />
                                     </>
                                 ) : (
                                     <span className="text-muted-foreground">

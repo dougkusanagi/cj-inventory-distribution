@@ -18,9 +18,14 @@ import type { CSSProperties, FormEvent } from 'react';
 import CatalogOrderController from '@/actions/App/Http/Controllers/CatalogOrderController';
 import AppearanceToggleTab from '@/components/appearance-tabs';
 import { PaperBag } from '@/components/icons/paper-bag';
+import { PageHero } from '@/components/page-hero';
 import ImageCarousel from '@/components/image-carousel';
 import InputError from '@/components/input-error';
 import ProductImageGallery from '@/components/products/product-image-gallery';
+import {
+    categoryFilterField,
+    lineFilterField,
+} from '@/components/products/product-filter-fields';
 import { SearchFilterBar } from '@/components/search-filter-bar';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
 import { Button } from '@/components/ui/button';
@@ -1038,22 +1043,11 @@ export default function Catalog({
                     id="produtos"
                     className="mx-auto max-w-7xl scroll-mt-24 px-4 pt-5 pb-12 sm:px-6 sm:pt-8 lg:px-8"
                 >
-                    <div className="ds-reveal relative flex flex-col gap-3 overflow-hidden rounded-[2rem] border border-border/70 bg-card px-5 py-8 shadow-sm sm:flex-row sm:items-end sm:justify-between sm:px-8 sm:py-10">
-                        <div className="pointer-events-none absolute -top-28 -right-20 size-72 rounded-full border-[32px] border-primary/15" />
-                        <div className="pointer-events-none absolute right-24 -bottom-24 size-48 rounded-full bg-brand-expressive/10 blur-3xl" />
-                        <div className="grid gap-2">
-                            <p className="ds-eyebrow relative text-highlight">
-                                Crônicas Jeans · para lojistas
-                            </p>
-                            <h1 className="ds-display relative max-w-2xl text-4xl sm:text-5xl">
-                                Reabasteça sua loja
-                            </h1>
-                            <p className="relative max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
-                                Encontre a peça e escolha os sacos com os
-                                tamanhos que sua loja precisa.
-                            </p>
-                        </div>
-                    </div>
+                    <PageHero
+                        eyebrow="Crônicas Jeans · para lojistas"
+                        title="Reabasteça sua loja"
+                        description="Encontre a peça e escolha os sacos com os tamanhos que sua loja precisa."
+                    />
 
                     <SearchFilterBar
                         idPrefix="catalog"
@@ -1061,25 +1055,8 @@ export default function Catalog({
                         search={query}
                         onSearchChange={setQuery}
                         fields={[
-                            {
-                                name: 'category',
-                                label: 'Categoria',
-                                value: category,
-                                allLabel: 'Todas as categorias',
-                                display: 'combobox',
-                                options: categories.map((option) => ({
-                                    value: option.id.toString(),
-                                    label: option.name,
-                                })),
-                            },
-                            {
-                                name: 'line',
-                                label: 'Linha',
-                                value: line,
-                                allLabel: 'Todas as linhas',
-                                display: 'cards',
-                                options: lines,
-                            },
+                            categoryFilterField(category, categories),
+                            lineFilterField(line, lines),
                         ]}
                         onFieldChange={(name, value) =>
                             name === 'category'

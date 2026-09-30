@@ -32,5 +32,6 @@ class DatabaseSeeder extends Seeder
         $this->call(CatalogDemoSeeder::class);
         $this->call(OperationalDemoSeeder::class);
         $this->call(FullSizeCatalogDemoSeeder::class);
+        $this->call(EdgeCaseCatalogDemoSeeder::class);
     }
 }

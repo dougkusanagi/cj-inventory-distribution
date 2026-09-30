@@ -11,6 +11,7 @@ import {
 import { useState } from 'react';
 import { PaperBag } from '@/components/icons/paper-bag';
 import InputError from '@/components/input-error';
+import { PageHero } from '@/components/page-hero';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -98,28 +99,15 @@ export default function InventoryIndex({
         <>
             <Head title="Balanço de estoque" />
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
-                <header className="relative overflow-hidden rounded-[2rem] bg-featured-card px-6 py-8 text-featured-card-foreground shadow-sm sm:px-8 sm:py-10">
-                    <div className="pointer-events-none absolute -top-24 -right-16 size-64 rounded-full border-[24px] border-primary/15" />
-                    <div className="pointer-events-none absolute -right-8 -bottom-20 size-56 rounded-full bg-primary/10 blur-3xl" />
-                    <div className="relative grid gap-7 lg:grid-cols-[minmax(0,1fr)_25rem] lg:items-end">
-                        <div className="grid gap-3">
-                            <p className="text-xs font-semibold tracking-[0.22em] text-primary uppercase">
-                                Estoque / conferência física
-                            </p>
-                            <h1 className="flex max-w-2xl items-center gap-3 text-4xl font-semibold tracking-[-0.05em] sm:text-5xl">
-                                <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground sm:size-14">
-                                    <ClipboardCheck className="size-6 sm:size-7" />
-                                </span>
-                                <span>Balanço de estoque</span>
-                            </h1>
-                            <p className="max-w-xl text-sm leading-6 text-featured-card-muted sm:text-base">
-                                Confira os sacos disponíveis, registre o que foi
-                                encontrado e aplique as diferenças somente após
-                                revisar tudo.
-                            </p>
-                        </div>
-                        <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
-                            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+                <PageHero
+                    eyebrow="Estoque / conferência física"
+                    title="Balanço de estoque"
+                    icon={ClipboardCheck}
+                    description="Confira os sacos disponíveis, registre o que foi encontrado e aplique as diferenças somente após revisar tudo."
+                    asideClassName="grid gap-2 sm:grid-cols-3 lg:w-96 lg:grid-cols-1"
+                    aside={
+                        <>
+                            <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-muted/40 p-3">
                                 <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary font-semibold text-primary-foreground">
                                     1
                                 </span>
@@ -127,38 +115,38 @@ export default function InventoryIndex({
                                     <strong className="text-sm">
                                         Selecione
                                     </strong>
-                                    <span className="text-xs text-featured-card-muted">
+                                    <span className="text-xs text-muted-foreground">
                                         os sacos disponíveis
                                     </span>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
-                                <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-white/10 font-semibold text-primary">
+                            <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-muted/40 p-3">
+                                <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-muted font-semibold text-highlight">
                                     2
                                 </span>
                                 <div className="grid gap-0.5">
                                     <strong className="text-sm">Conte</strong>
-                                    <span className="text-xs text-featured-card-muted">
+                                    <span className="text-xs text-muted-foreground">
                                         cada saco selecionado
                                     </span>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
-                                <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-white/10 font-semibold text-primary">
+                            <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-muted/40 p-3">
+                                <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-muted font-semibold text-highlight">
                                     3
                                 </span>
                                 <div className="grid gap-0.5">
                                     <strong className="text-sm">
                                         Confirme
                                     </strong>
-                                    <span className="text-xs text-featured-card-muted">
+                                    <span className="text-xs text-muted-foreground">
                                         depois de revisar
                                     </span>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </header>
+                        </>
+                    }
+                />
 
                 <section
                     className="grid gap-3 sm:grid-cols-3 sm:gap-4"
