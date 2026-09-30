@@ -45,3 +45,4 @@ ADRs iniciais:
 - [0015 — Soft deletes para entidades da aplicação](0015-soft-deletes-for-application-entities.md)
 - [0016 — Movimentações imutáveis para o estoque físico](0016-stock-movements.md)
 - [0017 — Trilha de auditoria administrativa](0017-application-audit-log.md)
+- [0019 — Phosphor duotone como biblioteca de ícones](0019-phosphor-duotone-icons.md)

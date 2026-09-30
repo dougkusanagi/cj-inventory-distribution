@@ -1,11 +1,11 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
-    CirclePlus,
-    ArrowLeftRight,
-    CircleMinus,
-    Search,
-    SlidersHorizontal,
-} from 'lucide-react';
+    ArrowsLeftRightIcon,
+    MagnifyingGlassIcon,
+    MinusCircleIcon,
+    PlusCircleIcon,
+    FunnelIcon,
+} from '@phosphor-icons/react';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
@@ -33,10 +33,10 @@ import type {
 
 function movementIcon(type: StockMovementType) {
     return type === 'in'
-        ? CirclePlus
+        ? PlusCircleIcon
         : type === 'out'
-          ? CircleMinus
-          : ArrowLeftRight;
+          ? MinusCircleIcon
+          : ArrowsLeftRightIcon;
 }
 
 function dateLabel(value: string): string {
@@ -117,7 +117,7 @@ export default function StockMovementsIndex({
                             Estoque / histórico
                         </p>
                         <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight">
-                            <ArrowLeftRight className="size-7 text-primary" />
+                            <ArrowsLeftRightIcon className="size-8 text-primary" />
                             Histórico de movimentações
                         </h1>
                         <p className="max-w-2xl text-sm text-muted-foreground">
@@ -128,13 +128,13 @@ export default function StockMovementsIndex({
                     <div className="flex flex-col gap-2 sm:flex-row">
                         <Button asChild variant="outline">
                             <Link href={createExit()}>
-                                <CircleMinus />
+                                <MinusCircleIcon />
                                 Registrar saída
                             </Link>
                         </Button>
                         <Button asChild>
                             <Link href={createEntry()}>
-                                <CirclePlus />
+                                <PlusCircleIcon />
                                 Registrar entrada
                             </Link>
                         </Button>
@@ -226,7 +226,7 @@ export default function StockMovementsIndex({
                             </Select>
                         </div>
                         <Button type="submit" variant="secondary">
-                            <Search />
+                            <MagnifyingGlassIcon />
                             Filtrar
                         </Button>
                     </div>
@@ -240,7 +240,7 @@ export default function StockMovementsIndex({
                             }
                             aria-expanded={showAdvancedFilters}
                         >
-                            <SlidersHorizontal />
+                            <FunnelIcon />
                             {showAdvancedFilters
                                 ? 'Ocultar filtros'
                                 : 'Mais filtros'}

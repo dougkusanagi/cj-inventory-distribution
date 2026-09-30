@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeftIcon } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { OrderForm } from '@/components/orders/order-form';
 import { index, show } from '@/routes/orders';
@@ -24,7 +24,7 @@ export default function EditOrder({ order }: { order: Order }) {
                     </div>
                     <Button asChild variant="outline" className="h-11 sm:h-9">
                         <Link href={show(order.id)} data-testid="voltar-pedido">
-                            <ArrowLeft />
+                            <ArrowLeftIcon weight="bold" />
                             Voltar ao pedido
                         </Link>
                     </Button>

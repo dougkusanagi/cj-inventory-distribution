@@ -1,5 +1,9 @@
 import useEmblaCarousel from 'embla-carousel-react';
-import { ChevronLeft, ChevronRight, Images } from 'lucide-react';
+import {
+    CaretLeftIcon,
+    CaretRightIcon,
+    ImagesIcon,
+} from '@phosphor-icons/react';
 import { useCallback, useEffect, useState, type WheelEvent } from 'react';
 import {
     Dialog,
@@ -237,7 +241,10 @@ export default function ProductImageGallery({
                                         onClick={goToPreviousImage}
                                         className="absolute top-1/2 left-3 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/30 text-white/90 shadow-xl backdrop-blur-md transition-all duration-200 hover:scale-105 hover:bg-black/55 hover:text-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:left-5"
                                     >
-                                        <ChevronLeft className="size-5" />
+                                        <CaretLeftIcon
+                                            weight="bold"
+                                            className="size-6"
+                                        />
                                     </button>
                                     <button
                                         type="button"
@@ -245,7 +252,10 @@ export default function ProductImageGallery({
                                         onClick={goToNextImage}
                                         className="absolute top-1/2 right-3 flex size-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/30 text-white/90 shadow-xl backdrop-blur-md transition-all duration-200 hover:scale-105 hover:bg-black/55 hover:text-white focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:right-5"
                                     >
-                                        <ChevronRight className="size-5" />
+                                        <CaretRightIcon
+                                            weight="bold"
+                                            className="size-6"
+                                        />
                                     </button>
                                 </>
                             )}
@@ -302,8 +312,8 @@ export default function ProductImageGallery({
                         </div>
                         <div className="mb-2 flex items-center justify-between gap-3 text-[11px] text-white/60">
                             <span className="inline-flex items-center gap-1.5 tabular-nums">
-                                <Images
-                                    className="size-3.5"
+                                <ImagesIcon
+                                    className="size-4"
                                     aria-hidden="true"
                                 />
                                 {activeIndex + 1} de {images.length}
@@ -324,7 +334,10 @@ export default function ProductImageGallery({
                                         onClick={goToPreviousImage}
                                         className="absolute top-1/2 left-0 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/55 text-white/90 shadow-lg backdrop-blur-md transition hover:bg-black/80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                                     >
-                                        <ChevronLeft className="size-4" />
+                                        <CaretLeftIcon
+                                            weight="bold"
+                                            className="size-5"
+                                        />
                                     </button>
                                     <button
                                         type="button"
@@ -332,7 +345,10 @@ export default function ProductImageGallery({
                                         onClick={goToNextImage}
                                         className="absolute top-1/2 right-0 z-10 flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/55 text-white/90 shadow-lg backdrop-blur-md transition hover:bg-black/80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                                     >
-                                        <ChevronRight className="size-4" />
+                                        <CaretRightIcon
+                                            weight="bold"
+                                            className="size-5"
+                                        />
                                     </button>
                                 </>
                             )}

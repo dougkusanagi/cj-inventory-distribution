@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -6,7 +6,7 @@ type PageHeroProps = {
     eyebrow: string;
     title: string;
     description: string;
-    icon?: LucideIcon;
+    icon?: PhosphorIcon;
     aside?: ReactNode;
     asideClassName?: string;
     className?: string;

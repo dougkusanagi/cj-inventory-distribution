@@ -18,6 +18,8 @@ export const PaperBag = forwardRef<SVGSVGElement, PaperBagProps>(
         >
             <path
                 d="M5 8.5h14l-1 11H6l-1-11Z"
+                fill="currentColor"
+                fillOpacity={0.2}
                 stroke="currentColor"
                 strokeWidth={strokeWidth}
                 strokeLinecap="round"

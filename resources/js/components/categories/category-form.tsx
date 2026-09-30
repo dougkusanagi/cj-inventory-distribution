@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import { Save } from 'lucide-react';
+import { FloppyDiskIcon } from '@phosphor-icons/react';
 import type { FormEvent } from 'react';
 import {
     store,
@@ -72,7 +72,7 @@ export function CategoryForm({ category }: { category?: Category }) {
                 disabled={form.processing}
                 className="h-11 justify-self-end"
             >
-                <Save />
+                <FloppyDiskIcon />
                 {form.processing ? 'Salvando...' : 'Salvar categoria'}
             </Button>
         </form>

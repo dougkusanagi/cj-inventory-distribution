@@ -1,4 +1,10 @@
-import { Check, ChevronDown, Search, SlidersHorizontal, X } from 'lucide-react';
+import {
+    CaretDownIcon,
+    CheckIcon,
+    MagnifyingGlassIcon,
+    FunnelIcon,
+    XIcon,
+} from '@phosphor-icons/react';
 import { useState } from 'react';
 import type { ComponentProps, ComponentType, CSSProperties } from 'react';
 import { Button } from '@/components/ui/button';
@@ -26,7 +32,8 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { RadioCard } from '@/components/ui/radio-card';
+import { RadioGroup } from '@/components/ui/radio-group';
 import {
     Select,
     SelectContent,
@@ -44,7 +51,10 @@ export type FilterField = {
     name: string;
     label: string;
     value: string;
+    defaultValue?: string;
     allLabel: string;
+    /** Rótulo curto da opção "todos" nos cartões, onde o título do grupo já dá o contexto. */
+    allCardLabel?: string;
     allIcon?: FilterIcon;
     options: FilterOption[];
     /** `cards` só afeta o drawer mobile com até três escolhas; no desktop vira select. */
@@ -78,7 +88,7 @@ function SearchField({
 }) {
     return (
         <div className="relative min-w-0">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <MagnifyingGlassIcon className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground" />
             <Input
                 type="search"
                 value={value}
@@ -100,7 +110,7 @@ function SearchField({
                     onClick={onClear}
                     className="absolute top-1/2 right-1 size-9 -translate-y-1/2 text-muted-foreground"
                 >
-                    <X />
+                    <XIcon weight="bold" />
                 </Button>
             )}
         </div>
@@ -187,7 +197,10 @@ function FilterCombobox({
                     )}
                 >
                     <span className="truncate">{selected?.label}</span>
-                    <ChevronDown className="size-4 shrink-0 opacity-50" />
+                    <CaretDownIcon
+                        weight="bold"
+                        className="size-5 shrink-0 opacity-50"
+                    />
                 </Button>
             </PopoverTrigger>
             <PopoverContent
@@ -216,7 +229,9 @@ function FilterCombobox({
                                     <span className="flex-1">
                                         {option.label}
                                     </span>
-                                    {option.value === field.value && <Check />}
+                                    {option.value === field.value && (
+                                        <CheckIcon weight="bold" />
+                                    )}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
@@ -248,7 +263,11 @@ function FilterCards({
     onChange: (value: string) => void;
 }) {
     const options: FilterOption[] = [
-        { value: 'all', label: field.allLabel, icon: field.allIcon },
+        {
+            value: 'all',
+            label: field.allCardLabel ?? field.allLabel,
+            icon: field.allIcon,
+        },
         ...field.options,
     ];
 
@@ -263,40 +282,16 @@ function FilterCards({
                 aria-labelledby={`${id}-label`}
                 className={cn('gap-2', columns && 'grid-cols-3')}
             >
-                {options.map((option) => {
-                    const Icon = option.icon;
-                    const optionId = `${id}-${option.value}`;
-
-                    return (
-                        <Label
-                            key={option.value}
-                            htmlFor={optionId}
-                            className={cn(
-                                'flex cursor-pointer rounded-xl border border-input bg-background text-sm font-medium transition-colors has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/10',
-                                columns
-                                    ? 'min-h-24 flex-col items-center justify-center gap-2 px-2 py-3 text-center'
-                                    : 'min-h-12 items-center gap-3 px-3 py-2',
-                            )}
-                        >
-                            {Icon && (
-                                <Icon
-                                    className={cn(
-                                        'shrink-0 text-muted-foreground',
-                                        columns ? 'size-6' : 'size-4',
-                                    )}
-                                />
-                            )}
-                            <span className={cn(!columns && 'flex-1')}>
-                                {option.label}
-                            </span>
-                            <RadioGroupItem
-                                id={optionId}
-                                value={option.value}
-                                className={cn(columns && 'sr-only')}
-                            />
-                        </Label>
-                    );
-                })}
+                {options.map((option) => (
+                    <RadioCard
+                        key={option.value}
+                        id={`${id}-${option.value}`}
+                        value={option.value}
+                        label={option.label}
+                        icon={option.icon}
+                        layout={columns ? 'stacked' : 'inline'}
+                    />
+                ))}
             </RadioGroup>
         </div>
     );
@@ -313,7 +308,9 @@ export function SearchFilterBar({
     className,
 }: SearchFilterBarProps) {
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const activeCount = fields.filter((field) => field.value !== 'all').length;
+    const activeCount = fields.filter(
+        (field) => field.value !== (field.defaultValue ?? 'all'),
+    ).length;
     const hasFilters = search !== '' || activeCount > 0;
     const drawerId = `${idPrefix}-filter-drawer`;
     const desktopStyle = {
@@ -346,7 +343,7 @@ export function SearchFilterBar({
                         aria-label="Abrir filtros de produtos"
                         onClick={() => setDrawerOpen(true)}
                     >
-                        <SlidersHorizontal />
+                        <FunnelIcon />
                         <span>Filtros</span>
                         {activeCount > 0 && (
                             <span className="flex min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs font-bold text-primary-foreground">
@@ -365,7 +362,12 @@ export function SearchFilterBar({
 
             <div
                 style={desktopStyle}
-                className="hidden gap-3 md:grid md:[grid-template-columns:var(--filter-columns)]"
+                className={cn(
+                    'hidden gap-3 md:grid md:grid-cols-2 lg:grid-cols-3',
+                    fields.length > 4
+                        ? '2xl:[grid-template-columns:var(--filter-columns)]'
+                        : 'xl:[grid-template-columns:var(--filter-columns)]',
+                )}
             >
                 <SearchField
                     id={`${idPrefix}-search`}
@@ -393,7 +395,7 @@ export function SearchFilterBar({
                 })}
                 {hasFilters && (
                     <Button type="button" variant="ghost" onClick={onClear}>
-                        <X />
+                        <XIcon weight="bold" />
                         Limpar filtros
                     </Button>
                 )}
@@ -414,7 +416,7 @@ export function SearchFilterBar({
                                 className="absolute top-4 right-4 size-11"
                                 aria-label="Fechar filtros de produtos"
                             >
-                                <X />
+                                <XIcon weight="bold" />
                             </Button>
                         </DrawerClose>
                     </DrawerHeader>

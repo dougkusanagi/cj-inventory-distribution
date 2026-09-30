@@ -1,5 +1,5 @@
 import { Link, useForm } from '@inertiajs/react';
-import { Save } from 'lucide-react';
+import { FloppyDiskIcon } from '@phosphor-icons/react';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { store as storeEntry } from '@/actions/App/Http/Controllers/StockEntryController';
@@ -260,7 +260,7 @@ export function StockEntryForm({
                     type="submit"
                     disabled={form.processing || form.data.product_id === null}
                 >
-                    <Save />
+                    <FloppyDiskIcon />
                     {form.processing ? 'Registrando...' : 'Registrar entrada'}
                 </Button>
             </div>

@@ -1,11 +1,11 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import {
-    CirclePlus,
-    ArrowLeftRight,
-    ArrowRight,
-    CircleMinus,
-    RotateCcw,
-} from 'lucide-react';
+    ArrowCounterClockwiseIcon,
+    ArrowRightIcon,
+    ArrowsLeftRightIcon,
+    MinusCircleIcon,
+    PlusCircleIcon,
+} from '@phosphor-icons/react';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { store as reverseMovement } from '@/actions/App/Http/Controllers/StockMovementReversalController';
@@ -121,10 +121,10 @@ export default function StockMovementShow({
     const form = useForm({ reason: '' });
     const Icon =
         movement.type === 'in'
-            ? CirclePlus
+            ? PlusCircleIcon
             : movement.type === 'out'
-              ? CircleMinus
-              : ArrowLeftRight;
+              ? MinusCircleIcon
+              : ArrowsLeftRightIcon;
     const canReverse =
         movement.source === 'manual' && movement.reversal_id === null;
 
@@ -248,8 +248,9 @@ export default function StockMovementShow({
                                                     )}
                                                 </strong>
                                             </div>
-                                            <ArrowRight
-                                                className="size-4 text-muted-foreground"
+                                            <ArrowRightIcon
+                                                weight="bold"
+                                                className="size-5 text-muted-foreground"
                                                 aria-hidden="true"
                                             />
                                             <div className="grid justify-items-end gap-0.5 text-right">
@@ -288,8 +289,9 @@ export default function StockMovementShow({
                                                                         size.before,
                                                                     )}
                                                                 </span>
-                                                                <ArrowRight
-                                                                    className="size-3 text-muted-foreground"
+                                                                <ArrowRightIcon
+                                                                    weight="bold"
+                                                                    className="size-3.5 text-muted-foreground"
                                                                     aria-hidden="true"
                                                                 />
                                                                 <span
@@ -395,7 +397,7 @@ export default function StockMovementShow({
                                 variant="outline"
                                 onClick={() => setShowReverse(true)}
                             >
-                                <RotateCcw />
+                                <ArrowCounterClockwiseIcon />
                                 Estornar movimentação
                             </Button>
                         )}

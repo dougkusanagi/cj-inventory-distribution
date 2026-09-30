@@ -170,6 +170,11 @@
         background: color-mix(in oklab, var(--action) 36%, transparent);
         color: var(--foreground);
     }
+
+    /* A Phosphor fixa a camada secundária do duotone em 20%, o que some em 16px. */
+    svg path[opacity='0.2'] {
+        opacity: 0.34;
+    }
 }
 
 @layer components {

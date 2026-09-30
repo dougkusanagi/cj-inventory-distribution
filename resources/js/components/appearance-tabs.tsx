@@ -1,5 +1,6 @@
-import type { LucideIcon } from 'lucide-react';
-import { Monitor, Moon, Sun } from 'lucide-react';
+import { MonitorIcon, MoonIcon, SunIcon } from '@phosphor-icons/react';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
+
 import type { HTMLAttributes } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,10 +30,10 @@ export default function AppearanceToggleTab({
 }: AppearanceToggleTabProps) {
     const { appearance, updateAppearance } = useAppearance();
 
-    const tabs: { value: Appearance; icon: LucideIcon; label: string }[] = [
-        { value: 'system', icon: Monitor, label: 'Sistema' },
-        { value: 'light', icon: Sun, label: 'Claro' },
-        { value: 'dark', icon: Moon, label: 'Escuro' },
+    const tabs: { value: Appearance; icon: PhosphorIcon; label: string }[] = [
+        { value: 'system', icon: MonitorIcon, label: 'Sistema' },
+        { value: 'light', icon: SunIcon, label: 'Claro' },
+        { value: 'dark', icon: MoonIcon, label: 'Escuro' },
     ];
 
     const handleAppearanceChange = (value: string) => {
@@ -57,7 +58,7 @@ export default function AppearanceToggleTab({
                             className="size-8 rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
                             aria-label="Selecionar tema da interface"
                         >
-                            <ActiveIcon className="size-4" />
+                            <ActiveIcon className="size-5" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent

@@ -1,14 +1,14 @@
 import { Link, router, useForm } from '@inertiajs/react';
 import {
-    CirclePlus,
-    CircleMinus,
-    ClipboardCheck,
-    FileText,
-    ImagePlus,
-    Images,
-    Layers,
-    Save,
-} from 'lucide-react';
+    CameraPlusIcon,
+    ClipboardTextIcon,
+    FileTextIcon,
+    FloppyDiskIcon,
+    ImagesIcon,
+    MinusCircleIcon,
+    PlusCircleIcon,
+    StackSimpleIcon,
+} from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
@@ -43,7 +43,8 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { RadioCard } from '@/components/ui/radio-card';
+import { RadioGroup } from '@/components/ui/radio-group';
 import {
     Select,
     SelectContent,
@@ -83,8 +84,8 @@ type ProductFormProps = {
 type ProductFormTab = 'details' | 'photos' | 'stock';
 
 const formTabs = [
-    { id: 'details', label: 'Detalhes', icon: FileText },
-    { id: 'photos', label: 'Fotos', icon: Images },
+    { id: 'details', label: 'Detalhes', icon: FileTextIcon },
+    { id: 'photos', label: 'Fotos', icon: ImagesIcon },
     { id: 'stock', label: 'Estoque', icon: PaperBag },
 ] as const;
 
@@ -436,7 +437,7 @@ export function ProductForm({
                             />
                         ) : (
                             <span className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground">
-                                <ImagePlus className="size-5" />
+                                <CameraPlusIcon className="size-6" />
                                 <span className="text-[10px] font-semibold">
                                     Adicionar
                                 </span>
@@ -652,19 +653,12 @@ export function ProductForm({
                                         ['slim', 'Slim'],
                                         ['plus', 'Plus'],
                                     ].map(([value, label]) => (
-                                        <label
+                                        <RadioCard
                                             key={value}
-                                            className={cn(
-                                                'flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 text-sm font-medium transition-colors',
-                                                (form.data.line || 'none') ===
-                                                    value
-                                                    ? 'border-highlight bg-accent/50'
-                                                    : 'border-border hover:bg-muted/30',
-                                            )}
-                                        >
-                                            <RadioGroupItem value={value} />
-                                            {label}
-                                        </label>
+                                            value={value}
+                                            label={label}
+                                            layout="inline"
+                                        />
                                     ))}
                                 </RadioGroup>
                                 <InputError
@@ -812,7 +806,7 @@ export function ProductForm({
                                             data-testid="open-stock-entry"
                                             className="col-span-2 h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
                                         >
-                                            <CirclePlus />
+                                            <PlusCircleIcon />
                                             Registrar entrada
                                         </Button>
                                     )}
@@ -826,7 +820,7 @@ export function ProductForm({
                                                 query: { product: product.id },
                                             })}
                                         >
-                                            <CircleMinus />
+                                            <MinusCircleIcon />
                                             Registrar saída
                                         </Link>
                                     </Button>
@@ -836,7 +830,7 @@ export function ProductForm({
                                         onClick={onAdjustStock}
                                         className="h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
                                     >
-                                        <ClipboardCheck />
+                                        <ClipboardTextIcon />
                                         Recontar saco
                                     </Button>
                                 </div>
@@ -912,7 +906,7 @@ export function ProductForm({
                                 <div className="grid gap-1.5">
                                     <div className="flex items-center gap-2">
                                         <span className="flex size-7 items-center justify-center rounded-lg bg-accent text-highlight">
-                                            <Layers className="size-4" />
+                                            <StackSimpleIcon className="size-5" />
                                         </span>
                                         <p className="text-xs font-semibold tracking-[0.18em] text-highlight uppercase">
                                             Estoque inicial (opcional)
@@ -1049,7 +1043,7 @@ export function ProductForm({
                         {form.processing || processingImages ? (
                             <Spinner />
                         ) : (
-                            <Save />
+                            <FloppyDiskIcon />
                         )}
                         {form.processing
                             ? 'Salvando...'

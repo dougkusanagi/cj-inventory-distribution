@@ -1,20 +1,20 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
-    ChevronLeft,
-    ChevronRight,
-    ArrowUpRight,
-    ChevronDown,
-    Pencil,
-    ImageOff,
-    LayoutGrid,
-    Plus,
-    Search,
-    Shirt,
-    SlidersHorizontal,
-    Table2,
-    Trash2,
-    X,
-} from 'lucide-react';
+    ArrowUpRightIcon,
+    CaretDownIcon,
+    CaretLeftIcon,
+    CaretRightIcon,
+    ImageBrokenIcon,
+    MagnifyingGlassIcon,
+    PencilSimpleIcon,
+    PlusCircleIcon,
+    FunnelIcon,
+    SquaresFourIcon,
+    TShirtIcon,
+    TableIcon,
+    TrashIcon,
+    XIcon,
+} from '@phosphor-icons/react';
 import {
     Fragment,
     useEffect,
@@ -91,6 +91,7 @@ export type ProductsIndexProps = {
         line: string;
         stock_offer_type: string;
         image: string;
+        status: 'active' | 'inactive' | 'all';
     };
     categories: Category[];
 };
@@ -108,6 +109,7 @@ type ProductFilterValues = {
     line: string;
     stock_offer_type: string;
     image: string;
+    status: string;
 };
 
 function formValue(data: FormData, name: string): string {
@@ -193,6 +195,18 @@ function ProductFilterFields({
 
     return (
         <>
+            <ProductFilterSelect
+                name="status"
+                id={`${idPrefix}-status`}
+                defaultValue={values.status}
+                placeholder="Status do produto"
+                label={labelled ? 'Status do produto' : undefined}
+                triggerClassName={triggerClassName}
+            >
+                <SelectItem value="active">Ativos</SelectItem>
+                <SelectItem value="inactive">Inativos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
+            </ProductFilterSelect>
             <ProductFilterSelect
                 name="category"
                 id={`${idPrefix}-category`}
@@ -283,10 +297,7 @@ function ProductImage({
             )}
             aria-label="Produto sem foto"
         >
-            <ImageOff
-                className={cn('size-5', iconClassName)}
-                strokeWidth={1.25}
-            />
+            <ImageBrokenIcon className={cn('size-5', iconClassName)} />
         </div>
     );
 }
@@ -561,9 +572,12 @@ function ProductCard({
             <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-3 sm:px-5">
                 <Button asChild variant="secondary" size="sm">
                     <Link href={productEdit(product.id)}>
-                        <Pencil />
+                        <PencilSimpleIcon />
                         Editar produto
-                        <ArrowUpRight className="ml-1 opacity-60" />
+                        <ArrowUpRightIcon
+                            weight="bold"
+                            className="ml-1 opacity-60"
+                        />
                     </Link>
                 </Button>
                 <Button
@@ -573,7 +587,7 @@ function ProductCard({
                     onClick={() => onDelete(product)}
                     aria-label={`Excluir ${product.name}`}
                 >
-                    <Trash2 />
+                    <TrashIcon />
                 </Button>
             </div>
         </article>
@@ -694,7 +708,8 @@ function ProductCardV5({
                             className="px-1 text-muted-foreground"
                         >
                             Detalhes
-                            <ChevronDown
+                            <CaretDownIcon
+                                weight="bold"
                                 className={cn(
                                     'transition-transform',
                                     detailsOpen && 'rotate-180',
@@ -704,7 +719,7 @@ function ProductCardV5({
                     </CollapsibleTrigger>
                     <Button asChild variant="secondary" size="sm">
                         <Link href={productEdit(product.id)}>
-                            <Pencil />
+                            <PencilSimpleIcon />
                             Editar produto
                         </Link>
                     </Button>
@@ -763,7 +778,7 @@ function ProductCardV5({
                             className="w-fit px-1 text-destructive hover:text-destructive"
                             onClick={() => onDelete(product)}
                         >
-                            <Trash2 />
+                            <TrashIcon />
                             Excluir produto
                         </Button>
                     </div>
@@ -913,7 +928,7 @@ function ProductTable({
                                         onClick={() => onDelete(product)}
                                         aria-label={`Excluir ${product.name}`}
                                     >
-                                        <Trash2 />
+                                        <TrashIcon />
                                     </Button>
                                 </div>
                             </td>
@@ -971,6 +986,7 @@ export default function ProductsCardPreview({
             line: formValue(data, 'line'),
             stock_offer_type: formValue(data, 'stock_offer_type'),
             image: formValue(data, 'image'),
+            status: formValue(data, 'status'),
         });
     };
 
@@ -988,6 +1004,7 @@ export default function ProductsCardPreview({
             line: filters.line || 'all',
             stock_offer_type: filters.stock_offer_type || 'all',
             image: filters.image || 'all',
+            status: filters.status,
         });
     };
 
@@ -998,6 +1015,7 @@ export default function ProductsCardPreview({
             line: '',
             stock_offer_type: '',
             image: '',
+            status: 'active',
         });
     };
 
@@ -1006,8 +1024,10 @@ export default function ProductsCardPreview({
         line: filters.line || 'all',
         stock_offer_type: filters.stock_offer_type || 'all',
         image: filters.image || 'all',
+        status: filters.status,
     };
     const activeFilterCount = [
+        filters.status !== 'active',
         filters.category !== null,
         filters.line !== '' && filters.line !== 'all',
         filters.stock_offer_type !== '' && filters.stock_offer_type !== 'all',
@@ -1066,7 +1086,7 @@ export default function ProductsCardPreview({
                     </div>
                     <Button asChild size="lg" className="w-full sm:w-fit">
                         <Link href={productCreate()}>
-                            <Plus />
+                            <PlusCircleIcon />
                             Novo produto
                         </Link>
                     </Button>
@@ -1100,7 +1120,7 @@ export default function ProductsCardPreview({
                                     className="absolute top-0 right-0 size-11 text-muted-foreground"
                                     aria-label="Buscar produtos"
                                 >
-                                    <Search />
+                                    <MagnifyingGlassIcon />
                                 </Button>
                             </div>
                             <Button
@@ -1112,7 +1132,7 @@ export default function ProductsCardPreview({
                                 aria-label="Abrir filtros de produtos"
                                 onClick={() => setFiltersOpen(true)}
                             >
-                                <SlidersHorizontal />
+                                <FunnelIcon />
                                 <span>Filtros</span>
                                 {activeFilterCount > 0 && (
                                     <span className="flex min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs font-bold text-primary-foreground">
@@ -1154,7 +1174,7 @@ export default function ProductsCardPreview({
                                             className="absolute top-4 right-4 size-11"
                                             aria-label="Fechar filtros de produtos"
                                         >
-                                            <X />
+                                            <XIcon weight="bold" />
                                         </Button>
                                     </DrawerClose>
                                 </DrawerHeader>
@@ -1181,7 +1201,7 @@ export default function ProductsCardPreview({
                                         className="h-11"
                                         aria-label="Aplicar filtros de produtos"
                                     >
-                                        <Search />
+                                        <MagnifyingGlassIcon />
                                         Aplicar filtros
                                     </Button>
                                     {hasAppliedFilters && (
@@ -1202,7 +1222,7 @@ export default function ProductsCardPreview({
 
                 <form
                     onSubmit={submitFilters}
-                    className="hidden gap-3 rounded-[1.75rem] border border-border/80 bg-card p-4 shadow-sm md:grid xl:grid-cols-[minmax(0,1.4fr)_minmax(11rem,1fr)_minmax(9rem,.75fr)_minmax(10rem,.9fr)_minmax(10rem,.8fr)_auto]"
+                    className="hidden gap-3 rounded-[1.75rem] border border-border/80 bg-card p-4 shadow-sm md:grid md:grid-cols-2 lg:grid-cols-3"
                 >
                     <Input
                         name="search"
@@ -1217,7 +1237,7 @@ export default function ProductsCardPreview({
                         values={filterValues}
                     />
                     <Button type="submit" variant="secondary">
-                        <Search />
+                        <MagnifyingGlassIcon />
                         Filtrar
                     </Button>
                     {hasAppliedFilters && (
@@ -1226,7 +1246,7 @@ export default function ProductsCardPreview({
                             variant="ghost"
                             onClick={clearFilters}
                         >
-                            <X />
+                            <XIcon weight="bold" />
                             Limpar filtros
                         </Button>
                     )}
@@ -1257,7 +1277,7 @@ export default function ProductsCardPreview({
                                         aria-label="Visualização em tabela"
                                         className="flex-1 px-3 data-[state=on]:bg-secondary md:flex-none"
                                     >
-                                        <Table2 />
+                                        <TableIcon />
                                         Tabela
                                     </ToggleGroupItem>
                                     <ToggleGroupItem
@@ -1265,7 +1285,7 @@ export default function ProductsCardPreview({
                                         aria-label="Visualização em cards"
                                         className="flex-1 px-3 data-[state=on]:bg-secondary md:flex-none"
                                     >
-                                        <LayoutGrid />
+                                        <SquaresFourIcon />
                                         Cards
                                     </ToggleGroupItem>
                                 </ToggleGroup>
@@ -1325,7 +1345,7 @@ export default function ProductsCardPreview({
                     <Card className="rounded-[2rem] border-dashed shadow-sm">
                         <CardHeader className="items-center pt-12 text-center">
                             <span className="mb-2 flex size-16 items-center justify-center rounded-3xl bg-primary text-primary-foreground">
-                                <Shirt className="size-7" />
+                                <TShirtIcon className="size-8" />
                             </span>
                             <CardTitle className="text-2xl tracking-tight">
                                 Seu catálogo começa aqui
@@ -1339,7 +1359,7 @@ export default function ProductsCardPreview({
                         <CardContent className="flex justify-center pb-12">
                             <Button asChild>
                                 <Link href={productCreate()}>
-                                    <Plus />
+                                    <PlusCircleIcon />
                                     Cadastrar primeiro produto
                                 </Link>
                             </Button>
@@ -1388,9 +1408,9 @@ export default function ProductsCardPreview({
                                     {link.url ? (
                                         <Link href={link.url} preserveScroll>
                                             {isPrevious ? (
-                                                <ChevronLeft />
+                                                <CaretLeftIcon weight="bold" />
                                             ) : isNext ? (
-                                                <ChevronRight />
+                                                <CaretRightIcon weight="bold" />
                                             ) : null}
                                             <span
                                                 className={
@@ -1438,7 +1458,7 @@ export default function ProductsCardPreview({
                             onClick={handleDelete}
                             disabled={deleting}
                         >
-                            <Trash2 />
+                            <TrashIcon />
                             {deleting ? 'Excluindo...' : 'Excluir produto'}
                         </Button>
                     </DialogFooter>

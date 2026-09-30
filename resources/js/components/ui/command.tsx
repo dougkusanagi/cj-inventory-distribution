@@ -1,5 +1,5 @@
 import { Command as CommandPrimitive } from 'cmdk';
-import { SearchIcon } from 'lucide-react';
+import { MagnifyingGlassIcon } from '@phosphor-icons/react';
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
@@ -28,7 +28,7 @@ function CommandInput({
             data-slot="command-input-wrapper"
             className="flex h-11 items-center gap-2 border-b px-3"
         >
-            <SearchIcon className="size-4 shrink-0 opacity-50" />
+            <MagnifyingGlassIcon className="size-5 shrink-0 opacity-50" />
             <CommandPrimitive.Input
                 data-slot="command-input"
                 className={cn(
@@ -90,7 +90,7 @@ function CommandItem({
         <CommandPrimitive.Item
             data-slot="command-item"
             className={cn(
-                "relative flex min-h-10 cursor-default items-center gap-2 rounded-lg px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+                "relative flex min-h-10 cursor-default items-center gap-2 rounded-lg px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5",
                 className,
             )}
             {...props}

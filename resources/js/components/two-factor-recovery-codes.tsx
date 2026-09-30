@@ -1,5 +1,10 @@
 import { Form } from '@inertiajs/react';
-import { Eye, EyeOff, LockKeyhole, RefreshCw } from 'lucide-react';
+import {
+    ArrowsClockwiseIcon,
+    EyeIcon,
+    EyeSlashIcon,
+    LockKeyIcon,
+} from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AlertError from '@/components/alert-error';
 import { Button } from '@/components/ui/button';
@@ -50,13 +55,13 @@ export default function TwoFactorRecoveryCodes({
         }
     }, [recoveryCodesList.length, fetchRecoveryCodes]);
 
-    const RecoveryCodeIconComponent = codesAreVisible ? EyeOff : Eye;
+    const RecoveryCodeIconComponent = codesAreVisible ? EyeSlashIcon : EyeIcon;
 
     return (
         <Card>
             <CardHeader>
                 <CardTitle className="flex gap-3">
-                    <LockKeyhole className="size-4" aria-hidden="true" />
+                    <LockKeyIcon className="size-5" aria-hidden="true" />
                     Códigos de recuperação da autenticação de dois fatores
                 </CardTitle>
                 <CardDescription>
@@ -94,7 +99,7 @@ export default function TwoFactorRecoveryCodes({
                                     disabled={processing}
                                     aria-describedby="regenerate-warning"
                                 >
-                                    <RefreshCw /> Regenerar códigos
+                                    <ArrowsClockwiseIcon /> Regenerar códigos
                                 </Button>
                             )}
                         </Form>

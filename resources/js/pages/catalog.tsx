@@ -1,18 +1,17 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import {
-    Check,
-    Grid2X2,
-    Grid3X3,
-    ImageOff,
-    LayoutGrid,
-    MessageCircle,
-    Search,
-    Shirt,
-    ShoppingBag,
-    Tag,
-    Trash2,
-    X,
-} from 'lucide-react';
+    CheckIcon,
+    GridNineIcon,
+    ImageBrokenIcon,
+    MagnifyingGlassIcon,
+    ShoppingBagIcon,
+    SquaresFourIcon,
+    TShirtIcon,
+    TagIcon,
+    TrashIcon,
+    WhatsappLogoIcon,
+    XIcon,
+} from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, FormEvent } from 'react';
 import CatalogOrderController from '@/actions/App/Http/Controllers/CatalogOrderController';
@@ -185,8 +184,8 @@ function ProductPhoto({
                     onClick={onOpenSelection}
                     aria-label={`Imagem indisponível. Ver sacos de ${product.name}`}
                 >
-                    <ImageOff
-                        className="size-7 text-muted-foreground/70"
+                    <ImageBrokenIcon
+                        className="size-8 text-muted-foreground/70"
                         aria-hidden="true"
                     />
                     <span>Produto sem foto</span>
@@ -308,7 +307,7 @@ function ProductVolumeOptions({
                                         : `Adicionar ${volume.name}`
                                 }
                             >
-                                {selected ? <Trash2 /> : <PaperBag />}
+                                {selected ? <TrashIcon /> : <PaperBag />}
                                 {selected ? 'Remover saco' : 'Adicionar saco'}
                             </Button>
                         </section>
@@ -371,7 +370,7 @@ function BagItems({
         >
             {bag.length === 0 && unavailableVolumeIds.length === 0 ? (
                 <div className="grid justify-items-center gap-3 py-10 text-center">
-                    <ShoppingBag className="size-10 text-muted-foreground" />
+                    <ShoppingBagIcon className="size-10 text-muted-foreground" />
                     <p>Sua sacola está vazia.</p>
                 </div>
             ) : (
@@ -416,7 +415,7 @@ function BagItems({
                                     onClick={() => onRemoveVolume(volumeId)}
                                     aria-label={`Remover saco indisponível ${volumeId} da sacola`}
                                 >
-                                    <Trash2 />
+                                    <TrashIcon />
                                 </Button>
                             </article>
                         );
@@ -447,7 +446,7 @@ function BagItems({
                                 onClick={() => onRemoveVolume(volume.id)}
                                 aria-label={`Remover ${volume.name} de ${product.name}`}
                             >
-                                <Trash2 />
+                                <TrashIcon />
                             </Button>
                         </article>
                     ))}
@@ -514,7 +513,7 @@ function CatalogCheckout({
         return (
             <div className="grid gap-4 border-t border-border p-4 text-center sm:p-6">
                 <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/15 text-highlight">
-                    <MessageCircle className="size-6" />
+                    <WhatsappLogoIcon className="size-7" />
                 </div>
                 <div className="grid gap-2">
                     <h3 className="text-lg font-semibold">
@@ -537,7 +536,7 @@ function CatalogCheckout({
                         data-testid="finalizar-whatsapp"
                         onClick={() => setWhatsappOpened(true)}
                     >
-                        <MessageCircle />
+                        <WhatsappLogoIcon />
                         Abrir WhatsApp
                     </a>
                 </Button>
@@ -650,7 +649,7 @@ function CatalogCheckout({
                     !canPlaceOrder
                 }
             >
-                <MessageCircle />
+                <WhatsappLogoIcon />
                 {form.processing ? 'Registrando pedido...' : 'Registrar pedido'}
             </Button>
             <p className="text-center text-xs leading-5 text-muted-foreground">
@@ -1026,7 +1025,7 @@ export default function Catalog({
                                 onClick={() => setBagOpen(true)}
                                 aria-label={`Ver sacola, ${selectedVolumeIds.length} sacos`}
                             >
-                                <ShoppingBag aria-hidden="true" />
+                                <ShoppingBagIcon aria-hidden="true" />
                                 <span>Sacola</span>
                                 <span
                                     className="flex min-w-6 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-xs font-bold text-primary-foreground transition-transform duration-200 motion-reduce:transition-none"
@@ -1097,8 +1096,8 @@ export default function Catalog({
                                         'bg-secondary text-foreground shadow-sm',
                                 )}
                             >
-                                <Grid2X2
-                                    className="size-4"
+                                <SquaresFourIcon
+                                    className="size-5"
                                     aria-hidden="true"
                                 />
                             </button>
@@ -1113,8 +1112,8 @@ export default function Catalog({
                                         'bg-secondary text-foreground shadow-sm',
                                 )}
                             >
-                                <Grid3X3
-                                    className="size-4"
+                                <GridNineIcon
+                                    className="size-5"
                                     aria-hidden="true"
                                 />
                             </button>
@@ -1137,7 +1136,7 @@ export default function Catalog({
                         </div>
                     ) : loadedProducts.length === 0 ? (
                         <div className="ds-reveal grid justify-items-center gap-3 rounded-[1.5rem] border border-dashed border-border bg-card px-4 py-16 text-center">
-                            <Search className="size-8 text-muted-foreground" />
+                            <MagnifyingGlassIcon className="size-10 text-muted-foreground" />
                             <h2 className="text-xl font-semibold">
                                 Nenhum produto encontrado
                             </h2>
@@ -1231,8 +1230,8 @@ export default function Catalog({
                                                                     tabIndex={0}
                                                                     className="inline-flex min-w-0 items-center gap-1.5 font-medium text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                                                 >
-                                                                    <LayoutGrid
-                                                                        className="size-4"
+                                                                    <SquaresFourIcon
+                                                                        className="size-5"
                                                                         aria-hidden="true"
                                                                     />
                                                                     {catalogOfferTypeLabel(
@@ -1256,8 +1255,8 @@ export default function Catalog({
                                                                         }
                                                                         className="row-start-2 inline-flex min-w-0 items-center gap-1.5 font-medium text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                                                     >
-                                                                        <Tag
-                                                                            className="size-4"
+                                                                        <TagIcon
+                                                                            className="size-5"
                                                                             aria-hidden="true"
                                                                         />
                                                                         Linha{' '}
@@ -1313,8 +1312,8 @@ export default function Catalog({
                                                                     tabIndex={0}
                                                                     className="col-start-2 row-start-2 inline-flex min-w-0 items-center gap-1.5 tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                                                 >
-                                                                    <Shirt
-                                                                        className="size-4"
+                                                                    <TShirtIcon
+                                                                        className="size-5"
                                                                         aria-hidden="true"
                                                                     />
                                                                     {product.volumes.reduce(
@@ -1396,7 +1395,7 @@ export default function Catalog({
                                                     aria-label={`Adicionar ${product.name} ao pedido`}
                                                 >
                                                     {selectedCount > 0 ? (
-                                                        <Check />
+                                                        <CheckIcon weight="bold" />
                                                     ) : (
                                                         <PaperBag />
                                                     )}
@@ -1512,7 +1511,7 @@ export default function Catalog({
                                         className="absolute top-4 right-4 size-11"
                                         aria-label="Fechar seleção de sacos"
                                     >
-                                        <X />
+                                        <XIcon weight="bold" />
                                     </Button>
                                 </DrawerClose>
                             </DrawerHeader>
@@ -1597,7 +1596,7 @@ export default function Catalog({
                                         className="absolute top-4 right-4 size-11"
                                         aria-label="Fechar sacola"
                                     >
-                                        <X />
+                                        <XIcon weight="bold" />
                                     </Button>
                                 </DrawerClose>
                             </DrawerHeader>

@@ -43,10 +43,10 @@ it('creates, lists, updates, and deletes a category through the interface', func
     expect($category->refresh()->name)->toBe('Calça Atualizada E2E')
         ->and($category->slug)->toBe('calca-atualizada-e2e');
 
-    $page->script('window.confirm = () => true;');
-
     $page
         ->click('button[aria-label="Excluir Calça Atualizada E2E"]')
+        ->assertSee('Excluir a categoria Calça Atualizada E2E?')
+        ->click('[role="dialog"] button:has-text("Excluir categoria")')
         ->assertDontSee('Calça Atualizada E2E')
         ->assertSee('Categoria excluída.')
         ->assertNoJavaScriptErrors();

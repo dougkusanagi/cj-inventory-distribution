@@ -211,6 +211,42 @@ test('product catalog paginates filtered products', function () {
             ->where('filters.search', 'Calça paginada'));
 });
 
+test('product catalog filters activation with active as the default', function (?string $status, string $expectedStatus, array $expectedNames) {
+    Product::factory()->create(['name' => 'Produto ativo', 'is_active' => true]);
+    Product::factory()->create(['name' => 'Produto inativo', 'is_active' => false]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('products.index', $status === null ? [] : ['status' => $status]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('filters.status', $expectedStatus)
+            ->where('products.meta.total', count($expectedNames))
+            ->where('products.data', fn ($products) => $products->pluck('name')->sort()->values()->all() === $expectedNames));
+})->with([
+    'default' => [null, 'active', ['Produto ativo']],
+    'active' => ['active', 'active', ['Produto ativo']],
+    'inactive' => ['inactive', 'inactive', ['Produto inativo']],
+    'all' => ['all', 'all', ['Produto ativo', 'Produto inativo']],
+    'invalid' => ['invalid', 'active', ['Produto ativo']],
+    'empty' => ['', 'active', ['Produto ativo']],
+]);
+
+test('activation combines with search and remains in pagination links', function () {
+    Product::factory()->count(13)->create(['name' => 'Calça inativa', 'is_active' => false]);
+    Product::factory()->create(['name' => 'Calça ativa']);
+    Product::factory()->create(['name' => 'Bermuda inativa', 'is_active' => false]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('products.index', ['status' => 'inactive', 'search' => 'Calça', 'page' => 2]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('products.data', 1)
+            ->where('products.data.0.name', 'Calça inativa')
+            ->where('products.meta.total', 13)
+            ->where('products.meta.current_page', 2)
+            ->where('products.links', fn ($links) => $links->contains(fn ($link) => str_contains($link['url'] ?? '', 'status=inactive') && str_contains($link['url'] ?? '', 'page=1'))));
+});
+
 test('product catalog filters products by their latest stock offer type', function () {
     $user = User::factory()->create();
     $replenishmentProduct = Product::factory()->create();
@@ -249,7 +285,7 @@ test('product catalog explains when a product is available for distribution', fu
     $availableOffer->stockVolumes()->create(['total_quantity' => 12]);
 
     $this->actingAs($user)
-        ->get(route('products.index'))
+        ->get(route('products.index', ['status' => 'all']))
         ->assertInertia(fn (Assert $page) => $page
             ->where('products.data.0.available_for_distribution', false)
             ->where('products.data.0.distribution_status', 'Produto oculto')

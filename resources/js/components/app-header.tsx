@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { LayoutGrid, Menu } from 'lucide-react';
+import { ListIcon, SquaresFourIcon } from '@phosphor-icons/react';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
 import AppearanceToggleTab from '@/components/appearance-tabs';
@@ -39,7 +39,7 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Painel',
         href: dashboard(),
-        icon: LayoutGrid,
+        icon: SquaresFourIcon,
     },
 ];
 
@@ -65,7 +65,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                     size="icon"
                                     className="mr-2 h-[34px] w-[34px]"
                                 >
-                                    <Menu className="h-5 w-5" />
+                                    <ListIcon className="h-6 w-6" />
                                 </Button>
                             </SheetTrigger>
                             <SheetContent
@@ -76,7 +76,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                     Menu de navegação
                                 </SheetTitle>
                                 <SheetHeader className="flex justify-start text-left">
-                                    <AppLogoIcon className="h-6 w-6 fill-current text-black dark:text-white" />
+                                    <AppLogoIcon className="h-7 w-7 fill-current text-black dark:text-white" />
                                 </SheetHeader>
                                 <div className="flex h-full flex-1 flex-col space-y-4 p-4">
                                     <div className="flex h-full flex-col justify-between text-sm">

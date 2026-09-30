@@ -26,3 +26,11 @@ A documentação visual viva está em `/design-system`. Ela é a referência de 
 ## Marca
 
 Os arquivos em `public/images/brand/` são derivados dos assets originais de `cj-catalogo`: use a versão colorida em superfícies claras e a branca em fundos escuros.
+
+## Ícones e cartões de escolha
+
+Os ícones vêm da Phosphor no peso `duotone` (ver ADR 0019). Indicadores sem
+significado próprio (check, setas, `X`) usam `weight="bold"`. Escolhas únicas em formato de cartão usam `RadioCard`
+(`components/ui/radio-card.tsx`): ícone em um tile no topo, rótulo curto de uma
+linha, texto em `foreground` suavizado (sem branco puro) e, quando selecionado,
+borda, fundo, tile e marca no canto em `primary`.

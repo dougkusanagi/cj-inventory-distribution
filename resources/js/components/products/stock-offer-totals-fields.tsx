@@ -1,4 +1,4 @@
-import { Minus, Plus } from 'lucide-react';
+import { MinusCircleIcon, PlusCircleIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
 import { PaperBag } from '@/components/icons/paper-bag';
@@ -152,7 +152,7 @@ export function StockOfferTotalsFields({
                             disabled={!bagCount}
                             aria-label="Remover um saco"
                         >
-                            <Minus />
+                            <MinusCircleIcon />
                         </Button>
                         <Input
                             id={bagCountId}
@@ -183,7 +183,7 @@ export function StockOfferTotalsFields({
                             disabled={(bagCount ?? 0) >= maxBagCount}
                             aria-label="Adicionar um saco"
                         >
-                            <Plus />
+                            <PlusCircleIcon />
                         </Button>
                     </div>
                     <InputError message={bagError} />

@@ -1,13 +1,13 @@
 import { Link } from '@inertiajs/react';
 import {
-    ArrowLeftRight,
-    ClipboardCheck,
-    LayoutGrid,
-    Shirt,
-    ShoppingCart,
-    Tags,
-    Warehouse,
-} from 'lucide-react';
+    ArrowsLeftRightIcon,
+    ClipboardTextIcon,
+    ShoppingCartIcon,
+    SquaresFourIcon,
+    TShirtIcon,
+    TagIcon,
+    WarehouseIcon,
+} from '@phosphor-icons/react';
 import AppLogo from '@/components/app-logo';
 import AppearanceToggleTab from '@/components/appearance-tabs';
 import { NavMain } from '@/components/nav-main';
@@ -34,38 +34,38 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Painel',
         href: dashboard(),
-        icon: LayoutGrid,
+        icon: SquaresFourIcon,
         exact: true,
     },
     {
         title: 'Produtos',
         href: productsIndex(),
-        icon: Shirt,
+        icon: TShirtIcon,
     },
     {
         title: 'Categorias',
         href: categoriesIndex(),
-        icon: Tags,
+        icon: TagIcon,
     },
     {
         title: 'Pedidos',
         href: ordersIndex(),
-        icon: ShoppingCart,
+        icon: ShoppingCartIcon,
     },
     {
         title: 'Estoque',
         href: inventoryIndex(),
-        icon: Warehouse,
+        icon: WarehouseIcon,
         items: [
             {
                 title: 'Balanço de estoque',
                 href: inventoryIndex(),
-                icon: ClipboardCheck,
+                icon: ClipboardTextIcon,
             },
             {
                 title: 'Histórico de estoque',
                 href: stockMovementsIndex(),
-                icon: ArrowLeftRight,
+                icon: ArrowsLeftRightIcon,
             },
         ],
     },

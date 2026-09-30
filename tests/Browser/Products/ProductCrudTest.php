@@ -92,6 +92,34 @@ it('renders the refined product card preview with compact stock details', functi
         ->assertNoJavaScriptErrors();
 });
 
+it('filters active and inactive products on desktop and resets the mobile filter to active', function () {
+    Product::factory()->create(['name' => 'Produto ativo do filtro', 'is_active' => true]);
+    Product::factory()->create(['name' => 'Produto inativo do filtro', 'is_active' => false]);
+    $this->actingAs(User::factory()->create());
+
+    visit(route('products.index', [], false))
+        ->resize(1440, 900)
+        ->assertSee('Produto ativo do filtro')
+        ->assertDontSee('Produto inativo do filtro')
+        ->click('#product-filter-status')
+        ->click('Inativos')
+        ->assertSee('Produto inativo do filtro')
+        ->assertDontSee('Produto ativo do filtro')
+        ->resize(390, 844)
+        ->click('button[aria-label="Abrir filtros de produtos"]')
+        ->click('label[for="mobile-product-filter-status-all"]')
+        ->click('button[aria-label="Fechar filtros de produtos"]')
+        ->assertSee('Produto ativo do filtro')
+        ->assertSee('Produto inativo do filtro')
+        ->click('button[aria-label="Abrir filtros de produtos"]')
+        ->click('#product-filter-filter-drawer button:has-text("Limpar filtros")')
+        ->click('button[aria-label="Fechar filtros de produtos"]')
+        ->assertSee('Produto ativo do filtro')
+        ->assertDontSee('Produto inativo do filtro')
+        ->assertScript('document.documentElement.scrollWidth <= document.documentElement.clientWidth')
+        ->assertNoJavaScriptErrors();
+});
+
 it('renders the v3 product card preview with the catalog pattern', function () {
     $user = User::factory()->create();
     $category = Category::factory()->create(['name' => 'Card v3 category']);
@@ -403,7 +431,7 @@ it('keeps a stock quantity when disabling a size is cancelled', function () {
         ->assertSee('Blusa com grade E2E')
         ->assertSee('Grade: Furada')
         ->assertSee('7')
-        ->assertSee('1 saco')
+        ->assertSee('Sacos disponíveis')
         ->assertSee('Produto cadastrado.')
         ->assertNoJavaScriptErrors();
 
@@ -463,7 +491,7 @@ it('edits product details while keeping existing stock read only', function () {
         ->assertRoute('products.index')
         ->assertSee('Produto atualizado E2E')
         ->assertSee('4')
-        ->assertSee('1 saco')
+        ->assertSee('Sacos disponíveis')
         ->assertSee('Produto atualizado.')
         ->assertNoJavaScriptErrors();
 

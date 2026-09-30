@@ -5,6 +5,7 @@ type StockQuantityDetailsProps = {
     availableSackCount: number;
     reservedQuantity: number;
     consumedQuantity: number;
+    layout?: 'rows' | 'columns';
     className?: string;
 };
 
@@ -13,34 +14,74 @@ export function StockQuantityDetails({
     availableSackCount,
     reservedQuantity,
     consumedQuantity,
+    layout = 'rows',
     className,
 }: StockQuantityDetailsProps) {
     return (
         <dl
             className={cn(
-                'grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 gap-y-0.5 text-xs leading-4 tabular-nums',
+                'grid gap-x-3 text-xs leading-4 tabular-nums',
+                layout === 'columns'
+                    ? 'grid-cols-2 gap-y-2'
+                    : 'grid-cols-[minmax(0,1fr)_auto] gap-y-0.5',
                 className,
             )}
         >
-            <dt>Estoque físico</dt>
-            <dd className="text-right font-medium">{physicalQuantity} peças</dd>
-            <dt>Sacos disponíveis</dt>
-            <dd className="text-right font-medium">{availableSackCount}</dd>
+            <div className={layout === 'columns' ? 'grid gap-0.5' : 'contents'}>
+                <dt>Estoque físico</dt>
+                <dd
+                    className={cn(
+                        'font-medium',
+                        layout === 'rows' && 'text-right',
+                    )}
+                >
+                    {physicalQuantity} peças
+                </dd>
+            </div>
+            <div className={layout === 'columns' ? 'grid gap-0.5' : 'contents'}>
+                <dt>Sacos disponíveis</dt>
+                <dd
+                    className={cn(
+                        'font-medium',
+                        layout === 'rows' && 'text-right',
+                    )}
+                >
+                    {availableSackCount}
+                </dd>
+            </div>
             {reservedQuantity > 0 && (
-                <>
+                <div
+                    className={
+                        layout === 'columns' ? 'grid gap-0.5' : 'contents'
+                    }
+                >
                     <dt>Peças reservadas</dt>
-                    <dd className="text-right font-medium">
+                    <dd
+                        className={cn(
+                            'font-medium',
+                            layout === 'rows' && 'text-right',
+                        )}
+                    >
                         {reservedQuantity}
                     </dd>
-                </>
+                </div>
             )}
             {consumedQuantity > 0 && (
-                <>
+                <div
+                    className={
+                        layout === 'columns' ? 'grid gap-0.5' : 'contents'
+                    }
+                >
                     <dt>Peças baixadas</dt>
-                    <dd className="text-right font-medium">
+                    <dd
+                        className={cn(
+                            'font-medium',
+                            layout === 'rows' && 'text-right',
+                        )}
+                    >
                         {consumedQuantity}
                     </dd>
-                </>
+                </div>
             )}
         </dl>
     );

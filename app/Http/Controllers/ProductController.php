@@ -146,6 +146,11 @@ class ProductController extends Controller
         $line = $request->string('line')->toString();
         $image = $request->string('image')->toString();
         $stockOfferType = $request->string('stock_offer_type')->toString();
+        $status = $request->string('status', 'active')->toString();
+
+        if (! in_array($status, ['active', 'inactive', 'all'], true)) {
+            $status = 'active';
+        }
 
         $products = Product::query()
             ->select(['id', 'code', 'model', 'name', 'category_id', 'line', 'notes', 'is_active', 'created_at', 'updated_at'])
@@ -167,6 +172,7 @@ class ProductController extends Controller
                 'offers.stockVolumes.items:id,stock_offer_volume_id,size,sort_order,is_active,quantity',
                 'media',
             ])
+            ->when($status !== 'all', fn (Builder $query) => $query->where('is_active', $status === 'active'))
             ->when($search !== '', function (Builder $query) use ($search): void {
                 NormalizedSearch::apply($query, $search, ['name', 'model', 'code']);
             })
@@ -196,6 +202,7 @@ class ProductController extends Controller
                 'line' => $line,
                 'stock_offer_type' => $stockOfferType,
                 'image' => $image,
+                'status' => $status,
             ],
             'categories' => Category::query()
                 ->orderBy('name')

@@ -1,7 +1,7 @@
-import type { LucideIcon } from 'lucide-react';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
-type CompactTab<T extends string> = { id: T; label: string; icon: LucideIcon };
+type CompactTab<T extends string> = { id: T; label: string; icon: PhosphorIcon };
 
 export function CompactTabs<T extends string>({
     tabs,

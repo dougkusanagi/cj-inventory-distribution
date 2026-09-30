@@ -1,5 +1,10 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import {
+    MagnifyingGlassIcon,
+    PencilSimpleIcon,
+    PlusCircleIcon,
+    TrashIcon,
+} from '@phosphor-icons/react';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { destroy } from '@/actions/App/Http/Controllers/CategoryController';
@@ -51,7 +56,7 @@ export default function CategoriesIndex({
                     </div>
                     <Button asChild>
                         <Link href={create()}>
-                            <Plus />
+                            <PlusCircleIcon />
                             Nova categoria
                         </Link>
                     </Button>
@@ -65,7 +70,7 @@ export default function CategoriesIndex({
                         className="max-w-md"
                     />
                     <Button type="submit" variant="secondary">
-                        <Search />
+                        <MagnifyingGlassIcon />
                         Buscar
                     </Button>
                 </form>
@@ -103,7 +108,7 @@ export default function CategoriesIndex({
                                         href={edit(category.id)}
                                         aria-label={`Editar ${category.name}`}
                                     >
-                                        <Pencil />
+                                        <PencilSimpleIcon />
                                     </Link>
                                 </Button>
                                 <Button
@@ -119,7 +124,7 @@ export default function CategoriesIndex({
                                     }
                                     aria-label={`Excluir ${category.name}`}
                                 >
-                                    <Trash2 />
+                                    <TrashIcon />
                                 </Button>
                             </div>
                         </Card>
@@ -151,7 +156,7 @@ export default function CategoriesIndex({
                             ) : (
                                 <Button asChild>
                                     <Link href={create()}>
-                                        <Plus />
+                                        <PlusCircleIcon />
                                         Criar primeira categoria
                                     </Link>
                                 </Button>

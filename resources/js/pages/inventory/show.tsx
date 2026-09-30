@@ -1,5 +1,10 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { ArrowLeft, ArrowRight, Check, CircleDot } from 'lucide-react';
+import {
+    ArrowLeftIcon,
+    ArrowRightIcon,
+    CheckIcon,
+    RadioButtonIcon,
+} from '@phosphor-icons/react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
 import {
@@ -80,7 +85,10 @@ function CountEditor({
                 e.preventDefault();
                 form.put(
                     update.url({ inventory: inventory.id, item: item.id }),
-                    { preserveScroll: true, onSuccess: onSaved },
+                    {
+                        preserveScroll: true,
+                        onSuccess: onSaved,
+                    },
                 );
             }}
         >
@@ -118,7 +126,7 @@ function CountEditor({
             <div className="flex flex-wrap gap-2">
                 <Button disabled={form.processing} type="submit">
                     {form.processing ? 'Salvando...' : 'Salvar e continuar'}
-                    {!form.processing && <ArrowRight />}
+                    {!form.processing && <ArrowRightIcon weight="bold" />}
                 </Button>
                 <Button type="button" variant="ghost" onClick={onCancel}>
                     Voltar
@@ -198,7 +206,7 @@ export default function InventoryShow({ inventory }: { inventory: Inventory }) {
                         href={index()}
                         className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
                     >
-                        <ArrowLeft className="size-4" />
+                        <ArrowLeftIcon weight="bold" className="size-5" />
                         Balanços
                     </Link>
                     <div className="flex flex-wrap items-center gap-2">
@@ -272,9 +280,9 @@ export default function InventoryShow({ inventory }: { inventory: Inventory }) {
                                 }
                             >
                                 {item.counted_total === null ? (
-                                    <CircleDot />
+                                    <RadioButtonIcon />
                                 ) : (
-                                    <Check />
+                                    <CheckIcon weight="bold" />
                                 )}
                                 {item.counted_total === null
                                     ? 'Aguardando'

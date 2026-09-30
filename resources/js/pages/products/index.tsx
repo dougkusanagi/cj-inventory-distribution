@@ -1,25 +1,27 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
-    ChevronLeft,
-    ChevronRight,
-    Info,
-    Image as ImageIcon,
-    ImageOff,
-    Images,
-    LayoutGrid,
-    LayoutList,
-    Package,
-    PackageOpen,
-    Pencil,
-    Plus,
-    RefreshCw,
-    Shirt,
-    Tag,
-    Sparkles,
-    Table2,
-    Trash2,
-    X,
-} from 'lucide-react';
+    ArrowsClockwiseIcon,
+    CaretLeftIcon,
+    CaretRightIcon,
+    CheckCircleIcon,
+    ImageBrokenIcon,
+    ImageIcon,
+    ImagesIcon,
+    InfoIcon,
+    ListBulletsIcon,
+    PackageIcon,
+    PencilSimpleIcon,
+    PlusCircleIcon,
+    ProhibitInsetIcon,
+    RowsIcon,
+    SparkleIcon,
+    SquaresFourIcon,
+    TShirtIcon,
+    TableIcon,
+    TagIcon,
+    TrashIcon,
+    XIcon,
+} from '@phosphor-icons/react';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { destroy } from '@/actions/App/Http/Controllers/ProductController';
 import { Badge } from '@/components/ui/badge';
@@ -95,6 +97,7 @@ export type ProductsIndexProps = {
         line: string;
         stock_offer_type: string;
         image: string;
+        status: 'active' | 'inactive' | 'all';
     };
     categories: Category[];
 };
@@ -120,6 +123,7 @@ type ProductFilterValues = {
     line: string;
     stock_offer_type: string;
     image: string;
+    status: string;
 };
 
 function paginationLabel(label: string): string {
@@ -173,10 +177,7 @@ function ProductImage({
             )}
             aria-label="Produto sem foto"
         >
-            <ImageOff
-                className={cn('size-5', iconClassName)}
-                strokeWidth={1.25}
-            />
+            <ImageBrokenIcon className={cn('size-5', iconClassName)} />
         </div>
     );
 }
@@ -477,7 +478,7 @@ function RefinedProductCard({
                             aria-label={`Editar ${product.name}`}
                         >
                             <Link href={productEdit(product.id)}>
-                                <Pencil />
+                                <PencilSimpleIcon />
                             </Link>
                         </Button>
                         <Button
@@ -487,11 +488,11 @@ function RefinedProductCard({
                             onClick={() => onDelete(product)}
                             aria-label={`Excluir ${product.name}`}
                         >
-                            <Trash2 />
+                            <TrashIcon />
                         </Button>
                         <Button asChild variant="outline">
                             <Link href={productEdit(product.id)}>
-                                <Pencil />
+                                <PencilSimpleIcon />
                                 Editar
                             </Link>
                         </Button>
@@ -524,7 +525,6 @@ function ProductCardV3({
         Boolean(product.available_for_distribution);
     const isInternalUse =
         Boolean(product.is_active) && product.stock_offer_type === 'new_grade';
-    const sizes = productSizeBreakdown(product);
     const volumes = product.stock_volumes;
 
     return (
@@ -553,7 +553,10 @@ function ProductCardV3({
                                 className="absolute top-3 right-3 z-10 flex size-9 items-center justify-center rounded-full border border-white/50 bg-card/90 text-foreground shadow-sm backdrop-blur transition hover:bg-card focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                 aria-label={`Ver observação de ${product.name}`}
                             >
-                                <Info className="size-4" aria-hidden="true" />
+                                <InfoIcon
+                                    className="size-5"
+                                    aria-hidden="true"
+                                />
                             </button>
                         </PopoverTrigger>
                         <PopoverContent
@@ -582,13 +585,13 @@ function ProductCardV3({
 
             <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
                 <div className="min-w-0">
-                    <p className="truncate font-mono text-xs text-muted-foreground">
+                    <p className="truncate font-mono text-xs leading-4 text-muted-foreground">
                         {product.code}
                         {product.model && ` · Mod. ${product.model}`}
                     </p>
                     <TextLink
                         href={productEdit(product.id)}
-                        className="mt-1 line-clamp-2 rounded-sm text-lg leading-7 font-semibold tracking-tight text-card-foreground no-underline hover:underline"
+                        className="line-clamp-2 rounded-sm text-lg leading-6 font-semibold tracking-tight text-card-foreground no-underline hover:underline"
                     >
                         {product.name}
                     </TextLink>
@@ -597,7 +600,7 @@ function ProductCardV3({
                 {hasStock ? (
                     <div
                         className={cn(
-                            'flex items-center justify-between gap-3 rounded-xl px-3.5 py-3.5',
+                            'grid gap-2 rounded-xl px-3.5 py-3',
                             isAvailable
                                 ? 'bg-emerald-950 text-white dark:bg-emerald-950/80'
                                 : isInternalUse
@@ -605,8 +608,8 @@ function ProductCardV3({
                                   : 'bg-muted',
                         )}
                     >
-                        <div className="min-w-0">
-                            <p className="mb-1.5 truncate text-xs font-semibold text-current/80">
+                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                            <p className="min-w-0 flex-1 text-xs leading-4 font-semibold text-current/80">
                                 {isAvailable
                                     ? 'Disponível para lojistas'
                                     : isInternalUse
@@ -614,31 +617,21 @@ function ProductCardV3({
                                       : (product.distribution_status ??
                                         'Indisponível')}
                             </p>
-                            <p className="text-2xl leading-7 font-bold tabular-nums">
+                            <p className="shrink-0 text-2xl leading-7 font-bold whitespace-nowrap tabular-nums">
                                 {availableQuantity}{' '}
                                 <span className="text-sm font-semibold text-current/75">
                                     peças
                                 </span>
                             </p>
-                            <StockQuantityDetails
-                                className="mt-2 text-current/70"
-                                physicalQuantity={physicalQuantity}
-                                availableSackCount={availableVolumeCount}
-                                reservedQuantity={reservedQuantity}
-                                consumedQuantity={consumedQuantity}
-                            />
                         </div>
-                        <span
-                            className={cn(
-                                'flex size-11 shrink-0 items-center justify-center rounded-full',
-                                isAvailable
-                                    ? 'bg-emerald-400/20 text-emerald-100'
-                                    : 'bg-background text-muted-foreground',
-                            )}
-                            aria-hidden="true"
-                        >
-                            <Package className="size-5" />
-                        </span>
+                        <StockQuantityDetails
+                            layout="columns"
+                            className="border-t border-current/15 pt-2 text-current/80"
+                            physicalQuantity={physicalQuantity}
+                            availableSackCount={availableVolumeCount}
+                            reservedQuantity={reservedQuantity}
+                            consumedQuantity={consumedQuantity}
+                        />
                     </div>
                 ) : (
                     <p className="rounded-xl bg-muted px-3.5 py-3 text-sm font-semibold text-muted-foreground">
@@ -646,49 +639,33 @@ function ProductCardV3({
                     </p>
                 )}
 
-                {(product.stock_offer_type ||
-                    product.line ||
-                    sizes.length > 0) && (
-                    <div className="grid gap-3 rounded-xl bg-muted/30 p-3">
-                        {(product.stock_offer_type || product.line) && (
-                            <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs text-muted-foreground">
-                                {product.stock_offer_type && (
-                                    <span className="inline-flex min-w-0 items-center gap-1.5 truncate font-medium">
-                                        <LayoutGrid
-                                            className="size-4 shrink-0"
-                                            aria-hidden="true"
-                                        />
-                                        <span className="truncate">
-                                            {
-                                                stockOfferTypeCardLabels[
-                                                    product.stock_offer_type
-                                                ]
-                                            }
-                                        </span>
-                                    </span>
-                                )}
-                                {product.line && (
-                                    <span className="inline-flex min-w-0 items-center gap-1.5 truncate font-medium">
-                                        <Tag
-                                            className="size-4 shrink-0"
-                                            aria-hidden="true"
-                                        />
-                                        <span className="truncate">
-                                            Linha{' '}
-                                            {productLineLabels[product.line]}
-                                        </span>
-                                    </span>
-                                )}
-                            </div>
+                {(product.stock_offer_type || product.line) && (
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-xl bg-muted/30 p-3 text-xs text-muted-foreground">
+                        {product.stock_offer_type && (
+                            <span className="inline-flex min-w-0 items-center gap-1.5 truncate font-medium">
+                                <SquaresFourIcon
+                                    className="size-5 shrink-0"
+                                    aria-hidden="true"
+                                />
+                                <span className="truncate">
+                                    {
+                                        stockOfferTypeCardLabels[
+                                            product.stock_offer_type
+                                        ]
+                                    }
+                                </span>
+                            </span>
                         )}
-
-                        {sizes.length > 0 && (
-                            <div className="grid gap-1.5">
-                                <p className="text-xs font-medium text-muted-foreground">
-                                    Tamanhos
-                                </p>
-                                <StockSizeBreakdown sizes={sizes} sizesOnly />
-                            </div>
+                        {product.line && (
+                            <span className="inline-flex min-w-0 items-center gap-1.5 truncate font-medium">
+                                <TagIcon
+                                    className="size-5 shrink-0"
+                                    aria-hidden="true"
+                                />
+                                <span className="truncate">
+                                    Linha {productLineLabels[product.line]}
+                                </span>
+                            </span>
                         )}
                     </div>
                 )}
@@ -707,7 +684,10 @@ function ProductCardV3({
                                 aria-label={`Ver mais informações de ${product.name}`}
                             >
                                 Mais
-                                <ChevronRight aria-hidden="true" />
+                                <CaretRightIcon
+                                    weight="bold"
+                                    aria-hidden="true"
+                                />
                             </Button>
                         </DrawerTrigger>
                         <Button asChild variant="secondary" size="sm">
@@ -715,7 +695,7 @@ function ProductCardV3({
                                 href={productEdit(product.id)}
                                 aria-label={`Editar ${product.name}`}
                             >
-                                <Pencil />
+                                <PencilSimpleIcon />
                                 Editar
                             </Link>
                         </Button>
@@ -746,7 +726,7 @@ function ProductCardV3({
                                 className="absolute top-3 right-3 text-muted-foreground"
                                 aria-label="Fechar detalhes do produto"
                             >
-                                <X />
+                                <XIcon weight="bold" />
                             </Button>
                         </DrawerClose>
                         <div
@@ -840,7 +820,7 @@ function ProductCardV3({
                                 onClick={() => onDelete(product)}
                                 aria-label={`Excluir ${product.name}`}
                             >
-                                <Trash2 />
+                                <TrashIcon />
                                 Excluir produto
                             </Button>
                         </DrawerFooter>
@@ -976,7 +956,7 @@ function ProductCompactCard({
                             href={productEdit(product.id)}
                             aria-label={`Editar ${product.name}`}
                         >
-                            <Pencil />
+                            <PencilSimpleIcon />
                             Editar
                         </Link>
                     </Button>
@@ -987,7 +967,7 @@ function ProductCompactCard({
                         onClick={() => onDelete(product)}
                         aria-label={`Excluir ${product.name}`}
                     >
-                        <Trash2 />
+                        <TrashIcon />
                     </Button>
                 </div>
             </div>
@@ -1165,7 +1145,7 @@ function ProductTable({
                                         onClick={() => onDelete(product)}
                                         aria-label={`Excluir ${product.name}`}
                                     >
-                                        <Trash2 />
+                                        <TrashIcon />
                                     </Button>
                                 </div>
                             </td>
@@ -1219,6 +1199,7 @@ export default function ProductsIndex({
         line: filters.line || 'all',
         stock_offer_type: filters.stock_offer_type || 'all',
         image: filters.image || 'all',
+        status: filters.status,
     });
     const filtersMounted = useRef(false);
     const [galleryProduct, setGalleryProduct] = useState<Product | null>(null);
@@ -1256,6 +1237,23 @@ export default function ProductsIndex({
     }, [filterValues]);
 
     const filterFields: FilterField[] = [
+        {
+            name: 'status',
+            label: 'Status do produto',
+            value: filterValues.status,
+            defaultValue: 'active',
+            allLabel: 'Todos',
+            allIcon: ListBulletsIcon,
+            display: 'cards',
+            options: [
+                { value: 'active', label: 'Ativos', icon: CheckCircleIcon },
+                {
+                    value: 'inactive',
+                    label: 'Inativos',
+                    icon: ProhibitInsetIcon,
+                },
+            ],
+        },
         categoryFilterField(filterValues.category, categories),
         lineFilterField(filterValues.line, [
             { value: 'slim', label: 'Slim' },
@@ -1266,19 +1264,19 @@ export default function ProductsIndex({
             label: 'Tipo de grade',
             value: filterValues.stock_offer_type,
             allLabel: 'Todas as grades',
-            allIcon: LayoutGrid,
+            allIcon: SquaresFourIcon,
             display: 'cards',
             options: [
                 {
                     value: 'replenishment',
                     label: 'Reposição',
-                    icon: RefreshCw,
+                    icon: ArrowsClockwiseIcon,
                 },
-                { value: 'new_grade', label: 'Grade Nova', icon: Sparkles },
+                { value: 'new_grade', label: 'Grade Nova', icon: SparkleIcon },
                 {
                     value: 'broken_grade',
                     label: 'Grade Furada',
-                    icon: PackageOpen,
+                    icon: PackageIcon,
                 },
             ],
         },
@@ -1287,11 +1285,12 @@ export default function ProductsIndex({
             label: 'Fotos',
             value: filterValues.image,
             allLabel: 'Com ou sem foto',
-            allIcon: Images,
+            allCardLabel: 'Todas',
+            allIcon: ImagesIcon,
             display: 'cards',
             options: [
                 { value: 'with', label: 'Com foto', icon: ImageIcon },
-                { value: 'without', label: 'Sem foto', icon: ImageOff },
+                { value: 'without', label: 'Sem foto', icon: ImageBrokenIcon },
             ],
         },
     ];
@@ -1373,7 +1372,7 @@ export default function ProductsIndex({
                     </div>
                     <Button asChild size="lg" className="w-full sm:w-fit">
                         <Link href={productCreate()}>
-                            <Plus />
+                            <PlusCircleIcon />
                             Novo produto
                         </Link>
                     </Button>
@@ -1399,6 +1398,7 @@ export default function ProductsIndex({
                             line: 'all',
                             stock_offer_type: 'all',
                             image: 'all',
+                            status: 'active',
                         })
                     }
                     resultCount={products.meta.total}
@@ -1430,7 +1430,7 @@ export default function ProductsIndex({
                                             aria-label="Visualização em tabela"
                                             className="flex-1 px-3 data-[state=on]:bg-secondary md:flex-none"
                                         >
-                                            <Table2 />
+                                            <TableIcon />
                                             Tabela
                                         </ToggleGroupItem>
                                     )}
@@ -1439,7 +1439,7 @@ export default function ProductsIndex({
                                         aria-label="Visualização em cards"
                                         className="flex-1 px-3 data-[state=on]:bg-secondary md:flex-none"
                                     >
-                                        <LayoutList />
+                                        <RowsIcon />
                                         Cards
                                     </ToggleGroupItem>
                                     <ToggleGroupItem
@@ -1447,7 +1447,7 @@ export default function ProductsIndex({
                                         aria-label="Visualização com 2 cards por linha"
                                         className="flex-1 px-3 data-[state=on]:bg-secondary md:flex-none"
                                     >
-                                        <LayoutGrid />2 por linha
+                                        <SquaresFourIcon />2 por linha
                                     </ToggleGroupItem>
                                 </ToggleGroup>
                             </div>
@@ -1515,7 +1515,7 @@ export default function ProductsIndex({
                     <Card className="rounded-[2rem] border-dashed shadow-sm">
                         <CardHeader className="items-center pt-12 text-center">
                             <span className="mb-2 flex size-16 items-center justify-center rounded-3xl bg-primary text-primary-foreground">
-                                <Shirt className="size-7" />
+                                <TShirtIcon className="size-8" />
                             </span>
                             <CardTitle className="text-2xl tracking-tight">
                                 Seu catálogo começa aqui
@@ -1529,7 +1529,7 @@ export default function ProductsIndex({
                         <CardContent className="flex justify-center pb-12">
                             <Button asChild>
                                 <Link href={productCreate()}>
-                                    <Plus />
+                                    <PlusCircleIcon />
                                     Cadastrar primeiro produto
                                 </Link>
                             </Button>
@@ -1578,9 +1578,9 @@ export default function ProductsIndex({
                                     {link.url ? (
                                         <Link href={link.url} preserveScroll>
                                             {isPrevious ? (
-                                                <ChevronLeft />
+                                                <CaretLeftIcon weight="bold" />
                                             ) : isNext ? (
-                                                <ChevronRight />
+                                                <CaretRightIcon weight="bold" />
                                             ) : null}
                                             <span
                                                 className={
@@ -1628,7 +1628,7 @@ export default function ProductsIndex({
                             onClick={handleDelete}
                             disabled={deleting}
                         >
-                            <Trash2 />
+                            <TrashIcon />
                             {deleting ? 'Excluindo...' : 'Excluir produto'}
                         </Button>
                     </DialogFooter>

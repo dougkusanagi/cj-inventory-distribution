@@ -1,5 +1,5 @@
 import useEmblaCarousel from 'embla-carousel-react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useState } from 'react';
 
 type ImageCarouselProps = {
@@ -156,7 +156,8 @@ export default function ImageCarousel({
                         onClick={() => emblaApi?.scrollPrev()}
                         className={`absolute ${compact ? 'left-2' : 'left-4'} top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-foreground/65 text-background shadow-sm transition-colors duration-200 hover:bg-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
                     >
-                        <ChevronLeft
+                        <CaretLeftIcon
+                            weight="bold"
                             className={compact ? 'size-4' : 'size-5'}
                         />
                     </button>
@@ -167,7 +168,8 @@ export default function ImageCarousel({
                         onClick={() => emblaApi?.scrollNext()}
                         className={`absolute ${compact ? 'right-2' : 'right-4'} top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-foreground/65 text-background shadow-sm transition-colors duration-200 hover:bg-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
                     >
-                        <ChevronRight
+                        <CaretRightIcon
+                            weight="bold"
                             className={compact ? 'size-4' : 'size-5'}
                         />
                     </button>

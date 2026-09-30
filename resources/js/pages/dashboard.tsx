@@ -1,14 +1,14 @@
 import { Head, Link } from '@inertiajs/react';
 import {
-    AlertTriangle,
-    ArrowRight,
-    Camera,
-    ClipboardList,
-    Layers3,
-    Plus,
-    Shirt,
-    Warehouse,
-} from 'lucide-react';
+    ArrowRightIcon,
+    CameraIcon,
+    ClipboardTextIcon,
+    PlusCircleIcon,
+    StackIcon,
+    TShirtIcon,
+    WarehouseIcon,
+    WarningIcon,
+} from '@phosphor-icons/react';
 import { PageHero } from '@/components/page-hero';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,7 +34,7 @@ type MetricCardProps = {
     label: string;
     value: string;
     description: string;
-    icon: typeof Shirt;
+    icon: typeof TShirtIcon;
     featured?: boolean;
 };
 
@@ -62,7 +62,7 @@ function MetricCard({
                                 : 'flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary'
                         }
                     >
-                        <Icon className="size-5" strokeWidth={1.7} />
+                        <Icon className="size-5" />
                     </span>
                     <span
                         className={
@@ -117,7 +117,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                         <>
                             <Button asChild className="w-full sm:w-fit">
                                 <Link href={productCreate()}>
-                                    <Plus />
+                                    <PlusCircleIcon />
                                     Novo produto
                                 </Link>
                             </Button>
@@ -128,7 +128,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                             >
                                 <Link href={productsIndex()}>
                                     Abrir catálogo
-                                    <ArrowRight />
+                                    <ArrowRightIcon weight="bold" />
                                 </Link>
                             </Button>
                         </>
@@ -143,20 +143,20 @@ export default function Dashboard({ stats }: DashboardProps) {
                         label="produtos cadastrados"
                         value={stats.total.toString().padStart(2, '0')}
                         description="Peças cadastradas no catálogo."
-                        icon={Shirt}
+                        icon={TShirtIcon}
                         featured
                     />
                     <MetricCard
                         label="com fotos"
                         value={stats.withPhotos.toString().padStart(2, '0')}
                         description="Peças prontas para identificação visual."
-                        icon={Camera}
+                        icon={CameraIcon}
                     />
                     <MetricCard
                         label="com grade de tamanhos"
                         value={stats.withSizes.toString().padStart(2, '0')}
                         description="Produtos com tamanhos cadastrados."
-                        icon={Layers3}
+                        icon={StackIcon}
                     />
                     <MetricCard
                         label="produtos com estoque cadastrado"
@@ -165,7 +165,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                             stats.stockUnits +
                             ' peças disponíveis para distribuição.'
                         }
-                        icon={Warehouse}
+                        icon={WarehouseIcon}
                     />
                 </section>
 
@@ -187,7 +187,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                             <Button variant="secondary" asChild>
                                 <Link href={productsIndex()}>
                                     Revisar produtos
-                                    <ArrowRight />
+                                    <ArrowRightIcon weight="bold" />
                                 </Link>
                             </Button>
                         </CardContent>
@@ -196,7 +196,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                     <Card className="ds-reveal ds-lift rounded-[1.75rem] border-primary/25 bg-primary/10 shadow-none [--reveal-delay:80ms]">
                         <CardContent className="flex h-full items-center gap-4 p-6">
                             <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-                                <Warehouse className="size-6" />
+                                <WarehouseIcon className="size-7" />
                             </span>
                             <div className="grid gap-1">
                                 <span className="text-xs font-semibold tracking-[0.16em] text-highlight uppercase">
@@ -226,7 +226,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                         <CardContent className="grid gap-6 p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
                             <div className="grid min-w-0 gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start">
                                 <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-                                    <ClipboardList className="size-6" />
+                                    <ClipboardTextIcon className="size-7" />
                                 </span>
                                 <div className="grid min-w-0 gap-2">
                                     <h2
@@ -242,7 +242,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                                     </p>
                                     {stats.ordersWithDivergences > 0 && (
                                         <p className="flex items-center gap-2 text-sm font-medium text-destructive">
-                                            <AlertTriangle className="size-4 shrink-0" />
+                                            <WarningIcon className="size-5 shrink-0" />
                                             {stats.ordersWithDivergences}{' '}
                                             {stats.ordersWithDivergences === 1
                                                 ? 'pedido tem divergência aberta.'
@@ -254,7 +254,7 @@ export default function Dashboard({ stats }: DashboardProps) {
                             <Button asChild className="w-full lg:w-fit">
                                 <Link href={ordersIndex()}>
                                     Abrir pedidos
-                                    <ArrowRight />
+                                    <ArrowRightIcon weight="bold" />
                                 </Link>
                             </Button>
                         </CardContent>

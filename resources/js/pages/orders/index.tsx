@@ -1,5 +1,9 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Plus, Search, X } from 'lucide-react';
+import {
+    MagnifyingGlassIcon,
+    PlusCircleIcon,
+    XIcon,
+} from '@phosphor-icons/react';
 import type { FormEvent } from 'react';
 import { OrderCard } from '@/components/orders/order-card';
 import { Button } from '@/components/ui/button';
@@ -74,7 +78,7 @@ export default function OrdersIndex({
                     </div>
                     <Button asChild>
                         <Link href={create()}>
-                            <Plus />
+                            <PlusCircleIcon />
                             Novo pedido
                         </Link>
                     </Button>
@@ -108,7 +112,7 @@ export default function OrdersIndex({
                         </SelectContent>
                     </Select>
                     <Button type="submit" variant="secondary">
-                        <Search />
+                        <MagnifyingGlassIcon />
                         Filtrar
                     </Button>
                     {(filters.search !== '' || filters.status !== '') && (
@@ -123,7 +127,7 @@ export default function OrdersIndex({
                                 )
                             }
                         >
-                            <X />
+                            <XIcon weight="bold" />
                             Limpar filtros
                         </Button>
                     )}
@@ -159,7 +163,7 @@ export default function OrdersIndex({
                             ) : (
                                 <Button asChild>
                                     <Link href={create()}>
-                                        <Plus />
+                                        <PlusCircleIcon />
                                         Registrar primeiro pedido
                                     </Link>
                                 </Button>

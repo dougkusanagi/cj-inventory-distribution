@@ -1,5 +1,4 @@
-import { Shirt } from 'lucide-react';
-import { PlusShirt, SlimShirt } from '@/components/icons/shirt-fit';
+import { PlusTee, SlimPlusTee, SlimTee } from '@/components/icons/shirt-fit';
 import type { FilterField } from '@/components/search-filter-bar';
 
 export function categoryFilterField(
@@ -28,15 +27,15 @@ export function lineFilterField(
         label: 'Linha comercial',
         value,
         allLabel: 'Slim e Plus',
-        allIcon: Shirt,
+        allIcon: SlimPlusTee,
         display: 'cards',
         options: lines.map((line) => ({
             ...line,
             icon:
                 line.value === 'slim'
-                    ? SlimShirt
+                    ? SlimTee
                     : line.value === 'plus'
-                      ? PlusShirt
+                      ? PlusTee
                       : undefined,
         })),
     };

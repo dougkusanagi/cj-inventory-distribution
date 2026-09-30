@@ -1,15 +1,15 @@
 import {
-    ArrowDown,
-    ArrowUp,
-    Copy,
-    Ellipsis,
-    Eye,
-    EyeOff,
-    ListCheck,
-    ListX,
-    Plus,
-    Trash2,
-} from 'lucide-react';
+    ArrowDownIcon,
+    ArrowUpIcon,
+    CopyIcon,
+    DotsThreeIcon,
+    EyeIcon,
+    EyeSlashIcon,
+    ListChecksIcon,
+    ListDashesIcon,
+    PlusCircleIcon,
+    TrashIcon,
+} from '@phosphor-icons/react';
 import { useState } from 'react';
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import InputError from '@/components/input-error';
@@ -607,7 +607,11 @@ export function StockOfferVolumeEditor({
                                     setIsCustomEditorOpen((current) => !current)
                                 }
                             >
-                                {isCustomEditorOpen ? <EyeOff /> : <Eye />}
+                                {isCustomEditorOpen ? (
+                                    <EyeSlashIcon />
+                                ) : (
+                                    <EyeIcon />
+                                )}
                                 {isCustomEditorOpen
                                     ? 'Ocultar edição'
                                     : 'Editar tamanhos'}
@@ -666,7 +670,7 @@ export function StockOfferVolumeEditor({
                                             className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                                             aria-label={`Remover tamanho ${itemIndex + 1} de todos os sacos`}
                                         >
-                                            <Trash2 />
+                                            <TrashIcon />
                                         </Button>
                                     </div>
                                 ))}
@@ -677,7 +681,7 @@ export function StockOfferVolumeEditor({
                                     disabled={hasLockedVolumes}
                                     className="w-full sm:w-fit"
                                 >
-                                    <Plus />
+                                    <PlusCircleIcon />
                                     Adicionar tamanho
                                 </Button>
                             </div>
@@ -744,7 +748,7 @@ export function StockOfferVolumeEditor({
                                             }
                                             aria-label={`Mover Saco ${volumeIndex + 1} para cima`}
                                         >
-                                            <ArrowUp />
+                                            <ArrowUpIcon weight="bold" />
                                         </Button>
                                         <Button
                                             type="button"
@@ -761,7 +765,7 @@ export function StockOfferVolumeEditor({
                                             }
                                             aria-label={`Mover Saco ${volumeIndex + 1} para baixo`}
                                         >
-                                            <ArrowDown />
+                                            <ArrowDownIcon weight="bold" />
                                         </Button>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -773,7 +777,7 @@ export function StockOfferVolumeEditor({
                                                     disabled={isLocked}
                                                     aria-label={`Mais ações para o Saco ${volumeIndex + 1}`}
                                                 >
-                                                    <Ellipsis />
+                                                    <DotsThreeIcon weight="bold" />
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
@@ -785,7 +789,7 @@ export function StockOfferVolumeEditor({
                                                         )
                                                     }
                                                 >
-                                                    <Copy />
+                                                    <CopyIcon />
                                                     Duplicar saco
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
@@ -800,7 +804,7 @@ export function StockOfferVolumeEditor({
                                                         )
                                                     }
                                                 >
-                                                    <Trash2 />
+                                                    <TrashIcon />
                                                     Remover saco
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
@@ -910,7 +914,7 @@ export function StockOfferVolumeEditor({
                                                 }
                                                 disabled={isLocked}
                                             >
-                                                <ListCheck />
+                                                <ListChecksIcon />
                                                 Marcar todos
                                             </Button>
                                             <Button
@@ -925,7 +929,7 @@ export function StockOfferVolumeEditor({
                                                 }
                                                 disabled={isLocked}
                                             >
-                                                <ListX />
+                                                <ListDashesIcon />
                                                 Desmarcar todos
                                             </Button>
                                         </>
@@ -1048,7 +1052,7 @@ export function StockOfferVolumeEditor({
                 onClick={addVolume}
                 className="w-full sm:w-fit"
             >
-                <Plus />
+                <PlusCircleIcon />
                 Adicionar saco
             </Button>
             <ConfirmationDialog
