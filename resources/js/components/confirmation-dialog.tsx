@@ -16,6 +16,9 @@ type ConfirmationDialogProps = {
     title: ReactNode;
     description: ReactNode;
     confirmLabel: string;
+    confirmIcon?: ReactNode;
+    cancelLabel?: string;
+    cancelVariant?: 'outline' | 'ghost';
     onConfirm: () => void;
     destructive?: boolean;
     disabled?: boolean;
@@ -28,6 +31,9 @@ export function ConfirmationDialog({
     description,
     confirmLabel,
     onConfirm,
+    confirmIcon,
+    cancelLabel = 'Voltar',
+    cancelVariant = 'outline',
     destructive = false,
     disabled = false,
 }: ConfirmationDialogProps) {
@@ -40,8 +46,12 @@ export function ConfirmationDialog({
                 </DialogHeader>
                 <DialogFooter>
                     <DialogClose asChild>
-                        <Button type="button" variant="outline">
-                            Voltar
+                        <Button
+                            type="button"
+                            variant={cancelVariant}
+                            disabled={disabled}
+                        >
+                            {cancelLabel}
                         </Button>
                     </DialogClose>
                     <Button
@@ -50,6 +60,7 @@ export function ConfirmationDialog({
                         onClick={onConfirm}
                         disabled={disabled}
                     >
+                        {confirmIcon}
                         {confirmLabel}
                     </Button>
                 </DialogFooter>
