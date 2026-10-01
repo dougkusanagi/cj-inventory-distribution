@@ -207,6 +207,21 @@ configuração de autenticação entre execuções, sem copiá-la para o reposit
 ou logs. Não é necessário instalar dependências da aplicação nesse runner.
 O modelo é o padrão da CLI; não se usa uma integração direta com API.
 
+Neste servidor de desenvolvimento, o runner está instalado em
+`/home/servidor/.local/share/github-runners/inventario-changelog`, registrado
+como `inventario-dev-codex-changelog`. O serviço systemd do usuário `servidor`
+usa o login ChatGPT existente em `/home/servidor/.codex_mkt`; as credenciais
+permanecem fora do repositório. O serviço inicia automaticamente e o usuário
+possui linger habilitado, mantendo o runner ativo após logout e reinício.
+
+Gerenciamento pelo usuário `servidor`, sem sudo:
+
+```bash
+systemctl --user status inventario-codex-changelog.service
+systemctl --user restart inventario-codex-changelog.service
+journalctl --user -u inventario-codex-changelog.service -n 50
+```
+
 Use o runner somente para workflows confiáveis deste repositório. O workflow
 faz checkout da `master`, nunca do código do PR. PRs de forks não executam
 automaticamente no runner; depois da revisão, use o acionamento manual.
