@@ -21,6 +21,7 @@ cd "$REPOSITORY_ROOT"
 printf 'Executando as validações locais.\n'
 
 php artisan config:clear --ansi
+python3 -m unittest discover -s scripts/changelog -p "test_*.py"
 composer lint:check
 vp check
 vp run types:check

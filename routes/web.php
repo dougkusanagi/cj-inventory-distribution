@@ -3,6 +3,7 @@
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CatalogOrderController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryCountController;
 use App\Http\Controllers\OrderController;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', CatalogController::class)->name('home');
 Route::get('catalog', CatalogController::class)->name('catalog');
+Route::get('novidades', ChangelogController::class)->name('changelog');
 Route::post('catalog/pedidos', CatalogOrderController::class)
     ->middleware('throttle:10,1')
     ->name('catalog-orders.store');

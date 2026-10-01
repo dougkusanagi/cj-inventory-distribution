@@ -1,4 +1,4 @@
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
     CheckIcon,
     GridNineIcon,
@@ -54,7 +54,7 @@ import type {
     CatalogPreviewProduct,
 } from '@/lib/catalog-preview';
 import { cn } from '@/lib/utils';
-import { catalog as catalogRoute } from '@/routes';
+import { changelog, catalog as catalogRoute } from '@/routes';
 
 const CATALOG_BAG_STORAGE_KEY = 'catalog-bag';
 const CATALOG_GRID_STORAGE_KEY = 'catalog-grid-columns';
@@ -1456,6 +1456,12 @@ export default function Catalog({
                     )}
                     <footer className="mt-12 border-t border-border/70 pt-6 pb-[env(safe-area-inset-bottom)] text-center text-xs tracking-wide text-muted-foreground">
                         <p>Crônicas Jeans · Distribuição de estoque</p>
+                        <Link
+                            href={changelog()}
+                            className="mt-2 inline-flex min-h-11 items-center underline underline-offset-4"
+                        >
+                            O que há de novo
+                        </Link>
                     </footer>
                 </main>
                 <p role="status" aria-live="polite" className="sr-only">

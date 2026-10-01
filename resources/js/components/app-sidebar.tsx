@@ -8,6 +8,7 @@ import {
     TagIcon,
     DropIcon,
     WarehouseIcon,
+    NewspaperIcon,
 } from '@phosphor-icons/react';
 import AppLogo from '@/components/app-logo';
 import AppearanceToggleTab from '@/components/appearance-tabs';
@@ -23,7 +24,7 @@ import {
     SidebarMenuItem,
     useSidebar,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
+import { changelog, dashboard } from '@/routes';
 import { index as productsIndex } from '@/routes/products';
 import { index as washTypesIndex } from '@/routes/wash-types';
 import { index as categoriesIndex } from '@/routes/categories';
@@ -72,6 +73,7 @@ const mainNavItems: NavItem[] = [
             },
         ],
     },
+    { title: 'Novidades', href: changelog(), icon: NewspaperIcon },
 ];
 
 export function AppSidebar() {

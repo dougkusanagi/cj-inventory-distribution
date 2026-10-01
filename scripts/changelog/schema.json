@@ -1,0 +1,23 @@
+{
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["title", "changes"],
+    "properties": {
+        "title": { "type": "string" },
+        "changes": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["category", "text"],
+                "properties": {
+                    "category": {
+                        "type": "string",
+                        "enum": ["added", "improved", "fixed"]
+                    },
+                    "text": { "type": "string" }
+                }
+            }
+        }
+    }
+}
