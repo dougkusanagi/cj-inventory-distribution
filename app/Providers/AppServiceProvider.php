@@ -24,7 +24,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->scoped(ModelAuditObserver::class);
     }
 
     /**
@@ -33,8 +33,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
-
-        $observer = new ModelAuditObserver;
 
         foreach ([
             Product::class,
@@ -46,7 +44,7 @@ class AppServiceProvider extends ServiceProvider
             CatalogSetting::class,
             User::class,
         ] as $model) {
-            $model::observe($observer);
+            $model::observe(ModelAuditObserver::class);
         }
     }
 

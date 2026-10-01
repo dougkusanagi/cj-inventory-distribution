@@ -60,7 +60,7 @@ type SearchFilterBarProps = {
     className?: string;
 };
 
-const searchPlaceholder = 'Buscar por nome, modelo ou código';
+const searchPlaceholder = 'Nome, modelo ou código';
 const filterTriggerClassName =
     'h-10 w-full justify-between rounded-xl border-input bg-background px-3 text-sm font-normal text-foreground shadow-xs hover:bg-background hover:text-foreground dark:bg-background dark:hover:bg-background data-[size=default]:h-10';
 const filterTriggerLabelledClassName = 'h-11 data-[size=default]:h-11';
@@ -263,7 +263,7 @@ export function SearchFilterBar({
             : undefined,
     }));
     const desktopStyle = {
-        '--filter-columns': `minmax(0,1.4fr) repeat(${fields.length}, minmax(9rem,1fr)) auto`,
+        '--filter-columns': `minmax(0,1.4fr) repeat(${fields.length}, minmax(9rem,1fr))`,
     } as CSSProperties;
 
     return (
@@ -342,8 +342,23 @@ export function SearchFilterBar({
                         />
                     );
                 })}
+            </div>
+            <div className="mt-3 hidden min-h-9 items-center justify-between gap-3 border-t border-border/60 pt-3 md:flex">
+                <p role="status" className="text-sm text-muted-foreground">
+                    <strong className="text-foreground">{resultCount}</strong>{' '}
+                    {resultCount === 1
+                        ? 'produto encontrado'
+                        : 'produtos encontrados'}
+                    {activeCount > 0 &&
+                        ` · ${activeCount} ${activeCount === 1 ? 'filtro aplicado' : 'filtros aplicados'}`}
+                </p>
                 {hasFilters && (
-                    <Button type="button" variant="ghost" onClick={onClear}>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={onClear}
+                    >
                         <XIcon weight="bold" />
                         Limpar filtros
                     </Button>

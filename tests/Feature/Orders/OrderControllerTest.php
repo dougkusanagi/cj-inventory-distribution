@@ -6,6 +6,7 @@ use App\Enums\StockOfferType;
 use App\Models\CatalogSetting;
 use App\Models\Order;
 use App\Models\OrderEvent;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\StockOfferVolume;
 use App\Models\User;
@@ -29,6 +30,44 @@ function availableOrderVolume(): StockOfferVolume
 test('guests are redirected when visiting orders', function () {
     $this->get(route('orders.index'))->assertRedirect(route('login'));
 });
+
+test('terminal orders reject editing cancellation and completion without changing stock or history', function (OrderStatus $status, string $operation, string $message) {
+    $user = User::factory()->create();
+    $order = Order::factory()->create(['status' => $status, 'store_name' => 'Loja original']);
+    $volume = availableOrderVolume();
+    OrderItem::factory()->for($order)->create([
+        'stock_offer_volume_id' => $volume->id,
+        'product_id' => $volume->offer->product_id,
+        'total_quantity' => 12,
+        'separated_at' => now(), 'checked_at' => now(),
+    ]);
+    if ($status === OrderStatus::Completed) {
+        $volume->refresh()->update(['consumed_at' => now()]);
+    }
+    $before = $order->refresh()->getAttributes();
+    $stockBefore = $volume->refresh()->getAttributes();
+    $this->actingAs($user);
+
+    if ($operation === 'update') {
+        $this->put(route('orders.update', $order), ['store_name' => 'Outra loja', 'requester_name' => 'Outra pessoa'])
+            ->assertInvalid(['order' => $message]);
+    } else {
+        $this->post(route('orders.'.$operation, $order), ['reason' => 'Nova tentativa'])
+            ->assertInvalid(['order' => $message]);
+    }
+
+    expect($order->refresh()->getAttributes())->toBe($before);
+    expect($volume->refresh()->getAttributes())->toBe($stockBefore);
+    $this->assertDatabaseEmpty('order_events');
+    $this->assertDatabaseEmpty('stock_movements');
+})->with([
+    'edit completed' => [OrderStatus::Completed, 'update', 'Somente pedidos pendentes podem ser editados.'],
+    'edit canceled' => [OrderStatus::Canceled, 'update', 'Somente pedidos pendentes podem ser editados.'],
+    'cancel completed' => [OrderStatus::Completed, 'cancel', 'Somente pedidos pendentes podem ser cancelados.'],
+    'cancel canceled' => [OrderStatus::Canceled, 'cancel', 'Somente pedidos pendentes podem ser cancelados.'],
+    'complete completed' => [OrderStatus::Completed, 'complete', 'Somente pedidos pendentes podem ser finalizados.'],
+    'complete canceled' => [OrderStatus::Canceled, 'complete', 'Somente pedidos pendentes podem ser finalizados.'],
+]);
 
 test('order list and edit routes render their matching screens', function () {
     $order = Order::factory()->create([

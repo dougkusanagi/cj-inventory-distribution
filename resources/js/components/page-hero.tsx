@@ -24,7 +24,7 @@ export function PageHero({
     return (
         <header
             className={cn(
-                'ds-reveal relative isolate overflow-hidden rounded-3xl border border-border/70 bg-card px-6 py-8 shadow-[inset_0_1px_0_0_color-mix(in_oklab,var(--foreground)_6%,transparent)] sm:px-10 sm:py-12',
+                'ds-reveal relative isolate overflow-hidden rounded-3xl border border-border/70 bg-card px-5 py-6 shadow-[inset_0_1px_0_0_color-mix(in_oklab,var(--foreground)_6%,transparent)] sm:px-10 sm:py-12',
                 className,
             )}
         >
@@ -34,7 +34,15 @@ export function PageHero({
             />
             <div
                 aria-hidden="true"
+                className="pointer-events-none absolute top-0 left-1/2 -z-10 h-24 w-[min(100%,70rem)] -translate-x-1/2 bg-[radial-gradient(ellipse_50%_100%_at_50%_0%,color-mix(in_oklab,var(--primary)_20%,transparent),transparent)]"
+            />
+            <div
+                aria-hidden="true"
                 className="pointer-events-none absolute inset-x-8 top-0 h-px bg-linear-to-r from-transparent via-primary/70 to-transparent sm:inset-x-14"
+            />
+            <div
+                aria-hidden="true"
+                className="pointer-events-none absolute top-0 left-1/2 h-px w-[min(50%,24rem)] -translate-x-1/2 bg-linear-to-r from-transparent via-white/70 to-transparent"
             />
             <div
                 className={cn(

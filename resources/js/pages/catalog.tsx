@@ -42,14 +42,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetFooter,
-    SheetHeader,
-    SheetTitle,
-} from '@/components/ui/sheet';
-import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
@@ -192,7 +184,11 @@ function ProductPhoto({
                     <span>Produto sem foto</span>
                 </button>
             )}
-            <span className="absolute right-3 bottom-3 rounded-full border border-white/50 bg-card/90 px-3 py-1 text-xs font-semibold shadow-sm backdrop-blur">
+            <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-1/4 bg-linear-to-t from-black/25 to-transparent"
+            />
+            <span className="pointer-events-none absolute bottom-3 left-3 rounded-full border border-white/20 bg-black/65 px-3 py-1 text-xs font-semibold text-white shadow-sm backdrop-blur-md">
                 {product.category}
             </span>
         </div>
@@ -897,9 +893,6 @@ export default function Catalog({
     const bagDescription = selectedVolumeIds.length
         ? `${selectedVolumeIds.length} ${selectedVolumeIds.length === 1 ? 'saco' : 'sacos'} · ${totalPieces} ${unavailableVolumeIds.length > 0 ? 'peças disponíveis' : 'peças no total'}`
         : 'Escolha os sacos para reabastecer sua loja.';
-    const filterCount = [category, washType, line].filter(
-        (value) => value !== 'all',
-    ).length;
 
     function openProductImage(product: CatalogPreviewProduct) {
         setSelectedImageIndex(0);
@@ -1007,8 +1000,20 @@ export default function Catalog({
                 >
                     Ir para os produtos
                 </a>
-                <header className="sticky top-0 z-30 border-b border-border/70 bg-background/88 shadow-sm shadow-foreground/5 backdrop-blur-xl">
-                    <div className="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+                <header className="sticky top-0 z-30 border-b border-border/70 bg-background/85 shadow-sm shadow-foreground/5 backdrop-blur-xl backdrop-saturate-150">
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-linear-to-r from-transparent via-primary/50 to-transparent"
+                    />
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute -bottom-px left-1/2 h-px w-[min(50%,24rem)] -translate-x-1/2 bg-linear-to-r from-transparent via-white/70 to-transparent"
+                    />
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute bottom-0 left-1/2 h-9 w-[min(100%,70rem)] -translate-x-1/2 bg-[radial-gradient(ellipse_50%_100%_at_50%_100%,color-mix(in_oklab,var(--primary)_20%,transparent),transparent)]"
+                    />
+                    <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:min-h-20 sm:px-6 lg:px-8">
                         <a
                             href="#produtos"
                             aria-label="Crônicas Jeans — catálogo"
@@ -1017,12 +1022,12 @@ export default function Catalog({
                             <img
                                 src="/images/brand/logo-cronicas-color.png"
                                 alt="Crônicas Jeans"
-                                className="h-10 w-auto object-contain sm:h-12 dark:hidden"
+                                className="h-9 w-auto object-contain sm:h-12 dark:hidden"
                             />
                             <img
                                 src="/images/brand/logo-cronicas-white.png"
                                 alt="Crônicas Jeans"
-                                className="hidden h-10 w-auto object-contain sm:h-12 dark:block"
+                                className="hidden h-9 w-auto object-contain sm:h-12 dark:block"
                             />
                         </a>
                         <div className="flex shrink-0 items-center gap-2">
@@ -1051,7 +1056,7 @@ export default function Catalog({
 
                 <main
                     id="produtos"
-                    className="mx-auto max-w-7xl scroll-mt-24 px-4 pt-5 pb-12 sm:px-6 sm:pt-8 lg:px-8"
+                    className="mx-auto max-w-7xl scroll-mt-20 px-4 pt-3 pb-10 sm:px-6 sm:pt-8 lg:px-8"
                 >
                     <PageHero
                         eyebrow="Crônicas Jeans · para lojistas"
@@ -1061,7 +1066,7 @@ export default function Catalog({
 
                     <SearchFilterBar
                         idPrefix="catalog"
-                        className="ds-reveal mt-6 mb-3 [--reveal-delay:60ms]"
+                        className="ds-reveal mt-3 mb-3 [--reveal-delay:60ms] sm:mt-5 sm:mb-4"
                         search={query}
                         onSearchChange={setQuery}
                         fields={[
@@ -1080,24 +1085,11 @@ export default function Catalog({
                         resultCount={products.meta.total}
                     />
 
-                    <div className="mb-4 flex min-h-11 flex-wrap items-center justify-between gap-2">
-                        <p
-                            role="status"
-                            className="hidden text-sm text-muted-foreground md:block"
-                        >
-                            <strong className="text-foreground">
-                                {products.meta.total}
-                            </strong>{' '}
-                            {products.meta.total === 1
-                                ? 'produto encontrado'
-                                : 'produtos encontrados'}
-                            {filterCount > 0 &&
-                                ` · ${filterCount} ${filterCount === 1 ? 'filtro aplicado' : 'filtros aplicados'}`}
-                        </p>
+                    <div className="mb-4 hidden justify-end xl:flex">
                         <div
                             role="group"
                             aria-label="Colunas do catálogo"
-                            className="hidden items-center gap-1 rounded-xl border border-border bg-card p-1 xl:flex"
+                            className="flex items-center gap-1 rounded-xl border border-border bg-card p-1"
                         >
                             <button
                                 type="button"
@@ -1136,7 +1128,7 @@ export default function Catalog({
                     {filtering ? (
                         <div
                             className={cn(
-                                'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3',
+                                'grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3',
                                 gridColumns === 4 && 'xl:grid-cols-4 xl:gap-4',
                             )}
                             aria-busy="true"
@@ -1167,7 +1159,7 @@ export default function Catalog({
                     ) : (
                         <div
                             className={cn(
-                                'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3',
+                                'grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3',
                                 gridColumns === 4 && 'xl:grid-cols-4 xl:gap-4',
                             )}
                         >
@@ -1191,9 +1183,9 @@ export default function Catalog({
                                         key={product.id}
                                         data-testid="catalog-product"
                                         className={cn(
-                                            'group ds-reveal ds-lift flex min-w-0 flex-col overflow-hidden rounded-[1.5rem] border bg-card',
+                                            'group ds-reveal ds-lift flex min-w-0 flex-col overflow-hidden rounded-[1.5rem] border bg-card shadow-[0_1px_2px_color-mix(in_oklab,var(--foreground)_6%,transparent)]',
                                             selectedCount > 0
-                                                ? 'border-highlight'
+                                                ? 'border-highlight shadow-[0_0_0_3px_color-mix(in_oklab,var(--primary)_16%,transparent)]'
                                                 : 'border-border hover:border-input',
                                         )}
                                         style={
@@ -1354,7 +1346,7 @@ export default function Catalog({
                                             <div className="mt-4 grid gap-2">
                                                 {sizes.length > 0 ? (
                                                     <>
-                                                        <p className="text-sm text-muted-foreground">
+                                                        <p className="ds-eyebrow text-muted-foreground">
                                                             Tamanhos
                                                         </p>
                                                         <div
@@ -1452,7 +1444,7 @@ export default function Catalog({
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="h-11"
+                                className="h-12 w-full sm:w-auto sm:min-w-64"
                                 onClick={loadMore}
                                 disabled={loadingMore}
                             >
@@ -1462,7 +1454,7 @@ export default function Catalog({
                             </Button>
                         </div>
                     )}
-                    <footer className="mt-10 border-t border-border pt-6 text-sm text-muted-foreground">
+                    <footer className="mt-12 border-t border-border/70 pt-6 pb-[env(safe-area-inset-bottom)] text-center text-xs tracking-wide text-muted-foreground">
                         <p>Crônicas Jeans · Distribuição de estoque</p>
                     </footer>
                 </main>
@@ -1500,165 +1492,104 @@ export default function Catalog({
                     onSelectedIndexChange={setSelectedImageIndex}
                 />
 
-                {isMobile ? (
-                    <Drawer
-                        open={selectedProduct !== null}
-                        onOpenChange={(open) => {
-                            if (!open) {
-                                setSelectedProduct(null);
-                            }
-                        }}
+                <Drawer
+                    direction={isMobile ? 'bottom' : 'right'}
+                    open={selectedProduct !== null}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setSelectedProduct(null);
+                        }
+                    }}
+                >
+                    <DrawerContent
+                        side={isMobile ? 'bottom' : 'right'}
+                        className={
+                            isMobile ? 'mx-auto max-w-2xl' : 'max-w-lg gap-0'
+                        }
                     >
-                        <DrawerContent className="mx-auto max-w-2xl">
-                            <DrawerHeader className="relative shrink-0 pr-16 text-left">
-                                <DrawerTitle>
-                                    {selectedProduct?.name ?? 'Escolher sacos'}
-                                </DrawerTitle>
-                                <DrawerDescription>
-                                    Escolha os sacos completos. Os tamanhos
-                                    mostram o conteúdo de cada saco.
-                                </DrawerDescription>
-                                <DrawerClose asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="absolute top-4 right-4 size-11"
-                                        aria-label="Fechar seleção de sacos"
-                                    >
-                                        <XIcon weight="bold" />
-                                    </Button>
-                                </DrawerClose>
-                            </DrawerHeader>
-                            {selectedProduct && (
-                                <ProductVolumeOptions
-                                    product={selectedProduct}
-                                    selectedVolumeIds={selectedVolumeIds}
-                                    onAddVolume={addVolume}
-                                    onRemoveVolume={removeVolume}
-                                    className="px-4 pb-5 sm:px-6"
-                                />
-                            )}
-                            <DrawerFooter className="shrink-0 border-t border-border px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">
-                                <ProductSelectionActions
-                                    bagLength={selectedVolumeIds.length}
-                                    onReviewBag={() => {
-                                        setSelectedProduct(null);
-                                        setBagOpen(true);
-                                    }}
-                                    onContinue={() => setSelectedProduct(null)}
-                                />
-                            </DrawerFooter>
-                        </DrawerContent>
-                    </Drawer>
-                ) : (
-                    <Sheet
-                        open={selectedProduct !== null}
-                        onOpenChange={(open) => {
-                            if (!open) {
-                                setSelectedProduct(null);
-                            }
-                        }}
-                    >
-                        <SheetContent
-                            side="right"
-                            className="w-full gap-0 overflow-hidden p-0 sm:max-w-lg"
-                        >
-                            <SheetHeader className="relative shrink-0 border-b border-border px-6 py-5 pr-16 text-left">
-                                <SheetTitle className="text-xl">
-                                    {selectedProduct?.name ?? 'Escolher sacos'}
-                                </SheetTitle>
-                                <SheetDescription>
-                                    Escolha os sacos completos. Os tamanhos
-                                    mostram o conteúdo de cada saco.
-                                </SheetDescription>
-                            </SheetHeader>
-                            {selectedProduct && (
-                                <ProductVolumeOptions
-                                    product={selectedProduct}
-                                    selectedVolumeIds={selectedVolumeIds}
-                                    onAddVolume={addVolume}
-                                    onRemoveVolume={removeVolume}
-                                    className="flex-1 px-6 py-5"
-                                />
-                            )}
-                            <SheetFooter className="shrink-0 flex-col border-t border-border p-6 sm:flex-col sm:justify-start">
-                                <ProductSelectionActions
-                                    bagLength={selectedVolumeIds.length}
-                                    onReviewBag={() => {
-                                        setSelectedProduct(null);
-                                        setBagOpen(true);
-                                    }}
-                                    onContinue={() => setSelectedProduct(null)}
-                                />
-                            </SheetFooter>
-                        </SheetContent>
-                    </Sheet>
-                )}
+                        <DrawerHeader className="relative shrink-0 border-b border-border px-5 py-4 pr-16 text-left sm:px-6 sm:py-5">
+                            <DrawerTitle>
+                                {selectedProduct?.name ?? 'Escolher sacos'}
+                            </DrawerTitle>
+                            <DrawerDescription>
+                                Escolha os sacos completos. Os tamanhos mostram
+                                o conteúdo de cada saco.
+                            </DrawerDescription>
+                            <DrawerClose asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute top-3 right-3 size-11"
+                                    aria-label="Fechar seleção de sacos"
+                                >
+                                    <XIcon weight="bold" />
+                                </Button>
+                            </DrawerClose>
+                        </DrawerHeader>
+                        {selectedProduct && (
+                            <ProductVolumeOptions
+                                product={selectedProduct}
+                                selectedVolumeIds={selectedVolumeIds}
+                                onAddVolume={addVolume}
+                                onRemoveVolume={removeVolume}
+                                className="flex-1 px-4 py-4 sm:px-6 sm:py-5"
+                            />
+                        )}
+                        <DrawerFooter className="shrink-0 border-t border-border px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6">
+                            <ProductSelectionActions
+                                bagLength={selectedVolumeIds.length}
+                                onReviewBag={() => {
+                                    setSelectedProduct(null);
+                                    setBagOpen(true);
+                                }}
+                                onContinue={() => setSelectedProduct(null)}
+                            />
+                        </DrawerFooter>
+                    </DrawerContent>
+                </Drawer>
 
-                {isMobile ? (
-                    <Drawer open={bagOpen} onOpenChange={setBagOpen}>
-                        <DrawerContent className="mx-auto max-w-2xl">
-                            <DrawerHeader className="relative shrink-0 pr-16 text-left">
-                                <DrawerTitle>Sua sacola</DrawerTitle>
-                                <DrawerDescription>
-                                    {bagDescription}
-                                </DrawerDescription>
-                                <DrawerClose asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="absolute top-4 right-4 size-11"
-                                        aria-label="Fechar sacola"
-                                    >
-                                        <XIcon weight="bold" />
-                                    </Button>
-                                </DrawerClose>
-                            </DrawerHeader>
-                            <BagItems
-                                bag={bag}
-                                unavailableVolumeIds={unavailableVolumeIds}
-                                bagSnapshots={bagSnapshots}
-                                onRemoveVolume={removeVolume}
-                                className="px-4 pb-5 sm:px-6"
-                            />
-                            <CatalogCheckout
-                                bag={bag}
-                                unavailableVolumeIds={unavailableVolumeIds}
-                                canPlaceOrder={canPlaceOrder}
-                                onOrderConfirmed={confirmOrder}
-                            />
-                        </DrawerContent>
-                    </Drawer>
-                ) : (
-                    <Sheet open={bagOpen} onOpenChange={setBagOpen}>
-                        <SheetContent
-                            side="right"
-                            className="w-full gap-0 overflow-hidden p-0 sm:max-w-lg"
-                        >
-                            <SheetHeader className="relative shrink-0 border-b border-border px-6 py-5 pr-16 text-left">
-                                <SheetTitle className="text-xl">
-                                    Sua sacola
-                                </SheetTitle>
-                                <SheetDescription>
-                                    {bagDescription}
-                                </SheetDescription>
-                            </SheetHeader>
-                            <BagItems
-                                bag={bag}
-                                unavailableVolumeIds={unavailableVolumeIds}
-                                bagSnapshots={bagSnapshots}
-                                onRemoveVolume={removeVolume}
-                                className="flex-1 px-6 py-5"
-                            />
-                            <CatalogCheckout
-                                bag={bag}
-                                unavailableVolumeIds={unavailableVolumeIds}
-                                canPlaceOrder={canPlaceOrder}
-                                onOrderConfirmed={confirmOrder}
-                            />
-                        </SheetContent>
-                    </Sheet>
-                )}
+                <Drawer
+                    direction={isMobile ? 'bottom' : 'right'}
+                    open={bagOpen}
+                    onOpenChange={setBagOpen}
+                >
+                    <DrawerContent
+                        side={isMobile ? 'bottom' : 'right'}
+                        className={
+                            isMobile ? 'mx-auto max-w-2xl' : 'max-w-lg gap-0'
+                        }
+                    >
+                        <DrawerHeader className="relative shrink-0 border-b border-border px-5 py-4 pr-16 text-left sm:px-6 sm:py-5">
+                            <DrawerTitle>Sua sacola</DrawerTitle>
+                            <DrawerDescription>
+                                {bagDescription}
+                            </DrawerDescription>
+                            <DrawerClose asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute top-3 right-3 size-11"
+                                    aria-label="Fechar sacola"
+                                >
+                                    <XIcon weight="bold" />
+                                </Button>
+                            </DrawerClose>
+                        </DrawerHeader>
+                        <BagItems
+                            bag={bag}
+                            unavailableVolumeIds={unavailableVolumeIds}
+                            bagSnapshots={bagSnapshots}
+                            onRemoveVolume={removeVolume}
+                            className="flex-1 px-4 py-4 sm:px-6 sm:py-5"
+                        />
+                        <CatalogCheckout
+                            bag={bag}
+                            unavailableVolumeIds={unavailableVolumeIds}
+                            canPlaceOrder={canPlaceOrder}
+                            onOrderConfirmed={confirmOrder}
+                        />
+                    </DrawerContent>
+                </Drawer>
             </div>
         </>
     );

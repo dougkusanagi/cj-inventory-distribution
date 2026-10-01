@@ -133,6 +133,8 @@ it('renders the v3 product card preview with the catalog pattern', function () {
         ]);
     $product->addMedia(UploadedFile::fake()->image('v3-card.jpg', 800, 1000))
         ->toMediaCollection(Product::MEDIA_COLLECTION);
+    $product->addMedia(UploadedFile::fake()->image('v3-card-back.jpg', 800, 1000))
+        ->toMediaCollection(Product::MEDIA_COLLECTION);
     $offer = $product->offers()->create([
         'type' => StockOfferType::BrokenGrade,
     ]);
@@ -157,7 +159,10 @@ it('renders the v3 product card preview with the catalog pattern', function () {
         ->assertSee('Slim')
         ->assertSee('Card v3 category')
         ->assertSee('24')
-        ->assertSee('Sacos disponíveis')
+        ->assertSee('Disponível')
+        ->assertDontSee('Estoque físico')
+        ->click('button[aria-label="Próxima imagem de Produto no card v3"]')
+        ->assertAttribute('[role="group"][aria-label^="Imagem "]', 'aria-label', 'Imagem 2 de 2')
         ->assertPresent('button[aria-label="Ver observação de Produto no card v3"]')
         ->click('button[aria-label="Ver observação de Produto no card v3"]')
         ->assertVisible('[data-slot="popover-content"]')
@@ -172,6 +177,8 @@ it('renders the v3 product card preview with the catalog pattern', function () {
         ->click('button[aria-label="Ver mais informações de Produto no card v3"]')
         ->assertDontSee('Quantidade por tamanho')
         ->assertSee('Quantidade por saco')
+        ->assertSee('Estoque físico')
+        ->assertSee('Sacos disponíveis')
         ->assertPresent('button[aria-label="Excluir Produto no card v3"]')
         ->assertMissing('[data-testid="product-card-refined"]')
         ->assertMissing('table[aria-label="Produtos cadastrados"]')
@@ -245,7 +252,9 @@ it('shows two product cards per row and remembers the chosen view', function () 
     $page->navigate(route('products.index', [], false))
         ->assertPresent('[data-testid="product-cards-compact"]')
         ->resize(1280, 900)
-        ->assertScript("(() => { const cards = [...document.querySelectorAll('[data-testid=\"product-card-compact\"]')]; return Math.round(cards[0].getBoundingClientRect().top) === Math.round(cards[1].getBoundingClientRect().top) && cards[2].getBoundingClientRect().top > cards[0].getBoundingClientRect().top; })()")
+        ->assertMissing('[data-testid="product-card-compact"]')
+        ->assertMissing('button[aria-label="Visualização com 2 cards por linha"]')
+        ->assertPresent('[data-testid="product-card-v3"]')
         ->assertNoJavaScriptErrors();
 });
 
@@ -302,7 +311,7 @@ it('opens a product image gallery and changes the selected image', function () {
     $page
         ->assertSee('1 de 2')
         ->assertSee('200%')
-        ->click('button[aria-label="Próxima imagem de Produto com galeria E2E"]')
+        ->click('[data-testid="galeria-produto-'.$product->id.'"] button[aria-label="Próxima imagem de Produto com galeria E2E"]')
         ->assertSee('2 de 2')
         ->assertSee('100%')
         ->click(

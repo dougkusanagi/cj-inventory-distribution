@@ -63,6 +63,14 @@ No frontend, prefira componentes shadcn existentes ou bibliotecas React maduras 
   quantidades de estoque por tamanho com o componente compartilhado de mini
   cards, preservando o mesmo padrão no catálogo, formulários e históricos.
 
+- Painéis sobrepostos (detalhes, seleção, carrinho, navegação mobile e
+  formulários) usam `@/components/ui/drawer`: sobe do rodapé no celular
+  (`side="bottom"`) e abre pela lateral no desktop (`side="right"` ou
+  `"left"`), com `direction` correspondente no `Drawer`. Não use nem crie
+  `Sheet`; o modelo de referência é o painel de detalhes dos sacos em
+  `resources/js/pages/products/index.tsx`. `Dialog` continua reservado a
+  confirmações e formulários curtos em desktop.
+
 - Para estados booleanos, reutilize `@/components/ui/switch`, baseado no
   componente Switch do shadcn/Radix. Não reimplemente um switch usando
   `TogglePrimitive` ou markup visual próprio.

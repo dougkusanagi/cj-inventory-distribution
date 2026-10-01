@@ -3,7 +3,6 @@ import {
     FolderOpenIcon,
     LayoutIcon,
     PlusCircleIcon,
-    SidebarSimpleIcon,
     SparkleIcon,
     WarningCircleIcon,
 } from '@phosphor-icons/react';
@@ -49,14 +48,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
-} from '@/components/ui/sheet';
 import { useAppearance } from '@/hooks/use-appearance';
 
 const colors = [
@@ -82,7 +73,7 @@ function OverlayPreview({
     description,
 }: {
     icon: PhosphorIcon;
-    kind: 'dialog' | 'drawer' | 'sheet';
+    kind: 'dialog' | 'drawer';
     title: string;
     description: string;
 }) {
@@ -103,14 +94,6 @@ function OverlayPreview({
                         <span className="mx-auto block h-1 w-8 rounded-full bg-muted-foreground/40" />
                         <span className="mt-3 block h-2 w-1/2 rounded-full bg-foreground/70" />
                         <span className="mt-3 block h-4 w-full rounded-full bg-primary" />
-                    </span>
-                )}
-                {kind === 'sheet' && (
-                    <span className="absolute inset-y-0 right-0 block w-1/2 border-l border-border bg-card p-3 shadow-lg">
-                        <span className="block h-2 w-2/3 rounded-full bg-foreground/70" />
-                        <span className="mt-4 block h-2 w-full rounded-full bg-secondary" />
-                        <span className="mt-2 block h-2 w-4/5 rounded-full bg-secondary" />
-                        <span className="mt-2 block h-2 w-3/5 rounded-full bg-secondary" />
                     </span>
                 )}
             </span>
@@ -450,9 +433,9 @@ export default function DesignSystem() {
                         <SectionHeading
                             eyebrow="05 / sobreposições"
                             title="O componente acompanha o contexto"
-                            description="O mesmo conteúdo muda de contêiner conforme a tarefa e o tamanho da tela. Experimente os três componentes."
+                            description="O mesmo conteúdo muda de contêiner conforme a tarefa e o tamanho da tela. Experimente os dois componentes."
                         />
-                        <div className="mt-8 grid gap-5 md:grid-cols-3">
+                        <div className="mt-8 grid gap-5 md:grid-cols-2">
                             <Dialog>
                                 <DialogTrigger asChild>
                                     <Button
@@ -504,7 +487,7 @@ export default function DesignSystem() {
                                             icon={FolderOpenIcon}
                                             kind="drawer"
                                             title="Drawer"
-                                            description="Ações e formulários ao alcance do polegar no mobile."
+                                            description="Ações, formulários e detalhes: sobe do rodapé no celular e abre pela lateral no desktop."
                                         />
                                     </Button>
                                 </DrawerTrigger>
@@ -535,53 +518,6 @@ export default function DesignSystem() {
                                     </DrawerFooter>
                                 </DrawerContent>
                             </Drawer>
-                            <Sheet>
-                                <SheetTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        className="h-auto w-full justify-start rounded-2xl p-4 text-left"
-                                    >
-                                        <OverlayPreview
-                                            icon={SidebarSimpleIcon}
-                                            kind="sheet"
-                                            title="Sheet"
-                                            description="Navegação, filtros e conteúdo complementar."
-                                        />
-                                    </Button>
-                                </SheetTrigger>
-                                <SheetContent>
-                                    <SheetHeader>
-                                        <SheetTitle>
-                                            Filtros do catálogo
-                                        </SheetTitle>
-                                        <SheetDescription>
-                                            Conteúdo complementar, persistente
-                                            na intenção e dispensável sem perda
-                                            de contexto.
-                                        </SheetDescription>
-                                    </SheetHeader>
-                                    <div className="grid gap-3 px-4">
-                                        <Button
-                                            variant="secondary"
-                                            className="justify-start"
-                                        >
-                                            Novidades
-                                        </Button>
-                                        <Button
-                                            variant="secondary"
-                                            className="justify-start"
-                                        >
-                                            Mais vendidos
-                                        </Button>
-                                        <Button
-                                            variant="secondary"
-                                            className="justify-start"
-                                        >
-                                            Em promoção
-                                        </Button>
-                                    </div>
-                                </SheetContent>
-                            </Sheet>
                         </div>
                     </section>
 
