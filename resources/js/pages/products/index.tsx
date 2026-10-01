@@ -10,6 +10,9 @@ import {
     ArrowsClockwiseIcon,
     CaretRightIcon,
     CheckCircleIcon,
+    DotsThreeIcon,
+    FolderSimpleIcon,
+    HashIcon,
     ImageBrokenIcon,
     ImageIcon,
     ImagesIcon,
@@ -346,10 +349,13 @@ function ProductCardV3({
     product,
     onDelete,
     onOpenGallery,
+    compact = false,
 }: {
     product: Product;
     onDelete: (product: Product) => void;
     onOpenGallery: (product: Product) => void;
+    /** Densidade para duas colunas no celular; mantém o mesmo conteúdo e ações. */
+    compact?: boolean;
 }) {
     const [detailsOpen, setDetailsOpen] = useState(false);
     const availableQuantity = product.available_quantity ?? 0;
@@ -368,20 +374,25 @@ function ProductCardV3({
 
     return (
         <article
-            data-testid="product-card-v3"
+            data-testid={compact ? 'product-card-compact' : 'product-card-v3'}
             aria-label={product.name}
-            className="group flex min-w-0 flex-col overflow-hidden rounded-[1.5rem] border border-border bg-card shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-foreground/20 hover:shadow-md"
+            className={cn(
+                'group flex min-w-0 flex-col overflow-hidden border border-border bg-card shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-foreground/20 hover:shadow-md',
+                compact ? 'rounded-2xl' : 'rounded-[1.5rem]',
+            )}
         >
             <div
                 className={cn(
-                    'relative aspect-[6/5] overflow-hidden bg-muted/60',
+                    'relative overflow-hidden bg-muted/60',
+                    compact ? 'aspect-square' : 'aspect-[6/5]',
                     !product.is_active && '[&_img]:grayscale',
                 )}
             >
                 <ProductImageButton
                     product={product}
                     onOpenGallery={onOpenGallery}
-                    className="transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none"
+                    carousel
+                    dense={compact}
                     iconClassName="size-8"
                 />
                 {product.notes && (
@@ -389,7 +400,12 @@ function ProductCardV3({
                         <PopoverTrigger asChild>
                             <button
                                 type="button"
-                                className="absolute top-3 right-3 z-10 flex size-9 items-center justify-center rounded-full border border-white/50 bg-card/90 text-foreground shadow-sm backdrop-blur transition hover:bg-card focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                className={cn(
+                                    'absolute z-10 flex items-center justify-center rounded-full border border-white/50 bg-card/90 text-foreground shadow-sm backdrop-blur transition hover:bg-card focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                                    compact
+                                        ? 'top-2 right-2 size-8'
+                                        : 'top-3 right-3 size-9',
+                                )}
                                 aria-label={`Ver observação de ${product.name}`}
                             >
                                 <InfoIcon
@@ -415,75 +431,73 @@ function ProductCardV3({
                         </PopoverContent>
                     </Popover>
                 )}
-                {product.category && (
-                    <span className="pointer-events-none absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] truncate rounded-full border border-white/50 bg-card/90 px-3 py-1 text-xs font-semibold shadow-sm backdrop-blur">
+                {!compact && product.category && (
+                    <span
+                        className={cn(
+                            'pointer-events-none absolute truncate rounded-full border border-white/50 bg-card/90 font-semibold shadow-sm backdrop-blur',
+                            'bottom-3 left-3 max-w-[calc(100%-1.5rem)] px-3 py-1 text-xs',
+                        )}
+                    >
                         {product.category.name}
                     </span>
                 )}
             </div>
 
-            <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
+            <div
+                className={cn(
+                    'flex flex-1 flex-col',
+                    compact ? 'gap-2.5 p-3 sm:p-4' : 'gap-3 p-4 sm:p-5',
+                )}
+            >
                 <div className="min-w-0">
                     <p className="truncate font-mono text-xs leading-4 text-muted-foreground">
                         {product.code}
-                        {product.model && ` · Mod. ${product.model}`}
+                        {!compact &&
+                            product.model &&
+                            ` · Mod. ${product.model}`}
                     </p>
                     <TextLink
                         href={productEdit(product.id)}
-                        className="line-clamp-2 rounded-sm text-lg leading-6 font-semibold tracking-tight text-card-foreground no-underline hover:underline"
+                        className={cn(
+                            'line-clamp-2 rounded-sm font-semibold tracking-tight text-card-foreground no-underline hover:underline',
+                            compact
+                                ? 'text-[0.9375rem] leading-5 sm:text-lg sm:leading-6'
+                                : 'text-lg leading-6',
+                        )}
                     >
                         {product.name}
                     </TextLink>
                 </div>
 
-                {hasStock ? (
+                {(product.stock_offer_type ||
+                    product.line ||
+                    (compact && (product.model || product.category))) && (
                     <div
                         className={cn(
-                            'grid gap-2 rounded-xl px-3.5 py-3',
-                            isAvailable
-                                ? 'bg-emerald-950 text-white dark:bg-emerald-950/80'
-                                : isInternalUse
-                                  ? 'bg-amber-100 text-amber-950 dark:bg-amber-400/15 dark:text-amber-100'
-                                  : 'bg-muted',
+                            'border-t border-border text-xs text-muted-foreground',
+                            compact
+                                ? 'grid gap-y-1 pt-2.5 text-[11px] sm:text-xs'
+                                : 'grid grid-cols-2 gap-x-3 gap-y-2 pt-3',
                         )}
                     >
-                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                            <p className="min-w-0 flex-1 text-xs leading-4 font-semibold text-current/80">
-                                {isAvailable
-                                    ? 'Disponível para lojistas'
-                                    : isInternalUse
-                                      ? 'Uso interno da equipe'
-                                      : (product.distribution_status ??
-                                        'Indisponível')}
-                            </p>
-                            <p className="shrink-0 text-2xl leading-7 font-bold whitespace-nowrap tabular-nums">
-                                {availableQuantity}{' '}
-                                <span className="text-sm font-semibold text-current/75">
-                                    peças
+                        {compact && product.model && (
+                            <span className="inline-flex min-w-0 items-center gap-1.5 truncate font-medium">
+                                <HashIcon
+                                    className="size-4 shrink-0"
+                                    aria-hidden="true"
+                                />
+                                <span className="truncate">
+                                    Mod. {product.model}
                                 </span>
-                            </p>
-                        </div>
-                        <StockQuantityDetails
-                            layout="columns"
-                            className="border-t border-current/15 pt-2 text-current/80"
-                            physicalQuantity={physicalQuantity}
-                            availableSackCount={availableVolumeCount}
-                            reservedQuantity={reservedQuantity}
-                            consumedQuantity={consumedQuantity}
-                        />
-                    </div>
-                ) : (
-                    <p className="rounded-xl bg-muted px-3.5 py-3 text-sm font-semibold text-muted-foreground">
-                        Sem oferta de estoque
-                    </p>
-                )}
-
-                {(product.stock_offer_type || product.line) && (
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-xl bg-muted/30 p-3 text-xs text-muted-foreground">
+                            </span>
+                        )}
                         {product.stock_offer_type && (
                             <span className="inline-flex min-w-0 items-center gap-1.5 truncate font-medium">
                                 <SquaresFourIcon
-                                    className="size-5 shrink-0"
+                                    className={cn(
+                                        'shrink-0',
+                                        compact ? 'size-4' : 'size-5',
+                                    )}
                                     aria-hidden="true"
                                 />
                                 <span className="truncate">
@@ -498,7 +512,10 @@ function ProductCardV3({
                         {product.line && (
                             <span className="inline-flex min-w-0 items-center gap-1.5 truncate font-medium">
                                 <TagIcon
-                                    className="size-5 shrink-0"
+                                    className={cn(
+                                        'shrink-0',
+                                        compact ? 'size-4' : 'size-5',
+                                    )}
                                     aria-hidden="true"
                                 />
                                 <span className="truncate">
@@ -506,30 +523,109 @@ function ProductCardV3({
                                 </span>
                             </span>
                         )}
+                        {compact && product.category && (
+                            <span className="inline-flex min-w-0 items-center gap-1.5 truncate font-medium">
+                                <FolderSimpleIcon
+                                    className="size-4 shrink-0"
+                                    aria-hidden="true"
+                                />
+                                <span className="truncate">
+                                    {product.category.name}
+                                </span>
+                            </span>
+                        )}
                     </div>
                 )}
+
+                <p
+                    className={cn(
+                        'mt-auto rounded-lg text-xs leading-5',
+                        compact
+                            ? 'px-2.5 py-1.5 leading-[1.15rem]'
+                            : 'px-3 py-2',
+                        isAvailable
+                            ? 'bg-emerald-500/10 text-emerald-900 dark:text-emerald-200'
+                            : isInternalUse
+                              ? 'bg-amber-500/10 text-amber-950 dark:text-amber-100'
+                              : 'bg-muted text-muted-foreground',
+                    )}
+                >
+                    {isAvailable ? (
+                        <>
+                            <span className="block text-[10px] leading-4 font-normal opacity-70">
+                                Disponível
+                            </span>
+                            <strong>{availableQuantity} peças</strong>
+                            {' · '}
+                            <strong>
+                                {availableVolumeCount}{' '}
+                                {availableVolumeCount === 1 ? 'saco' : 'sacos'}
+                            </strong>
+                        </>
+                    ) : isInternalUse ? (
+                        <>
+                            <span className="block text-[10px] leading-4 font-normal opacity-70">
+                                Grade Nova
+                            </span>
+                            <strong>Oculto para lojistas</strong>
+                        </>
+                    ) : hasStock ? (
+                        (product.distribution_status ?? 'Sem sacos disponíveis')
+                    ) : (
+                        'Sem oferta de estoque'
+                    )}
+                </p>
 
                 <Drawer
                     direction="right"
                     open={detailsOpen}
                     onOpenChange={setDetailsOpen}
                 >
-                    <div className="-mx-4 mt-auto -mb-4 flex items-center justify-between gap-2 border-t border-border px-4 py-2.5 sm:-mx-5 sm:-mb-5 sm:px-5">
+                    <div
+                        className={cn(
+                            'flex items-center justify-between gap-2 border-t border-border',
+                            compact
+                                ? '-mx-3 -mb-3 px-3 py-2 sm:-mx-4 sm:-mb-4 sm:px-4 sm:py-2.5'
+                                : '-mx-4 -mb-4 px-4 py-2.5 sm:-mx-5 sm:-mb-5 sm:px-5',
+                        )}
+                    >
                         <DrawerTrigger asChild>
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="px-1 text-muted-foreground"
+                                className={cn(
+                                    'px-1 text-muted-foreground',
+                                    compact && 'max-sm:size-9 max-sm:shrink-0',
+                                )}
                                 aria-label={`Ver mais informações de ${product.name}`}
                             >
-                                Mais
+                                <span
+                                    className={cn(compact && 'max-sm:hidden')}
+                                >
+                                    Mais
+                                </span>
                                 <CaretRightIcon
                                     weight="bold"
                                     aria-hidden="true"
+                                    className={cn(compact && 'max-sm:hidden')}
                                 />
+                                {compact && (
+                                    <DotsThreeIcon
+                                        weight="bold"
+                                        aria-hidden="true"
+                                        className="size-5 sm:hidden"
+                                    />
+                                )}
                             </Button>
                         </DrawerTrigger>
-                        <Button asChild variant="secondary" size="sm">
+                        <Button
+                            asChild
+                            variant="secondary"
+                            size="sm"
+                            className={cn(
+                                compact && 'min-w-0 flex-1 px-2.5 sm:flex-none',
+                            )}
+                        >
                             <Link
                                 href={productEdit(product.id)}
                                 aria-label={`Editar ${product.name}`}
@@ -572,6 +668,22 @@ function ProductCardV3({
                             data-vaul-no-drag
                             className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto p-5 text-xs text-muted-foreground"
                         >
+                            <section
+                                className="grid gap-2"
+                                aria-label="Resumo do estoque"
+                            >
+                                <p className="text-sm font-medium text-card-foreground">
+                                    Resumo do estoque
+                                </p>
+                                <StockQuantityDetails
+                                    layout="columns"
+                                    physicalQuantity={physicalQuantity}
+                                    availableSackCount={availableVolumeCount}
+                                    reservedQuantity={reservedQuantity}
+                                    consumedQuantity={consumedQuantity}
+                                    className="[&_dd]:font-semibold [&_dd]:text-card-foreground"
+                                />
+                            </section>
                             {volumes.length > 0 ? (
                                 <div className="grid gap-3">
                                     <p className="text-sm font-medium text-card-foreground">
@@ -665,150 +777,6 @@ function ProductCardV3({
                         </DrawerFooter>
                     </DrawerContent>
                 </Drawer>
-            </div>
-        </article>
-    );
-}
-
-function ProductCompactCard({
-    product,
-    onDelete,
-    onOpenGallery,
-}: {
-    product: Product;
-    onDelete: (product: Product) => void;
-    onOpenGallery: (product: Product) => void;
-}) {
-    const availableQuantity = product.available_quantity ?? 0;
-    const availableVolumeCount = product.available_stock_volume_count ?? 0;
-    const hasStock =
-        product.total_quantity !== null && product.total_quantity !== undefined;
-    const isAvailable =
-        Boolean(product.is_active) &&
-        Boolean(product.available_for_distribution);
-    const statusLabel = !product.is_active
-        ? 'Inativo'
-        : product.available_for_distribution
-          ? 'Disponível'
-          : product.stock_offer_type === 'new_grade'
-            ? 'Uso interno'
-            : 'Indisponível';
-    const sizes = productSizeBreakdown(product);
-
-    return (
-        <article
-            data-testid="product-card-compact"
-            aria-label={product.name}
-            className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card transition-colors duration-200 hover:border-foreground/30 lg:flex-row"
-        >
-            <div
-                className={cn(
-                    'relative aspect-[4/5] shrink-0 overflow-hidden bg-muted/60 lg:aspect-auto lg:w-44',
-                    !product.is_active && '[&_img]:grayscale',
-                )}
-            >
-                <ProductImageButton
-                    product={product}
-                    onOpenGallery={onOpenGallery}
-                    className="transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none"
-                    iconClassName="size-7"
-                />
-                <span
-                    className={cn(
-                        'pointer-events-none absolute top-2 left-2 inline-flex max-w-[calc(100%-1rem)] items-center gap-1.5 truncate rounded-full border px-2 py-0.5 text-[11px] font-semibold shadow-sm backdrop-blur',
-                        isAvailable
-                            ? 'border-emerald-600/30 bg-emerald-50/95 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-950/85 dark:text-emerald-200'
-                            : 'border-border bg-card/90 text-muted-foreground',
-                    )}
-                >
-                    <span
-                        className={cn(
-                            'size-1.5 shrink-0 rounded-full',
-                            isAvailable
-                                ? 'bg-emerald-600 dark:bg-emerald-400'
-                                : 'bg-muted-foreground',
-                        )}
-                        aria-hidden="true"
-                    />
-                    {statusLabel}
-                </span>
-            </div>
-
-            <div className="flex min-w-0 flex-1 flex-col gap-3 p-3 sm:p-4">
-                <div className="min-w-0">
-                    <p className="truncate font-mono text-[10px] text-muted-foreground sm:text-xs">
-                        {product.code}
-                        {product.model && ` · ${product.model}`}
-                    </p>
-                    <TextLink
-                        href={productEdit(product.id)}
-                        className="mt-1 line-clamp-2 rounded-sm text-base leading-5 font-semibold tracking-tight text-card-foreground no-underline hover:underline sm:text-lg sm:leading-6"
-                    >
-                        {product.name}
-                    </TextLink>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                    {product.stock_offer_type && (
-                        <Badge
-                            variant="secondary"
-                            className="rounded-full px-2 text-[11px] sm:text-xs"
-                        >
-                            {stockOfferTypeCardLabels[product.stock_offer_type]}
-                        </Badge>
-                    )}
-                    {product.line && (
-                        <span>{productLineLabels[product.line]}</span>
-                    )}
-                </div>
-
-                {hasStock ? (
-                    <p className="border-t border-border/70 pt-3 text-sm leading-5 text-muted-foreground tabular-nums">
-                        <strong className="text-xl font-bold text-card-foreground sm:text-2xl">
-                            {availableQuantity}
-                        </strong>{' '}
-                        {availableQuantity === 1 ? 'peça' : 'peças'}
-                        <span className="block text-[11px] sm:inline sm:text-xs">
-                            <span className="hidden sm:inline"> · </span>
-                            {availableVolumeCount}{' '}
-                            {availableVolumeCount === 1 ? 'saco' : 'sacos'}
-                        </span>
-                    </p>
-                ) : (
-                    <p className="text-xs font-medium text-muted-foreground">
-                        Sem oferta de estoque
-                    </p>
-                )}
-
-                {sizes.length > 0 && (
-                    <StockSizeBreakdown sizes={sizes} sizesOnly />
-                )}
-
-                <div className="mt-auto flex items-center gap-1 border-t border-border/70 pt-3">
-                    <Button
-                        asChild
-                        variant="secondary"
-                        size="sm"
-                        className="h-10 min-w-0 flex-1"
-                    >
-                        <Link
-                            href={productEdit(product.id)}
-                            aria-label={`Editar ${product.name}`}
-                        >
-                            <PencilSimpleIcon />
-                            Editar
-                        </Link>
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-10 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => onDelete(product)}
-                        aria-label={`Excluir ${product.name}`}
-                    >
-                        <TrashIcon />
-                    </Button>
-                </div>
             </div>
         </article>
     );
@@ -1045,7 +1013,7 @@ export default function ProductsIndex({
     };
     const visibleView: ProductView = isCardPreview
         ? 'cards'
-        : isMobile && view === 'table'
+        : (isMobile && view === 'table') || (!isMobile && view === 'compact')
           ? 'cards'
           : view;
     const [filterValues, setFilterValues] = useState<ProductFilterValues>({
@@ -1304,13 +1272,15 @@ export default function ProductsIndex({
                                         <RowsIcon />
                                         Cards
                                     </ToggleGroupItem>
-                                    <ToggleGroupItem
-                                        value="compact"
-                                        aria-label="Visualização com 2 cards por linha"
-                                        className="flex-1 px-3 data-[state=on]:bg-secondary md:flex-none"
-                                    >
-                                        <SquaresFourIcon />2 por linha
-                                    </ToggleGroupItem>
+                                    {isMobile && (
+                                        <ToggleGroupItem
+                                            value="compact"
+                                            aria-label="Visualização com 2 cards por linha"
+                                            className="flex-1 px-3 data-[state=on]:bg-secondary md:flex-none"
+                                        >
+                                            <SquaresFourIcon />2 por linha
+                                        </ToggleGroupItem>
+                                    )}
                                 </ToggleGroup>
                             </div>
                         )}
@@ -1322,11 +1292,12 @@ export default function ProductsIndex({
                                 aria-label="Produtos cadastrados em 2 cards por linha"
                             >
                                 {products.data.map((product) => (
-                                    <ProductCompactCard
+                                    <ProductCardV3
                                         key={product.id}
                                         product={product}
                                         onDelete={setProductToDelete}
                                         onOpenGallery={openProductGallery}
+                                        compact
                                     />
                                 ))}
                             </section>

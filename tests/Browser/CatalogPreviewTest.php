@@ -158,9 +158,10 @@ it('opens product selection in a side panel on desktop', function () {
     visit(route('catalog', [], false))
         ->resize(1280, 900)
         ->click('button[aria-label="Adicionar Calça Wide Leg ao pedido"]')
-        ->assertVisible('[data-slot="sheet-content"]')
         ->assertSee('Escolha os sacos completos.')
-        ->assertScript("(() => { const panel = document.querySelector('[data-slot=\"sheet-content\"][data-state=\"open\"]'); return panel !== null && panel.getBoundingClientRect().left > window.innerWidth / 2 && panel.getBoundingClientRect().right <= window.innerWidth; })()")
+        ->wait(1)
+        ->assertVisible('[data-slot="drawer-content"]')
+        ->assertScript("(() => { const panel = document.querySelector('[data-slot=\"drawer-content\"][data-state=\"open\"]'); return panel !== null && panel.getBoundingClientRect().left > window.innerWidth / 2 && panel.getBoundingClientRect().right <= window.innerWidth; })()")
         ->assertNoJavaScriptErrors();
 });
 
@@ -183,10 +184,11 @@ it('opens the bag in a side panel on desktop', function () {
         ->click('button[aria-label="Adicionar Calça Wide Leg ao pedido"]')
         ->click('button[aria-label="Adicionar Saco 01"]')
         ->click('button:has-text("Revisar sacola (1)")')
-        ->assertVisible('[data-slot="sheet-content"]')
         ->assertSee('Sua sacola')
         ->assertSee('1 saco · 20 peças no total')
-        ->assertScript("(() => { const panel = document.querySelector('[data-slot=\"sheet-content\"][data-state=\"open\"]'); return panel !== null && panel.getBoundingClientRect().left > window.innerWidth / 2 && panel.getBoundingClientRect().right <= window.innerWidth; })()")
+        ->wait(1)
+        ->assertVisible('[data-slot="drawer-content"]')
+        ->assertScript("(() => { const panel = document.querySelector('[data-slot=\"drawer-content\"][data-state=\"open\"]'); return panel !== null && panel.getBoundingClientRect().left > window.innerWidth / 2 && panel.getBoundingClientRect().right <= window.innerWidth; })()")
         ->assertNoJavaScriptErrors();
 });
 
@@ -210,7 +212,7 @@ it('requires opening WhatsApp before confirming a catalog order', function () {
     $page
         ->assertEnabled('[data-testid="confirmar-pedido"]')
         ->click('[data-testid="confirmar-pedido"]')
-        ->assertMissing('[data-slot="sheet-content"][data-state="open"]')
+        ->assertMissing('[data-slot="drawer-content"][data-state="open"]')
         ->assertAttribute(
             'button[aria-label^="Ver sacola"]',
             'aria-label',

@@ -159,7 +159,7 @@ test('stock entry returns to the product when started from its stock tab', funct
 test('stock exit lists only the selected product available sacks', function () {
     $user = User::factory()->create();
     $selectedVolume = movementVolume();
-    $otherVolume = movementVolume();
+    movementVolume();
 
     $this->actingAs($user)
         ->get(route('stock-exits.create', [
@@ -171,7 +171,6 @@ test('stock exit lists only the selected product available sacks', function () {
             ->has('volumes', 1)
             ->where('volumes.0.id', $selectedVolume->id));
 
-    expect($otherVolume->id)->not->toBe($selectedVolume->id);
 });
 
 test('staff can recount known sizes from the product and records the difference', function () {
@@ -515,6 +514,14 @@ test('history filters isolate products and responsible users in its counters', f
         'reason' => 'Avaria no segundo lote',
         'idempotency_key' => 'exit-filter-second',
     ]);
+    $thirdVolume = movementVolume();
+    $fourthVolume = $firstVolume->offer->stockVolumes()->create(['total_quantity' => 12]);
+    $this->actingAs($firstUser)->post(route('stock-exits.store'), [
+        'volume_ids' => [$thirdVolume->id], 'reason' => 'Outro produto da Ana', 'idempotency_key' => 'exit-filter-third',
+    ])->assertRedirect();
+    $this->actingAs($secondUser)->post(route('stock-exits.store'), [
+        'volume_ids' => [$fourthVolume->id], 'reason' => 'Mesmo produto com Bruno', 'idempotency_key' => 'exit-filter-fourth',
+    ])->assertRedirect();
 
     $this->actingAs($firstUser)
         ->get(route('stock-movements.index', [
@@ -534,7 +541,39 @@ test('history filters isolate products and responsible users in its counters', f
             ->where('summary.reversals', 0));
 });
 
-test('history supports chronological sorting and searches order and model snapshots', function () {
+test('recounts reject incomplete repeated and foreign size selections without changing stock', function (string $selection, string $message) {
+    $volume = movementVolume();
+    $item = $volume->items->sole();
+    $items = [['id' => $item->id, 'is_active' => true, 'quantity' => 9]];
+    if ($selection === 'missing') {
+        $items = [];
+    } elseif ($selection === 'repeated') {
+        $items[] = $items[0];
+    } elseif ($selection === 'same size') {
+        $items[] = ['size' => 'm', 'is_active' => true, 'quantity' => 1];
+    } else {
+        $other = movementVolume();
+        $items[0]['id'] = $other->items->sole()->id;
+    }
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('products.stock-adjustments.store', $volume->offer->product), [
+            'volume_id' => $volume->id, 'expected_version' => $volume->fresh()->stock_version,
+            'items' => $items, 'total_quantity' => 9, 'reason' => 'Recontagem', 'idempotency_key' => 'invalid-selection',
+        ])->assertInvalid(['items' => $message]);
+
+    expect($volume->refresh()->total_quantity)->toBe(12);
+    expect($item->refresh()->quantity)->toBe(12);
+    $this->assertDatabaseCount('stock_offer_volume_items', $selection === 'foreign' ? 2 : 1);
+    $this->assertDatabaseEmpty('stock_movements');
+})->with([
+    'omitted existing size' => ['missing', 'Envie todos os tamanhos do saco. Desative os que não foram encontrados.'],
+    'repeated size identity' => ['repeated', 'Os tamanhos informados não pertencem a este saco ou estão repetidos.'],
+    'case insensitive duplicate' => ['same size', 'Informe tamanhos diferentes e não vazios.'],
+    'size from another sack' => ['foreign', 'Os tamanhos informados não pertencem a este saco ou estão repetidos.'],
+]);
+
+test('history searches order codes and product model snapshots', function () {
     $user = User::factory()->create();
     $firstVolume = movementVolume();
     $firstVolume->offer->product->update(['model' => 'MODELO-UM']);
@@ -546,27 +585,116 @@ test('history supports chronological sorting and searches order and model snapsh
         'reason' => 'Primeira saída',
         'idempotency_key' => 'exit-sort-first',
     ]);
-    $this->actingAs($user)->post(route('stock-exits.store'), [
-        'volume_ids' => [$secondVolume->id],
-        'reason' => 'Segunda saída',
-        'idempotency_key' => 'exit-sort-second',
-    ]);
-
-    $order = Order::factory()->create(['code' => 'PED-999999']);
+    $this->post(route('orders.store'), [
+        'store_name' => 'Loja Centro', 'requester_name' => 'Ana', 'volume_ids' => [$secondVolume->id],
+    ])->assertRedirect();
+    $order = Order::query()->sole();
+    $item = $order->items()->sole();
+    $this->post(route('orders.items.separate', [$order, $item]))->assertRedirect();
+    $this->post(route('orders.items.check', [$order, $item]))->assertRedirect();
+    $this->post(route('orders.complete', $order))->assertRedirect();
     $movement = StockMovement::query()->latest('id')->firstOrFail();
-    $movement->forceFill(['order_id' => $order->id])->saveQuietly();
 
     $this->actingAs($user)
-        ->get(route('stock-movements.index', ['sort' => 'oldest', 'search' => 'MODELO-DOIS']))
+        ->get(route('stock-movements.index', ['search' => 'MODELO-DOIS']))
         ->assertInertia(fn ($page) => $page
             ->has('movements.data', 1)
             ->where('movements.data.0.id', $movement->id)
-            ->where('filters.sort', 'oldest')
             ->where('filters.has_filters', true));
 
     $this->actingAs($user)
-        ->get(route('stock-movements.index', ['search' => 'PED-999999']))
-        ->assertInertia(fn ($page) => $page->has('movements.data', 1));
+        ->get(route('stock-movements.index', ['search' => $order->code]))
+        ->assertInertia(fn ($page) => $page->has('movements.data', 1)
+            ->where('movements.data.0.id', $movement->id));
+});
+
+test('stock history sorts by occurrence date and breaks ties by movement identity', function (string $sort, array $positions) {
+    $user = User::factory()->create();
+    $first = StockMovement::factory()->for($user, 'actor')->create(['occurred_at' => '2026-09-10 09:00:00']);
+    $second = StockMovement::factory()->for($user, 'actor')->create(['occurred_at' => '2026-09-09 09:00:00']);
+    $third = StockMovement::factory()->for($user, 'actor')->create(['occurred_at' => '2026-09-10 09:00:00']);
+    $ids = [$first->id, $second->id, $third->id];
+
+    $this->actingAs($user)->get(route('stock-movements.index', ['sort' => $sort]))
+        ->assertInertia(fn ($page) => $page
+            ->has('movements.data', 3)
+            ->where('movements.data.0.id', $ids[$positions[0]])
+            ->where('movements.data.1.id', $ids[$positions[1]])
+            ->where('movements.data.2.id', $ids[$positions[2]]));
+})->with(['oldest' => ['oldest', [1, 0, 2]], 'newest' => ['newest', [2, 0, 1]]]);
+
+test('automatic movements cannot be reversed through the manual endpoint', function (StockMovementSource $source) {
+    $user = User::factory()->create();
+    $movement = StockMovement::factory()->for($user, 'actor')->create(['source' => $source]);
+
+    $this->actingAs($user)->post(route('stock-movements.reverse', $movement), ['reason' => 'Correção'])
+        ->assertInvalid(['movement' => 'Esta movimentação não pode ser estornada porque foi gerada automaticamente.']);
+
+    $this->assertDatabaseCount('stock_movements', 1);
+    expect($movement->reversals()->count())->toBe(0);
+})->with([StockMovementSource::Order, StockMovementSource::Opening, StockMovementSource::Adjustment]);
+
+test('a multi sack reversal rolls back earlier sacks when a later sack cannot be restored', function () {
+    $user = User::factory()->create();
+    $first = movementVolume();
+    $second = movementVolume();
+    $this->actingAs($user)->post(route('stock-exits.store'), [
+        'volume_ids' => [$first->id, $second->id], 'reason' => 'Baixa de lote', 'idempotency_key' => 'exit-rollback',
+    ])->assertRedirect();
+    $movement = StockMovement::query()->sole();
+    $second->refresh()->update(['current_order_id' => Order::factory()->create()->id]);
+
+    $this->post(route('stock-movements.reverse', $movement), ['reason' => 'Lote recuperado'])
+        ->assertInvalid(['movement' => 'Esta saída não pode ser estornada porque o saco já foi alterado.']);
+
+    expect($first->refresh()->consumed_at)->not->toBeNull();
+    expect($second->refresh()->consumed_at)->not->toBeNull();
+    $this->assertDatabaseCount('stock_movements', 1);
+    $this->assertDatabaseCount('stock_movement_items', 2);
+    expect($movement->reversals()->count())->toBe(0);
+});
+
+test('entry reversal consumes its original sacks once and accepts an identical retry', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $this->actingAs($user)->post(route('stock-entries.store'), [
+        'product_id' => $product->id, 'stock_offer_type' => StockOfferType::Replenishment->value,
+        'idempotency_key' => 'entry-reversal', 'stock_volumes' => [['total_quantity' => 8, 'items' => []]],
+    ])->assertRedirect();
+    $movement = StockMovement::query()->sole();
+    $volume = StockOfferVolume::query()->sole();
+
+    $this->post(route('stock-movements.reverse', $movement), ['reason' => 'Recebimento indevido'])->assertRedirect();
+    $this->post(route('stock-movements.reverse', $movement), ['reason' => 'Recebimento indevido'])->assertRedirect();
+
+    $reversal = $movement->reversals()->sole();
+    expect($reversal->type)->toBe(StockMovementType::Out);
+    expect($reversal->items()->sole()->stock_offer_volume_id)->toBe($volume->id);
+    expect($volume->refresh()->consumed_at)->not->toBeNull();
+    $this->assertDatabaseCount('stock_movements', 2);
+    $this->assertDatabaseCount('stock_movement_items', 2);
+});
+
+test('entry reversal refuses a later movement even when both occurred at the same time', function () {
+    $this->freezeTime();
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $this->actingAs($user)->post(route('stock-entries.store'), [
+        'product_id' => $product->id, 'stock_offer_type' => StockOfferType::Replenishment->value,
+        'idempotency_key' => 'entry-before-exit', 'stock_volumes' => [['total_quantity' => 8, 'items' => []]],
+    ])->assertRedirect();
+    $entry = StockMovement::query()->sole();
+    $volume = StockOfferVolume::query()->sole();
+    $this->post(route('stock-exits.store'), [
+        'volume_ids' => [$volume->id], 'reason' => 'Retirada', 'idempotency_key' => 'exit-after-entry',
+    ])->assertRedirect();
+
+    $this->post(route('stock-movements.reverse', $entry), ['reason' => 'Recebimento indevido'])
+        ->assertInvalid(['movement' => 'Esta movimentação não pode ser estornada porque os mesmos sacos já foram movimentados depois.']);
+
+    expect($volume->refresh()->consumed_at)->not->toBeNull();
+    expect($entry->reversals()->count())->toBe(0);
+    $this->assertDatabaseCount('stock_movements', 2);
 });
 
 test('the initial stock opening is idempotent and marks legacy sacks', function () {

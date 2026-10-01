@@ -6,7 +6,7 @@ paths:
 # Ui
 
 ## Tokens e semântica do design system
-Use os tokens de resources/css/app.css e os componentes shadcn em resources/js/components/ui. Primary é amarelo com primary-foreground marrom profundo; brand é vermelho institucional; destructive é reservado para erros e exclusões. Drawer é para ações e formulários mobile; Sheet para conteúdo complementar.
+Use os tokens de resources/css/app.css e os componentes shadcn em resources/js/components/ui. Primary é amarelo com primary-foreground marrom profundo; brand é vermelho institucional; destructive é reservado para erros e exclusões. Drawer é o único painel sobreposto (ações, formulários, detalhes, navegação): bottom no celular e right/left no desktop. Não use Sheet.
 
 ## Dark neutro e hierarquia de ações
 O tema dark usa fundo preto/quase preto e superfícies neutras inspiradas no cj-catalogo; não aplique o marrom do cj-formularios como fundo global. Botões de aplicação usam default, secondary, destructive e ghost. Brand vermelho é identidade visual, não variante de CTA. Alertas destrutivos precisam de fundo/borda suaves e texto destructive com contraste.

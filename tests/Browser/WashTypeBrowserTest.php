@@ -1,6 +1,10 @@
 <?php
 
+use App\Enums\ProductLine;
+use App\Models\Category;
 use App\Models\Product;
+use App\Models\StockOffer;
+use App\Models\StockOfferVolume;
 use App\Models\User;
 use App\Models\WashType;
 use Illuminate\Support\Facades\Vite;
@@ -46,6 +50,74 @@ it('searches and quickly creates washes without losing the product form', functi
 
     $washType = WashType::query()->where('name', 'Vintage')->sole();
     expect(Product::query()->sole()->wash_type_id)->toBe($washType->id);
+})->with(['desktop' => [1280, 900], 'mobile' => [390, 844]]);
+
+it('searches public catalog washes, combines filters, and clears every selection', function (int $width, int $height) {
+    $stone = WashType::factory()->create(['name' => 'Stone', 'slug' => 'stone']);
+    $acid = WashType::factory()->create(['name' => 'Acid', 'slug' => 'acid']);
+    $pants = Category::factory()->create(['name' => 'Calça', 'slug' => 'calca']);
+    $shorts = Category::factory()->create(['name' => 'Short', 'slug' => 'short']);
+
+    foreach ([
+        ['name' => 'Calça Stone Plus', 'category_id' => $pants->id, 'wash_type_id' => $stone->id, 'line' => ProductLine::Plus],
+        ['name' => 'Calça Stone Slim', 'category_id' => $pants->id, 'wash_type_id' => $stone->id, 'line' => ProductLine::Slim],
+        ['name' => 'Short Stone Plus', 'category_id' => $shorts->id, 'wash_type_id' => $stone->id, 'line' => ProductLine::Plus],
+        ['name' => 'Calça Acid Plus', 'category_id' => $pants->id, 'wash_type_id' => $acid->id, 'line' => ProductLine::Plus],
+        ['name' => 'Calça sem lavagem', 'category_id' => $pants->id, 'wash_type_id' => null, 'line' => ProductLine::Plus],
+    ] as $attributes) {
+        $product = Product::factory()->create($attributes);
+        $offer = StockOffer::factory()->replenishment()->for($product)->create();
+        StockOfferVolume::factory()->for($offer)->withTotal(8)->create();
+    }
+
+    $page = visit(route('catalog', [], false))->resize($width, $height)
+        ->assertCount('[data-testid="catalog-product"]', 5);
+
+    if ($width < 768) {
+        $page->click('button[aria-label="Abrir filtros de produtos"]');
+    }
+    $prefix = $width < 768 ? '#mobile-catalog-' : '#catalog-';
+    $page->click($prefix.'wash_type')
+        ->type('input[placeholder="Buscar tipo de lavagem"]', 'Sto')
+        ->assertMissing('[cmdk-item]:has-text("Acid")')
+        ->click('[cmdk-item]:has-text("Stone")')
+        ->assertCount('[data-testid="catalog-product"]', 3)
+        ->assertDontSee('Calça Acid Plus')
+        ->assertDontSee('Calça sem lavagem')
+        ->click($prefix.'category')
+        ->click('[cmdk-item]:has-text("Calça")')
+        ->assertCount('[data-testid="catalog-product"]', 2)
+        ->assertDontSee('Short Stone Plus');
+
+    if ($width < 768) {
+        $page->click('label[for="mobile-catalog-line-plus"]');
+    } else {
+        $page->click('#catalog-line')->click('[role="option"]:has(:text-is("Plus"))');
+    }
+
+    $page->assertCount('[data-testid="catalog-product"]', 1);
+    if ($width < 768) {
+        $page->click('Ver 1 resultado')->assertSee('Calça Stone Plus')
+            ->click('button[aria-label="Abrir filtros de produtos"]');
+    } else {
+        $page->assertSee('Calça Stone Plus');
+    }
+    $page->click($width < 768 ? '#catalog-filter-drawer button:has-text("Limpar filtros")' : 'Limpar filtros')
+        ->assertSeeIn($prefix.'wash_type', 'Todas as lavagens')
+        ->assertSeeIn($prefix.'category', 'Todas as categorias')
+        ->assertCount('[data-testid="catalog-product"]', 5);
+
+    if ($width < 768) {
+        $page->assertAttribute('#mobile-catalog-line-all', 'data-state', 'checked')
+            ->click('Ver 5 resultados');
+    } else {
+        $page->assertSeeIn('#catalog-line', 'Slim e Plus');
+    }
+    $page->assertSee('Calça Acid Plus')
+        ->assertSee('Calça sem lavagem')
+        ->assertSee('Calça Stone Slim')
+        ->assertSee('Short Stone Plus')
+        ->assertNoJavaScriptErrors();
 })->with(['desktop' => [1280, 900], 'mobile' => [390, 844]]);
 
 it('manages washes and filters products using the searchable selector', function (int $width, int $height) {

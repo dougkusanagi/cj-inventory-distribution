@@ -1,10 +1,14 @@
 <?php
 
+use App\Enums\AuditAction;
+use App\Models\AuditLog;
 use App\Models\Product;
 use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
 use App\Models\User;
 use App\Models\WashType;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('guests are redirected when visiting wash-types', function () {
@@ -68,6 +72,70 @@ test('wash type names are unique after normalization', function () {
         'name' => '  STONE wash ',
         'is_active' => true,
     ])->assertInvalid(['slug' => 'Já existe um tipo de lavagem com esse nome.']);
+});
+
+test('the database rejects duplicate wash slugs even when a wash is inactive', function (bool $active) {
+    WashType::factory()->create(['name' => 'Stone', 'slug' => 'stone', 'is_active' => $active]);
+
+    expect(fn () => DB::table('wash_types')->insert([
+        'name' => 'Outra Stone',
+        'slug' => 'stone',
+        'is_active' => true,
+    ]))->toThrow(QueryException::class);
+
+    $this->assertDatabaseCount('wash_types', 1);
+})->with(['active' => true, 'inactive' => false]);
+
+test('the database allows reusing a deleted wash slug without removing its history', function () {
+    $deleted = WashType::factory()->create(['name' => 'Stone', 'slug' => 'stone']);
+    $deleted->delete();
+
+    DB::table('wash_types')->insert(['name' => 'Nova Stone', 'slug' => 'stone', 'is_active' => true]);
+
+    $this->assertSoftDeleted($deleted);
+    $this->assertDatabaseCount('wash_types', 2);
+    $this->assertDatabaseHas('wash_types', ['name' => 'Nova Stone', 'slug' => 'stone', 'deleted_at' => null]);
+});
+
+test('editing a wash type audits the actor and changed values', function () {
+    $user = User::factory()->create();
+    $washType = WashType::factory()->create(['name' => 'Stone', 'slug' => 'stone']);
+
+    $this->actingAs($user)->put(route('wash-types.update', $washType), [
+        'name' => 'Stone clara',
+        'is_active' => false,
+    ])->assertRedirect(route('wash-types.index'));
+
+    $this->assertDatabaseHas('wash_types', ['id' => $washType->id, 'name' => 'Stone clara', 'slug' => 'stone-clara', 'is_active' => false]);
+    $audit = AuditLog::query()
+        ->where('auditable_type', WashType::class)
+        ->where('auditable_id', $washType->id)
+        ->where('action', AuditAction::Updated->value)
+        ->sole();
+
+    expect($audit->actor_id)->toBe($user->id);
+    expect($audit->before)->toMatchArray(['name' => 'Stone', 'slug' => 'stone', 'is_active' => true]);
+    expect($audit->after)->toMatchArray(['name' => 'Stone clara', 'slug' => 'stone-clara', 'is_active' => false]);
+});
+
+test('deleting a wash type audits the actor and soft deletion', function () {
+    $user = User::factory()->create();
+    $washType = WashType::factory()->create(['name' => 'Stone', 'slug' => 'stone']);
+
+    $this->actingAs($user)->delete(route('wash-types.destroy', $washType))
+        ->assertRedirect(route('wash-types.index'));
+
+    $this->assertSoftDeleted($washType);
+    $audit = AuditLog::query()
+        ->where('auditable_type', WashType::class)
+        ->where('auditable_id', $washType->id)
+        ->where('action', AuditAction::Deleted->value)
+        ->sole();
+
+    expect($audit->actor_id)->toBe($user->id);
+    expect($audit->before)->toMatchArray(['name' => 'Stone', 'slug' => 'stone', 'deleted_at' => null]);
+    expect($audit->after)->toMatchArray(['name' => 'Stone', 'slug' => 'stone', 'deleted_at' => $washType->refresh()->getRawOriginal('deleted_at')]);
+    expect($audit->after['deleted_at'])->not->toBeNull();
 });
 
 test('wash-types without products can be deleted', function () {

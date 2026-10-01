@@ -1,4 +1,5 @@
 import { ImageBrokenIcon } from '@phosphor-icons/react';
+import ImageCarousel from '@/components/image-carousel';
 import { cn } from '@/lib/utils';
 import type { Product } from '@/types';
 
@@ -42,12 +43,17 @@ export function ProductImageButton({
     product,
     onOpenGallery,
     showImageCount = true,
+    carousel = false,
+    dense = false,
     className,
     iconClassName,
 }: {
     product: Product;
     onOpenGallery: (product: Product) => void;
     showImageCount?: boolean;
+    carousel?: boolean;
+    /** Controles menores do carrossel para cards estreitos. */
+    dense?: boolean;
     className?: string;
     iconClassName?: string;
 }) {
@@ -59,6 +65,24 @@ export function ProductImageButton({
                 product={product}
                 className={className}
                 iconClassName={iconClassName}
+            />
+        );
+    }
+
+    if (carousel) {
+        return (
+            <ImageCarousel
+                images={product.images.map(
+                    (image) => image.thumb_url ?? image.url,
+                )}
+                alt={product.name}
+                compact
+                dense={dense}
+                onImageClick={() => onOpenGallery(product)}
+                imageClickTestId={`abrir-galeria-produto-${product.id}`}
+                imageClickAriaLabel={() =>
+                    `Abrir galeria de imagens de ${product.name}`
+                }
             />
         );
     }

@@ -34,7 +34,7 @@ function DrawerContent({
     children,
     side = 'bottom',
     ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Content> & { side?: 'bottom' | 'right' }) {
+}: React.ComponentProps<typeof DrawerPrimitive.Content> & { side?: 'bottom' | 'right' | 'left' }) {
     return (
         <DrawerPortal>
             <DrawerOverlay />
@@ -44,6 +44,7 @@ function DrawerContent({
                     'bg-background fixed z-50 flex flex-col shadow-2xl outline-none',
                     side === 'bottom' && 'inset-x-0 bottom-0 max-h-[85vh] rounded-t-[2rem] border-t',
                     side === 'right' && 'inset-y-2 right-2 w-[calc(100%-3.5rem)] max-w-md rounded-2xl border after:hidden!',
+                    side === 'left' && 'inset-y-2 left-2 w-[calc(100%-3.5rem)] max-w-md rounded-2xl border after:hidden!',
                     className,
                 )}
                 {...props}

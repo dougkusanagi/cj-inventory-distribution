@@ -50,20 +50,60 @@ test('authentication secrets never enter the audit snapshots', function () {
 });
 
 test('restoring a soft-deleted product is audited', function () {
-    $product = Product::factory()->create(['name' => 'Produto restaurável']);
+    $this->freezeTime();
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $product = Product::factory()->create(['name' => 'Produto restaurável'])->refresh();
     $product->delete();
+    $deletedAt = $product->getRawOriginal('deleted_at');
     $product->restore();
 
-    expect(AuditLog::query()
+    $deleted = AuditLog::query()
         ->where('auditable_type', $product->getMorphClass())
         ->where('auditable_id', $product->id)
         ->where('action', AuditAction::Deleted->value)
-        ->exists())->toBeTrue()
-        ->and(AuditLog::query()
-            ->where('auditable_type', $product->getMorphClass())
-            ->where('auditable_id', $product->id)
-            ->where('action', AuditAction::Restored->value)
-            ->exists())->toBeTrue();
+        ->sole();
+    $restored = AuditLog::query()
+        ->where('auditable_type', $product->getMorphClass())
+        ->where('auditable_id', $product->id)
+        ->where('action', AuditAction::Restored->value)
+        ->sole();
+
+    expect($deleted->actor_id)->toBe($user->id);
+    expect($deleted->before)->toMatchArray(['name' => 'Produto restaurável', 'deleted_at' => null]);
+    expect($deleted->after)->toMatchArray(['name' => 'Produto restaurável', 'deleted_at' => $deletedAt]);
+    expect($restored->actor_id)->toBe($user->id);
+    expect($restored->before)->toMatchArray(['name' => 'Produto restaurável', 'deleted_at' => $deletedAt]);
+    expect($restored->after)->toMatchArray(['name' => 'Produto restaurável', 'deleted_at' => null]);
+    expect($product->refresh()->trashed())->toBeFalse();
+});
+
+test('saving unchanged attributes does not create a misleading update audit', function () {
+    $this->freezeTime();
+    $product = Product::factory()->create(['name' => 'Produto estável']);
+
+    $product->update(['name' => 'Produto estável']);
+
+    expect(AuditLog::query()->where('auditable_type', Product::class)
+        ->where('auditable_id', $product->id)->where('action', AuditAction::Updated->value)->count())->toBe(0);
+});
+
+test('editing authentication secrets excludes their names and values from both audit snapshots', function () {
+    $user = User::factory()->withTwoFactor()->create(['name' => 'Nome anterior']);
+    $oldPassword = $user->getRawOriginal('password');
+    $oldSecret = $user->getRawOriginal('two_factor_secret');
+    $oldRecoveryCodes = $user->getRawOriginal('two_factor_recovery_codes');
+
+    $user->forceFill(['name' => 'Nome atualizado', 'password' => 'new-sensitive-password',
+        'remember_token' => 'new-sensitive-token', 'two_factor_secret' => null, 'two_factor_recovery_codes' => null])->save();
+
+    $audit = AuditLog::query()->where('auditable_type', User::class)->where('auditable_id', $user->id)
+        ->where('action', AuditAction::Updated->value)->sole();
+    expect($audit->before)->toMatchArray(['name' => 'Nome anterior']);
+    expect($audit->after)->toMatchArray(['name' => 'Nome atualizado']);
+    expect(json_encode([$audit->before, $audit->after], JSON_THROW_ON_ERROR))
+        ->not->toContain('password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes',
+            $oldPassword, $oldSecret, $oldRecoveryCodes, $user->getRawOriginal('password'), 'new-sensitive-token');
 });
 
 test('audit records cannot be edited or deleted', function () {

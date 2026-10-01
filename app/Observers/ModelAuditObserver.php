@@ -13,6 +13,9 @@ class ModelAuditObserver
     /** @var array<int, array<string, mixed>> */
     private array $before = [];
 
+    /** @var array<int, array<string, mixed>> */
+    private array $beforeRestoring = [];
+
     public function created(Model $model): void
     {
         $this->record($model, AuditAction::Created, null, $this->snapshot($model->getAttributes()));
@@ -62,14 +65,14 @@ class ModelAuditObserver
 
     public function restoring(Model $model): void
     {
-        $this->before[spl_object_id($model)] = $this->snapshot($model->getRawOriginal());
+        $this->beforeRestoring[spl_object_id($model)] = $this->snapshot($model->getRawOriginal());
     }
 
     public function restored(Model $model): void
     {
         $modelId = spl_object_id($model);
-        $before = $this->before[$modelId] ?? null;
-        unset($this->before[$modelId]);
+        $before = $this->beforeRestoring[$modelId] ?? null;
+        unset($this->beforeRestoring[$modelId]);
 
         $this->record($model, AuditAction::Restored, $before, $this->snapshot($model->getAttributes()));
     }

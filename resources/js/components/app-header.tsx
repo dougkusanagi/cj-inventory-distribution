@@ -12,18 +12,18 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+    Drawer,
+    DrawerContent,
+    DrawerHeader,
+    DrawerTitle,
+    DrawerTrigger,
+} from '@/components/ui/drawer';
+import {
     NavigationMenu,
     NavigationMenuItem,
     NavigationMenuList,
     navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
-import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
-} from '@/components/ui/sheet';
 import { UserMenuContent } from '@/components/user-menu-content';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useInitials } from '@/hooks/use-initials';
@@ -58,8 +58,8 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                 <div className="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                     {/* Mobile Menu */}
                     <div className="lg:hidden">
-                        <Sheet>
-                            <SheetTrigger asChild>
+                        <Drawer direction="left">
+                            <DrawerTrigger asChild>
                                 <Button
                                     variant="ghost"
                                     size="icon"
@@ -67,17 +67,17 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                 >
                                     <ListIcon className="h-6 w-6" />
                                 </Button>
-                            </SheetTrigger>
-                            <SheetContent
+                            </DrawerTrigger>
+                            <DrawerContent
                                 side="left"
-                                className="flex h-full w-64 flex-col items-stretch justify-between bg-sidebar"
+                                className="flex w-64 flex-col items-stretch justify-between bg-sidebar"
                             >
-                                <SheetTitle className="sr-only">
+                                <DrawerTitle className="sr-only">
                                     Menu de navegação
-                                </SheetTitle>
-                                <SheetHeader className="flex justify-start text-left">
+                                </DrawerTitle>
+                                <DrawerHeader className="flex justify-start text-left">
                                     <AppLogoIcon className="h-7 w-7 fill-current text-black dark:text-white" />
-                                </SheetHeader>
+                                </DrawerHeader>
                                 <div className="flex h-full flex-1 flex-col space-y-4 p-4">
                                     <div className="flex h-full flex-col justify-between text-sm">
                                         <div className="flex flex-col space-y-4">
@@ -96,8 +96,8 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                         </div>
                                     </div>
                                 </div>
-                            </SheetContent>
-                        </Sheet>
+                            </DrawerContent>
+                        </Drawer>
                     </div>
 
                     <Link

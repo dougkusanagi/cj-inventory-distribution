@@ -19,8 +19,7 @@ A documentação visual viva está em `/design-system`. Ela é a referência de 
 
 ## Modalidades
 
-- `Drawer`: ações e formulários em telas móveis.
-- `Sheet`: navegação ou conteúdo complementar, em qualquer breakpoint.
+- `Drawer`: ações, formulários, detalhes e navegação. Sobe do rodapé no celular e abre pela lateral (`side="right"` ou `"left"`) no desktop. Não existe `Sheet` no sistema.
 - `Dialog`: confirmações e formulários em desktop.
 
 ## Marca

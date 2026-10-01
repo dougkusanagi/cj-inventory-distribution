@@ -8,9 +8,12 @@ type ImageCarouselProps = {
     fallbackImage?: string;
     loading?: 'lazy' | 'eager';
     compact?: boolean;
+    /** Setas e indicadores menores, para cards estreitos (duas colunas). */
+    dense?: boolean;
     previousTestId?: string;
     nextTestId?: string;
     imageTestId?: string;
+    imageClickTestId?: string;
     onImageClick?: () => void;
     imageClickAriaLabel?: (index: number) => string;
 };
@@ -21,9 +24,11 @@ export default function ImageCarousel({
     fallbackImage,
     loading = 'lazy',
     compact = false,
+    dense = false,
     previousTestId,
     nextTestId,
     imageTestId,
+    imageClickTestId,
     onImageClick,
     imageClickAriaLabel,
 }: ImageCarouselProps) {
@@ -129,6 +134,9 @@ export default function ImageCarousel({
                         {onImageClick ? (
                             <button
                                 type="button"
+                                data-testid={
+                                    index === 0 ? imageClickTestId : undefined
+                                }
                                 onClick={onImageClick}
                                 className="absolute inset-0 size-full cursor-zoom-in text-left outline-none"
                                 aria-label={
@@ -154,7 +162,7 @@ export default function ImageCarousel({
                         data-testid={previousTestId}
                         aria-label={`Imagem anterior de ${alt}`}
                         onClick={() => emblaApi?.scrollPrev()}
-                        className={`absolute ${compact ? 'left-2' : 'left-4'} top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-foreground/65 text-background shadow-sm transition-colors duration-200 hover:bg-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
+                        className={`absolute ${dense ? 'left-1.5 size-8' : compact ? 'left-2 size-11' : 'left-4 size-11'} top-1/2 z-10 flex -translate-y-1/2 items-center justify-center rounded-full bg-foreground/65 text-background shadow-sm transition-colors duration-200 hover:bg-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
                     >
                         <CaretLeftIcon
                             weight="bold"
@@ -166,7 +174,7 @@ export default function ImageCarousel({
                         data-testid={nextTestId}
                         aria-label={`Próxima imagem de ${alt}`}
                         onClick={() => emblaApi?.scrollNext()}
-                        className={`absolute ${compact ? 'right-2' : 'right-4'} top-1/2 z-10 flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-foreground/65 text-background shadow-sm transition-colors duration-200 hover:bg-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
+                        className={`absolute ${dense ? 'right-1.5 size-8' : compact ? 'right-2 size-11' : 'right-4 size-11'} top-1/2 z-10 flex -translate-y-1/2 items-center justify-center rounded-full bg-foreground/65 text-background shadow-sm transition-colors duration-200 hover:bg-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
                     >
                         <CaretRightIcon
                             weight="bold"
@@ -176,11 +184,11 @@ export default function ImageCarousel({
                     <div
                         role="group"
                         aria-label={`Imagem ${selectedIndex + 1} de ${images.length}`}
-                        className={`absolute ${compact ? 'bottom-3' : 'bottom-4'} left-1/2 flex -translate-x-1/2 items-center gap-0.5`}
+                        className={`absolute ${dense ? 'bottom-1.5 left-1/2 flex -translate-x-1/2 items-center' : `${compact ? 'bottom-3' : 'bottom-4'} left-1/2 flex -translate-x-1/2 items-center gap-0.5`}`}
                     >
                         <span
                             aria-hidden="true"
-                            className="pointer-events-none absolute inset-x-2 top-2 bottom-2 rounded-full bg-foreground/45 backdrop-blur-sm"
+                            className={`pointer-events-none absolute rounded-full bg-foreground/45 backdrop-blur-sm ${dense ? 'inset-x-0 inset-y-1' : 'inset-x-2 top-2 bottom-2'}`}
                         />
                         {images.map((_, index) => (
                             <button
@@ -191,7 +199,7 @@ export default function ImageCarousel({
                                     index === selectedIndex ? 'true' : undefined
                                 }
                                 onClick={() => scrollTo(index)}
-                                className="relative z-10 flex size-11 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                className={`relative z-10 flex items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${dense ? 'h-7 w-5' : 'size-11'}`}
                             >
                                 <span
                                     aria-hidden="true"
