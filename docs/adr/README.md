@@ -48,3 +48,4 @@ ADRs iniciais:
 - [0019 — Phosphor duotone como biblioteca de ícones](0019-phosphor-duotone-icons.md)
 
 - [0020 — Tipos de lavagem independentes do produto](0020-independent-wash-types.md)
+- [0021 — Histórico de novidades por PR com Codex CLI](0021-codex-cli-changelog.md)

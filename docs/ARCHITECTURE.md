@@ -424,3 +424,13 @@ Produto
 ```
 
 Integrações com Bling e funcionalidades de PCP devem ser tratadas como módulos futuros, não como dependências do MVP.
+
+## Histórico de novidades
+
+As notas de atualização são arquivos JSON versionados por PR em
+`resources/changelog`, lidos pela página pública `/novidades`. A automação
+usa a CLI do Codex autenticada em um runner dedicado, gera uma nota revisável
+no PR e registra a versão final após merge na `master`. Mudanças técnicas e
+correções fazem parte do histórico, explicadas em português leigo. A página
+mostra apenas notas presentes no código implantado, sem tabela, webhook ou
+consulta ao GitHub em tempo de execução.

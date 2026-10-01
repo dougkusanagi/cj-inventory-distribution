@@ -180,3 +180,80 @@ Ao alterar uma regra de domínio:
 - atualizar teste;
 - atualizar `ARCHITECTURE.md` se necessário;
 - criar ADR apenas quando for uma decisão arquitetural relevante.
+
+## Histórico de novidades com Codex CLI
+
+A página pública `/novidades` lê as notas versionadas em
+`resources/changelog/pr-<numero>.json`, com paginação e ordem de merge.
+Inclui novidades, melhorias, correções e manutenção técnica explicadas em
+linguagem leiga. Ela lê somente os arquivos presentes no código implantado;
+não busca novidades futuras do GitHub durante uma visita.
+
+O workflow `changelog.yml` gera/atualiza um comentário em PRs destinados à
+`master`, usando `codex exec` e o login ChatGPT da CLI, sem chave de API.
+Para revisar o texto, copie o bloco `changelog` do comentário para a descrição
+do PR e edite o JSON. Essa versão tem prioridade. Mudanças no código invalidam
+o comentário anterior pelo SHA; notas manuais continuam sendo responsabilidade
+da revisão do PR. O merge registra um arquivo por PR, sem substituir uma nota
+já publicada ao repetir a execução. PR fechado sem merge não publica nada.
+
+### Configuração do runner
+
+Cadastre em Settings → Actions → Runners um runner Linux dedicado com o label
+`codex-changelog`. Ele precisa de Bash, Python 3, Git e Codex CLI 0.159.3 ou
+mais recente. No usuário que executa o serviço do runner, execute
+`codex login --device-auth` e confira `codex login status`. Preserve a
+configuração de autenticação entre execuções, sem copiá-la para o repositório
+ou logs. Não é necessário instalar dependências da aplicação nesse runner.
+O modelo é o padrão da CLI; não se usa uma integração direta com API.
+
+Neste servidor de desenvolvimento, o runner está instalado em
+`/home/servidor/.local/share/github-runners/inventario-changelog`, registrado
+como `inventario-dev-codex-changelog`. O serviço systemd do usuário `servidor`
+usa o login ChatGPT existente em `/home/servidor/.codex_mkt`; as credenciais
+permanecem fora do repositório. O serviço inicia automaticamente e o usuário
+possui linger habilitado, mantendo o runner ativo após logout e reinício.
+
+Gerenciamento pelo usuário `servidor`, sem sudo:
+
+```bash
+systemctl --user status inventario-codex-changelog.service
+systemctl --user restart inventario-codex-changelog.service
+journalctl --user -u inventario-codex-changelog.service -n 50
+```
+
+Use o runner somente para workflows confiáveis deste repositório. O workflow
+faz checkout da `master`, nunca do código do PR. PRs de forks não executam
+automaticamente no runner; depois da revisão, use o acionamento manual.
+O subprocesso Codex recebe dados por stdin, roda em pasta temporária com
+sandbox somente leitura, sem configuração pessoal/MCP e sem o token GitHub
+no ambiente. Diffs são dados para resumo, nunca comandos para execução.
+
+O `GITHUB_TOKEN` precisa poder escrever comentários e conteúdo na `master`.
+Se houver proteção que proíba esse commit, a publicação falha explicitamente;
+ajuste a política para o bot conforme as regras do repositório. Não desative
+proteções para contornar um erro sem avaliar a política vigente.
+
+Para recuperar uma falha, execute o workflow manualmente na `master`, informe
+o número do PR e habilite `publish` somente quando já estiver mergeado.
+Falha de login, limite de uso, diff grande ou JSON inválido não gera nota
+inventada. O merge do código não depende do sucesso do resumo; confira a
+execução antes de fazer deploy para incluir a nota na mesma atualização.
+No primeiro merge que instalar o workflow, use o acionamento manual caso o
+evento ainda não encontre a nova automação.
+
+Verificação local da automação, sem chamar a IA:
+
+```bash
+python3 -m unittest discover -s scripts/changelog -p 'test_*.py'
+php artisan test --compact tests/Feature/ChangelogTest.php
+```
+
+### Bun em produção
+
+O servidor usa Bun para instalar e compilar o frontend. O Bun 1.3.14 falha ao
+migrar este `package-lock.json` por causa de `@napi-rs/wasm-runtime` e pode
+ignorar o lockfile, recalculando versões. A conversão do mesmo arquivo foi
+verificada com Bun 1.4.2. Atualize o binário usado pelo deploy
+(`/usr/local/bin/bun`) antes de repetir a instalação. Não remova o lockfile
+nem gere outro com versões diferentes como contorno.

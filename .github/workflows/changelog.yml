@@ -1,0 +1,52 @@
+name: Histórico de novidades
+
+on:
+  pull_request_target:
+    branches: [master]
+    types: [opened, reopened, synchronize, edited, closed]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Número do PR para gerar ou recuperar a nota
+        required: true
+        type: number
+      publish:
+        description: Publicar a nota de um PR já mergeado
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  changelog:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      (github.event.action != 'closed' || github.event.pull_request.merged))
+    runs-on: [self-hosted, linux, codex-changelog]
+    timeout-minutes: 15
+    concurrency:
+      group: changelog-${{ github.event.pull_request.number || inputs.pr }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout trusted master code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: master
+          persist-credentials: false
+
+      - name: Generate or publish notes with Codex CLI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
+          PUBLISH: ${{ github.event.pull_request.merged || inputs.publish || false }}
+        run: |
+          command -v codex
+          codex login status
+          args=(--pr "$PR_NUMBER")
+          if [[ "$PUBLISH" == "true" ]]; then
+            args+=(--publish)
+          fi
+          python3 scripts/changelog/generate.py "${args[@]}"
