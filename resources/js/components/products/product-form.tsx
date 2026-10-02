@@ -481,7 +481,7 @@ export function ProductForm({
                         aria-invalid={error('name') ? true : undefined}
                         placeholder="Ex.: Calça Wide Leg"
                         maxLength={80}
-                        className="h-11 text-base sm:h-10 sm:text-sm"
+                        className="text-base sm:text-sm"
                         required
                     />
                     <InputError message={error('name')} />
@@ -588,7 +588,7 @@ export function ProductForm({
                                             error('model') ? true : undefined
                                         }
                                         placeholder="Ex.: 2451"
-                                        className="h-11 text-base sm:h-10 sm:text-sm"
+                                        className="text-base sm:text-sm"
                                     />
                                     <InputError message={error('model')} />
                                 </div>
@@ -607,7 +607,7 @@ export function ProductForm({
                                     >
                                         <SelectTrigger
                                             id="product-category"
-                                            className="h-11 w-full text-base sm:h-10 sm:text-sm"
+                                            className="w-full text-base sm:text-sm"
                                             aria-invalid={
                                                 error('category_id')
                                                     ? true

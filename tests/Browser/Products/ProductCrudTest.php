@@ -37,10 +37,12 @@ it('shows the grade type, commercial line, and category in product cards and tab
     $this->actingAs($user);
 
     visit(route('products.index', [], false))
-        ->assertSee('Grade: Furada')
-        ->assertSee('Slim')
+        ->assertPresent('table[aria-label="Produtos cadastrados"]')
+        ->assertSee('Grade Furada')
+        ->assertSee('Linha Slim')
         ->assertSee('Calças')
-        ->assertSee('3 peças disponíveis')
+        ->assertSee('3 peças · 1 saco')
+        ->assertSee('3 peças em estoque físico')
         ->click('button[aria-label="Visualização em cards"]')
         ->assertSee('Grade Furada')
         ->assertSee('Slim')
@@ -393,7 +395,7 @@ it('creates a product without a stock offer from the form', function () {
         ->assertRoute('products.index')
         ->assertSee('Blusa básica E2E')
         ->assertSee('CJ-000001')
-        ->assertSee('Grade: Sem oferta')
+        ->assertSee('Sem oferta de estoque')
         ->assertSee('Produto cadastrado.')
         ->assertNoJavaScriptErrors();
 
@@ -438,9 +440,8 @@ it('keeps a stock quantity when disabling a size is cancelled', function () {
     $page
         ->assertRoute('products.index')
         ->assertSee('Blusa com grade E2E')
-        ->assertSee('Grade: Furada')
-        ->assertSee('7')
-        ->assertSee('Sacos disponíveis')
+        ->assertSee('Grade Furada')
+        ->assertSee('7 peças · 1 saco')
         ->assertSee('Produto cadastrado.')
         ->assertNoJavaScriptErrors();
 
@@ -499,8 +500,8 @@ it('edits product details while keeping existing stock read only', function () {
         ->submit()
         ->assertRoute('products.index')
         ->assertSee('Produto atualizado E2E')
-        ->assertSee('4')
-        ->assertSee('Sacos disponíveis')
+        ->assertSee('Oculto para lojistas')
+        ->assertSee('4 peças em estoque físico')
         ->assertSee('Produto atualizado.')
         ->assertNoJavaScriptErrors();
 

@@ -61,9 +61,21 @@ type SearchFilterBarProps = {
 };
 
 const searchPlaceholder = 'Nome, modelo ou código';
-const filterTriggerClassName =
-    'h-10 w-full justify-between rounded-xl border-input bg-background px-3 text-sm font-normal text-foreground shadow-xs hover:bg-background hover:text-foreground dark:bg-background dark:hover:bg-background data-[size=default]:h-10';
-const filterTriggerLabelledClassName = 'h-11 data-[size=default]:h-11';
+const filterTriggerClassName = 'h-14 w-full data-[size=default]:h-14';
+const filterTriggerLabelledClassName = 'h-12 data-[size=default]:h-12';
+/** Destaca em dourado os filtros que fogem do valor padrão. */
+const filterTriggerActiveClassName =
+    'border-highlight bg-primary/10 font-medium text-foreground hover:border-highlight hover:bg-primary/15';
+
+/** O brilho de foco envolve o campo e o botão anexo como um único controle. */
+const addonGroupClassName =
+    'group/addon has-[[aria-expanded=true]]:ring-4 has-[[aria-expanded=true]]:ring-ring/15 has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-ring/15';
+const addonGroupItemClassName =
+    'focus-visible:ring-0 aria-expanded:ring-0 group-has-[[aria-expanded=true]]/addon:border-highlight group-has-[:focus-visible]/addon:border-highlight';
+
+function isFieldActive(field: FilterField): boolean {
+    return field.value !== (field.defaultValue ?? 'all');
+}
 
 function SearchField({
     className,
@@ -75,16 +87,24 @@ function SearchField({
     onClear: () => void;
 }) {
     return (
-        <div className="relative min-w-0">
-            <MagnifyingGlassIcon className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground" />
+        <div className="group/search relative min-w-0">
+            <span className="pointer-events-none absolute top-1/2 left-3 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg bg-primary/10 text-highlight">
+                <MagnifyingGlassIcon className="size-5" />
+            </span>
+            <span
+                aria-hidden="true"
+                className="pointer-events-none absolute top-2.5 left-14 text-xs leading-4 text-muted-foreground"
+            >
+                Buscar produtos
+            </span>
             <Input
                 type="search"
                 value={value}
                 placeholder={searchPlaceholder}
                 aria-label="Buscar produtos"
                 className={cn(
-                    'h-11 bg-background pl-10 text-base md:h-10 md:text-sm [&::-webkit-search-cancel-button]:appearance-none',
-                    value !== '' && 'pr-11',
+                    'h-14 pt-6 pb-2 pl-14 text-base md:text-sm [&::-webkit-search-cancel-button]:appearance-none',
+                    value !== '' && 'pr-14',
                     className,
                 )}
                 {...props}
@@ -96,7 +116,7 @@ function SearchField({
                     size="icon"
                     aria-label="Limpar busca"
                     onClick={onClear}
-                    className="absolute top-1/2 right-1 size-9 -translate-y-1/2 text-muted-foreground"
+                    className="absolute top-1/2 right-1 size-11 -translate-y-1/2 text-muted-foreground"
                 >
                     <XIcon weight="bold" />
                 </Button>
@@ -120,10 +140,12 @@ function FilterSelect({
         <Select value={field.value} onValueChange={onChange}>
             <SelectTrigger
                 id={id}
+                label={labelled ? undefined : field.label}
                 aria-label={field.label}
                 className={cn(
                     filterTriggerClassName,
                     labelled && filterTriggerLabelledClassName,
+                    isFieldActive(field) && filterTriggerActiveClassName,
                 )}
             >
                 <SelectValue />
@@ -163,10 +185,16 @@ function FilterCombobox({
     onChange: (value: string) => void;
 }) {
     const combobox = (
-        <div className="flex min-w-0">
+        <div
+            className={cn(
+                'flex min-w-0 rounded-2xl transition-shadow duration-200 motion-reduce:transition-none',
+                field.onAdd && addonGroupClassName,
+            )}
+        >
             <SearchableSelect
                 id={id}
                 label={field.label}
+                showLabel={!labelled}
                 value={field.value}
                 options={[
                     { value: 'all', label: field.allLabel },
@@ -176,17 +204,19 @@ function FilterCombobox({
                 className={cn(
                     filterTriggerClassName,
                     'min-w-0 flex-1',
-                    field.onAdd && 'rounded-r-none focus-visible:z-10',
+                    field.onAdd && ['rounded-r-none', addonGroupItemClassName],
                     labelled && filterTriggerLabelledClassName,
+                    isFieldActive(field) && filterTriggerActiveClassName,
                 )}
             />
             {field.onAdd && (
                 <Button
                     type="button"
-                    variant="secondary"
+                    variant="ghost"
                     className={cn(
-                        'size-10 shrink-0 rounded-l-none rounded-r-xl border border-l-0 border-input focus-visible:z-10',
-                        labelled && 'size-11',
+                        'h-14 w-11 shrink-0 rounded-l-none rounded-r-2xl border border-l-0 border-input bg-field text-highlight shadow-field hover:bg-field-hover hover:text-highlight',
+                        addonGroupItemClassName,
+                        labelled && 'h-12',
                     )}
                     aria-label={field.addLabel}
                     onClick={field.onAdd}
@@ -252,9 +282,7 @@ export function SearchFilterBar({
     className,
 }: SearchFilterBarProps) {
     const [drawerOpen, setDrawerOpen] = useState(false);
-    const activeCount = fields.filter(
-        (field) => field.value !== (field.defaultValue ?? 'all'),
-    ).length;
+    const activeCount = fields.filter(isFieldActive).length;
     const hasFilters = search !== '' || activeCount > 0;
     const drawerId = `${idPrefix}-filter-drawer`;
     const controlFields = fields.map((field) => ({
@@ -279,14 +307,14 @@ export function SearchFilterBar({
                 className,
             )}
         >
-            <div className="grid gap-3 md:hidden">
+            <div className="grid gap-2 md:hidden">
                 <SearchField
                     id={`mobile-${idPrefix}-search`}
                     value={search}
                     onChange={(event) => onSearchChange(event.target.value)}
                     onClear={() => onSearchChange('')}
                 />
-                <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-3">
+                <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-2">
                     <Button
                         type="button"
                         variant="secondary"

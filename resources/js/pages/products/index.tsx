@@ -1,16 +1,14 @@
 import { Pagination } from '@/components/pagination';
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import { ProductImageButton } from '@/components/products/product-image';
-import {
-    ProductClassification,
-    productLineLabels,
-} from '@/components/products/product-classification';
+import { productLineLabels } from '@/components/products/product-classification';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowsClockwiseIcon,
     CaretRightIcon,
     CheckCircleIcon,
     DotsThreeIcon,
+    DropIcon,
     FolderSimpleIcon,
     HashIcon,
     ImageBrokenIcon,
@@ -30,8 +28,9 @@ import {
     TagIcon,
     TrashIcon,
     XIcon,
+    type Icon as PhosphorIcon,
 } from '@phosphor-icons/react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { WashTypeCreateDialog } from '@/components/wash-types/wash-type-create-dialog';
 import { destroy } from '@/actions/App/Http/Controllers/ProductController';
 import { Badge } from '@/components/ui/badge';
@@ -200,9 +199,7 @@ function RefinedProductCard({
     const availableVolumeCount = product.available_stock_volume_count ?? 0;
     const hasStock =
         product.total_quantity !== null && product.total_quantity !== undefined;
-    const isAvailable =
-        Boolean(product.is_active) &&
-        Boolean(product.available_for_distribution);
+    const isAvailable = isProductAvailable(product);
     const statusLabel = !product.is_active
         ? 'Inativo'
         : product.available_for_distribution
@@ -357,21 +354,6 @@ function ProductCardV3({
     /** Densidade para duas colunas no celular; mantém o mesmo conteúdo e ações. */
     compact?: boolean;
 }) {
-    const [detailsOpen, setDetailsOpen] = useState(false);
-    const availableQuantity = product.available_quantity ?? 0;
-    const physicalQuantity = product.physical_quantity ?? 0;
-    const reservedQuantity = product.reserved_quantity ?? 0;
-    const consumedQuantity = product.consumed_quantity ?? 0;
-    const availableVolumeCount = product.available_stock_volume_count ?? 0;
-    const hasStock =
-        product.total_quantity !== null && product.total_quantity !== undefined;
-    const isAvailable =
-        Boolean(product.is_active) &&
-        Boolean(product.available_for_distribution);
-    const isInternalUse =
-        Boolean(product.is_active) && product.stock_offer_type === 'new_grade';
-    const volumes = product.stock_volumes;
-
     return (
         <article
             data-testid={compact ? 'product-card-compact' : 'product-card-v3'}
@@ -395,42 +377,15 @@ function ProductCardV3({
                     dense={compact}
                     iconClassName="size-8"
                 />
-                {product.notes && (
-                    <Popover modal={false}>
-                        <PopoverTrigger asChild>
-                            <button
-                                type="button"
-                                className={cn(
-                                    'absolute z-10 flex items-center justify-center rounded-full border border-white/50 bg-card/90 text-foreground shadow-sm backdrop-blur transition hover:bg-card focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                                    compact
-                                        ? 'top-2 right-2 size-8'
-                                        : 'top-3 right-3 size-9',
-                                )}
-                                aria-label={`Ver observação de ${product.name}`}
-                            >
-                                <InfoIcon
-                                    className="size-5"
-                                    aria-hidden="true"
-                                />
-                            </button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                            align="end"
-                            side="bottom"
-                            sideOffset={8}
-                            className="w-64"
-                        >
-                            <PopoverHeader>
-                                <PopoverTitle>
-                                    Observação do produto
-                                </PopoverTitle>
-                                <PopoverDescription className="whitespace-pre-wrap">
-                                    {product.notes}
-                                </PopoverDescription>
-                            </PopoverHeader>
-                        </PopoverContent>
-                    </Popover>
-                )}
+                <ProductNotesPopover
+                    product={product}
+                    className={cn(
+                        'absolute z-10 border border-white/50 bg-card/90 text-foreground shadow-sm backdrop-blur hover:bg-card',
+                        compact
+                            ? 'top-2 right-2 size-8'
+                            : 'top-3 right-3 size-9',
+                    )}
+                />
                 {!compact && product.category && (
                     <span
                         className={cn(
@@ -537,248 +492,331 @@ function ProductCardV3({
                     </div>
                 )}
 
-                <p
-                    className={cn(
-                        'mt-auto rounded-lg text-xs leading-5',
-                        compact
-                            ? 'px-2.5 py-1.5 leading-[1.15rem]'
-                            : 'px-3 py-2',
-                        isAvailable
-                            ? 'bg-emerald-500/10 text-emerald-900 dark:text-emerald-200'
-                            : isInternalUse
-                              ? 'bg-amber-500/10 text-amber-950 dark:text-amber-100'
-                              : 'bg-muted text-muted-foreground',
-                    )}
-                >
-                    {isAvailable ? (
-                        <>
-                            <span className="block text-[10px] leading-4 font-normal opacity-70">
-                                Disponível
-                            </span>
-                            <strong>{availableQuantity} peças</strong>
-                            {' · '}
-                            <strong>
-                                {availableVolumeCount}{' '}
-                                {availableVolumeCount === 1 ? 'saco' : 'sacos'}
-                            </strong>
-                        </>
-                    ) : isInternalUse ? (
-                        <>
-                            <span className="block text-[10px] leading-4 font-normal opacity-70">
-                                Grade Nova
-                            </span>
-                            <strong>Oculto para lojistas</strong>
-                        </>
-                    ) : hasStock ? (
-                        (product.distribution_status ?? 'Sem sacos disponíveis')
-                    ) : (
-                        'Sem oferta de estoque'
-                    )}
-                </p>
+                <ProductAvailabilityNotice
+                    product={product}
+                    compact={compact}
+                    className="mt-auto"
+                />
 
-                <Drawer
-                    direction="right"
-                    open={detailsOpen}
-                    onOpenChange={setDetailsOpen}
+                <div
+                    className={cn(
+                        'flex items-center justify-between gap-2 border-t border-border',
+                        compact
+                            ? '-mx-3 -mb-3 px-3 py-2 sm:-mx-4 sm:-mb-4 sm:px-4 sm:py-2.5'
+                            : '-mx-4 -mb-4 px-4 py-2.5 sm:-mx-5 sm:-mb-5 sm:px-5',
+                    )}
                 >
-                    <div
-                        className={cn(
-                            'flex items-center justify-between gap-2 border-t border-border',
-                            compact
-                                ? '-mx-3 -mb-3 px-3 py-2 sm:-mx-4 sm:-mb-4 sm:px-4 sm:py-2.5'
-                                : '-mx-4 -mb-4 px-4 py-2.5 sm:-mx-5 sm:-mb-5 sm:px-5',
-                        )}
-                    >
-                        <DrawerTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className={cn(
-                                    'px-1 text-muted-foreground',
-                                    compact && 'max-sm:size-9 max-sm:shrink-0',
-                                )}
-                                aria-label={`Ver mais informações de ${product.name}`}
-                            >
-                                <span
-                                    className={cn(compact && 'max-sm:hidden')}
-                                >
-                                    Mais
-                                </span>
-                                <CaretRightIcon
-                                    weight="bold"
-                                    aria-hidden="true"
-                                    className={cn(compact && 'max-sm:hidden')}
-                                />
-                                {compact && (
-                                    <DotsThreeIcon
-                                        weight="bold"
-                                        aria-hidden="true"
-                                        className="size-5 sm:hidden"
-                                    />
-                                )}
-                            </Button>
-                        </DrawerTrigger>
+                    <ProductDetailsDrawer product={product} onDelete={onDelete}>
                         <Button
-                            asChild
-                            variant="secondary"
+                            variant="ghost"
                             size="sm"
                             className={cn(
-                                compact && 'min-w-0 flex-1 px-2.5 sm:flex-none',
+                                'px-1 text-muted-foreground',
+                                compact && 'max-sm:size-9 max-sm:shrink-0',
                             )}
+                            aria-label={`Ver mais informações de ${product.name}`}
                         >
-                            <Link
-                                href={productEdit(product.id)}
-                                aria-label={`Editar ${product.name}`}
-                            >
-                                <PencilSimpleIcon />
-                                Editar
-                            </Link>
-                        </Button>
-                    </div>
-                    <DrawerContent
-                        side="right"
-                        data-testid="product-card-v3-details"
-                        className="gap-0"
-                    >
-                        <DrawerHeader className="relative border-b border-border p-5 pr-14 text-left">
-                            <p className="truncate font-mono text-xs text-muted-foreground">
-                                {product.code}
-                                {product.model && ` · Mod. ${product.model}`}
-                            </p>
-                            <DrawerTitle className="text-lg leading-snug text-balance break-words">
-                                {product.name}
-                            </DrawerTitle>
-                            <DrawerDescription>
-                                {product.distribution_status ??
-                                    'Detalhes do estoque por saco.'}
-                            </DrawerDescription>
-                        </DrawerHeader>
-                        <DrawerClose asChild>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="absolute top-3 right-3 text-muted-foreground"
-                                aria-label="Fechar detalhes do produto"
-                            >
-                                <XIcon weight="bold" />
-                            </Button>
-                        </DrawerClose>
-                        <div
-                            data-vaul-no-drag
-                            className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto p-5 text-xs text-muted-foreground"
-                        >
-                            <section
-                                className="grid gap-2"
-                                aria-label="Resumo do estoque"
-                            >
-                                <p className="text-sm font-medium text-card-foreground">
-                                    Resumo do estoque
-                                </p>
-                                <StockQuantityDetails
-                                    layout="columns"
-                                    physicalQuantity={physicalQuantity}
-                                    availableSackCount={availableVolumeCount}
-                                    reservedQuantity={reservedQuantity}
-                                    consumedQuantity={consumedQuantity}
-                                    className="[&_dd]:font-semibold [&_dd]:text-card-foreground"
+                            <span className={cn(compact && 'max-sm:hidden')}>
+                                Mais
+                            </span>
+                            <CaretRightIcon
+                                weight="bold"
+                                aria-hidden="true"
+                                className={cn(compact && 'max-sm:hidden')}
+                            />
+                            {compact && (
+                                <DotsThreeIcon
+                                    weight="bold"
+                                    aria-hidden="true"
+                                    className="size-5 sm:hidden"
                                 />
-                            </section>
-                            {volumes.length > 0 ? (
-                                <div className="grid gap-3">
-                                    <p className="text-sm font-medium text-card-foreground">
-                                        Quantidade por saco
-                                    </p>
-                                    <div className="grid gap-2.5">
-                                        {volumes.map((volume, index) => {
-                                            const volumeSizes = volume.items
-                                                .filter(
-                                                    (item) => item.is_active,
-                                                )
-                                                .map(({ size, quantity }) => ({
-                                                    size,
-                                                    quantity,
-                                                }));
-
-                                            return (
-                                                <div
-                                                    key={volume.id}
-                                                    className="grid gap-2.5 rounded-xl border border-border/70 bg-muted/40 px-3.5 py-3"
-                                                >
-                                                    <div className="flex items-start justify-between gap-3">
-                                                        <p className="min-w-0 font-semibold text-card-foreground">
-                                                            Saco {index + 1}
-                                                            {volume.code && (
-                                                                <span className="block truncate font-mono text-[11px] font-normal text-muted-foreground">
-                                                                    {
-                                                                        volume.code
-                                                                    }
-                                                                </span>
-                                                            )}
-                                                        </p>
-                                                        {volume.status && (
-                                                            <Badge
-                                                                variant="outline"
-                                                                className={cn(
-                                                                    'shrink-0',
-                                                                    volume.status ===
-                                                                        'Disponível'
-                                                                        ? 'border-emerald-600/30 bg-emerald-500/10 text-emerald-800 dark:border-emerald-400/30 dark:text-emerald-200'
-                                                                        : volume.status ===
-                                                                            'Reservado'
-                                                                          ? 'border-amber-600/30 bg-amber-500/10 text-amber-900 dark:border-amber-400/30 dark:text-amber-200'
-                                                                          : 'border-border bg-muted text-muted-foreground',
-                                                                )}
-                                                            >
-                                                                {volume.status}
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                    <StockSizeBreakdown
-                                                        sizes={volumeSizes}
-                                                        compact
-                                                        showUnknownAsCards
-                                                    />
-                                                    <p className="tabular-nums">
-                                                        Total do saco:{' '}
-                                                        <strong className="text-card-foreground">
-                                                            {
-                                                                volume.total_quantity
-                                                            }{' '}
-                                                            {volume.total_quantity ===
-                                                            1
-                                                                ? 'peça'
-                                                                : 'peças'}
-                                                        </strong>
-                                                    </p>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            ) : (
-                                <p>
-                                    Este produto ainda não tem sacos
-                                    cadastrados.
-                                </p>
                             )}
-                        </div>
-                        <DrawerFooter className="border-t border-border p-5">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="w-fit px-1 text-destructive hover:text-destructive"
-                                onClick={() => onDelete(product)}
-                                aria-label={`Excluir ${product.name}`}
-                            >
-                                <TrashIcon />
-                                Excluir produto
-                            </Button>
-                        </DrawerFooter>
-                    </DrawerContent>
-                </Drawer>
+                        </Button>
+                    </ProductDetailsDrawer>
+                    <Button
+                        asChild
+                        variant="secondary"
+                        size="sm"
+                        className={cn(
+                            compact && 'min-w-0 flex-1 px-2.5 sm:flex-none',
+                        )}
+                    >
+                        <Link
+                            href={productEdit(product.id)}
+                            aria-label={`Editar ${product.name}`}
+                        >
+                            <PencilSimpleIcon />
+                            Editar
+                        </Link>
+                    </Button>
+                </div>
             </div>
         </article>
+    );
+}
+
+/** Observação do produto em um popover acionado por um botão circular. */
+function ProductNotesPopover({
+    product,
+    className,
+}: {
+    product: Product;
+    className?: string;
+}) {
+    if (!product.notes) {
+        return null;
+    }
+
+    return (
+        <Popover modal={false}>
+            <PopoverTrigger asChild>
+                <button
+                    type="button"
+                    className={cn(
+                        'flex items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none',
+                        className,
+                    )}
+                    aria-label={`Ver observação de ${product.name}`}
+                >
+                    <InfoIcon className="size-5" aria-hidden="true" />
+                </button>
+            </PopoverTrigger>
+            <PopoverContent
+                align="end"
+                side="bottom"
+                sideOffset={8}
+                className="w-64"
+            >
+                <PopoverHeader>
+                    <PopoverTitle>Observação do produto</PopoverTitle>
+                    <PopoverDescription className="whitespace-pre-wrap">
+                        {product.notes}
+                    </PopoverDescription>
+                </PopoverHeader>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
+function isProductAvailable(product: Product): boolean {
+    return (
+        Boolean(product.is_active) &&
+        Boolean(product.available_for_distribution)
+    );
+}
+
+function isProductInternalUse(product: Product): boolean {
+    return (
+        Boolean(product.is_active) && product.stock_offer_type === 'new_grade'
+    );
+}
+
+/** Situação de distribuição do produto, no mesmo destaque dos cards e da tabela. */
+function ProductAvailabilityNotice({
+    product,
+    compact = false,
+    className,
+}: {
+    product: Product;
+    compact?: boolean;
+    className?: string;
+}) {
+    const availableQuantity = product.available_quantity ?? 0;
+    const availableVolumeCount = product.available_stock_volume_count ?? 0;
+    const hasStock =
+        product.total_quantity !== null && product.total_quantity !== undefined;
+    const isAvailable = isProductAvailable(product);
+    const isInternalUse = isProductInternalUse(product);
+
+    return (
+        <p
+            className={cn(
+                'rounded-lg text-xs leading-5',
+                compact ? 'px-2.5 py-1.5 leading-[1.15rem]' : 'px-3 py-2',
+                isAvailable
+                    ? 'bg-emerald-500/10 text-emerald-900 dark:text-emerald-200'
+                    : isInternalUse
+                      ? 'bg-amber-500/10 text-amber-950 dark:text-amber-100'
+                      : 'bg-muted text-muted-foreground',
+                className,
+            )}
+        >
+            {isAvailable ? (
+                <>
+                    <span className="block text-[10px] leading-4 font-normal opacity-70">
+                        Disponível
+                    </span>
+                    <strong>{availableQuantity} peças</strong>
+                    {' · '}
+                    <strong>
+                        {availableVolumeCount}{' '}
+                        {availableVolumeCount === 1 ? 'saco' : 'sacos'}
+                    </strong>
+                </>
+            ) : isInternalUse ? (
+                <>
+                    <span className="block text-[10px] leading-4 font-normal opacity-70">
+                        Grade Nova
+                    </span>
+                    <strong>Oculto para lojistas</strong>
+                </>
+            ) : hasStock ? (
+                (product.distribution_status ?? 'Sem sacos disponíveis')
+            ) : (
+                'Sem oferta de estoque'
+            )}
+        </p>
+    );
+}
+
+/** Painel lateral com o resumo do estoque e o conteúdo de cada saco. */
+function ProductDetailsDrawer({
+    product,
+    onDelete,
+    children,
+}: {
+    product: Product;
+    onDelete: (product: Product) => void;
+    /** Botão que abre o painel. */
+    children: ReactNode;
+}) {
+    const [open, setOpen] = useState(false);
+    const volumes = product.stock_volumes;
+
+    return (
+        <Drawer direction="right" open={open} onOpenChange={setOpen}>
+            <DrawerTrigger asChild>{children}</DrawerTrigger>
+            <DrawerContent
+                side="right"
+                data-testid="product-card-v3-details"
+                className="gap-0"
+            >
+                <DrawerHeader className="relative border-b border-border p-5 pr-14 text-left">
+                    <p className="truncate font-mono text-xs text-muted-foreground">
+                        {product.code}
+                        {product.model && ` · Mod. ${product.model}`}
+                    </p>
+                    <DrawerTitle className="text-lg leading-snug text-balance break-words">
+                        {product.name}
+                    </DrawerTitle>
+                    <DrawerDescription>
+                        {product.distribution_status ??
+                            'Detalhes do estoque por saco.'}
+                    </DrawerDescription>
+                </DrawerHeader>
+                <DrawerClose asChild>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-3 right-3 text-muted-foreground"
+                        aria-label="Fechar detalhes do produto"
+                    >
+                        <XIcon weight="bold" />
+                    </Button>
+                </DrawerClose>
+                <div className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto p-5 text-xs text-muted-foreground">
+                    <section
+                        className="grid gap-2"
+                        aria-label="Resumo do estoque"
+                    >
+                        <p className="text-sm font-medium text-card-foreground">
+                            Resumo do estoque
+                        </p>
+                        <StockQuantityDetails
+                            layout="columns"
+                            physicalQuantity={product.physical_quantity ?? 0}
+                            availableSackCount={
+                                product.available_stock_volume_count ?? 0
+                            }
+                            reservedQuantity={product.reserved_quantity ?? 0}
+                            consumedQuantity={product.consumed_quantity ?? 0}
+                            className="[&_dd]:font-semibold [&_dd]:text-card-foreground"
+                        />
+                    </section>
+                    {volumes.length > 0 ? (
+                        <div className="grid gap-3">
+                            <p className="text-sm font-medium text-card-foreground">
+                                Quantidade por saco
+                            </p>
+                            <div className="grid gap-2.5">
+                                {volumes.map((volume, index) => {
+                                    const volumeSizes = volume.items
+                                        .filter((item) => item.is_active)
+                                        .map(({ size, quantity }) => ({
+                                            size,
+                                            quantity,
+                                        }));
+
+                                    return (
+                                        <div
+                                            key={volume.id}
+                                            className="grid gap-2.5 rounded-xl border border-border/70 bg-muted/40 px-3.5 py-3"
+                                        >
+                                            <div className="flex items-start justify-between gap-3">
+                                                <p className="min-w-0 font-semibold text-card-foreground">
+                                                    Saco {index + 1}
+                                                    {volume.code && (
+                                                        <span className="block truncate font-mono text-[11px] font-normal text-muted-foreground">
+                                                            {volume.code}
+                                                        </span>
+                                                    )}
+                                                </p>
+                                                {volume.status && (
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={cn(
+                                                            'shrink-0',
+                                                            volume.status ===
+                                                                'Disponível'
+                                                                ? 'border-emerald-600/30 bg-emerald-500/10 text-emerald-800 dark:border-emerald-400/30 dark:text-emerald-200'
+                                                                : volume.status ===
+                                                                    'Reservado'
+                                                                  ? 'border-amber-600/30 bg-amber-500/10 text-amber-900 dark:border-amber-400/30 dark:text-amber-200'
+                                                                  : 'border-border bg-muted text-muted-foreground',
+                                                        )}
+                                                    >
+                                                        {volume.status}
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            <StockSizeBreakdown
+                                                sizes={volumeSizes}
+                                                compact
+                                                showUnknownAsCards
+                                            />
+                                            <p className="tabular-nums">
+                                                Total do saco:{' '}
+                                                <strong className="text-card-foreground">
+                                                    {volume.total_quantity}{' '}
+                                                    {volume.total_quantity === 1
+                                                        ? 'peça'
+                                                        : 'peças'}
+                                                </strong>
+                                            </p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ) : (
+                        <p>Este produto ainda não tem sacos cadastrados.</p>
+                    )}
+                </div>
+                <DrawerFooter className="border-t border-border p-5">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-fit px-1 text-destructive hover:text-destructive"
+                        onClick={() => onDelete(product)}
+                        aria-label={`Excluir ${product.name}`}
+                    >
+                        <TrashIcon />
+                        Excluir produto
+                    </Button>
+                </DrawerFooter>
+            </DrawerContent>
+        </Drawer>
     );
 }
 
@@ -812,6 +850,92 @@ function ProductCard({
     );
 }
 
+function pieceCount(quantity: number): string {
+    return `${quantity} ${quantity === 1 ? 'peça' : 'peças'}`;
+}
+
+/** Proporção entre peças livres e reservadas dentro do estoque físico. */
+function ProductStockMeter({ product }: { product: Product }) {
+    const physicalQuantity = product.physical_quantity ?? 0;
+    const availableQuantity = product.available_quantity ?? 0;
+    const reservedQuantity = product.reserved_quantity ?? 0;
+    const consumedQuantity = product.consumed_quantity ?? 0;
+    const shareOfPhysical = (quantity: number): string =>
+        physicalQuantity > 0
+            ? `${Math.min(100, (quantity / physicalQuantity) * 100)}%`
+            : '0%';
+
+    return (
+        <div className="grid gap-1.5">
+            <div
+                className="flex h-1.5 overflow-hidden rounded-full bg-muted"
+                aria-hidden="true"
+            >
+                <span
+                    className={cn(
+                        'h-full transition-[width] duration-500',
+                        isProductAvailable(product)
+                            ? 'bg-emerald-500'
+                            : 'bg-muted-foreground/50',
+                    )}
+                    style={{ width: shareOfPhysical(availableQuantity) }}
+                />
+                <span
+                    className="h-full bg-amber-500 transition-[width] duration-500"
+                    style={{ width: shareOfPhysical(reservedQuantity) }}
+                />
+            </div>
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] leading-4 text-muted-foreground tabular-nums">
+                <span>
+                    {physicalQuantity > 0
+                        ? `${pieceCount(physicalQuantity)} em estoque físico`
+                        : 'Sem peças em estoque físico'}
+                </span>
+                {reservedQuantity > 0 && (
+                    <span className="inline-flex items-center gap-1">
+                        <span
+                            className="size-1.5 rounded-full bg-amber-500"
+                            aria-hidden="true"
+                        />
+                        {reservedQuantity}{' '}
+                        {reservedQuantity === 1 ? 'reservada' : 'reservadas'}
+                    </span>
+                )}
+                {consumedQuantity > 0 && (
+                    <span>
+                        {consumedQuantity}{' '}
+                        {consumedQuantity === 1 ? 'baixada' : 'baixadas'}
+                    </span>
+                )}
+            </p>
+        </div>
+    );
+}
+
+function ProductTableAttribute({
+    icon: Icon,
+    children,
+}: {
+    icon: PhosphorIcon;
+    children: ReactNode;
+}) {
+    return (
+        <span className="inline-flex min-w-0 items-center gap-1.5">
+            <Icon className="size-4 shrink-0" aria-hidden="true" />
+            <span className="truncate">{children}</span>
+        </span>
+    );
+}
+
+const productTableHeadClassName =
+    'h-11 px-4 text-left text-xs font-medium text-muted-foreground first:pl-5 last:pr-5';
+
+const productTableCellClassName =
+    'block p-0 lg:table-cell lg:px-4 lg:py-4 lg:align-middle lg:first:pl-5 lg:last:pr-5';
+
+const productTableMobileLabelClassName =
+    'mb-2 block text-xs font-medium text-muted-foreground lg:hidden';
+
 function ProductTable({
     products,
     onDelete,
@@ -822,7 +946,7 @@ function ProductTable({
     onOpenGallery: (product: Product) => void;
 }) {
     return (
-        <div className="overflow-hidden rounded-[1.75rem] border border-border/80 bg-card shadow-sm">
+        <div className="overflow-hidden rounded-[1.5rem] border border-border bg-card shadow-sm">
             <table
                 className="block w-full border-collapse text-sm lg:table"
                 aria-label="Produtos cadastrados"
@@ -830,27 +954,27 @@ function ProductTable({
                 <caption className="sr-only">
                     Catálogo de produtos cadastrados
                 </caption>
-                <thead className="hidden bg-muted/45 lg:table-header-group">
-                    <tr className="border-b border-border">
-                        <th
-                            scope="col"
-                            className="h-12 px-5 text-left text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase"
-                        >
+                <thead className="hidden border-b border-border bg-muted/40 lg:table-header-group">
+                    <tr>
+                        <th scope="col" className={productTableHeadClassName}>
                             Produto
                         </th>
-                        <th
-                            scope="col"
-                            className="h-12 px-5 text-left text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase"
-                        >
+                        <th scope="col" className={productTableHeadClassName}>
                             Tamanhos
                         </th>
                         <th
                             scope="col"
-                            className="h-12 px-5 text-left text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase"
+                            className={cn(
+                                productTableHeadClassName,
+                                'w-[17rem]',
+                            )}
                         >
-                            Estoque físico e disponível
+                            Estoque
                         </th>
-                        <th scope="col" className="h-12 px-5">
+                        <th
+                            scope="col"
+                            className={cn(productTableHeadClassName, 'w-px')}
+                        >
                             <span className="sr-only">Ações</span>
                         </th>
                     </tr>
@@ -859,100 +983,174 @@ function ProductTable({
                     {products.map((product) => (
                         <tr
                             key={product.id}
-                            className="grid gap-4 p-4 transition-colors hover:bg-muted/30 lg:table-row lg:p-0"
+                            className="group/row grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-4 p-4 transition-colors hover:bg-muted/30 lg:table-row lg:p-0"
                         >
-                            <td className="block p-0 lg:table-cell lg:px-5 lg:py-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="size-14 shrink-0 overflow-hidden rounded-xl border border-border bg-featured-card">
+                            <td
+                                className={cn(
+                                    productTableCellClassName,
+                                    'col-start-1 row-start-1',
+                                )}
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div
+                                        className={cn(
+                                            'aspect-[4/5] w-14 shrink-0 overflow-hidden rounded-xl border border-border bg-muted/60',
+                                            !product.is_active &&
+                                                '[&_img]:grayscale',
+                                        )}
+                                    >
                                         <ProductImageButton
                                             product={product}
                                             onOpenGallery={onOpenGallery}
                                             showImageCount={false}
+                                            className="transition-transform duration-300 group-hover/row:scale-105"
                                         />
                                     </div>
-                                    <div className="min-w-0 flex-1">
-                                        <TextLink
-                                            href={productEdit(product.id)}
-                                            className="line-clamp-2 font-semibold break-words text-card-foreground"
-                                        >
-                                            {product.name}
-                                        </TextLink>
-                                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                            <span className="font-mono tracking-[0.08em]">
+                                    <div className="grid min-w-0 flex-1 gap-1.5">
+                                        <div className="min-w-0">
+                                            <p className="truncate font-mono text-xs leading-4 text-muted-foreground">
                                                 {product.code}
-                                            </span>
-                                            <span
-                                                className="size-1 rounded-full bg-muted-foreground/60"
-                                                aria-hidden="true"
-                                            />
-                                            <span className="min-w-0 break-words">
-                                                {product.model
-                                                    ? `Modelo ${product.model}`
-                                                    : 'Modelo não informado'}
-                                            </span>
+                                                {product.model &&
+                                                    ` · Mod. ${product.model}`}
+                                            </p>
+                                            <div className="flex min-w-0 items-center gap-1">
+                                                <TextLink
+                                                    href={productEdit(
+                                                        product.id,
+                                                    )}
+                                                    className="line-clamp-2 rounded-sm text-[0.9375rem] leading-6 font-semibold tracking-tight break-words text-card-foreground no-underline hover:underline"
+                                                >
+                                                    {product.name}
+                                                </TextLink>
+                                                <ProductNotesPopover
+                                                    product={product}
+                                                    className="size-7 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="mt-2">
-                                            <ProductClassification
-                                                product={product}
-                                            />
+                                        <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-xs font-medium text-muted-foreground">
+                                            <ProductTableAttribute
+                                                icon={SquaresFourIcon}
+                                            >
+                                                {product.stock_offer_type
+                                                    ? stockOfferTypeCardLabels[
+                                                          product
+                                                              .stock_offer_type
+                                                      ]
+                                                    : 'Sem oferta'}
+                                            </ProductTableAttribute>
+                                            {product.line && (
+                                                <ProductTableAttribute
+                                                    icon={TagIcon}
+                                                >
+                                                    Linha{' '}
+                                                    {
+                                                        productLineLabels[
+                                                            product.line
+                                                        ]
+                                                    }
+                                                </ProductTableAttribute>
+                                            )}
+                                            {product.category && (
+                                                <ProductTableAttribute
+                                                    icon={FolderSimpleIcon}
+                                                >
+                                                    {product.category.name}
+                                                </ProductTableAttribute>
+                                            )}
+                                            {product.wash_type && (
+                                                <ProductTableAttribute
+                                                    icon={DropIcon}
+                                                >
+                                                    {product.wash_type.name}
+                                                </ProductTableAttribute>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
                             </td>
-                            <td className="block p-0 lg:table-cell lg:px-5 lg:py-4 lg:align-middle">
-                                <span className="mb-2 block text-[10px] font-semibold tracking-[0.16em] text-muted-foreground uppercase lg:hidden">
+                            <td
+                                className={cn(
+                                    productTableCellClassName,
+                                    'col-span-2',
+                                )}
+                            >
+                                <span
+                                    className={productTableMobileLabelClassName}
+                                >
                                     Tamanhos
                                 </span>
-                                <div className="flex max-w-full flex-wrap gap-1.5">
-                                    <StockSizeBreakdown
-                                        sizes={productSizes(product).map(
-                                            (size) => ({
-                                                size,
-                                                quantity: null,
-                                            }),
-                                        )}
-                                        sizesOnly
+                                <StockSizeBreakdown
+                                    sizes={productSizes(product).map(
+                                        (size) => ({
+                                            size,
+                                            quantity: null,
+                                        }),
+                                    )}
+                                    sizesOnly
+                                />
+                            </td>
+                            <td
+                                className={cn(
+                                    productTableCellClassName,
+                                    'col-span-2',
+                                )}
+                            >
+                                <span
+                                    className={productTableMobileLabelClassName}
+                                >
+                                    Estoque
+                                </span>
+                                <div className="grid gap-2">
+                                    <ProductAvailabilityNotice
+                                        product={product}
+                                        compact
                                     />
+                                    {product.total_quantity !== null &&
+                                        product.total_quantity !==
+                                            undefined && (
+                                            <ProductStockMeter
+                                                product={product}
+                                            />
+                                        )}
                                 </div>
                             </td>
-                            <td className="block p-0 lg:table-cell lg:px-5 lg:py-4 lg:align-middle">
-                                <span className="mb-1 block text-[10px] font-semibold tracking-[0.16em] text-muted-foreground uppercase lg:hidden">
-                                    Estoque físico e disponível
-                                </span>
-                                {product.physical_quantity !== undefined ? (
-                                    <>
-                                        <p className="font-semibold text-card-foreground">
-                                            {product.available_quantity ?? 0}{' '}
-                                            peças disponíveis
-                                        </p>
-                                        <StockQuantityDetails
-                                            className="mt-1 text-muted-foreground"
-                                            physicalQuantity={
-                                                product.physical_quantity
-                                            }
-                                            availableSackCount={
-                                                product.available_stock_volume_count ??
-                                                0
-                                            }
-                                            reservedQuantity={
-                                                product.reserved_quantity ?? 0
-                                            }
-                                            consumedQuantity={
-                                                product.consumed_quantity ?? 0
-                                            }
-                                        />
-                                    </>
-                                ) : (
-                                    <span className="text-muted-foreground">
-                                        Sem oferta
-                                    </span>
+                            <td
+                                className={cn(
+                                    productTableCellClassName,
+                                    'col-start-2 row-start-1 self-start',
                                 )}
-                            </td>
-                            <td className="block p-0 lg:table-cell lg:px-5 lg:py-4 lg:align-middle">
-                                <span className="mb-2 block text-[10px] font-semibold tracking-[0.16em] text-muted-foreground uppercase lg:hidden">
-                                    Ações
-                                </span>
-                                <div className="flex w-full items-center gap-2 lg:w-auto lg:justify-end">
+                            >
+                                <div className="flex items-center justify-end gap-1">
+                                    <Button
+                                        asChild
+                                        variant="secondary"
+                                        size="sm"
+                                    >
+                                        <Link
+                                            href={productEdit(product.id)}
+                                            aria-label={`Editar ${product.name}`}
+                                        >
+                                            <PencilSimpleIcon />
+                                            Editar
+                                        </Link>
+                                    </Button>
+                                    <ProductDetailsDrawer
+                                        product={product}
+                                        onDelete={onDelete}
+                                    >
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="text-muted-foreground"
+                                            aria-label={`Ver mais informações de ${product.name}`}
+                                        >
+                                            <DotsThreeIcon
+                                                weight="bold"
+                                                className="size-5"
+                                            />
+                                        </Button>
+                                    </ProductDetailsDrawer>
                                     <Button
                                         variant="ghost"
                                         size="icon"
