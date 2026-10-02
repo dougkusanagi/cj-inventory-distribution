@@ -1,0 +1,37 @@
+{
+  "title": "Padronização das ferramentas e ajustes visuais",
+  "changes": [
+    {
+      "category": "improved",
+      "text": "Padronizado o uso do Bun 1.4.2 na configuração do projeto e na preparação dos testes automatizados, substituindo o registro de versões de dependências do npm pelo do Bun."
+    },
+    {
+      "category": "improved",
+      "text": "Atualizada a preparação do sistema e do deploy para instalar as versões registradas das dependências, sem recalculá-las, e gerar a interface com Bun. A instalação passa a falhar quando a lista de dependências diverge das versões registradas."
+    },
+    {
+      "category": "improved",
+      "text": "Realizada manutenção nas ferramentas e na configuração de dependências da interface para uso com Vite Plus."
+    },
+    {
+      "category": "improved",
+      "text": "Atualizada a documentação de desenvolvimento e produção com orientações sobre a versão do Bun, instalação, geração da interface e inclusão de dependências."
+    },
+    {
+      "category": "improved",
+      "text": "Ajustado o teste de deploy para conferir a instalação com versões fixadas das dependências. Os testes não foram executados neste PR."
+    },
+    {
+      "category": "improved",
+      "text": "Ajustados os filtros para unir visualmente o campo de seleção ao botão de adicionar, com mudanças nas bordas e no destaque de foco."
+    },
+    {
+      "category": "improved",
+      "text": "Reorganizada a janela de cadastro de tipos de lavagem em celulares e computadores, com ícone no título, novos espaçamentos e áreas separadas para formulário e ações."
+    }
+  ],
+  "pr_number": 59,
+  "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/59",
+  "merged_at": "2026-10-02T11:21:21Z",
+  "commit": "fae6a421850fc270e1dd75661e52b97cac0a9b21"
+}
