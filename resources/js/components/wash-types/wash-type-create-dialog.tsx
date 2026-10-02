@@ -1,4 +1,5 @@
 import { useHttp } from '@inertiajs/react';
+import { DropIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { toast } from 'sonner';
@@ -70,39 +71,55 @@ export function WashTypeCreateDialog({
     }
 
     const quickForm = (
-        <form onSubmit={submit} className="grid gap-5 p-4 pt-0 sm:p-0">
-            <WashTypeFields
-                name={form.data.name}
-                active={true}
-                onNameChange={(name) => form.setData('name', name)}
-                onActiveChange={() => {}}
-                errors={form.errors}
-                disabled={form.processing}
-                showActive={false}
-            />
-            <InputError message={requestError} />
-            <div className="flex justify-end gap-2">
+        <form onSubmit={submit} className="grid">
+            <div className="grid gap-3 px-6 py-6">
+                <WashTypeFields
+                    name={form.data.name}
+                    active={true}
+                    onNameChange={(name) => form.setData('name', name)}
+                    onActiveChange={() => {}}
+                    errors={form.errors}
+                    disabled={form.processing}
+                    showActive={false}
+                />
+                {requestError && <InputError message={requestError} />}
+            </div>
+            <div className="flex items-center justify-end gap-3 rounded-b-2xl border-t border-border/60 bg-muted/30 px-6 py-4">
                 <Button
                     type="button"
-                    variant="secondary"
+                    variant="ghost"
+                    className="h-11 px-4"
                     onClick={() => changeOpen(false)}
                     disabled={form.processing}
                 >
                     Cancelar
                 </Button>
-                <Button type="submit" disabled={form.processing}>
+                <Button
+                    type="submit"
+                    disabled={form.processing}
+                    className="h-11 flex-1 px-5 sm:flex-none"
+                >
                     {form.processing ? 'Salvando...' : 'Cadastrar lavagem'}
                 </Button>
             </div>
         </form>
     );
 
+    const title = (
+        <span className="flex items-center gap-3">
+            <DropIcon className="size-7 shrink-0 text-highlight" />
+            <span>Novo tipo de lavagem</span>
+        </span>
+    );
+
     return isMobile ? (
         <Drawer open={open} onOpenChange={changeOpen}>
             <DrawerContent>
-                <DrawerHeader>
-                    <DrawerTitle>Novo tipo de lavagem</DrawerTitle>
-                    <DrawerDescription>
+                <DrawerHeader className="gap-1.5 border-b border-border/60 bg-muted/30 px-6 py-4 text-left">
+                    <DrawerTitle className="text-xl leading-tight">
+                        {title}
+                    </DrawerTitle>
+                    <DrawerDescription className="leading-relaxed">
                         Cadastre a lavagem e continue de onde parou.
                     </DrawerDescription>
                 </DrawerHeader>
@@ -111,10 +128,12 @@ export function WashTypeCreateDialog({
         </Drawer>
     ) : (
         <Dialog open={open} onOpenChange={changeOpen}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Novo tipo de lavagem</DialogTitle>
-                    <DialogDescription>
+            <DialogContent className="gap-0 rounded-2xl bg-card p-0 sm:max-w-md">
+                <DialogHeader className="gap-1.5 rounded-t-2xl border-b border-border/60 bg-muted/30 px-6 py-4 pr-12">
+                    <DialogTitle className="text-xl leading-tight">
+                        {title}
+                    </DialogTitle>
+                    <DialogDescription className="leading-relaxed">
                         Cadastre a lavagem e continue de onde parou.
                     </DialogDescription>
                 </DialogHeader>

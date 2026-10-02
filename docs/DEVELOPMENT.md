@@ -18,7 +18,14 @@ php artisan migrate
 php artisan storage:link
 ```
 
-Instale e compile os assets usando o package manager já adotado pelo repositório.
+Use Bun 1.4.2, definido em `package.json`, com o `bun.lock` versionado:
+
+```bash
+bun install --frozen-lockfile
+bun run build
+```
+
+Para adicionar dependências, use `bun add`; não gere `package-lock.json`.
 
 Para visualizar o catálogo com dados demonstrativos, execute:
 
@@ -251,9 +258,8 @@ php artisan test --compact tests/Feature/ChangelogTest.php
 
 ### Bun em produção
 
-O servidor usa Bun para instalar e compilar o frontend. O Bun 1.3.14 falha ao
-migrar este `package-lock.json` por causa de `@napi-rs/wasm-runtime` e pode
-ignorar o lockfile, recalculando versões. A conversão do mesmo arquivo foi
-verificada com Bun 1.4.2. Atualize o binário usado pelo deploy
-(`/usr/local/bin/bun`) antes de repetir a instalação. Não remova o lockfile
-nem gere outro com versões diferentes como contorno.
+Desenvolvimento, CI e produção usam Bun 1.4.2 e o mesmo `bun.lock`.
+O deploy executa `bun install --frozen-lockfile`, falhando se o manifesto e o
+lockfile estiverem inconsistentes, sem recalcular versões. Na VPS, mantenha
+`/usr/local/bin/bun` na versão definida em `package.json`. Não há conversão de
+lockfile do npm durante o deploy.

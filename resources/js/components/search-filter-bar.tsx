@@ -163,7 +163,7 @@ function FilterCombobox({
     onChange: (value: string) => void;
 }) {
     const combobox = (
-        <div className="flex min-w-0 gap-2">
+        <div className="flex min-w-0">
             <SearchableSelect
                 id={id}
                 label={field.label}
@@ -176,6 +176,7 @@ function FilterCombobox({
                 className={cn(
                     filterTriggerClassName,
                     'min-w-0 flex-1',
+                    field.onAdd && 'rounded-r-none focus-visible:z-10',
                     labelled && filterTriggerLabelledClassName,
                 )}
             />
@@ -183,7 +184,10 @@ function FilterCombobox({
                 <Button
                     type="button"
                     variant="secondary"
-                    className={cn('size-10 shrink-0', labelled && 'size-11')}
+                    className={cn(
+                        'size-10 shrink-0 rounded-l-none rounded-r-xl border border-l-0 border-input focus-visible:z-10',
+                        labelled && 'size-11',
+                    )}
                     aria-label={field.addLabel}
                     onClick={field.onAdd}
                 >

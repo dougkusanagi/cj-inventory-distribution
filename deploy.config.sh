@@ -5,8 +5,6 @@ PHP_FPM_ACTION="${PHP_FPM_ACTION:-reload}"
 WEB_SERVICE="${WEB_SERVICE-}"
 HORIZON="${HORIZON:-false}"
 STORAGE_LINK="${STORAGE_LINK:-true}"
-# Bun provides the JavaScript runtime on the server, which does not have Node.
-# Do not let Vite+ select npm internally: invoke Bun's installer and script
-# runner directly.
-FRONTEND_INSTALL=(/usr/local/bin/bun install --no-save)
+# Use o lockfile versionado sem recalcular as versões no servidor.
+FRONTEND_INSTALL=(/usr/local/bin/bun install --frozen-lockfile)
 FRONTEND_BUILD=(bash -c 'rm -f public/hot && /usr/local/bin/bun run build')
