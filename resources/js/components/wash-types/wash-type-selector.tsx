@@ -52,7 +52,7 @@ export function WashTypeSelector({
                 <Button
                     type="button"
                     variant="secondary"
-                    className="size-11 shrink-0"
+                    className="size-12 shrink-0"
                     aria-label="Cadastrar tipo de lavagem"
                     onClick={() => setOpen(true)}
                     disabled={disabled}

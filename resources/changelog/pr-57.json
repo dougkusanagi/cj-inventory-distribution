@@ -1,45 +1,45 @@
 {
-  "title": "Histórico de novidades e manutenção",
-  "changes": [
-    {
-      "category": "added",
-      "text": "Adicionada a página pública “O que há de novo”, acessível pelo catálogo e pelo painel, com novidades, melhorias, correções e manutenção técnica explicadas em linguagem simples."
-    },
-    {
-      "category": "added",
-      "text": "O histórico apresenta as atualizações mais recentes primeiro, com datas, categorias, navegação entre páginas e escolha de aparência clara ou escura. Exibe somente as notas incluídas na versão instalada do sistema."
-    },
-    {
-      "category": "added",
-      "text": "Adicionada a geração automática de resumos das alterações com Codex CLI e login ChatGPT, sem chave de API. Os textos ficam disponíveis para revisão, e a versão revisada na descrição da alteração tem prioridade."
-    },
-    {
-      "category": "improved",
-      "text": "A publicação do histórico registra uma nota por alteração incorporada, sem duplicar ou substituir notas já publicadas ao repetir a execução. Resumos automáticos desatualizados são gerados novamente, e falhas podem ser recuperadas manualmente sem publicar textos inventados."
-    },
-    {
-      "category": "improved",
-      "text": "A automação utiliza rotinas da versão principal e geração em ambiente restrito à leitura, sem repassar credenciais de publicação ao gerador. Alterações de repositórios externos exigem revisão e acionamento manual."
-    },
-    {
-      "category": "improved",
-      "text": "Configurado e validado um serviço dedicado à geração do histórico, com início automático e funcionamento após o encerramento da sessão do usuário."
-    },
-    {
-      "category": "improved",
-      "text": "Adicionados testes para acesso público, ordenação, navegação entre páginas, revisão dos textos, publicação sem duplicações e tratamento de falhas. Os testes da automação passaram a integrar a verificação local; também foram aprovadas as verificações funcionais, de navegador, de qualidade do código, de compilação e das rotinas de implantação."
-    },
-    {
-      "category": "improved",
-      "text": "Documentados o funcionamento do histórico, as decisões técnicas, a configuração do serviço e os procedimentos de revisão, recuperação e publicação. A interface foi conferida em computador e celular, os dados de demonstração foram removidos e os arquivos temporários das ferramentas passaram a ser ignorados no controle de versões."
-    },
-    {
-      "category": "improved",
-      "text": "Documentada a falha do Bun 1.3.14 ao converter o registro de versões das dependências e a conversão bem-sucedida com Bun 1.4.2, com orientação para preservar esse registro na manutenção da ferramenta de produção. Nenhuma implantação real foi executada."
-    }
-  ],
-  "pr_number": 57,
-  "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/57",
-  "merged_at": "2026-10-01T19:41:14Z",
-  "commit": "0043fe01fab41c41fa2c8d7df8e33c54a56ac0a9"
+    "title": "Histórico de novidades e manutenção",
+    "changes": [
+        {
+            "category": "added",
+            "text": "Adicionada a página pública “O que há de novo”, acessível pelo catálogo e pelo painel, com novidades, melhorias, correções e manutenção técnica explicadas em linguagem simples."
+        },
+        {
+            "category": "added",
+            "text": "O histórico apresenta as atualizações mais recentes primeiro, com datas, categorias, navegação entre páginas e escolha de aparência clara ou escura. Exibe somente as notas incluídas na versão instalada do sistema."
+        },
+        {
+            "category": "added",
+            "text": "Adicionada a geração automática de resumos das alterações com Codex CLI e login ChatGPT, sem chave de API. Os textos ficam disponíveis para revisão, e a versão revisada na descrição da alteração tem prioridade."
+        },
+        {
+            "category": "improved",
+            "text": "A publicação do histórico registra uma nota por alteração incorporada, sem duplicar ou substituir notas já publicadas ao repetir a execução. Resumos automáticos desatualizados são gerados novamente, e falhas podem ser recuperadas manualmente sem publicar textos inventados."
+        },
+        {
+            "category": "improved",
+            "text": "A automação utiliza rotinas da versão principal e geração em ambiente restrito à leitura, sem repassar credenciais de publicação ao gerador. Alterações de repositórios externos exigem revisão e acionamento manual."
+        },
+        {
+            "category": "improved",
+            "text": "Configurado e validado um serviço dedicado à geração do histórico, com início automático e funcionamento após o encerramento da sessão do usuário."
+        },
+        {
+            "category": "improved",
+            "text": "Adicionados testes para acesso público, ordenação, navegação entre páginas, revisão dos textos, publicação sem duplicações e tratamento de falhas. Os testes da automação passaram a integrar a verificação local; também foram aprovadas as verificações funcionais, de navegador, de qualidade do código, de compilação e das rotinas de implantação."
+        },
+        {
+            "category": "improved",
+            "text": "Documentados o funcionamento do histórico, as decisões técnicas, a configuração do serviço e os procedimentos de revisão, recuperação e publicação. A interface foi conferida em computador e celular, os dados de demonstração foram removidos e os arquivos temporários das ferramentas passaram a ser ignorados no controle de versões."
+        },
+        {
+            "category": "improved",
+            "text": "Documentada a falha do Bun 1.3.14 ao converter o registro de versões das dependências e a conversão bem-sucedida com Bun 1.4.2, com orientação para preservar esse registro na manutenção da ferramenta de produção. Nenhuma implantação real foi executada."
+        }
+    ],
+    "pr_number": 57,
+    "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/57",
+    "merged_at": "2026-10-01T19:41:14Z",
+    "commit": "0043fe01fab41c41fa2c8d7df8e33c54a56ac0a9"
 }

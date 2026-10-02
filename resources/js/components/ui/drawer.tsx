@@ -50,6 +50,15 @@ function DrawerContent({
                 {...props}
             >
                 {side === 'bottom' && <div className="bg-muted-foreground/35 mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full" />}
+                {side !== 'bottom' && (
+                    <div
+                        aria-hidden="true"
+                        className={cn(
+                            'bg-muted-foreground/35 pointer-events-none absolute top-1/2 z-10 h-12 w-1.5 -translate-y-1/2 rounded-full',
+                            side === 'right' ? 'left-2' : 'right-2',
+                        )}
+                    />
+                )}
                 {children}
             </DrawerPrimitive.Content>
         </DrawerPortal>

@@ -1022,12 +1022,7 @@ export default function Catalog({
                             <img
                                 src="/images/brand/logo-cronicas-color.png"
                                 alt="Crônicas Jeans"
-                                className="h-9 w-auto object-contain sm:h-12 dark:hidden"
-                            />
-                            <img
-                                src="/images/brand/logo-cronicas-white.png"
-                                alt="Crônicas Jeans"
-                                className="hidden h-9 w-auto object-contain sm:h-12 dark:block"
+                                className="h-9 w-auto object-contain sm:h-12"
                             />
                         </a>
                         <div className="flex shrink-0 items-center gap-2">

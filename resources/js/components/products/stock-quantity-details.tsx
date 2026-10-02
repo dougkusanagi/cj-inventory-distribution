@@ -23,7 +23,7 @@ export function StockQuantityDetails({
                 'grid gap-x-3 text-xs leading-4 tabular-nums',
                 layout === 'columns'
                     ? 'grid-cols-2 gap-y-2'
-                    : 'grid-cols-[minmax(0,1fr)_auto] gap-y-0.5',
+                    : 'grid-cols-[max-content_minmax(0,1fr)] gap-y-0.5',
                 className,
             )}
         >
@@ -32,7 +32,7 @@ export function StockQuantityDetails({
                 <dd
                     className={cn(
                         'font-medium',
-                        layout === 'rows' && 'text-right',
+                        layout === 'rows' && 'text-left',
                     )}
                 >
                     {physicalQuantity} peças
@@ -43,7 +43,7 @@ export function StockQuantityDetails({
                 <dd
                     className={cn(
                         'font-medium',
-                        layout === 'rows' && 'text-right',
+                        layout === 'rows' && 'text-left',
                     )}
                 >
                     {availableSackCount}
@@ -59,7 +59,7 @@ export function StockQuantityDetails({
                     <dd
                         className={cn(
                             'font-medium',
-                            layout === 'rows' && 'text-right',
+                            layout === 'rows' && 'text-left',
                         )}
                     >
                         {reservedQuantity}
@@ -76,7 +76,7 @@ export function StockQuantityDetails({
                     <dd
                         className={cn(
                             'font-medium',
-                            layout === 'rows' && 'text-right',
+                            layout === 'rows' && 'text-left',
                         )}
                     >
                         {consumedQuantity}
