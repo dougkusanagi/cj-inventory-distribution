@@ -1,0 +1,45 @@
+{
+  "title": "Formulários, filtros e produtos",
+  "changes": [
+    {
+      "category": "improved",
+      "text": "Padronizados a aparência, os tamanhos e os destaques de seleção, erro e indisponibilidade dos campos nos temas claro e escuro. O formulário de produtos e o botão de cadastro de lavagem acompanham esse padrão."
+    },
+    {
+      "category": "improved",
+      "text": "Busca e filtros receberam rótulos visíveis, destaque para filtros ativos, botão maior para limpar a busca e ajustes de espaçamento no celular. Campos com botão de cadastro anexo passaram a compartilhar o destaque de foco."
+    },
+    {
+      "category": "improved",
+      "text": "Listas de seleção receberam opções maiores, destaque da escolha atual e indicação visual de abertura. Também foram ajustados o posicionamento para evitar as bordas da tela e o respeito à preferência por menos animações."
+    },
+    {
+      "category": "improved",
+      "text": "Reorganizada a tabela de produtos em computador e celular, com ajustes nas fotos, na identificação, nos atributos, nos tamanhos e nas ações. Fotos de produtos inativos aparecem em tons de cinza."
+    },
+    {
+      "category": "added",
+      "text": "A tabela de produtos passou a oferecer acesso às observações e ao painel com detalhes do estoque por saco. Também recebeu uma barra que representa as proporções de peças disponíveis e reservadas, acompanhada das quantidades físicas, reservadas e baixadas."
+    },
+    {
+      "category": "improved",
+      "text": "Unificada a apresentação da disponibilidade entre cartões e tabela, incluindo peças e sacos disponíveis, uso interno e ausência de oferta. Os detalhes de quantidades tiveram o alinhamento ajustado, e os painéis laterais receberam um indicador visual na borda."
+    },
+    {
+      "category": "improved",
+      "text": "O catálogo passou a usar o logotipo colorido também no tema escuro."
+    },
+    {
+      "category": "improved",
+      "text": "Reorganizadas as partes internas que exibem campos, observações, disponibilidade e detalhes dos produtos, permitindo reutilizá-las nas diferentes visualizações. Também foi padronizada a formatação de uma nota existente do histórico, sem alterar seu conteúdo."
+    },
+    {
+      "category": "improved",
+      "text": "Atualizados os testes de navegador de cadastro e edição de produtos para acompanhar a tabela e os novos textos de estoque. A execução dos testes e das verificações de qualidade, formatação, geração do sistema e navegador não foi realizada neste PR."
+    }
+  ],
+  "pr_number": 60,
+  "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/60",
+  "merged_at": "2026-10-02T16:13:38Z",
+  "commit": "4d2d0f5d5bf399bef048965e535bb7a412ad8172"
+}
