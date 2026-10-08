@@ -68,10 +68,13 @@ it('keeps existing sacks read only in the product form', function () {
         ->assertSee('Saco 2')
         ->assertSee('4 peças · Disponível')
         ->assertSee('3 peças · Disponível')
-        ->assertSee('Registrar entrada')
-        ->assertSee('Registrar saída')
+        ->assertSee('Entrada')
+        ->assertSee('Saída')
         ->assertDontSee('Duplicar saco')
-        ->assertDontSee('Remover saco')
+        ->assertMissing('button:text-is("Remover saco")')
+        ->assertMissing('#volume-total-0')
+        ->click('[data-testid="stock-more-actions"]')
+        ->assertSee('Excluir sacos')
         ->assertNoJavaScriptErrors();
 
     expect($offer->stockVolumes()->count())->toBe(2);

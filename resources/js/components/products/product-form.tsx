@@ -1,85 +1,94 @@
-import { Link, router, useForm } from '@inertiajs/react';
+import { Link, router, useForm } from "@inertiajs/react";
 import {
     CameraPlusIcon,
-    ClipboardTextIcon,
+    PencilSimpleLineIcon,
+    DotsThreeIcon,
     FileTextIcon,
     FloppyDiskIcon,
     ImagesIcon,
     MinusCircleIcon,
     PlusCircleIcon,
     StackSimpleIcon,
-} from '@phosphor-icons/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { FormEvent } from 'react';
+    TrashIcon,
+} from "@phosphor-icons/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { FormEvent } from "react";
 import {
     update,
     store,
-} from '@/actions/App/Http/Controllers/ProductController';
-import { ConfirmationDialog } from '@/components/confirmation-dialog';
-import { WashTypeSelector } from '@/components/wash-types/wash-type-selector';
-import InputError from '@/components/input-error';
-import { PaperBag } from '@/components/icons/paper-bag';
-import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
-import { create as stockExit } from '@/routes/stock-exits';
-import { index as productsIndex } from '@/routes/products';
-import { ProductPhotoManager } from '@/components/products/product-photo-manager';
-import type { ProductCoverPreview } from '@/components/products/product-photo-manager';
+} from "@/actions/App/Http/Controllers/ProductController";
+import { ConfirmationDialog } from "@/components/confirmation-dialog";
+import { WashTypeSelector } from "@/components/wash-types/wash-type-selector";
+import InputError from "@/components/input-error";
+import { PaperBag } from "@/components/icons/paper-bag";
+import { StockSizeBreakdown } from "@/components/stock-size-breakdown";
+import { create as stockExit } from "@/routes/stock-exits";
+import { index as productsIndex } from "@/routes/products";
+import { ProductPhotoManager } from "@/components/products/product-photo-manager";
+import type { ProductCoverPreview } from "@/components/products/product-photo-manager";
 import {
     StockOfferTotalsFields,
     volumesForOfferType,
-} from '@/components/products/stock-offer-totals-fields';
+} from "@/components/products/stock-offer-totals-fields";
 import {
     StockOfferTypeSelector,
     stockOfferTypeTracksSizes,
-} from '@/components/products/stock-offer-type-selector';
-import { StockOfferVolumeEditor } from '@/components/products/stock-offer-volume-editor';
-import type { StockOfferVolumeFormItem } from '@/components/products/stock-offer-volume-editor';
-import { Button } from '@/components/ui/button';
-import { CompactTabs } from '@/components/ui/compact-tabs';
+} from "@/components/products/stock-offer-type-selector";
+import { StockOfferVolumeEditor } from "@/components/products/stock-offer-volume-editor";
+import type { StockOfferVolumeFormItem } from "@/components/products/stock-offer-volume-editor";
+import { Button } from "@/components/ui/button";
+import { CompactTabs } from "@/components/ui/compact-tabs";
 import {
     Card,
     CardContent,
     CardDescription,
     CardHeader,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioCardGroup } from '@/components/ui/radio-card-group';
-import { SlimTee, PlusTee, SlimPlusTee } from '@/components/icons/shirt-fit';
+} from "@/components/ui/card";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioCardGroup } from "@/components/ui/radio-card-group";
+import { SlimTee, PlusTee, SlimPlusTee } from "@/components/icons/shirt-fit";
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from '@/components/ui/select';
-import { useSidebar } from '@/components/ui/sidebar';
-import { Spinner } from '@/components/ui/spinner';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/select";
+import { useSidebar } from "@/components/ui/sidebar";
+import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import type {
     Category,
     Product,
     ProductLine,
     StockOfferType,
     WashType,
-} from '@/types';
+} from "@/types";
 
 type ProductFormData = {
     name: string;
     model: string;
     wash_type_id: string;
     category_id: string;
-    line: ProductLine | '';
+    line: ProductLine | "";
     notes: string;
     is_active: boolean;
-    stock_offer_type: StockOfferType | '';
+    stock_offer_type: StockOfferType | "";
     stock_volumes: StockOfferVolumeFormItem[];
     images: File[];
     image_order: string[];
     remove_media_ids: number[];
-    _method?: 'PUT';
+    _method?: "PUT";
 };
 
 type ProductFormProps = {
@@ -88,29 +97,30 @@ type ProductFormProps = {
     washTypes: WashType[];
     onAdjustStock?: () => void;
     onRegisterEntry?: () => void;
+    onRemoveStock?: () => void;
 };
 
-type ProductFormTab = 'details' | 'photos' | 'stock';
+type ProductFormTab = "details" | "photos" | "stock";
 
 const formTabs = [
-    { id: 'details', label: 'Detalhes', icon: FileTextIcon },
-    { id: 'photos', label: 'Fotos', icon: ImagesIcon },
-    { id: 'stock', label: 'Estoque', icon: PaperBag },
+    { id: "details", label: "Detalhes", icon: FileTextIcon },
+    { id: "photos", label: "Fotos", icon: ImagesIcon },
+    { id: "stock", label: "Estoque", icon: PaperBag },
 ] as const;
 
 function tabForError(field: string): ProductFormTab {
     if (
-        field === 'images' ||
-        field.startsWith('images.') ||
-        field === 'image_order' ||
-        field.startsWith('image_order.') ||
-        field === 'remove_media_ids' ||
-        field.startsWith('remove_media_ids.')
+        field === "images" ||
+        field.startsWith("images.") ||
+        field === "image_order" ||
+        field.startsWith("image_order.") ||
+        field === "remove_media_ids" ||
+        field.startsWith("remove_media_ids.")
     ) {
-        return 'photos';
+        return "photos";
     }
 
-    return field.startsWith('stock_') ? 'stock' : 'details';
+    return field.startsWith("stock_") ? "stock" : "details";
 }
 
 type ProductErrorField =
@@ -143,7 +153,7 @@ function hasKnownVolumeQuantity(volume: StockOfferVolumeFormItem): boolean {
         (item) =>
             item.is_active &&
             item.quantity !== null &&
-            item.quantity !== '' &&
+            item.quantity !== "" &&
             !Number.isNaN(Number(item.quantity)),
     );
 }
@@ -152,7 +162,7 @@ function volumeTotal(volume: StockOfferVolumeFormItem): number {
     if (hasKnownVolumeQuantity(volume)) {
         return volume.items.reduce(
             (total, item) =>
-                item.is_active && item.quantity !== null && item.quantity !== ''
+                item.is_active && item.quantity !== null && item.quantity !== ""
                     ? total + Number(item.quantity)
                     : total,
             0,
@@ -168,10 +178,11 @@ export function ProductForm({
     washTypes,
     onAdjustStock,
     onRegisterEntry,
+    onRemoveStock,
 }: ProductFormProps) {
     const isEditing = product !== undefined;
     const [processingImages, setProcessingImages] = useState(false);
-    const [activeTab, setActiveTab] = useState<ProductFormTab>('details');
+    const [activeTab, setActiveTab] = useState<ProductFormTab>("details");
     const [clearStockConfirmationOpen, setClearStockConfirmationOpen] =
         useState(false);
     const [stockFieldsVersion, setStockFieldsVersion] = useState(0);
@@ -183,7 +194,7 @@ export function ProductForm({
                 ? {
                       url: cover.thumb_url ?? cover.url,
                       name: cover.name,
-                      kind: 'existing',
+                      kind: "existing",
                   }
                 : null;
         });
@@ -192,19 +203,19 @@ export function ProductForm({
     const { isMobile, state: sidebarState } = useSidebar();
 
     const form = useForm<ProductFormData>({
-        name: product?.name ?? '',
-        model: product?.model ?? '',
-        category_id: product?.category_id?.toString() ?? '',
-        wash_type_id: product?.wash_type_id?.toString() ?? '',
-        line: product?.line ?? '',
-        notes: product?.notes ?? '',
+        name: product?.name ?? "",
+        model: product?.model ?? "",
+        category_id: product?.category_id?.toString() ?? "",
+        wash_type_id: product?.wash_type_id?.toString() ?? "",
+        line: product?.line ?? "",
+        notes: product?.notes ?? "",
         is_active: product?.is_active ?? true,
-        stock_offer_type: product?.stock_offer_type ?? 'new_grade',
+        stock_offer_type: product?.stock_offer_type ?? "new_grade",
         stock_volumes: initialStockVolumes(product),
         images: [],
-        image_order: product?.images.map((image) => 'media:' + image.id) ?? [],
+        image_order: product?.images.map((image) => "media:" + image.id) ?? [],
         remove_media_ids: [],
-        ...(isEditing ? { _method: 'PUT' as const } : {}),
+        ...(isEditing ? { _method: "PUT" as const } : {}),
     });
 
     const error = (field: ProductErrorField): string | undefined =>
@@ -236,14 +247,14 @@ export function ProductForm({
             event.returnValue = true;
         };
 
-        window.addEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener("beforeunload", handleBeforeUnload);
 
         return () =>
-            window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener("beforeunload", handleBeforeUnload);
     }, [form.isDirty]);
 
     useEffect(() => {
-        const removeBeforeVisitListener = router.on('before', (event) => {
+        const removeBeforeVisitListener = router.on("before", (event) => {
             if (event.detail.visit.prefetch) {
                 return;
             }
@@ -253,7 +264,7 @@ export function ProductForm({
             }
 
             return window.confirm(
-                'Você tem alterações não salvas. Deseja sair mesmo assim?',
+                "Você tem alterações não salvas. Deseja sair mesmo assim?",
             );
         });
 
@@ -271,13 +282,13 @@ export function ProductForm({
                     '#product-identity [aria-invalid="true"], [role="tabpanel"]:not([hidden]) [aria-invalid="true"]',
                 );
 
-            firstInvalidField?.scrollIntoView({ block: 'center' });
+            firstInvalidField?.scrollIntoView({ block: "center" });
             firstInvalidField?.focus({ preventScroll: true });
         });
     }, [form.errors, form.processing, hasErrors]);
 
     const toggleProductActive = (isActive: boolean) => {
-        form.setData('is_active', isActive);
+        form.setData("is_active", isActive);
     };
 
     const hasPositiveTotal = form.data.stock_volumes.some(
@@ -294,16 +305,16 @@ export function ProductForm({
         form.data.is_active &&
         hasAvailableVolumes &&
         hasPositiveTotal &&
-        form.data.stock_offer_type !== 'new_grade';
+        form.data.stock_offer_type !== "new_grade";
     const distributionStatus = !form.data.is_active
-        ? 'Não aparece para as vendedoras: produto oculto.'
+        ? "Não aparece para as vendedoras: produto oculto."
         : !hasAvailableVolumes
-          ? 'Não aparece para as vendedoras: sem estoque disponível.'
-          : form.data.stock_offer_type === 'new_grade'
-            ? 'Não aparece para as vendedoras: Grade Nova é somente para uso interno.'
+          ? "Não aparece para as vendedoras: sem estoque disponível."
+          : form.data.stock_offer_type === "new_grade"
+            ? "Não aparece para as vendedoras: Grade Nova é somente para uso interno."
             : !hasPositiveTotal
-              ? 'Não aparece para as vendedoras: estoque zerado.'
-              : 'Aparece para as vendedoras.';
+              ? "Não aparece para as vendedoras: estoque zerado."
+              : "Aparece para as vendedoras.";
 
     const changeOfferType = (type: StockOfferType) => {
         form.setData((previousData) => ({
@@ -336,16 +347,16 @@ export function ProductForm({
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const invalidField = formRef.current?.querySelector<HTMLInputElement>(
-            'input:invalid, textarea:invalid, select:invalid',
+            "input:invalid, textarea:invalid, select:invalid",
         );
 
         if (invalidField) {
             setActiveTab(
                 invalidField.closest('[data-form-tab="stock"]')
-                    ? 'stock'
+                    ? "stock"
                     : invalidField.closest('[data-form-tab="photos"]')
-                      ? 'photos'
-                      : 'details',
+                      ? "photos"
+                      : "details",
             );
             window.requestAnimationFrame(() => {
                 invalidField.focus();
@@ -390,7 +401,7 @@ export function ProductForm({
             className="grid min-w-0 scroll-mt-4 gap-5 pb-[calc(7rem+env(safe-area-inset-bottom))]"
         >
             <p className="text-xs text-muted-foreground sm:text-sm">
-                Campos marcados com <span className="text-destructive">*</span>{' '}
+                Campos marcados com <span className="text-destructive">*</span>{" "}
                 são obrigatórios. As quantidades por tamanho podem ficar em
                 branco.
             </p>
@@ -430,12 +441,12 @@ export function ProductForm({
                     <button
                         id="product-cover"
                         type="button"
-                        onClick={() => changeTab('photos')}
+                        onClick={() => changeTab("photos")}
                         className="group relative aspect-[4/5] w-24 overflow-hidden rounded-xl bg-muted text-left transition-colors hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none sm:w-full"
                         aria-label={
                             coverPreview
-                                ? 'Abrir fotos do produto'
-                                : 'Adicionar capa nas fotos do produto'
+                                ? "Abrir fotos do produto"
+                                : "Adicionar capa nas fotos do produto"
                         }
                     >
                         {coverPreview?.url ? (
@@ -468,7 +479,7 @@ export function ProductForm({
                         htmlFor="product-name"
                         className="text-sm font-medium"
                     >
-                        Nome do produto{' '}
+                        Nome do produto{" "}
                         <span className="text-destructive">*</span>
                     </Label>
                     <Input
@@ -476,15 +487,15 @@ export function ProductForm({
                         name="name"
                         value={form.data.name}
                         onChange={(event) =>
-                            form.setData('name', event.target.value)
+                            form.setData("name", event.target.value)
                         }
-                        aria-invalid={error('name') ? true : undefined}
+                        aria-invalid={error("name") ? true : undefined}
                         placeholder="Ex.: Calça Wide Leg"
                         maxLength={80}
                         className="text-base sm:text-sm"
                         required
                     />
-                    <InputError message={error('name')} />
+                    <InputError message={error("name")} />
                 </div>
             </section>
 
@@ -505,10 +516,10 @@ export function ProductForm({
                 role="tabpanel"
                 aria-labelledby="product-tab-details"
                 data-form-tab="details"
-                hidden={activeTab !== 'details'}
+                hidden={activeTab !== "details"}
                 className={cn(
-                    'min-w-0 gap-6',
-                    activeTab === 'details' ? 'grid' : 'hidden',
+                    "min-w-0 gap-6",
+                    activeTab === "details" ? "grid" : "hidden",
                 )}
             >
                 <Card className="gap-0 rounded-2xl border-border p-0 shadow-none">
@@ -522,8 +533,8 @@ export function ProductForm({
                             </p>
                             <p className="text-sm leading-5 text-muted-foreground">
                                 {form.data.is_active
-                                    ? 'O produto poderá aparecer no catálogo quando houver estoque disponível.'
-                                    : 'O produto ficará oculto do catálogo, sem alterar o estoque.'}
+                                    ? "O produto poderá aparecer no catálogo quando houver estoque disponível."
+                                    : "O produto ficará oculto do catálogo, sem alterar o estoque."}
                             </p>
                         </div>
                         <Switch
@@ -532,8 +543,8 @@ export function ProductForm({
                             onCheckedChange={toggleProductActive}
                             aria-label={
                                 form.data.is_active
-                                    ? 'Desativar produto'
-                                    : 'Ativar produto'
+                                    ? "Desativar produto"
+                                    : "Ativar produto"
                             }
                         />
                     </label>
@@ -569,7 +580,7 @@ export function ProductForm({
                                         htmlFor="product-model"
                                         className="text-sm font-medium"
                                     >
-                                        Modelo{' '}
+                                        Modelo{" "}
                                         <span className="text-xs font-normal text-muted-foreground">
                                             (opcional)
                                         </span>
@@ -580,28 +591,28 @@ export function ProductForm({
                                         value={form.data.model}
                                         onChange={(event) =>
                                             form.setData(
-                                                'model',
+                                                "model",
                                                 event.target.value,
                                             )
                                         }
                                         aria-invalid={
-                                            error('model') ? true : undefined
+                                            error("model") ? true : undefined
                                         }
                                         placeholder="Ex.: 2451"
                                         className="text-base sm:text-sm"
                                     />
-                                    <InputError message={error('model')} />
+                                    <InputError message={error("model")} />
                                 </div>
                                 <div className="grid gap-2">
                                     <Label htmlFor="product-category">
                                         Categoria
                                     </Label>
                                     <Select
-                                        value={form.data.category_id || 'none'}
+                                        value={form.data.category_id || "none"}
                                         onValueChange={(value) =>
                                             form.setData(
-                                                'category_id',
-                                                value === 'none' ? '' : value,
+                                                "category_id",
+                                                value === "none" ? "" : value,
                                             )
                                         }
                                     >
@@ -609,7 +620,7 @@ export function ProductForm({
                                             id="product-category"
                                             className="w-full text-base sm:text-sm"
                                             aria-invalid={
-                                                error('category_id')
+                                                error("category_id")
                                                     ? true
                                                     : undefined
                                             }
@@ -627,23 +638,23 @@ export function ProductForm({
                                                 >
                                                     {category.name}
                                                     {!category.is_active
-                                                        ? ' (inativa)'
-                                                        : ''}
+                                                        ? " (inativa)"
+                                                        : ""}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
                                     <InputError
-                                        message={error('category_id')}
+                                        message={error("category_id")}
                                     />
                                 </div>
                                 <WashTypeSelector
                                     washTypes={washTypes}
                                     value={form.data.wash_type_id}
                                     onValueChange={(value) =>
-                                        form.setData('wash_type_id', value)
+                                        form.setData("wash_type_id", value)
                                     }
-                                    error={error('wash_type_id')}
+                                    error={error("wash_type_id")}
                                     disabled={form.processing}
                                 />
                             </div>
@@ -653,40 +664,40 @@ export function ProductForm({
                                     Linha comercial
                                 </legend>
                                 <RadioCardGroup
-                                    value={form.data.line || 'none'}
+                                    value={form.data.line || "none"}
                                     onValueChange={(value) =>
                                         form.setData(
-                                            'line',
-                                            value === 'none'
-                                                ? ''
+                                            "line",
+                                            value === "none"
+                                                ? ""
                                                 : (value as ProductLine),
                                         )
                                     }
                                     aria-label="Linha comercial"
                                     aria-invalid={
-                                        error('line') ? true : undefined
+                                        error("line") ? true : undefined
                                     }
                                     idPrefix="product-line"
                                     options={[
                                         {
-                                            value: 'none',
-                                            label: 'Não informada',
+                                            value: "none",
+                                            label: "Não informada",
                                             icon: SlimPlusTee,
                                         },
                                         {
-                                            value: 'slim',
-                                            label: 'Slim',
+                                            value: "slim",
+                                            label: "Slim",
                                             icon: SlimTee,
                                         },
                                         {
-                                            value: 'plus',
-                                            label: 'Plus',
+                                            value: "plus",
+                                            label: "Plus",
                                             icon: PlusTee,
                                         },
                                     ]}
                                 />
                                 <InputError
-                                    message={error('line')}
+                                    message={error("line")}
                                     className="mt-2"
                                 />
                             </fieldset>
@@ -696,7 +707,7 @@ export function ProductForm({
                                     htmlFor="product-notes"
                                     className="text-sm font-medium"
                                 >
-                                    Observações{' '}
+                                    Observações{" "}
                                     <span className="text-xs font-normal text-muted-foreground">
                                         (opcional)
                                     </span>
@@ -707,18 +718,18 @@ export function ProductForm({
                                     value={form.data.notes}
                                     onChange={(event) =>
                                         form.setData(
-                                            'notes',
+                                            "notes",
                                             event.target.value,
                                         )
                                     }
                                     aria-invalid={
-                                        error('notes') ? true : undefined
+                                        error("notes") ? true : undefined
                                     }
                                     placeholder="Cor, lavagem ou algum detalhe importante..."
                                     rows={3}
                                     className="text-base sm:text-sm"
                                 />
-                                <InputError message={error('notes')} />
+                                <InputError message={error("notes")} />
                             </div>
                         </CardContent>
                     </Card>
@@ -730,10 +741,10 @@ export function ProductForm({
                 role="tabpanel"
                 aria-labelledby="product-tab-photos"
                 data-form-tab="photos"
-                hidden={activeTab !== 'photos'}
+                hidden={activeTab !== "photos"}
                 className={cn(
-                    'min-w-0 gap-6',
-                    activeTab === 'photos' ? 'grid' : 'hidden',
+                    "min-w-0 gap-6",
+                    activeTab === "photos" ? "grid" : "hidden",
                 )}
             >
                 <Card className="gap-0 rounded-2xl border-border p-0 shadow-none">
@@ -750,7 +761,7 @@ export function ProductForm({
                         <ProductPhotoManager
                             value={form.data.images}
                             existingImages={product?.images ?? []}
-                            error={error('images') ?? error('image_order')}
+                            error={error("images") ?? error("image_order")}
                             errors={form.errors as Record<string, string>}
                             onChange={(change) => {
                                 form.setData((previousData) => ({
@@ -772,10 +783,10 @@ export function ProductForm({
                 role="tabpanel"
                 aria-labelledby="product-tab-stock"
                 data-form-tab="stock"
-                hidden={activeTab !== 'stock'}
+                hidden={activeTab !== "stock"}
                 className={cn(
-                    'min-w-0 gap-6',
-                    activeTab === 'stock' ? 'grid' : 'hidden',
+                    "min-w-0 gap-6",
+                    activeTab === "stock" ? "grid" : "hidden",
                 )}
             >
                 {product ? (
@@ -796,15 +807,15 @@ export function ProductForm({
                                     {(
                                         [
                                             [
-                                                'Disponível',
+                                                "Disponível",
                                                 product.available_quantity ?? 0,
                                             ],
                                             [
-                                                'Reservado',
+                                                "Reservado",
                                                 product.reserved_quantity ?? 0,
                                             ],
                                             [
-                                                'Sacos',
+                                                "Sacos",
                                                 product.stock_volumes.length,
                                             ],
                                         ] as const
@@ -822,16 +833,16 @@ export function ProductForm({
                                         </div>
                                     ))}
                                 </dl>
-                                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                                <div className="grid grid-cols-[1fr_1fr_auto] gap-2 sm:flex sm:flex-wrap">
                                     {onRegisterEntry && (
                                         <Button
                                             type="button"
                                             onClick={onRegisterEntry}
                                             data-testid="open-stock-entry"
-                                            className="col-span-2 h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
+                                            className="h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
                                         >
                                             <PlusCircleIcon />
-                                            Registrar entrada
+                                            Entrada
                                         </Button>
                                     )}
                                     <Button
@@ -845,18 +856,73 @@ export function ProductForm({
                                             })}
                                         >
                                             <MinusCircleIcon />
-                                            Registrar saída
+                                            Saída
                                         </Link>
                                     </Button>
-                                    <Button
-                                        type="button"
-                                        variant="secondary"
-                                        onClick={onAdjustStock}
-                                        className="h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
-                                    >
-                                        <ClipboardTextIcon />
-                                        Recontar saco
-                                    </Button>
+                                    {(onAdjustStock || onRemoveStock) && (
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="size-11 sm:size-9"
+                                                    aria-label="Mais ações de estoque"
+                                                    data-testid="stock-more-actions"
+                                                >
+                                                    <DotsThreeIcon weight="bold" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent
+                                                align="end"
+                                                className="min-w-72"
+                                            >
+                                                {onAdjustStock && (
+                                                    <DropdownMenuItem
+                                                        className="items-start gap-3 py-2"
+                                                        onSelect={onAdjustStock}
+                                                    >
+                                                        <PencilSimpleLineIcon className="mt-0.5" />
+                                                        <span className="grid gap-0.5">
+                                                            <span>
+                                                                Corrigir
+                                                                contagem
+                                                            </span>
+                                                            <span className="text-xs text-muted-foreground">
+                                                                Ajuste a
+                                                                quantidade de um
+                                                                saco depois de
+                                                                conferir.
+                                                            </span>
+                                                        </span>
+                                                    </DropdownMenuItem>
+                                                )}
+                                                {onAdjustStock &&
+                                                    onRemoveStock && (
+                                                        <DropdownMenuSeparator />
+                                                    )}
+                                                {onRemoveStock && (
+                                                    <DropdownMenuItem
+                                                        variant="destructive"
+                                                        className="items-start gap-3 py-2"
+                                                        onSelect={onRemoveStock}
+                                                    >
+                                                        <TrashIcon className="mt-0.5" />
+                                                        <span className="grid gap-0.5">
+                                                            <span>
+                                                                Excluir sacos
+                                                            </span>
+                                                            <span className="text-xs text-muted-foreground">
+                                                                Cadastrados por
+                                                                engano. Saem do
+                                                                estoque.
+                                                            </span>
+                                                        </span>
+                                                    </DropdownMenuItem>
+                                                )}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    )}
                                 </div>
                             </CardHeader>
                         </Card>
@@ -876,10 +942,10 @@ export function ProductForm({
                                             <div className="flex items-start justify-between gap-3">
                                                 <div className="grid min-w-0 gap-0.5">
                                                     <h3 className="font-semibold">
-                                                        Saco{' '}
+                                                        Saco{" "}
                                                         {volume.sort_order + 1}
                                                         <span className="font-mono text-sm font-normal text-muted-foreground">
-                                                            {' '}
+                                                            {" "}
                                                             · {volume.code}
                                                         </span>
                                                     </h3>
@@ -889,14 +955,14 @@ export function ProductForm({
                                                 </div>
                                                 <span
                                                     className={cn(
-                                                        'shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums',
+                                                        "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums",
                                                         volume.status ===
-                                                            'Disponível'
-                                                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                                                            : 'bg-muted text-muted-foreground',
+                                                            "Disponível"
+                                                            ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                                                            : "bg-muted text-muted-foreground",
                                                     )}
                                                 >
-                                                    {volume.total_quantity}{' '}
+                                                    {volume.total_quantity}{" "}
                                                     peças · {volume.status}
                                                 </span>
                                             </div>
@@ -951,7 +1017,7 @@ export function ProductForm({
                                     value={form.data.stock_offer_type}
                                     onChange={changeOfferType}
                                     disabled={hasLockedVolumes}
-                                    error={error('stock_offer_type')}
+                                    error={error("stock_offer_type")}
                                 />
 
                                 {!tracksSizes && (
@@ -966,7 +1032,7 @@ export function ProductForm({
                                         }
                                         onChange={(volumes) =>
                                             form.setData(
-                                                'stock_volumes',
+                                                "stock_volumes",
                                                 volumes,
                                             )
                                         }
@@ -975,19 +1041,19 @@ export function ProductForm({
 
                                 <p
                                     className={cn(
-                                        'flex items-center gap-2 text-sm font-medium',
+                                        "flex items-center gap-2 text-sm font-medium",
                                         isVisibleToSellers
-                                            ? 'text-foreground'
-                                            : 'text-muted-foreground',
+                                            ? "text-foreground"
+                                            : "text-muted-foreground",
                                     )}
                                     aria-live="polite"
                                 >
                                     <span
                                         className={cn(
-                                            'size-2 shrink-0 rounded-full',
+                                            "size-2 shrink-0 rounded-full",
                                             isVisibleToSellers
-                                                ? 'bg-emerald-600 dark:bg-emerald-400'
-                                                : 'bg-muted-foreground/60',
+                                                ? "bg-emerald-600 dark:bg-emerald-400"
+                                                : "bg-muted-foreground/60",
                                         )}
                                         aria-hidden="true"
                                     />
@@ -1003,7 +1069,7 @@ export function ProductForm({
                                 errors={form.errors as Record<string, string>}
                                 lockedVolumeIds={lockedVolumeIds}
                                 onChange={(volumes) =>
-                                    form.setData('stock_volumes', volumes)
+                                    form.setData("stock_volumes", volumes)
                                 }
                             />
                         )}
@@ -1039,11 +1105,11 @@ export function ProductForm({
             {/* 5. Ações inferiores (Mobile-First) */}
             <div
                 className={cn(
-                    'fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-card px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-4 sm:pb-[calc(1rem+env(safe-area-inset-bottom))] lg:px-8',
+                    "fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-card px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-4 sm:pb-[calc(1rem+env(safe-area-inset-bottom))] lg:px-8",
                     !isMobile &&
-                        (sidebarState === 'collapsed'
-                            ? 'md:left-[calc(var(--sidebar-width-icon)+1rem)]'
-                            : 'md:left-(--sidebar-width)'),
+                        (sidebarState === "collapsed"
+                            ? "md:left-[calc(var(--sidebar-width-icon)+1rem)]"
+                            : "md:left-(--sidebar-width)"),
                 )}
             >
                 <div className="mx-auto flex w-full max-w-7xl items-center justify-center gap-2 sm:justify-end">
@@ -1070,12 +1136,12 @@ export function ProductForm({
                             <FloppyDiskIcon />
                         )}
                         {form.processing
-                            ? 'Salvando...'
+                            ? "Salvando..."
                             : processingImages
-                              ? 'Preparando fotos...'
+                              ? "Preparando fotos..."
                               : isEditing
-                                ? 'Salvar alterações'
-                                : 'Cadastrar produto'}
+                                ? "Salvar alterações"
+                                : "Cadastrar produto"}
                     </Button>
                 </div>
             </div>

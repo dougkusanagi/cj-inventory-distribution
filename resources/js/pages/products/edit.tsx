@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ProductForm } from '@/components/products/product-form';
 import { StockAdjustmentModal } from '@/components/products/stock-adjustment-modal';
 import { StockEntryModal } from '@/components/products/stock-entry-modal';
+import { StockRemovalDrawer } from '@/components/products/stock-removal-drawer';
 import { index as productsIndex } from '@/routes/products';
 import type { Category, Product, WashType } from '@/types';
 
@@ -18,6 +19,7 @@ export default function EditProduct({
 }) {
     const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
     const [isEntryOpen, setIsEntryOpen] = useState(false);
+    const [isRemovalOpen, setIsRemovalOpen] = useState(false);
 
     return (
         <>
@@ -50,6 +52,13 @@ export default function EditProduct({
                     washTypes={washTypes}
                     onAdjustStock={() => setIsAdjustmentOpen(true)}
                     onRegisterEntry={() => setIsEntryOpen(true)}
+                    onRemoveStock={() => setIsRemovalOpen(true)}
+                />
+                <StockRemovalDrawer
+                    key={isRemovalOpen ? 'open' : 'closed'}
+                    product={product}
+                    open={isRemovalOpen}
+                    onOpenChange={setIsRemovalOpen}
                 />
                 <StockEntryModal
                     product={product}

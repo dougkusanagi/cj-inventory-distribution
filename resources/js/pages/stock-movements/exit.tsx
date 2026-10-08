@@ -13,7 +13,7 @@ import {
     StockMovementReasonField,
     stockExitReasons,
 } from '@/components/stock-movement-reason-field';
-import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
+import { StockVolumeSelection } from '@/components/stock-volume-selection';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -22,7 +22,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { index } from '@/routes/stock-movements';
@@ -135,49 +134,12 @@ export default function StockExit({
                                     selecionados. A seleção permanece ao buscar.
                                 </p>
                             </div>
-                            {volumes.map((volume) => {
-                                const selected = form.data.volume_ids.includes(
-                                    volume.id,
-                                );
-
-                                return (
-                                    <label
-                                        key={volume.id}
-                                        className="flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-colors hover:bg-muted/30"
-                                    >
-                                        <Checkbox
-                                            checked={selected}
-                                            onCheckedChange={(checked) =>
-                                                toggleVolume(
-                                                    volume.id,
-                                                    checked === true,
-                                                )
-                                            }
-                                            aria-label={`Selecionar ${volume.code}`}
-                                        />
-                                        <span className="grid min-w-0 flex-1 gap-2">
-                                            <span className="flex flex-wrap items-center justify-between gap-2">
-                                                <strong>
-                                                    {volume.product.name}
-                                                </strong>
-                                                <span className="font-mono text-xs text-muted-foreground">
-                                                    {volume.code}
-                                                </span>
-                                            </span>
-                                            <span className="text-sm text-muted-foreground">
-                                                {volume.product.code}
-                                                {volume.product.model
-                                                    ? ` · ${volume.product.model}`
-                                                    : ''}{' '}
-                                                · {volume.total_quantity} peças
-                                            </span>
-                                            <StockSizeBreakdown
-                                                sizes={volume.sizes}
-                                            />
-                                        </span>
-                                    </label>
-                                );
-                            })}
+                            <StockVolumeSelection
+                                volumes={volumes}
+                                selectedIds={form.data.volume_ids}
+                                onToggle={toggleVolume}
+                                disabled={form.processing}
+                            />
                             {volumes.length === 0 && (
                                 <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
                                     {selectedProductId === null
