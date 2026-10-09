@@ -14,6 +14,7 @@ export function CompactTabs<T extends string>({
     errorCount,
     idPrefix,
     panelIdPrefix,
+    className,
 }: {
     tabs: readonly CompactTab<T>[];
     activeTab: T;
@@ -21,6 +22,7 @@ export function CompactTabs<T extends string>({
     errorCount?: (tab: T) => number;
     idPrefix: string;
     panelIdPrefix: string;
+    className?: string;
 }) {
     const activeIndex = Math.max(
         tabs.findIndex((tab) => tab.id === activeTab),
@@ -30,7 +32,10 @@ export function CompactTabs<T extends string>({
     return (
         <div
             role="tablist"
-            className="sticky top-[var(--app-header-offset,0px)] z-20 grid auto-cols-fr grid-flow-col gap-1.5 rounded-2xl border border-border bg-muted/95 p-1.5 backdrop-blur transition-[top] duration-200 ease-in-out"
+            className={cn(
+                "sticky top-[var(--app-header-offset,0px)] z-20 grid auto-cols-fr grid-flow-col gap-1.5 rounded-2xl border border-border bg-muted/95 p-1.5 backdrop-blur transition-[top] duration-200 ease-in-out",
+                className,
+            )}
         >
             <span
                 aria-hidden="true"
@@ -54,22 +59,16 @@ export function CompactTabs<T extends string>({
                         aria-controls={`${panelIdPrefix}-${id}`}
                         onClick={() => onChange(id)}
                         className={cn(
-                            "relative z-10 flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                            "relative z-10 flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl px-2 text-xs font-semibold sm:min-h-12 sm:flex-row sm:gap-2 sm:px-3 sm:text-sm transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                             active
                                 ? "text-foreground"
                                 : "text-muted-foreground hover:bg-card/60 hover:text-foreground",
                         )}
                     >
                         <Icon className="size-5 shrink-0" aria-hidden="true" />
-                        <span
-                            className={cn(
-                                active ? "inline" : "sr-only sm:not-sr-only",
-                            )}
-                        >
-                            {label}
-                        </span>
+                        <span>{label}</span>
                         {errors > 0 && (
-                            <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs text-destructive">
+                            <span className="absolute top-1 right-1.5 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] text-destructive sm:static sm:px-2 sm:text-xs">
                                 {errors}
                                 <span className="sr-only">
                                     {" "}

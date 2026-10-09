@@ -400,7 +400,7 @@ export function ProductForm({
             noValidate
             className="grid min-w-0 scroll-mt-4 gap-5 pb-[calc(7rem+env(safe-area-inset-bottom))]"
         >
-            <p className="text-xs text-muted-foreground sm:text-sm">
+            <p className="hidden text-sm text-muted-foreground sm:block">
                 Campos marcados com <span className="text-destructive">*</span>{" "}
                 são obrigatórios. As quantidades por tamanho podem ficar em
                 branco.
@@ -429,7 +429,7 @@ export function ProductForm({
             <section
                 id="product-identity"
                 aria-labelledby="product-identity-title"
-                className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-4 rounded-2xl border border-border bg-card p-4 sm:grid-cols-[6rem_minmax(0,1fr)] sm:gap-5 sm:p-5"
+                className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-4 rounded-2xl rounded-b-none border border-b-0 border-border bg-card p-4 sm:grid-cols-[6rem_minmax(0,1fr)] sm:gap-5 sm:p-5"
             >
                 <div className="grid gap-1.5">
                     <p
@@ -500,6 +500,7 @@ export function ProductForm({
             </section>
 
             <CompactTabs
+                className="-mt-5 rounded-t-none"
                 tabs={formTabs}
                 activeTab={activeTab}
                 onChange={changeTab}
@@ -527,14 +528,14 @@ export function ProductForm({
                         htmlFor="is-active"
                         className="flex min-h-12 cursor-pointer items-center justify-between gap-4 p-4 select-none sm:px-6"
                     >
-                        <div className="grid gap-1">
+                        <div className="grid gap-0.5">
                             <p className="text-sm font-semibold text-foreground">
                                 Produto ativo
                             </p>
-                            <p className="text-sm leading-5 text-muted-foreground">
+                            <p className="text-xs leading-5 text-muted-foreground sm:text-sm">
                                 {form.data.is_active
-                                    ? "O produto poderá aparecer no catálogo quando houver estoque disponível."
-                                    : "O produto ficará oculto do catálogo, sem alterar o estoque."}
+                                    ? "Aparece no catálogo quando houver estoque."
+                                    : "Oculto do catálogo. O estoque não muda."}
                             </p>
                         </div>
                         <Switch
@@ -557,7 +558,7 @@ export function ProductForm({
                             <h2 className="text-xl font-semibold tracking-tight">
                                 Informações do produto
                             </h2>
-                            <CardDescription className="text-sm leading-6">
+                            <CardDescription className="hidden text-sm leading-6 sm:block">
                                 Modelo, categoria, linha comercial e observações
                                 da peça.
                             </CardDescription>
@@ -1154,6 +1155,17 @@ export function ProductForm({
                               : isEditing
                                 ? "Salvar alterações"
                                 : "Cadastrar produto"}
+                        {form.isDirty && !form.processing && (
+                            <>
+                                <span
+                                    aria-hidden="true"
+                                    className="size-2 rounded-full bg-primary-foreground/70 sm:hidden"
+                                />
+                                <span className="sr-only sm:hidden">
+                                    Há alterações não salvas
+                                </span>
+                            </>
+                        )}
                     </Button>
                 </div>
             </div>
