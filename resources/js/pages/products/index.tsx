@@ -629,7 +629,7 @@ function ProductAvailabilityNotice({
     const isInternalUse = isProductInternalUse(product);
 
     return (
-        <p
+        <div
             className={cn(
                 'rounded-lg text-xs leading-5',
                 compact ? 'px-2.5 py-1.5 leading-[1.15rem]' : 'px-3 py-2',
@@ -643,15 +643,53 @@ function ProductAvailabilityNotice({
         >
             {isAvailable ? (
                 <>
-                    <span className="block text-[10px] leading-4 font-normal opacity-70">
+                    <span className="block text-xs leading-4 font-normal">
                         Disponível
                     </span>
-                    <strong>{availableQuantity} peças</strong>
-                    {' · '}
-                    <strong>
-                        {availableVolumeCount}{' '}
-                        {availableVolumeCount === 1 ? 'saco' : 'sacos'}
-                    </strong>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1">
+                        <span className="inline-flex items-center gap-1.5">
+                            <TShirtIcon
+                                className={
+                                    compact
+                                        ? 'size-4 shrink-0'
+                                        : 'size-5 shrink-0'
+                                }
+                                aria-hidden="true"
+                            />
+                            <strong
+                                className={cn(
+                                    'leading-none font-semibold tabular-nums',
+                                    compact ? 'text-lg' : 'text-2xl',
+                                )}
+                            >
+                                {availableQuantity}
+                            </strong>{' '}
+                            <span>
+                                {availableQuantity === 1 ? 'peça' : 'peças'}
+                            </span>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                            <PackageIcon
+                                className={
+                                    compact
+                                        ? 'size-4 shrink-0'
+                                        : 'size-5 shrink-0'
+                                }
+                                aria-hidden="true"
+                            />
+                            <strong
+                                className={cn(
+                                    'leading-none font-semibold tabular-nums',
+                                    compact ? 'text-lg' : 'text-2xl',
+                                )}
+                            >
+                                {availableVolumeCount}
+                            </strong>{' '}
+                            <span>
+                                {availableVolumeCount === 1 ? 'saco' : 'sacos'}
+                            </span>
+                        </span>
+                    </div>
                 </>
             ) : isInternalUse ? (
                 <>
@@ -665,7 +703,7 @@ function ProductAvailabilityNotice({
             ) : (
                 'Sem oferta de estoque'
             )}
-        </p>
+        </div>
     );
 }
 

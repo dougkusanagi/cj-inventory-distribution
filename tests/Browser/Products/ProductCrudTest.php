@@ -41,7 +41,8 @@ it('shows the grade type, commercial line, and category in product cards and tab
         ->assertSee('Grade Furada')
         ->assertSee('Linha Slim')
         ->assertSee('Calças')
-        ->assertSee('3 peças · 1 saco')
+        ->assertSee('3 peças')
+        ->assertSee('1 saco')
         ->assertSee('3 peças em estoque físico')
         ->click('button[aria-label="Visualização em cards"]')
         ->assertSee('Grade Furada')
@@ -441,7 +442,8 @@ it('keeps a stock quantity when disabling a size is cancelled', function () {
         ->assertRoute('products.index')
         ->assertSee('Blusa com grade E2E')
         ->assertSee('Grade Furada')
-        ->assertSee('7 peças · 1 saco')
+        ->assertSee('7 peças')
+        ->assertSee('1 saco')
         ->assertSee('Produto cadastrado.')
         ->assertNoJavaScriptErrors();
 
