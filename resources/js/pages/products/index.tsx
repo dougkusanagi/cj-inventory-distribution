@@ -643,11 +643,11 @@ function ProductAvailabilityNotice({
         >
             {isAvailable ? (
                 <>
-                    <span className="block text-xs leading-4 font-normal">
+                    <span className="block text-xs leading-4 font-normal text-emerald-700 dark:text-emerald-400">
                         Disponível
                     </span>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1">
-                        <span className="inline-flex items-center gap-1.5">
+                    <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+                        <span className="inline-flex flex-wrap items-center gap-1.5">
                             <TShirtIcon
                                 className={
                                     compact
@@ -668,7 +668,7 @@ function ProductAvailabilityNotice({
                                 {availableQuantity === 1 ? 'peça' : 'peças'}
                             </span>
                         </span>
-                        <span className="inline-flex items-center gap-1.5">
+                        <span className="inline-flex flex-wrap items-center gap-1.5">
                             <PackageIcon
                                 className={
                                     compact
