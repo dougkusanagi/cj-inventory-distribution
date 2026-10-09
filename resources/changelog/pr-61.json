@@ -1,0 +1,49 @@
+{
+  "title": "Melhorias no estoque e nos produtos",
+  "changes": [
+    {
+      "category": "added",
+      "text": "Adicionado um painel para retirar do estoque sacos cadastrados por engano, com seleção de até 50 sacos, motivo, resumo das peças e confirmação. A retirada fica registrada no histórico; sacos reservados, já baixados ou sem peças não aparecem para seleção."
+    },
+    {
+      "category": "improved",
+      "text": "Reorganizadas as ações de estoque: Entrada e Saída ficam em destaque, enquanto Corrigir contagem e Excluir sacos ficam no menu de outras ações, com disposição adaptada ao celular."
+    },
+    {
+      "category": "improved",
+      "text": "Padronizada a seleção de sacos nas saídas e remoções, com destaque dos selecionados, identificação, quantidade e tamanhos. A seleção fica bloqueada durante o envio, e a remoção inclui controle para identificar solicitações repetidas."
+    },
+    {
+      "category": "improved",
+      "text": "Ajustada a apresentação dos produtos, com capa integrada às abas, código interno em destaque, textos mais curtos no celular e indicação de alterações não salvas no botão de salvar. Os sacos disponíveis também recebem destaque visual."
+    },
+    {
+      "category": "improved",
+      "text": "Reorganizada a galeria em cartões adaptados ao tamanho da tela, com acesso às ações de ordenar, definir capa, ajustar e remover fotos."
+    },
+    {
+      "category": "improved",
+      "text": "Atualizadas as abas para manter todos os nomes visíveis no celular e acompanhar a posição do cabeçalho durante a rolagem. A troca de aba ganhou destaque animado, respeitando a preferência por movimento reduzido."
+    },
+    {
+      "category": "improved",
+      "text": "As listas de opções passam a abrir em um painel no rodapé do celular. Também foram ajustados os limites de largura, a quebra de textos longos e a associação entre o rótulo e o campo de seleção na correção de contagem."
+    },
+    {
+      "category": "improved",
+      "text": "Alterada a configuração dos arquivos públicos para usar endereços relativos ao site, sem depender do endereço completo configurado para a aplicação."
+    },
+    {
+      "category": "improved",
+      "text": "Centralizada a apresentação da seleção de sacos para reutilização entre telas e padronizada a formatação de partes do código. A documentação de desenvolvimento ganhou orientações para manter botões, ícones, espaçamentos e ações consistentes."
+    },
+    {
+      "category": "improved",
+      "text": "Atualizados os testes de navegador para os novos textos e ações, os endereços das imagens e seu carregamento. Adicionado um teste de remoção em computador e celular para verificar a retirada apenas dos sacos selecionados e a preservação dos demais. Os testes não foram executados neste PR."
+    }
+  ],
+  "pr_number": 61,
+  "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/61",
+  "merged_at": "2026-10-09T12:37:40Z",
+  "commit": "bbebc8016c25ef04e12da2f81cf2bb5b3653d3c8"
+}
