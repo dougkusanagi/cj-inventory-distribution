@@ -71,20 +71,15 @@ export function StockRemovalDrawer({
                 data-testid="stock-removal-drawer"
             >
                 <DrawerHeader>
-                    <DrawerTitle>
-                        Excluir sacos cadastrados por engano
-                    </DrawerTitle>
+                    <DrawerTitle>Excluir sacos</DrawerTitle>
                     <DrawerDescription>
-                        Selecione os sacos cadastrados errados em {product.name}
-                        . Eles sairão do estoque disponível, e a correção ficará
-                        registrada no histórico. Depois, registre uma nova
-                        entrada se precisar adicionar os sacos corretos.
+                        Sacos de {product.name} cadastrados por engano. Eles
+                        saem do estoque e a remoção fica no histórico.
                     </DrawerDescription>
                 </DrawerHeader>
-                <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-6 pb-5">
-                    <p className="text-sm text-muted-foreground">
-                        Sacos reservados ou já baixados não podem ser removidos.
-                        Selecione até 50 sacos por vez.
+                <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto px-6 pb-5">
+                    <p className="text-xs text-muted-foreground">
+                        Reservados ou já baixados não aparecem. Até 50 por vez.
                     </p>
                     <StockVolumeSelection
                         showProduct={false}

@@ -1,24 +1,23 @@
 import {
+    ArrowsDownUpIcon,
     ArrowUUpLeftIcon,
     CameraIcon,
     CameraPlusIcon,
     CaretDownIcon,
     CaretUpIcon,
-    InfoIcon,
-    ImagesIcon,
     PencilSimpleIcon,
     StarIcon,
     TrashIcon,
-} from '@phosphor-icons/react';
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import type { ChangeEvent } from 'react';
-import InputError from '@/components/input-error';
+} from "@phosphor-icons/react";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import type { ChangeEvent } from "react";
+import InputError from "@/components/input-error";
 import {
     canvasToImageFile,
     PhotoEditor,
-} from '@/components/products/product-photo-modals';
-import type { PhotoEditorSource } from '@/components/products/product-photo-modals';
-import { Button } from '@/components/ui/button';
+} from "@/components/products/product-photo-modals";
+import type { PhotoEditorSource } from "@/components/products/product-photo-modals";
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogClose,
@@ -27,26 +26,26 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
     Drawer,
     DrawerContent,
     DrawerDescription,
     DrawerHeader,
     DrawerTitle,
-} from '@/components/ui/drawer';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
-import type { ProductImage } from '@/types';
+} from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
+import type { ProductImage } from "@/types";
 
 const MAX_IMAGES = 5;
 const MAX_SOURCE_IMAGE_SIZE_BYTES = 25 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 2400;
-const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 type ExistingPhotoItem = {
     key: string;
-    kind: 'existing';
+    kind: "existing";
     id: number;
     url: string;
     thumbUrl: string;
@@ -57,12 +56,12 @@ type ExistingPhotoItem = {
 
 type NewPhotoItem = {
     key: string;
-    kind: 'new';
+    kind: "new";
     id: string;
     file: File;
     previewUrl: string;
     name: string;
-    origin: 'camera' | 'gallery';
+    origin: "camera" | "gallery";
     replacesMediaId?: number;
     removed: boolean;
     error?: string;
@@ -72,7 +71,7 @@ export type PhotoItem = ExistingPhotoItem | NewPhotoItem;
 
 type PendingPhoto = {
     file: File;
-    origin: 'camera' | 'gallery';
+    origin: "camera" | "gallery";
 };
 
 type PhotoState = {
@@ -89,7 +88,7 @@ export type PhotoChange = {
 export type ProductCoverPreview = {
     url: string;
     name: string;
-    kind: PhotoItem['kind'];
+    kind: PhotoItem["kind"];
 };
 
 type PhotoManagerProps = {
@@ -103,22 +102,22 @@ type PhotoManagerProps = {
 };
 
 type PhotoAction =
-    | { type: 'hydrate'; items: PhotoItem[] }
-    | { type: 'add'; items: NewPhotoItem[] }
-    | { type: 'replace'; key: string; item: PhotoItem }
-    | { type: 'move'; key: string; direction: -1 | 1 }
-    | { type: 'setCover'; key: string }
-    | { type: 'remove'; key: string }
-    | { type: 'undoRemove'; key: string }
-    | { type: 'setError'; key?: string; message: string | null };
+    | { type: "hydrate"; items: PhotoItem[] }
+    | { type: "add"; items: NewPhotoItem[] }
+    | { type: "replace"; key: string; item: PhotoItem }
+    | { type: "move"; key: string; direction: -1 | 1 }
+    | { type: "setCover"; key: string }
+    | { type: "remove"; key: string }
+    | { type: "undoRemove"; key: string }
+    | { type: "setError"; key?: string; message: string | null };
 
 function photoReducer(state: PhotoState, action: PhotoAction): PhotoState {
     switch (action.type) {
-        case 'hydrate':
+        case "hydrate":
             return { items: action.items, error: null };
-        case 'add':
+        case "add":
             return { items: [...state.items, ...action.items], error: null };
-        case 'replace': {
+        case "replace": {
             const itemIndex = state.items.findIndex(
                 (item) => item.key === action.key,
             );
@@ -132,7 +131,7 @@ function photoReducer(state: PhotoState, action: PhotoAction): PhotoState {
 
             return { items, error: null };
         }
-        case 'move':
+        case "move":
             return {
                 ...state,
                 items: moveActiveItem(
@@ -141,19 +140,19 @@ function photoReducer(state: PhotoState, action: PhotoAction): PhotoState {
                     action.direction,
                 ),
             };
-        case 'setCover':
+        case "setCover":
             return {
                 ...state,
                 items: moveActiveItemToCover(state.items, action.key),
             };
-        case 'remove':
+        case "remove":
             return {
                 ...state,
                 items: state.items.map((item) =>
                     item.key === action.key ? { ...item, removed: true } : item,
                 ),
             };
-        case 'undoRemove':
+        case "undoRemove":
             return {
                 ...state,
                 items: state.items.map((item) =>
@@ -162,7 +161,7 @@ function photoReducer(state: PhotoState, action: PhotoAction): PhotoState {
                         : item,
                 ),
             };
-        case 'setError':
+        case "setError":
             if (!action.key) {
                 return { ...state, error: action.message };
             }
@@ -190,7 +189,7 @@ function createInitialPhotoState({
     const items = [
         ...existingImages.map((image): ExistingPhotoItem => ({
             key: existingPhotoKey(image.id),
-            kind: 'existing',
+            kind: "existing",
             id: image.id,
             url: image.url,
             thumbUrl: image.thumb_url ?? image.url,
@@ -199,17 +198,17 @@ function createInitialPhotoState({
         })),
         ...value.map((file): NewPhotoItem => ({
             key: newPhotoKey(),
-            kind: 'new',
+            kind: "new",
             id: createPhotoId(),
             file,
             previewUrl: createObjectUrl(file, objectUrls),
             name: file.name,
-            origin: 'gallery',
+            origin: "gallery",
             removed: false,
         })),
     ];
 
-    return photoReducer({ items: [], error: null }, { type: 'hydrate', items });
+    return photoReducer({ items: [], error: null }, { type: "hydrate", items });
 }
 
 function moveActiveItem(
@@ -269,17 +268,17 @@ function replaceActiveItems(
 function serializePhotos(items: PhotoItem[]): PhotoChange {
     const currentItems = items.filter((item) => !item.removed);
     const newItems = currentItems.filter(
-        (item): item is NewPhotoItem => item.kind === 'new',
+        (item): item is NewPhotoItem => item.kind === "new",
     );
     const newIndexByKey = new Map(
         newItems.map((item, index) => [item.key, index]),
     );
     const removeMediaIds = items.flatMap((item) => {
-        if (item.kind === 'existing' && item.removed) {
+        if (item.kind === "existing" && item.removed) {
             return [item.id];
         }
 
-        if (item.kind === 'new' && item.replacesMediaId !== undefined) {
+        if (item.kind === "new" && item.replacesMediaId !== undefined) {
             return [item.replacesMediaId];
         }
 
@@ -289,49 +288,49 @@ function serializePhotos(items: PhotoItem[]): PhotoChange {
     return {
         files: newItems.map((item) => item.file),
         imageOrder: currentItems.flatMap((item) => {
-            if (item.kind === 'existing') {
-                return ['media:' + item.id];
+            if (item.kind === "existing") {
+                return ["media:" + item.id];
             }
 
             const index = newIndexByKey.get(item.key);
 
-            return index === undefined ? [] : ['new:' + index];
+            return index === undefined ? [] : ["new:" + index];
         }),
         removeMediaIds: [...new Set(removeMediaIds)],
     };
 }
 
 function existingPhotoKey(id: number): string {
-    return 'media:' + id;
+    return "media:" + id;
 }
 
 function newPhotoKey(): string {
-    return 'new:' + createPhotoId();
+    return "new:" + createPhotoId();
 }
 
 function createPhotoId(): string {
     if (
-        typeof crypto !== 'undefined' &&
-        typeof crypto.randomUUID === 'function'
+        typeof crypto !== "undefined" &&
+        typeof crypto.randomUUID === "function"
     ) {
         return crypto.randomUUID();
     }
 
     return (
         Date.now().toString(36) +
-        '-' +
+        "-" +
         Math.random().toString(36).slice(2) +
-        '-' +
+        "-" +
         Math.random().toString(36).slice(2)
     );
 }
 
 function createObjectUrl(file: File, objectUrls: Set<string>): string {
     if (
-        typeof URL === 'undefined' ||
-        typeof URL.createObjectURL !== 'function'
+        typeof URL === "undefined" ||
+        typeof URL.createObjectURL !== "function"
     ) {
-        return '';
+        return "";
     }
 
     const url = URL.createObjectURL(file);
@@ -380,17 +379,17 @@ export function ProductPhotoManager({
     } | null>(null);
     const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
     const [processing, setProcessing] = useState(false);
-    const [announcement, setAnnouncement] = useState('');
+    const [announcement, setAnnouncement] = useState("");
 
     const currentItems = state.items.filter((item) => !item.removed);
     const serverImageErrors = useMemo(() => {
         const newItems = currentItems.filter(
-            (item): item is NewPhotoItem => item.kind === 'new',
+            (item): item is NewPhotoItem => item.kind === "new",
         );
 
         return new Map(
             newItems
-                .map((item, index) => [item.key, errors['images.' + index]])
+                .map((item, index) => [item.key, errors["images." + index]])
                 .filter((entry): entry is [string, string] =>
                     Boolean(entry[1]),
                 ),
@@ -412,7 +411,7 @@ export function ProductPhotoManager({
             cover
                 ? {
                       url:
-                          cover.kind === 'existing'
+                          cover.kind === "existing"
                               ? cover.thumbUrl
                               : cover.previewUrl,
                       name: cover.name,
@@ -429,11 +428,11 @@ export function ProductPhotoManager({
     useEffect(() => {
         const currentObjectUrls = new Set(
             state.items
-                .filter((item): item is NewPhotoItem => item.kind === 'new')
+                .filter((item): item is NewPhotoItem => item.kind === "new")
                 .map((item) => item.previewUrl),
         );
 
-        if (editor?.source.url.startsWith('blob:')) {
+        if (editor?.source.url.startsWith("blob:")) {
             currentObjectUrls.add(editor.source.url);
         }
 
@@ -458,10 +457,10 @@ export function ProductPhotoManager({
 
     const handleFileChange = async (
         event: ChangeEvent<HTMLInputElement>,
-        origin: 'camera' | 'gallery',
+        origin: "camera" | "gallery",
     ) => {
         const files = Array.from(event.target.files ?? []);
-        event.target.value = '';
+        event.target.value = "";
 
         if (files.length === 0 || processing) {
             return;
@@ -474,8 +473,8 @@ export function ProductPhotoManager({
 
         if (!isRetake && filesToProcess.length === 0) {
             dispatch({
-                type: 'setError',
-                message: 'Você já adicionou 5 fotos.',
+                type: "setError",
+                message: "Você já adicionou 5 fotos.",
             });
 
             return;
@@ -488,7 +487,7 @@ export function ProductPhotoManager({
             filesToProcess.length === 0
         ) {
             dispatch({
-                type: 'setError',
+                type: "setError",
                 message: getSelectedFilesError(filesToProcess, truncated),
             });
 
@@ -516,7 +515,7 @@ export function ProductPhotoManager({
                         origin,
                     },
                 }));
-                dispatch({ type: 'setError', message: null });
+                dispatch({ type: "setError", message: null });
 
                 return;
             }
@@ -535,17 +534,17 @@ export function ProductPhotoManager({
                     origin,
                 },
             });
-            dispatch({ type: 'setError', message: null });
+            dispatch({ type: "setError", message: null });
             setAnnouncement(
                 preparedFiles.length === 1
-                    ? 'Foto pronta para ajustar.'
-                    : 'Foto pronta para ajustar. As próximas serão abertas em seguida.',
+                    ? "Foto pronta para ajustar."
+                    : "Foto pronta para ajustar. As próximas serão abertas em seguida.",
             );
         } catch {
             dispatch({
-                type: 'setError',
+                type: "setError",
                 message:
-                    'Não foi possível preparar uma das fotos. Tente outra imagem.',
+                    "Não foi possível preparar uma das fotos. Tente outra imagem.",
             });
         } finally {
             setProcessing(false);
@@ -553,10 +552,10 @@ export function ProductPhotoManager({
     };
 
     const handleAddFromCamera = (event: ChangeEvent<HTMLInputElement>) =>
-        void handleFileChange(event, 'camera');
+        void handleFileChange(event, "camera");
 
     const handleAddFromGallery = (event: ChangeEvent<HTMLInputElement>) =>
-        void handleFileChange(event, 'gallery');
+        void handleFileChange(event, "gallery");
 
     const handleApplyEditedPhoto = async (editedFile: File) => {
         if (!editor) {
@@ -568,25 +567,25 @@ export function ProductPhotoManager({
         try {
             const editedItem: NewPhotoItem = {
                 key: editor.targetKey ?? newPhotoKey(),
-                kind: 'new',
+                kind: "new",
                 id: createPhotoId(),
                 file: editedFile,
                 previewUrl: createObjectUrl(editedFile, objectUrls),
                 name: editedFile.name,
                 origin:
-                    editor.source.origin === 'camera' ? 'camera' : 'gallery',
+                    editor.source.origin === "camera" ? "camera" : "gallery",
                 replacesMediaId: editor.targetMediaId,
                 removed: false,
             };
 
             if (editor.targetKey) {
                 dispatch({
-                    type: 'replace',
+                    type: "replace",
                     key: editor.targetKey,
                     item: editedItem,
                 });
             } else {
-                dispatch({ type: 'add', items: [editedItem] });
+                dispatch({ type: "add", items: [editedItem] });
             }
 
             const [nextPhoto, ...remainingPhotos] = pendingPhotos;
@@ -607,10 +606,10 @@ export function ProductPhotoManager({
                         origin: nextPhoto.origin,
                     },
                 });
-                setAnnouncement('Foto adicionada. Ajuste a próxima foto.');
+                setAnnouncement("Foto adicionada. Ajuste a próxima foto.");
             } else {
                 setEditor(null);
-                setAnnouncement('Foto adicionada.');
+                setAnnouncement("Foto adicionada.");
             }
         } finally {
             setProcessing(false);
@@ -619,18 +618,18 @@ export function ProductPhotoManager({
 
     const handleEdit = (item: PhotoItem) => {
         const source: PhotoEditorSource = {
-            url: item.kind === 'existing' ? item.url : item.previewUrl,
+            url: item.kind === "existing" ? item.url : item.previewUrl,
             name: item.name,
-            origin: item.kind === 'existing' ? 'existing' : item.origin,
+            origin: item.kind === "existing" ? "existing" : item.origin,
         };
 
         setEditor({
             source,
             targetKey: item.key,
             targetMediaId:
-                item.kind === 'existing' ? item.id : item.replacesMediaId,
+                item.kind === "existing" ? item.id : item.replacesMediaId,
         });
-        setAnnouncement('Ajuste a foto selecionada.');
+        setAnnouncement("Ajuste a foto selecionada.");
     };
 
     const handleCancelEditor = () => {
@@ -638,8 +637,8 @@ export function ProductPhotoManager({
         setPendingPhotos([]);
         setAnnouncement(
             editor?.targetKey
-                ? 'Ajuste cancelado. A foto original foi mantida.'
-                : 'Adição de fotos cancelada.',
+                ? "Ajuste cancelado. A foto original foi mantida."
+                : "Adição de fotos cancelada.",
         );
     };
 
@@ -652,8 +651,8 @@ export function ProductPhotoManager({
             return;
         }
 
-        dispatch({ type: 'setCover', key: item.key });
-        setAnnouncement('Foto ' + (index + 1) + ' definida como capa.');
+        dispatch({ type: "setCover", key: item.key });
+        setAnnouncement("Foto " + (index + 1) + " definida como capa.");
     };
 
     const handleMove = (item: PhotoItem, direction: -1 | 1) => {
@@ -666,8 +665,8 @@ export function ProductPhotoManager({
             return;
         }
 
-        dispatch({ type: 'move', key: item.key, direction });
-        setAnnouncement('Foto movida para a posição ' + (nextIndex + 1) + '.');
+        dispatch({ type: "move", key: item.key, direction });
+        setAnnouncement("Foto movida para a posição " + (nextIndex + 1) + ".");
     };
 
     const handleRemove = (item: PhotoItem) => {
@@ -679,11 +678,11 @@ export function ProductPhotoManager({
             return;
         }
 
-        dispatch({ type: 'remove', key: item.key });
+        dispatch({ type: "remove", key: item.key });
         setAnnouncement(
             index === 0 && currentItems.length > 1
-                ? 'Foto removida. Foto 2 agora é a capa.'
-                : 'Foto removida. Você pode desfazer antes de salvar.',
+                ? "Foto removida. Foto 2 agora é a capa."
+                : "Foto removida. Você pode desfazer antes de salvar.",
         );
     };
 
@@ -701,11 +700,11 @@ export function ProductPhotoManager({
     };
 
     const handleUndoRemove = (item: PhotoItem) => {
-        dispatch({ type: 'undoRemove', key: item.key });
+        dispatch({ type: "undoRemove", key: item.key });
         setAnnouncement(
-            item.kind === 'existing'
-                ? 'Foto restaurada.'
-                : 'Foto adicionada novamente.',
+            item.kind === "existing"
+                ? "Foto restaurada."
+                : "Foto adicionada novamente.",
         );
     };
 
@@ -718,37 +717,50 @@ export function ProductPhotoManager({
             aria-invalid={inputError ? true : undefined}
             tabIndex={inputError ? -1 : undefined}
         >
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="grid gap-1">
-                    <div className="flex items-center gap-2">
-                        <h3
-                            id="product-photos-title"
-                            className="text-sm font-semibold text-foreground"
-                        >
-                            Fotos do produto
-                        </h3>
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                            {currentItems.length}/{MAX_IMAGES}
-                        </span>
-                    </div>
-                    <p className="text-xs leading-5 text-muted-foreground">
-                        A primeira foto é a capa e aparece no catálogo.
-                    </p>
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                <div className="flex min-w-0 items-center gap-2">
+                    <h3
+                        id="product-photos-title"
+                        className="text-sm font-semibold whitespace-nowrap text-foreground"
+                    >
+                        Fotos
+                    </h3>
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                        {currentItems.length}/{MAX_IMAGES}
+                    </span>
                 </div>
-                <div className="grid w-full gap-2 sm:w-auto">
+                <div className="flex w-full items-center gap-2 sm:w-auto">
+                    {currentItems.length >= 2 && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setOrganizerOpen(true)}
+                            disabled={processing}
+                            className="h-10 flex-1 sm:flex-none"
+                            title="Mudar a ordem das fotos"
+                        >
+                            <ArrowsDownUpIcon />
+                            Ordenar
+                        </Button>
+                    )}
                     <Button
                         type="button"
                         onClick={() => setPickerOpen(true)}
                         disabled={
                             currentItems.length >= MAX_IMAGES || processing
                         }
-                        className="h-12 w-full"
+                        className="h-10 flex-1 sm:flex-none"
                     >
                         <CameraPlusIcon />
-                        Adicionar fotos
+                        Adicionar
                     </Button>
                 </div>
             </div>
+
+            <p className="-mt-2 text-xs leading-5 text-muted-foreground">
+                A primeira foto é a capa e aparece no catálogo. Toque em uma
+                foto para ampliar.
+            </p>
 
             {state.items.length === 0 ? (
                 <button
@@ -769,25 +781,7 @@ export function ProductPhotoManager({
                 </button>
             ) : (
                 <div className="grid gap-3">
-                    {currentItems.length >= 2 && (
-                        <div className="flex justify-center sm:justify-end">
-                            <Button
-                                type="button"
-                                variant="secondary"
-                                onClick={() => setOrganizerOpen(true)}
-                                disabled={processing}
-                                className="h-10 w-full rounded-xl px-3 text-xs sm:w-auto"
-                            >
-                                <ImagesIcon />
-                                Organizar fotos
-                            </Button>
-                        </div>
-                    )}
-                    <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground sm:justify-start">
-                        <InfoIcon className="size-4" />
-                        Toque em uma foto para ampliar ou ajustar.
-                    </p>
-                    <div className="grid grid-cols-2 gap-0 sm:grid-cols-1 sm:gap-3">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                         {state.items.map((item) => {
                             if (item.removed) {
                                 return (
@@ -816,7 +810,7 @@ export function ProductPhotoManager({
                                                 handleUndoRemove(item)
                                             }
                                             disabled={processing}
-                                            className="h-12 shrink-0 px-3"
+                                            className="h-10 shrink-0 px-3"
                                         >
                                             <ArrowUUpLeftIcon />
                                             Desfazer
@@ -846,22 +840,13 @@ export function ProductPhotoManager({
                                 />
                             );
                         })}
-                        {currentItems.length % 2 === 1 && (
-                            <div
-                                aria-hidden="true"
-                                className={cn(
-                                    'border-l border-border sm:hidden',
-                                    currentItems.length > 2 && 'border-t',
-                                )}
-                            />
-                        )}
                     </div>
                 </div>
             )}
 
             <InputError
                 message={inputError}
-                role={inputError ? 'alert' : undefined}
+                role={inputError ? "alert" : undefined}
             />
             <p role="status" aria-live="polite" className="sr-only">
                 {announcement}
@@ -871,7 +856,7 @@ export function ProductPhotoManager({
                 ref={cameraInputRef}
                 id="product-images-camera"
                 type="file"
-                accept={ACCEPTED_IMAGE_TYPES.join(',')}
+                accept={ACCEPTED_IMAGE_TYPES.join(",")}
                 capture="environment"
                 className="sr-only"
                 onChange={handleAddFromCamera}
@@ -881,7 +866,7 @@ export function ProductPhotoManager({
                 ref={galleryInputRef}
                 id="product-images-gallery"
                 type="file"
-                accept={ACCEPTED_IMAGE_TYPES.join(',')}
+                accept={ACCEPTED_IMAGE_TYPES.join(",")}
                 multiple
                 className="sr-only"
                 onChange={handleAddFromGallery}
@@ -918,7 +903,7 @@ export function ProductPhotoManager({
                     onCancel={handleCancelEditor}
                     onApply={handleApplyEditedPhoto}
                     onRetake={
-                        editor.source.origin === 'camera'
+                        editor.source.origin === "camera"
                             ? () => cameraInputRef.current?.click()
                             : undefined
                     }
@@ -940,9 +925,9 @@ export function ProductPhotoManager({
                     <DialogHeader>
                         <DialogTitle>Remover foto?</DialogTitle>
                         <DialogDescription>
-                            {pendingRemoval?.kind === 'existing'
-                                ? 'A remoção será aplicada ao salvar o produto. Você ainda poderá desfazê-la antes disso.'
-                                : 'A foto será descartada do formulário. Você ainda poderá desfazer essa ação antes de salvar.'}
+                            {pendingRemoval?.kind === "existing"
+                                ? "A remoção será aplicada ao salvar o produto. Você ainda poderá desfazê-la antes disso."
+                                : "A foto será descartada do formulário. Você ainda poderá desfazer essa ação antes de salvar."}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -985,28 +970,23 @@ function PhotoRow({
     onSetCover: () => void;
     onRemove: () => void;
 }) {
-    const imageUrl = item.kind === 'existing' ? item.thumbUrl : item.previewUrl;
+    const imageUrl = item.kind === "existing" ? item.thumbUrl : item.previewUrl;
 
     return (
         <article
             className={cn(
-                'grid min-w-0 content-start gap-2 bg-transparent p-2 sm:grid-cols-[5rem_minmax(0,1fr)] sm:items-center sm:gap-3 sm:rounded-2xl sm:border sm:p-3',
-                index % 2 === 1 && 'border-l border-border',
-                index >= 2 && 'border-t border-border',
+                "grid min-w-0 content-start gap-2 rounded-2xl border p-2",
                 index === 0
-                    ? 'sm:border-primary/50 sm:bg-primary/[0.03]'
-                    : 'sm:border-border sm:bg-background',
+                    ? "border-primary/50 bg-primary/[0.03]"
+                    : "border-border bg-background",
             )}
         >
-            <div className="relative w-full sm:w-20">
+            <div className="relative">
                 <button
                     type="button"
                     onClick={onPreview}
-                    className={cn(
-                        'group relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-muted text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none',
-                        index === 0 && 'ring-1 ring-primary/70 sm:ring-0',
-                    )}
-                    aria-label={`Ampliar ${index === 0 ? 'a capa' : 'a foto ' + (index + 1)}`}
+                    className="group relative block aspect-[4/5] w-full overflow-hidden rounded-xl bg-muted text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                    aria-label={`Ampliar ${index === 0 ? "a capa" : "a foto " + (index + 1)}`}
                 >
                     {imageUrl ? (
                         <img
@@ -1023,61 +1003,67 @@ function PhotoRow({
                     )}
                     <span className="absolute inset-0 bg-foreground/0 transition-colors group-hover:bg-foreground/15" />
                     {index === 0 && (
-                        <span className="absolute inset-x-1 bottom-1 flex items-center justify-center gap-1 rounded-md bg-background/65 px-1 py-1 text-[9px] font-bold tracking-[0.08em] text-foreground uppercase backdrop-blur-sm">
+                        <span className="absolute top-2 left-2 flex items-center gap-1 rounded-full bg-background/80 px-2 py-1 text-[10px] font-bold tracking-[0.08em] text-foreground uppercase backdrop-blur-sm">
                             <StarIcon className="size-3.5 text-primary" />
                             Capa
                         </span>
                     )}
                 </button>
-                {index > 0 && (
-                    <Button
-                        type="button"
-                        variant="secondary"
-                        size="icon"
-                        onClick={onSetCover}
-                        disabled={processing}
-                        className="absolute right-2 bottom-2 size-10 rounded-full border-black/15 bg-white text-stone-900 shadow-md hover:bg-stone-100 hover:text-stone-950"
-                        aria-label={`Definir a foto ${index + 1} como capa`}
-                    >
-                        <StarIcon className="size-5" />
-                    </Button>
-                )}
-                {item.kind === 'new' && (
-                    <span className="absolute top-2 left-2 rounded-full bg-primary/90 px-2 py-1 text-[10px] font-semibold text-primary-foreground">
+                {item.kind === "new" && (
+                    <span className="absolute top-2 right-2 rounded-full bg-primary/90 px-2 py-1 text-[10px] font-semibold text-primary-foreground">
                         Nova
                     </span>
                 )}
             </div>
 
-            <div className="grid min-w-0 gap-2">
+            <div className="flex items-center justify-between">
                 <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
+                    size="icon"
+                    onClick={onSetCover}
+                    disabled={processing || index === 0}
+                    className="size-10"
+                    aria-label={
+                        index === 0
+                            ? "Esta foto é a capa"
+                            : `Definir a foto ${index + 1} como capa`
+                    }
+                    title="Definir como capa"
+                >
+                    <StarIcon />
+                </Button>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={onEdit}
                     disabled={processing}
-                    className="h-10 w-full min-w-0 justify-start px-2 text-[11px] sm:h-12 sm:px-3 sm:text-sm"
+                    className="size-10"
+                    aria-label={`Ajustar a foto ${index + 1}`}
+                    title="Ajustar"
                 >
                     <PencilSimpleIcon />
-                    Ajustar
                 </Button>
-
                 <Button
                     type="button"
-                    variant="destructive"
+                    variant="ghost"
+                    size="icon"
                     onClick={onRemove}
                     disabled={processing}
-                    className="h-9 w-full min-w-0 justify-start px-2 text-[11px] sm:h-10 sm:px-3 sm:text-sm"
+                    className="size-10 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    aria-label={`Remover a foto ${index + 1}`}
+                    title="Remover"
                 >
-                    <TrashIcon className="size-5" />
-                    Remover
+                    <TrashIcon />
                 </Button>
-
-                {error && (
-                    <p role="alert" className="text-sm text-destructive">
-                        {error}
-                    </p>
-                )}
             </div>
+
+            {error && (
+                <p role="alert" className="text-sm text-destructive">
+                    {error}
+                </p>
+            )}
         </article>
     );
 }
@@ -1089,7 +1075,7 @@ function PhotoPreview({
     item: PhotoItem;
     onOpenChange: (open: boolean) => void;
 }) {
-    const imageUrl = item.kind === 'existing' ? item.url : item.previewUrl;
+    const imageUrl = item.kind === "existing" ? item.url : item.previewUrl;
     const [zoom, setZoom] = useState(1);
 
     return (
@@ -1119,7 +1105,7 @@ function PhotoPreview({
                 >
                     <img
                         src={imageUrl}
-                        alt={item.name || 'Foto do produto'}
+                        alt={item.name || "Foto do produto"}
                         className="mx-auto block max-h-[72dvh] w-full object-contain transition-transform duration-150"
                         style={{ transform: `scale(${zoom})` }}
                     />
@@ -1233,7 +1219,7 @@ function PhotoOrganizer({
         <div className="grid min-h-0 gap-3">
             {items.map((item, index) => {
                 const imageUrl =
-                    item.kind === 'existing' ? item.thumbUrl : item.previewUrl;
+                    item.kind === "existing" ? item.thumbUrl : item.previewUrl;
 
                 return (
                     <div
@@ -1253,11 +1239,11 @@ function PhotoOrganizer({
                         <div className="min-w-0">
                             <p className="text-sm font-semibold text-foreground">
                                 {index === 0
-                                    ? '1 · CAPA'
-                                    : 'Foto ' + (index + 1)}
+                                    ? "1 · CAPA"
+                                    : "Foto " + (index + 1)}
                             </p>
                             <p className="truncate text-xs text-muted-foreground">
-                                {item.name || 'Imagem do produto'}
+                                {item.name || "Imagem do produto"}
                             </p>
                         </div>
                         <div className="flex items-center gap-1">
@@ -1268,7 +1254,7 @@ function PhotoOrganizer({
                                 disabled={index === 0}
                                 className="size-12 px-0"
                                 aria-label={
-                                    'Mover foto ' + (index + 1) + ' para cima'
+                                    "Mover foto " + (index + 1) + " para cima"
                                 }
                             >
                                 <CaretUpIcon weight="bold" />
@@ -1280,7 +1266,7 @@ function PhotoOrganizer({
                                 disabled={index === items.length - 1}
                                 className="size-12 px-0"
                                 aria-label={
-                                    'Mover foto ' + (index + 1) + ' para baixo'
+                                    "Mover foto " + (index + 1) + " para baixo"
                                 }
                             >
                                 <CaretDownIcon weight="bold" />
@@ -1359,7 +1345,7 @@ function getSelectedFilesError(files: File[], truncated: boolean): string {
     );
 
     if (invalidType) {
-        return invalidType.name + ': use JPG, PNG ou WebP.';
+        return invalidType.name + ": use JPG, PNG ou WebP.";
     }
 
     const tooLarge = files.find(
@@ -1367,12 +1353,12 @@ function getSelectedFilesError(files: File[], truncated: boolean): string {
     );
 
     if (tooLarge) {
-        return tooLarge.name + ': cada foto deve ter no máximo 25 MB.';
+        return tooLarge.name + ": cada foto deve ter no máximo 25 MB.";
     }
 
     return truncated
-        ? 'Você selecionou fotos demais. O limite é de 5 fotos por produto.'
-        : 'Você pode adicionar até 5 fotos por produto.';
+        ? "Você selecionou fotos demais. O limite é de 5 fotos por produto."
+        : "Você pode adicionar até 5 fotos por produto.";
 }
 
 async function resizeImageForUpload(file: File): Promise<File> {
@@ -1383,10 +1369,10 @@ async function resizeImageForUpload(file: File): Promise<File> {
         MAX_IMAGE_DIMENSION / image.height,
     );
 
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(image.width * scale));
     canvas.height = Math.max(1, Math.round(image.height * scale));
-    const context = canvas.getContext('2d');
+    const context = canvas.getContext("2d");
 
     if (!context) {
         image.close?.();
@@ -1397,7 +1383,7 @@ async function resizeImageForUpload(file: File): Promise<File> {
     context.drawImage(image.source, 0, 0, canvas.width, canvas.height);
     image.close?.();
 
-    const baseName = file.name.replace(/\.[^.]+$/, '') || 'produto';
+    const baseName = file.name.replace(/\.[^.]+$/, "") || "produto";
     const optimizedFile = await canvasToImageFile(canvas, baseName, 0.9);
 
     if (!optimizedFile) {
@@ -1413,7 +1399,7 @@ async function loadImage(file: File): Promise<{
     height: number;
     close?: () => void;
 }> {
-    if (typeof createImageBitmap === 'function') {
+    if (typeof createImageBitmap === "function") {
         const bitmap = await createImageBitmap(file);
 
         return {
@@ -1431,7 +1417,7 @@ async function loadImage(file: File): Promise<{
             const element = new Image();
             element.onload = () => resolve(element);
             element.onerror = () =>
-                reject(new Error('Não foi possível ler a imagem.'));
+                reject(new Error("Não foi possível ler a imagem."));
             element.src = objectUrl;
         });
 

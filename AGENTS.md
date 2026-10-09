@@ -86,6 +86,22 @@ No frontend, prefira componentes shadcn existentes ou bibliotecas React maduras 
   equivalente na biblioteca ficam em `resources/js/components/icons`, desenhados
   em duotone com o mesmo padrão (traço mais preenchimento suave).
 
+- Botões e espaçamento seguem um único padrão. Use sempre `Button` de
+  `@/components/ui/button` e deixe o espaçamento entre ícone e texto (`gap`),
+  o tamanho do ícone e o padding horizontal por conta das variantes do
+  componente; não os sobrescreva por botão (`gap-*`, `px-*`, `size-*` em ícone).
+  Só ajuste altura para alvos de toque (`h-11` no celular). Se um botão precisar
+  de espaçamento diferente, ajuste a variante em `ui/button.tsx`, não a
+  instância. Botões equivalentes na mesma área (ex.: Entrada e Saída) usam o
+  mesmo tamanho, e ícones do mesmo grupo usam o mesmo peso e família.
+
+- Ações de um card: no desktop ficam no canto superior direito do cabeçalho,
+  alinhadas ao título (ação principal, ação secundária e menu `⋯`). No celular
+  o menu `⋯` fica no canto superior direito do título e as ações principais
+  ocupam a largura do card logo abaixo do cabeçalho, antes do conteúdo; não as
+  deixe numa linha solta no rodapé do card. Ações raras ou destrutivas vão
+  sempre no menu `⋯`.
+
 - Escolhas únicas em formato de cartão usam `@/components/ui/radio-card`.
   Não recrie cartões de rádio com `Label` e `RadioGroupItem` locais.
   Grupos dessas escolhas usam `@/components/ui/radio-card-group`, compartilhado

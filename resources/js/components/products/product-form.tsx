@@ -429,12 +429,12 @@ export function ProductForm({
             <section
                 id="product-identity"
                 aria-labelledby="product-identity-title"
-                className="grid gap-4 rounded-2xl border border-border bg-card p-4 sm:grid-cols-[6rem_minmax(0,1fr)] sm:items-center sm:gap-5 sm:p-5"
+                className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-4 rounded-2xl border border-border bg-card p-4 sm:grid-cols-[6rem_minmax(0,1fr)] sm:gap-5 sm:p-5"
             >
                 <div className="grid gap-1.5">
                     <p
                         id="product-identity-title"
-                        className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase"
+                        className="sr-only text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase sm:not-sr-only"
                     >
                         Capa
                     </p>
@@ -442,7 +442,7 @@ export function ProductForm({
                         id="product-cover"
                         type="button"
                         onClick={() => changeTab("photos")}
-                        className="group relative aspect-[4/5] w-24 overflow-hidden rounded-xl bg-muted text-left transition-colors hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none sm:w-full"
+                        className="group relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-muted text-left transition-colors hover:bg-muted/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                         aria-label={
                             coverPreview
                                 ? "Abrir fotos do produto"
@@ -564,14 +564,14 @@ export function ProductForm({
                         </CardHeader>
                         <CardContent className="grid gap-5 p-5 pt-0 sm:p-6 sm:pt-0">
                             {isEditing && (
-                                <div className="flex items-center justify-between rounded-xl bg-muted px-4 py-3">
-                                    <span className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+                                <dl className="grid gap-0.5 rounded-xl bg-muted px-4 py-3">
+                                    <dt className="text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
                                         Código interno
-                                    </span>
-                                    <span className="font-mono text-sm font-semibold text-foreground">
+                                    </dt>
+                                    <dd className="font-mono text-lg font-semibold text-foreground">
                                         {product.code}
-                                    </span>
-                                </div>
+                                    </dd>
+                                </dl>
                             )}
 
                             <div className="grid gap-5 sm:grid-cols-2 sm:gap-4">
@@ -792,7 +792,7 @@ export function ProductForm({
                 {product ? (
                     <div className="grid gap-5">
                         <Card className="gap-0 rounded-2xl border-border p-0 shadow-none">
-                            <CardHeader className="gap-4 p-5 sm:p-6">
+                            <CardHeader className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-4 p-5 sm:grid-cols-[1fr_auto_auto_auto] sm:items-start sm:gap-x-2 sm:p-6">
                                 <div className="grid gap-1.5">
                                     <h2 className="text-xl font-semibold tracking-tight">
                                         Estoque do produto
@@ -803,62 +803,7 @@ export function ProductForm({
                                         no histórico.
                                     </CardDescription>
                                 </div>
-                                <dl className="grid grid-cols-3 gap-2">
-                                    {(
-                                        [
-                                            [
-                                                "Disponível",
-                                                product.available_quantity ?? 0,
-                                            ],
-                                            [
-                                                "Reservado",
-                                                product.reserved_quantity ?? 0,
-                                            ],
-                                            [
-                                                "Sacos",
-                                                product.stock_volumes.length,
-                                            ],
-                                        ] as const
-                                    ).map(([label, value]) => (
-                                        <div
-                                            key={label}
-                                            className="grid gap-0.5 rounded-xl bg-muted/60 px-3 py-2.5"
-                                        >
-                                            <dt className="text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
-                                                {label}
-                                            </dt>
-                                            <dd className="font-mono text-xl font-semibold text-foreground tabular-nums">
-                                                {value}
-                                            </dd>
-                                        </div>
-                                    ))}
-                                </dl>
-                                <div className="grid grid-cols-[1fr_1fr_auto] gap-2 sm:flex sm:flex-wrap">
-                                    {onRegisterEntry && (
-                                        <Button
-                                            type="button"
-                                            onClick={onRegisterEntry}
-                                            data-testid="open-stock-entry"
-                                            className="h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
-                                        >
-                                            <PlusCircleIcon />
-                                            Entrada
-                                        </Button>
-                                    )}
-                                    <Button
-                                        asChild
-                                        variant="secondary"
-                                        className="h-11 min-w-0 justify-center gap-1.5 px-2 sm:h-9 sm:px-3"
-                                    >
-                                        <Link
-                                            href={stockExit({
-                                                query: { product: product.id },
-                                            })}
-                                        >
-                                            <MinusCircleIcon />
-                                            Saída
-                                        </Link>
-                                    </Button>
+                                <div className="col-start-2 row-start-1 sm:col-start-4">
                                     {(onAdjustStock || onRemoveStock) && (
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -924,6 +869,63 @@ export function ProductForm({
                                         </DropdownMenu>
                                     )}
                                 </div>
+                                <div className="col-span-2 grid grid-cols-2 gap-2 sm:contents">
+                                    {onRegisterEntry && (
+                                        <Button
+                                            type="button"
+                                            onClick={onRegisterEntry}
+                                            data-testid="open-stock-entry"
+                                            className="h-11 sm:col-start-2 sm:row-start-1 sm:h-9"
+                                        >
+                                            <PlusCircleIcon />
+                                            Entrada
+                                        </Button>
+                                    )}
+                                    <Button
+                                        asChild
+                                        variant="secondary"
+                                        className="h-11 sm:col-start-3 sm:row-start-1 sm:h-9"
+                                    >
+                                        <Link
+                                            href={stockExit({
+                                                query: { product: product.id },
+                                            })}
+                                        >
+                                            <MinusCircleIcon />
+                                            Saída
+                                        </Link>
+                                    </Button>
+                                </div>
+                                <dl className="col-span-2 grid grid-cols-3 gap-2 sm:col-span-4">
+                                    {(
+                                        [
+                                            [
+                                                "Disponível",
+                                                product.available_quantity ?? 0,
+                                            ],
+                                            [
+                                                "Reservado",
+                                                product.reserved_quantity ?? 0,
+                                            ],
+                                            [
+                                                "Sacos",
+                                                product.stock_volumes.length,
+                                            ],
+                                        ] as const
+                                    ).map(([label, value]) => (
+                                        <div
+                                            key={label}
+                                            className="grid gap-0.5 rounded-xl bg-muted/60 px-3 py-2.5"
+                                        >
+                                            <dt className="truncate text-[10px] font-semibold tracking-wider text-muted-foreground uppercase sm:text-[11px] sm:tracking-[0.12em]">
+                                                {label}
+                                            </dt>
+                                            <dd className="font-mono text-xl font-semibold text-foreground tabular-nums">
+                                                {value}
+                                            </dd>
+                                        </div>
+                                    ))}
+                                </dl>
                             </CardHeader>
                         </Card>
 
@@ -937,34 +939,44 @@ export function ProductForm({
                                     return (
                                         <div
                                             key={volume.id}
-                                            className="grid content-start gap-3 rounded-2xl border border-border bg-card p-4"
+                                            className={cn(
+                                                "grid content-start gap-3 rounded-2xl border bg-card p-4",
+                                                volume.status === "Disponível"
+                                                    ? "border-emerald-600/70 dark:border-emerald-500/40"
+                                                    : "border-border",
+                                            )}
                                         >
-                                            <div className="flex items-start justify-between gap-3">
+                                            <div className="flex items-start justify-between gap-3 border-b border-border pb-3">
                                                 <div className="grid min-w-0 gap-0.5">
                                                     <h3 className="font-semibold">
                                                         Saco{" "}
                                                         {volume.sort_order + 1}
-                                                        <span className="font-mono text-sm font-normal text-muted-foreground">
+                                                    </h3>
+                                                    <p className="truncate text-sm text-muted-foreground">
+                                                        {volume.offer_type}
+                                                        <span className="font-mono text-xs">
                                                             {" "}
                                                             · {volume.code}
                                                         </span>
-                                                    </h3>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {volume.offer_type}
                                                     </p>
                                                 </div>
-                                                <span
-                                                    className={cn(
-                                                        "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums",
-                                                        volume.status ===
-                                                            "Disponível"
-                                                            ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                                                            : "bg-muted text-muted-foreground",
-                                                    )}
-                                                >
-                                                    {volume.total_quantity}{" "}
-                                                    peças · {volume.status}
-                                                </span>
+                                                <div className="grid shrink-0 justify-items-end gap-1">
+                                                    <span
+                                                        className={cn(
+                                                            "rounded-full px-2.5 py-1 text-xs font-semibold",
+                                                            volume.status ===
+                                                                "Disponível"
+                                                                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                                                                : "bg-muted text-muted-foreground",
+                                                        )}
+                                                    >
+                                                        {volume.status}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground tabular-nums">
+                                                        {volume.total_quantity}{" "}
+                                                        peças
+                                                    </span>
+                                                </div>
                                             </div>
                                             {activeSizes.length > 0 ? (
                                                 <StockSizeBreakdown
