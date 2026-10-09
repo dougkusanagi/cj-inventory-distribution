@@ -1,8 +1,8 @@
-import { Head } from '@inertiajs/react';
-import { TShirtIcon } from '@phosphor-icons/react';
-import { ProductForm } from '@/components/products/product-form';
-import { index as productsIndex } from '@/routes/products';
-import type { Category, WashType } from '@/types';
+import { Head } from "@inertiajs/react";
+import { TShirtIcon } from "@phosphor-icons/react";
+import { ProductForm } from "@/components/products/product-form";
+import { index as productsIndex } from "@/routes/products";
+import type { Category, WashType } from "@/types";
 
 export default function CreateProduct({
     categories,
@@ -25,7 +25,7 @@ export default function CreateProduct({
                             <h1 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
                                 Cadastrar produto
                             </h1>
-                            <p className="max-w-2xl text-sm leading-6 text-pretty text-muted-foreground">
+                            <p className="hidden max-w-2xl text-sm leading-6 text-pretty text-muted-foreground sm:block">
                                 Cadastre os dados da peça para acompanhar suas
                                 disponibilidades de estoque.
                             </p>
@@ -42,11 +42,11 @@ export default function CreateProduct({
 CreateProduct.layout = {
     breadcrumbs: [
         {
-            title: 'Produtos',
+            title: "Produtos",
             href: productsIndex(),
         },
         {
-            title: 'Novo produto',
+            title: "Novo produto",
             href: productsIndex(),
         },
     ],

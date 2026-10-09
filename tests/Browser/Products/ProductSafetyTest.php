@@ -66,12 +66,17 @@ it('keeps existing sacks read only in the product form', function () {
         ->click('#product-tab-stock')
         ->assertSee('Saco 1')
         ->assertSee('Saco 2')
-        ->assertSee('4 peças · Disponível')
-        ->assertSee('3 peças · Disponível')
-        ->assertSee('Registrar entrada')
-        ->assertSee('Registrar saída')
+        ->assertSee('4 peças')
+        ->assertSee('Disponível')
+        ->assertSee('3 peças')
+        ->assertSee('Disponível')
+        ->assertSee('Entrada')
+        ->assertSee('Saída')
         ->assertDontSee('Duplicar saco')
-        ->assertDontSee('Remover saco')
+        ->assertMissing('button:text-is("Remover saco")')
+        ->assertMissing('#volume-total-0')
+        ->click('[data-testid="stock-more-actions"]')
+        ->assertSee('Excluir sacos')
         ->assertNoJavaScriptErrors();
 
     expect($offer->stockVolumes()->count())->toBe(2);
@@ -116,8 +121,10 @@ it('registers stock from the product dialog and returns to the product', functio
         ->assertSee('15 peças em 2 sacos')
         ->click('[data-testid="stock-entry-form"] button[type="submit"]')
         ->assertRoute('products.edit', [$product->id])
-        ->assertSee('8 peças · Disponível')
-        ->assertSee('7 peças · Disponível')
+        ->assertSee('8 peças')
+        ->assertSee('Disponível')
+        ->assertSee('7 peças')
+        ->assertSee('Disponível')
         ->assertSee('Entrada de estoque registrada.')
         ->assertNoJavaScriptErrors();
 

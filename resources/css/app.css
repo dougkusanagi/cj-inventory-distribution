@@ -278,3 +278,10 @@
         transform: none;
     }
 }
+
+/* A lista do Select no celular fica presa ao rodapé, ignorando o posicionamento do popper. */
+[data-radix-popper-content-wrapper]:has(> [data-bottom-sheet]) {
+    inset: auto 0 0 0 !important;
+    min-width: 0 !important;
+    transform: none !important;
+}

@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Vite;
 
 beforeEach(function (): void {
     config(['inertia.ssr.enabled' => false]);
-    config(['filesystems.disks.public.url' => '/storage']);
     Vite::useHotFile(storage_path('framework/testing-hot-file'));
     $this->seed(CatalogDemoSeeder::class);
 });
@@ -71,7 +70,8 @@ it('renders generated photos and a compact fallback for visible product cards', 
         ->assertPresent('[aria-label="Tamanhos não informados"]')
         ->assertVisible('button[aria-label="Imagem indisponível. Ver sacos de Blusa sem foto"]')
         ->assertScript("(() => Array.from(document.querySelectorAll('[data-testid=\"catalog-product\"]')).every((card) => card.querySelector('img[data-testid^=\"catalog-product-image-\"]') !== null || card.textContent?.includes('Produto sem foto')))()")
-        ->assertScript("(() => Array.from(document.querySelectorAll('img[data-testid^=\"catalog-product-image-\"]')).every((image) => image.getAttribute('src')?.includes('/storage/')))()")
+        ->assertScript("(() => Array.from(document.querySelectorAll('img[data-testid^=\"catalog-product-image-\"]')).every((image) => image.getAttribute('src')?.startsWith('/storage/')))()")
+        ->assertScript("document.querySelector('img[data-testid^=\"catalog-product-image-\"]').naturalWidth > 0")
         ->assertAttributeContains(
             'img[data-testid="catalog-product-image-1"]',
             'src',

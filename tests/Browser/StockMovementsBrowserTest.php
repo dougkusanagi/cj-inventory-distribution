@@ -160,3 +160,50 @@ test('a manual stock movement can be reversed from its details screen', function
         ->and($reversal->reason)->toBe('Operação cancelada')
         ->and($volume->fresh()->consumed_at)->toBeNull();
 });
+
+test('product stock correction removes only selected sacks and preserves unavailable sacks', function (int $width, int $height) {
+    $volume = stockMovementBrowserVolume('Produto com saco cadastrado errado', 5);
+    $offer = $volume->offer;
+    $kept = $offer->stockVolumes()->create(['total_quantity' => 7, 'sort_order' => 1, 'code' => 'SC-KEPT']);
+    $reserved = $offer->stockVolumes()->create([
+        'total_quantity' => 4, 'sort_order' => 2, 'code' => 'SC-RESERVED',
+        'current_order_id' => Order::factory()->create()->id,
+    ]);
+    $consumed = $offer->stockVolumes()->create([
+        'total_quantity' => 3, 'sort_order' => 3, 'code' => 'SC-CONSUMED', 'consumed_at' => now(),
+    ]);
+    $this->actingAs(User::factory()->create());
+
+    $page = visit(route('products.edit', $offer->product, false))
+        ->resize($width, $height)
+        ->click('#product-tab-stock')
+        ->click('[data-testid="stock-more-actions"]')
+        ->click('[role="menuitem"]:has-text("Excluir sacos")')
+        ->assertVisible('[data-testid="stock-removal-drawer"]')
+        ->assertMissing('button[aria-label="Selecionar SC-RESERVED"]')
+        ->assertMissing('button[aria-label="Selecionar SC-CONSUMED"]')
+        ->assertDisabled('button:has-text("Confirmar remoção")')
+        ->click('button[aria-label="Selecionar '.$volume->code.'"]')
+        ->click('button[aria-label="Selecionar SC-KEPT"]')
+        ->assertSee('2 sacos · 12 peças serão removidas do estoque.')
+        ->click('button[aria-label="Selecionar SC-KEPT"]')
+        ->assertSee('1 saco · 5 peças serão removidas do estoque.')
+        ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
+        ->click('button:has-text("Confirmar remoção")')
+        ->assertSee('Saída de estoque registrada.')
+        ->assertSee('Saco adicionado por engano')
+        ->assertNoJavaScriptErrors();
+
+    $movement = StockMovement::query()->sole();
+    $page->assertRoute('stock-movements.show', [$movement->id]);
+
+    expect($movement->items()->pluck('stock_offer_volume_id')->all())->toBe([$volume->id]);
+    expect($volume->fresh()->consumed_at)->not->toBeNull();
+    expect($kept->fresh()->consumed_at)->toBeNull();
+    expect($reserved->fresh()->current_order_id)->toBe($reserved->current_order_id);
+    expect($reserved->fresh()->consumed_at)->toBeNull();
+    expect($consumed->fresh()->consumed_at->equalTo($consumed->consumed_at))->toBeTrue();
+})->with([
+    'desktop' => [1280, 900],
+    'mobile' => [390, 844],
+]);

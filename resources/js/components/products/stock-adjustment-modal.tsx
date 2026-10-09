@@ -86,14 +86,17 @@ export function StockAdjustmentModal({
     const content = (
         <div className="grid min-h-0 gap-5 overflow-y-auto px-4 pb-4 sm:px-0">
             <div className="grid gap-2">
-                <Label>Saco disponível</Label>
+                <Label htmlFor="stock-adjustment-volume">Saco disponível</Label>
                 <Select
                     value={
                         form.data.volume_id ? String(form.data.volume_id) : ''
                     }
                     onValueChange={select}
                 >
-                    <SelectTrigger>
+                    <SelectTrigger
+                        id="stock-adjustment-volume"
+                        className="w-full"
+                    >
                         <SelectValue placeholder="Selecione o saco" />
                     </SelectTrigger>
                     <SelectContent>
@@ -189,7 +192,7 @@ export function StockAdjustmentModal({
             <Drawer open={open} onOpenChange={onOpenChange}>
                 <DrawerContent className="max-h-[95dvh]">
                     <DrawerHeader>
-                        <DrawerTitle>Recontar saco</DrawerTitle>
+                        <DrawerTitle>Corrigir contagem</DrawerTitle>
                         <DrawerDescription>{description}</DrawerDescription>
                     </DrawerHeader>
                     {content}
@@ -200,7 +203,7 @@ export function StockAdjustmentModal({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="flex max-h-[90dvh] flex-col sm:max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>Recontar saco</DialogTitle>
+                    <DialogTitle>Corrigir contagem</DialogTitle>
                     <DialogDescription>{description}</DialogDescription>
                 </DialogHeader>
                 {content}
