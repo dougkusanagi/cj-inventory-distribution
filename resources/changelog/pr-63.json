@@ -1,0 +1,29 @@
+{
+  "title": "Estoque em destaque e publicação incremental",
+  "changes": [
+    {
+      "category": "improved",
+      "text": "Destacadas as quantidades disponíveis de peças e sacos nos produtos, com números maiores, ícones e ajuste do texto para uma peça."
+    },
+    {
+      "category": "improved",
+      "text": "Atualizada a ferramenta de publicação do sistema para a versão 0.5.0, incluindo a definição de um comando de testes de integração no pacote."
+    },
+    {
+      "category": "added",
+      "text": "Ativada a publicação incremental, que seleciona as etapas necessárias conforme as mudanças desde a última publicação bem-sucedida. A primeira publicação, a execução forçada e a recuperação de falhas realizam o processo completo."
+    },
+    {
+      "category": "improved",
+      "text": "Atualizadas as orientações de publicação para explicar a atualização do código, o bloqueio padrão quando há alterações locais em arquivos controlados e a renovação dos caches. As instruções de preparação da interface agora indicam o uso do Bun."
+    },
+    {
+      "category": "improved",
+      "text": "Adaptados os testes de produtos à nova apresentação do estoque e os testes de publicação à atualização direta do código, à conclusão sem etapas quando nada mudou e à execução forçada. Os testes não foram executados nesta alteração."
+    }
+  ],
+  "pr_number": 63,
+  "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/63",
+  "merged_at": "2026-10-09T16:03:28Z",
+  "commit": "81b2c52621557f4f10885de12858c3313c8de5b1"
+}
