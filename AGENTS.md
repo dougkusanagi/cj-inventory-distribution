@@ -157,8 +157,8 @@ o usuário solicitar deploy. Antes de executá-lo:
 
 1. Execute `composer ci:verify` no ambiente de desenvolvimento com dependências dev.
 2. Confirme que as alterações estão commitadas e disponíveis na branch de destino
-   no `origin`; o script usa `git pull --ff-only`, e o Git interrompe a atualização
-   se alterações locais entrarem em conflito com o código remoto.
+   no `origin`; o script usa `git fetch` e `git merge --ff-only`. Alterações locais
+   em arquivos rastreados bloqueiam o deploy por padrão.
 3. Confira ferramentas, permissões dos serviços e a configuração do ambiente de destino.
 
 O arquivo de configuração define `master` como branch padrão
@@ -177,9 +177,14 @@ laravel-deploy.lock`, fora dos arquivos versionados. Se precisar sobrescrever
 `DEPLOY_LOCK_FILE`, use um caminho compartilhado por todas as execuções do
 mesmo deploy, fora dos arquivos versionados.
 
-O deploy instala dependências PHP sem dev, compila o frontend, executa migrations,
-recria caches de configuração/eventos preservando o cache da aplicação e
-recarrega apenas os serviços configurados. Ele atualiza a aplicação no próprio diretório, sem rollback
+O pacote `dougkusanagi/laravel-deploy` usa `^0.5`. O deploy incremental é ativo por
+padrão: compara com o último deploy bem-sucedido para selecionar Composer,
+instalação e build do frontend e atualização do runtime PHP. O primeiro deploy,
+`--force` ou recuperação de falha executa o fluxo completo.
+
+Quando selecionadas, as etapas instalam dependências PHP sem dev, compilam o
+frontend, executam migrations, recriam caches de configuração/eventos/rotas/views
+preservando o cache da aplicação e recarregam apenas os serviços configurados. Ele atualiza a aplicação no próprio diretório, sem rollback
 automático; uma falha pode deixar etapas já aplicadas. Não reverta migrations
 automaticamente. Investigue a falha antes de repetir a execução.
 
@@ -234,7 +239,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 ## Frontend Bundling
 
-- If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `npm run build`, `npm run dev`, or `composer run dev`. Ask them.
+- If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `bun run build`, `bun run dev`, or `composer run dev`. Ask them.
 
 ## Documentation Files
 
@@ -366,7 +371,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 ## Vite Error
 
-- If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
+- If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `bun run build` or ask the user to run `bun run dev` or `composer run dev`.
 
 === wayfinder/core rules ===
 

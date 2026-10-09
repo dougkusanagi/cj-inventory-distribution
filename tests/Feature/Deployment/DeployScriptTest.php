@@ -16,8 +16,8 @@ test('the deployment script uses the application production toolchain', function
         ->toContain('DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"')
         ->toContain('DEPLOY_LOCK_FILE="${DEPLOY_LOCK_FILE:-$(git rev-parse --git-path laravel-deploy.lock)}"')
         ->toContain('flock -n 9')
-        ->toContain('git switch "$DEPLOY_BRANCH"')
-        ->toContain('git pull --ff-only origin "$DEPLOY_BRANCH"')
+        ->toContain('git switch -- "$DEPLOY_BRANCH"')
+        ->toContain('git merge --ff-only "origin/$DEPLOY_BRANCH"')
         ->toContain('run_tool composer install')
         ->toContain('--no-dev')
         ->toContain('--optimize-autoloader')
@@ -31,8 +31,6 @@ test('the deployment script uses the application production toolchain', function
         ->toContain('run_tool php artisan about --only=environment,application')
         ->toContain('curl --fail --silent --show-error --location --max-time 10 "$HEALTHCHECK_URL"')
         ->toContain('sudo systemctl "$PHP_FPM_ACTION" "${PHP_FPM_SERVICE%.service}"')
-        ->not->toContain('bun install')
-        ->toContain('run_tool php artisan horizon-new-dawn:install --force --ansi')
         ->toContain('run_tool php artisan horizon:terminate');
 
     expect($wrapper)
@@ -83,7 +81,10 @@ test('the deployment script pulls remote changes when an untracked file exists',
         foreach (['composer', 'php'] as $command) {
             $commandPath = $fixtureBin.'/'.$command;
 
-            $filesystem->put($commandPath, "#!/usr/bin/env bash\nexit 0\n");
+            $script = $command === 'composer'
+                ? "#!/usr/bin/env bash\nmkdir -p vendor\ntouch vendor/autoload.php\nexit 0\n"
+                : "#!/usr/bin/env bash\nexit 0\n";
+            $filesystem->put($commandPath, $script);
             chmod($commandPath, 0755);
         }
 
@@ -127,9 +128,26 @@ BASH);
 
         expect($process->getOutput().$process->getErrorOutput())
             ->toContain('Atualizando o código da branch master')
-            ->toContain('Deploy concluído.');
+            ->toContain('concluído em');
         expect(file_get_contents($application.'/version.txt'))->toBe("new\n");
         expect(file_get_contents($application.'/untracked.txt'))->toBe('alteração local');
+
+        $process->mustRun();
+
+        expect($process->getOutput())
+            ->toContain('já foi implantado com sucesso; nenhuma etapa necessária.')
+            ->not->toContain('Instalando dependências PHP');
+
+        $process = new Process(
+            ['bash', $application.'/deploy.sh', '--force'],
+            $application,
+            ['PATH' => $fixtureBin.':/usr/bin:/bin'],
+        );
+        $process->mustRun();
+
+        expect($process->getOutput())
+            ->toContain('Instalando dependências PHP')
+            ->toContain('concluído em');
     } finally {
         $filesystem->deleteDirectory($fixture);
     }
