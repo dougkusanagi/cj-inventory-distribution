@@ -49,3 +49,4 @@ ADRs iniciais:
 
 - [0020 — Tipos de lavagem independentes do produto](0020-independent-wash-types.md)
 - [0021 — Histórico de novidades por PR com Codex CLI](0021-codex-cli-changelog.md)
+- [0022 — Rastreio de erros com Bugsink](0022-bugsink-error-tracking.md)

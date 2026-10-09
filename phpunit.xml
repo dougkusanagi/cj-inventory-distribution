@@ -18,6 +18,8 @@
         </include>
     </source>
     <php>
+        <env name="SENTRY_LARAVEL_DSN" value="" force="true"/>
+        <env name="VITE_SENTRY_DSN" value="" force="true"/>
         <server name="APP_ENV" value="testing"/>
         <server name="APP_KEY" value="base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="/>
         <server name="APP_MAINTENANCE_DRIVER" value="file"/>

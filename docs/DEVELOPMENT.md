@@ -39,6 +39,26 @@ classificados como Slim/Plus e ofertas com sacos e quantidades. O produto de
 tipo Grade Nova existe apenas para testar a regra de exclusão do catálogo;
 fotos reais ainda precisam ser enviadas pelo cadastro de produtos.
 
+## Rastreio de erros com Bugsink
+
+O Laravel usa `sentry/sentry-laravel` para enviar exceções reportáveis e o
+React usa `@sentry/react` para erros não tratados e rejeições de promises.
+Configure `SENTRY_LARAVEL_DSN` com o DSN HTTPS público do projeto no Bugsink;
+o hostname deve ser `bugsink.cronicasjeans.com.br`, mesmo se a tela de setup
+mostrar `localhost`. `VITE_SENTRY_DSN` reutiliza esse valor no frontend.
+Sem DSN configurado, o envio fica desativado.
+
+`SENTRY_ENVIRONMENT` distingue os ambientes e `SENTRY_RELEASE` pode receber
+a versão ou SHA implantado; as variáveis `VITE_SENTRY_*` correspondentes são
+incorporadas durante o build. Após alterar o ambiente, refaça o build e o
+cache de configuração. Não versione o `.env` preenchido.
+
+Para verificar a comunicação, execute `php artisan sentry:test` e confira
+o evento no projeto do inventário no Bugsink. Esse comando envia um evento
+de teste real. Traces, métricas e logs independentes não são enviados;
+a coleta automática de dados pessoais e corpos de requisição está desativada.
+Alertas por email dependem da configuração SMTP da instância Bugsink.
+
 ## Convenções Laravel
 
 Preferir recursos nativos:
