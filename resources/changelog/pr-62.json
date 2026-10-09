@@ -1,0 +1,37 @@
+{
+  "title": "Monitoramento de erros com Bugsink",
+  "changes": [
+    {
+      "category": "added",
+      "text": "Adicionado envio de erros do servidor e de falhas não tratadas no navegador ao Bugsink, para centralizar o acompanhamento de problemas."
+    },
+    {
+      "category": "added",
+      "text": "Adicionadas configurações para definir o destino dos relatos, o ambiente e a versão do sistema. Sem destino configurado, o envio fica desativado."
+    },
+    {
+      "category": "improved",
+      "text": "Configurado o monitoramento com coleta automática de dados pessoais e conteúdo de requisições desativada, além de restrições à coleta de informações do navegador. O envio de registros independentes, métricas e dados de desempenho também fica desativado."
+    },
+    {
+      "category": "improved",
+      "text": "Incluídas ferramentas e dependências de apoio ao monitoramento no servidor e no navegador, com atualização do registro das versões utilizadas. Uma ferramenta de identificação de versões passou a integrar também as dependências de produção."
+    },
+    {
+      "category": "added",
+      "text": "Adicionados testes para verificar o encaminhamento de erros do servidor e a exclusão de erros esperados de validação. O envio real ao Bugsink foi desativado nos testes automatizados; os testes não foram executados neste PR."
+    },
+    {
+      "category": "improved",
+      "text": "Documentadas a decisão de usar Bugsink, a configuração, a verificação do envio e as limitações da coleta. Incluídas orientações para reaplicar configurações na publicação e sobre a dependência do serviço de email para alertas."
+    },
+    {
+      "category": "improved",
+      "text": "Padronizada a formatação interna do cabeçalho, dos formulários e das telas de produtos e do gerenciador de fotos, para manter a consistência do código."
+    }
+  ],
+  "pr_number": 62,
+  "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/62",
+  "merged_at": "2026-10-09T12:38:26Z",
+  "commit": "7dbe003509eaacd441577f795151585642e8111b"
+}
