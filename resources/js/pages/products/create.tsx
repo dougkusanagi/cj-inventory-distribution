@@ -1,8 +1,8 @@
-import { Head } from "@inertiajs/react";
-import { TShirtIcon } from "@phosphor-icons/react";
-import { ProductForm } from "@/components/products/product-form";
-import { index as productsIndex } from "@/routes/products";
-import type { Category, WashType } from "@/types";
+import { Head } from '@inertiajs/react';
+import { TShirtIcon } from '@phosphor-icons/react';
+import { ProductForm } from '@/components/products/product-form';
+import { index as productsIndex } from '@/routes/products';
+import type { Category, WashType } from '@/types';
 
 export default function CreateProduct({
     categories,
@@ -42,11 +42,11 @@ export default function CreateProduct({
 CreateProduct.layout = {
     breadcrumbs: [
         {
-            title: "Produtos",
+            title: 'Produtos',
             href: productsIndex(),
         },
         {
-            title: "Novo produto",
+            title: 'Novo produto',
             href: productsIndex(),
         },
     ],
