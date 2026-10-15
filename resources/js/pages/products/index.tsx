@@ -1,5 +1,5 @@
 import { Pagination } from '@/components/pagination';
-import { ConfirmationDialog } from '@/components/confirmation-dialog';
+import { ProductDeleteDialog } from '@/components/products/product-delete-dialog';
 import { ProductImageButton } from '@/components/products/product-image';
 import { productLineLabels } from '@/components/products/product-classification';
 import { Head, Link, router } from '@inertiajs/react';
@@ -33,7 +33,6 @@ import {
 } from '@phosphor-icons/react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { WashTypeCreateDialog } from '@/components/wash-types/wash-type-create-dialog';
-import { destroy } from '@/actions/App/Http/Controllers/ProductController';
 import { Badge } from '@/components/ui/badge';
 import {
     categoryFilterField,
@@ -90,7 +89,6 @@ import TextLink from '@/components/text-link';
 import ProductImageGallery from '@/components/products/product-image-gallery';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 import {
     index as productsIndex,
     edit as productEdit,
@@ -441,6 +439,11 @@ function ProductCardV3({
                         >
                             {product.name}
                         </TextLink>
+                        {!product.is_active && (
+                            <Badge variant="secondary" className="mt-2">
+                                Inativo
+                            </Badge>
+                        )}
                     </div>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -458,7 +461,7 @@ function ProductCardV3({
                                 variant="destructive"
                                 onSelect={() => onDelete(product)}
                             >
-                                <MinusCircleIcon />
+                                <TrashIcon />
                                 Excluir produto
                             </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -1310,7 +1313,6 @@ export default function ProductsIndex({
     const [productToDelete, setProductToDelete] = useState<Product | null>(
         null,
     );
-    const [deleting, setDeleting] = useState(false);
 
     const openProductGallery = (product: Product): void => {
         if (product.images.length === 0) {
@@ -1418,27 +1420,6 @@ export default function ProductsIndex({
             ],
         },
     ];
-
-    const handleDelete = () => {
-        if (!productToDelete) {
-            return;
-        }
-
-        setDeleting(true);
-        router.delete(destroy.url(productToDelete.id), {
-            preserveScroll: true,
-            onError: (errors) => {
-                toast.error(Object.values(errors).join(' '), {
-                    closeButton: true,
-                    duration: Infinity,
-                });
-            },
-            onFinish: () => {
-                setDeleting(false);
-                setProductToDelete(null);
-            },
-        });
-    };
 
     return (
         <>
@@ -1733,22 +1714,9 @@ export default function ProductsIndex({
                     }));
                 }}
             />
-            <ConfirmationDialog
-                open={productToDelete !== null}
-                onOpenChange={(open) => !open && setProductToDelete(null)}
-                title="Excluir produto?"
-                description={
-                    productToDelete
-                        ? `“${productToDelete.name}” será movido para a lixeira, junto com suas fotos, tamanhos e estoque.`
-                        : ''
-                }
-                confirmLabel={deleting ? 'Excluindo...' : 'Excluir produto'}
-                confirmIcon={<TrashIcon />}
-                cancelLabel="Cancelar"
-                cancelVariant="ghost"
-                onConfirm={handleDelete}
-                destructive
-                disabled={deleting}
+            <ProductDeleteDialog
+                product={productToDelete}
+                onClose={() => setProductToDelete(null)}
             />
         </>
     );

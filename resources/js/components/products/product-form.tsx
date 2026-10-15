@@ -18,6 +18,7 @@ import {
     store,
 } from '@/actions/App/Http/Controllers/ProductController';
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
+import { ProductDeleteDialog } from '@/components/products/product-delete-dialog';
 import { WashTypeSelector } from '@/components/wash-types/wash-type-selector';
 import InputError from '@/components/input-error';
 import { PaperBag } from '@/components/icons/paper-bag';
@@ -181,6 +182,7 @@ export function ProductForm({
     onRemoveStock,
 }: ProductFormProps) {
     const isEditing = product !== undefined;
+    const [deleteOpen, setDeleteOpen] = useState(false);
     const [processingImages, setProcessingImages] = useState(false);
     const [activeTab, setActiveTab] = useState<ProductFormTab>('details');
     const [clearStockConfirmationOpen, setClearStockConfirmationOpen] =
@@ -1126,6 +1128,21 @@ export function ProductForm({
                 )}
             >
                 <div className="mx-auto flex w-full max-w-7xl items-center justify-center gap-2 sm:justify-end">
+                    {product && (
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            className="h-12 shrink-0"
+                            aria-label="Excluir produto"
+                            onClick={() => setDeleteOpen(true)}
+                            disabled={form.processing || processingImages}
+                        >
+                            <TrashIcon />
+                            <span className="hidden sm:inline">
+                                Excluir produto
+                            </span>
+                        </Button>
+                    )}
                     {form.isDirty && (
                         <p className="mr-auto hidden text-sm text-muted-foreground sm:block">
                             Alterações não salvas
@@ -1169,6 +1186,13 @@ export function ProductForm({
                     </Button>
                 </div>
             </div>
+            <ProductDeleteDialog
+                product={deleteOpen && product ? product : null}
+                onClose={() => setDeleteOpen(false)}
+                onDeletingChange={(deleting) => {
+                    submittingRef.current = deleting;
+                }}
+            />
             <ConfirmationDialog
                 open={clearStockConfirmationOpen}
                 onOpenChange={setClearStockConfirmationOpen}
