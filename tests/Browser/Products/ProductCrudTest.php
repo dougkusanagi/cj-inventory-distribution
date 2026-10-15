@@ -760,3 +760,15 @@ it('removes a product from the card actions after confirmation', function (bool 
 
     $this->assertSoftDeleted('products', ['id' => $product->id]);
 })->with(['desktop cards' => false, 'mobile compact cards' => true]);
+
+it('labels inactive products in normal and compact cards', function (bool $compact) {
+    $product = Product::factory()->create(['name' => 'Produto inativo com badge', 'is_active' => false]);
+    $this->actingAs(User::factory()->create());
+
+    visit(route('products.index', ['status' => 'all'], false))
+        ->resize($compact ? 390 : 1440, 900)
+        ->click($compact ? 'button[aria-label="Visualização com 2 cards por linha"]' : 'button[aria-label="Visualização em cards"]')
+        ->assertSee($product->name)
+        ->assertVisible('article[aria-label="Produto inativo com badge"] [data-slot="badge"]:has-text("Inativo")')
+        ->assertNoJavaScriptErrors();
+})->with(['desktop cards' => false, 'mobile compact cards' => true]);

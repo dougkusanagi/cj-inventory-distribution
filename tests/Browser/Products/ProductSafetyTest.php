@@ -274,3 +274,44 @@ it('explains why a product with available stock cannot be moved to the trash', f
 
     expect($product->refresh()->trashed())->toBeFalse();
 });
+
+it('confirms deletion from the edit form even when the form has unsaved changes', function () {
+    $product = Product::factory()->create(['name' => 'Produto excluído pela edição']);
+    $this->actingAs(User::factory()->create());
+
+    $page = visit(route('products.edit', [$product->id], false))
+        ->type('#product-name', 'Alteração ainda não salva')
+        ->click('button[aria-label="Excluir produto"]')
+        ->assertSee('Excluir produto?')
+        ->click('[role="dialog"] button:has-text("Cancelar")')
+        ->assertValue('#product-name', 'Alteração ainda não salva');
+
+    $this->assertModelExists($product);
+    $page->script('window.confirm = () => false;');
+
+    $page
+        ->click('button[aria-label="Excluir produto"]')
+        ->click('[role="dialog"] button:has-text("Excluir produto")')
+        ->assertRoute('products.index')
+        ->assertSee('Produto excluído.')
+        ->assertDontSee($product->name)
+        ->assertNoJavaScriptErrors();
+
+    $this->assertSoftDeleted('products', ['id' => $product->id]);
+});
+
+it('keeps a product with physical stock when deletion starts from the edit form', function () {
+    $product = Product::factory()->create(['name' => 'Produto protegido na edição']);
+    $offer = $product->offers()->create(['type' => StockOfferType::Replenishment]);
+    $volume = $offer->stockVolumes()->create(['total_quantity' => 4]);
+    $this->actingAs(User::factory()->create());
+
+    visit(route('products.edit', [$product->id], false))
+        ->click('button[aria-label="Excluir produto"]')
+        ->click('[role="dialog"] button:has-text("Excluir produto")')
+        ->assertSee('Produto com estoque disponível ou reservado não pode ser excluído.')
+        ->assertNoJavaScriptErrors();
+
+    $this->assertNotSoftDeleted($product);
+    $this->assertNotSoftDeleted($volume);
+});
