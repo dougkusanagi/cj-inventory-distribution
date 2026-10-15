@@ -152,6 +152,12 @@ class ProductController extends Controller
         $image = $request->string('image')->toString();
         $stockOfferType = $request->string('stock_offer_type')->toString();
         $status = $request->string('status', 'active')->toString();
+        $stock = $request->string('stock', 'all')->toString();
+        $perPage = max(1, min(100, $request->integer('per_page', 12)));
+
+        if (! in_array($stock, ['with', 'without', 'all'], true)) {
+            $stock = 'all';
+        }
 
         if (! in_array($status, ['active', 'inactive', 'all'], true)) {
             $status = 'active';
@@ -188,8 +194,16 @@ class ProductController extends Controller
             ->when(in_array($stockOfferType, array_column(StockOfferType::cases(), 'value'), true), fn (Builder $query) => $query->whereHas('offers', fn (Builder $query) => $query->where('type', $stockOfferType)))
             ->when($image === 'with', fn (Builder $query) => $query->whereHas('media', fn (Builder $query) => $query->where('collection_name', Product::MEDIA_COLLECTION)))
             ->when($image === 'without', fn (Builder $query) => $query->whereDoesntHave('media', fn (Builder $query) => $query->where('collection_name', Product::MEDIA_COLLECTION)))
+            ->when($stock !== 'all', fn (Builder $query) => $query->has(
+                'offers.stockVolumes',
+                $stock === 'with' ? '>=' : '<',
+                1,
+                'and',
+                fn (Builder $query) => $query->where('total_quantity', '>', 0)->whereNull('consumed_at'),
+            ))
             ->latest()
-            ->paginate(12)
+            ->orderBy('id')
+            ->paginate($perPage)
             ->withQueryString()
             ->through(fn (Product $product): array => ProductResource::make($product)->resolve());
 
@@ -211,6 +225,8 @@ class ProductController extends Controller
                 'stock_offer_type' => $stockOfferType,
                 'image' => $image,
                 'status' => $status,
+                'stock' => $stock,
+                'per_page' => $perPage,
             ],
             'washTypes' => WashType::query()->orderBy('name')->get(['id', 'name', 'is_active'])->toArray(),
             'categories' => Category::query()

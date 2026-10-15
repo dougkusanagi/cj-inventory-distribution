@@ -17,6 +17,7 @@ import {
     InfoIcon,
     ListBulletsIcon,
     PackageIcon,
+    MinusCircleIcon,
     PencilSimpleIcon,
     PlusCircleIcon,
     ProhibitInsetIcon,
@@ -45,6 +46,19 @@ import {
     type FilterField,
 } from '@/components/search-filter-bar';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Card,
     CardContent,
@@ -100,6 +114,8 @@ export type ProductsIndexProps = {
         stock_offer_type: string;
         image: string;
         status: 'active' | 'inactive' | 'all';
+        stock: 'with' | 'without' | 'all';
+        per_page: number;
     };
     categories: Category[];
     washTypes: WashType[];
@@ -128,6 +144,8 @@ type ProductFilterValues = {
     stock_offer_type: string;
     image: string;
     status: string;
+    stock: string;
+    per_page: string;
 };
 
 function productSizes(product: Product): string[] {
@@ -404,24 +422,47 @@ function ProductCardV3({
                     compact ? 'gap-2.5 p-3 sm:p-4' : 'gap-3 p-4 sm:p-5',
                 )}
             >
-                <div className="min-w-0">
-                    <p className="truncate font-mono text-xs leading-4 text-muted-foreground">
-                        {product.code}
-                        {!compact &&
-                            product.model &&
-                            ` · Mod. ${product.model}`}
-                    </p>
-                    <TextLink
-                        href={productEdit(product.id)}
-                        className={cn(
-                            'line-clamp-2 rounded-sm font-semibold tracking-tight text-card-foreground no-underline hover:underline',
-                            compact
-                                ? 'text-[0.9375rem] leading-5 sm:text-lg sm:leading-6'
-                                : 'text-lg leading-6',
-                        )}
-                    >
-                        {product.name}
-                    </TextLink>
+                <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                        <p className="truncate font-mono text-xs leading-4 text-muted-foreground">
+                            {product.code}
+                            {!compact &&
+                                product.model &&
+                                ` · Mod. ${product.model}`}
+                        </p>
+                        <TextLink
+                            href={productEdit(product.id)}
+                            className={cn(
+                                'line-clamp-2 rounded-sm font-semibold tracking-tight text-card-foreground no-underline hover:underline',
+                                compact
+                                    ? 'text-[0.9375rem] leading-5 sm:text-lg sm:leading-6'
+                                    : 'text-lg leading-6',
+                            )}
+                        >
+                            {product.name}
+                        </TextLink>
+                    </div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-11 shrink-0"
+                                aria-label={`Ações de ${product.name}`}
+                            >
+                                <DotsThreeIcon weight="bold" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                                variant="destructive"
+                                onSelect={() => onDelete(product)}
+                            >
+                                <MinusCircleIcon />
+                                Excluir produto
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
 
                 {(product.stock_offer_type ||
@@ -643,11 +684,11 @@ function ProductAvailabilityNotice({
         >
             {isAvailable ? (
                 <>
-                    <span className="block text-xs leading-4 font-normal">
+                    <span className="block text-xs leading-4 font-normal text-emerald-700 dark:text-emerald-400">
                         Disponível
                     </span>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1">
-                        <span className="inline-flex items-center gap-1.5">
+                    <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1">
+                        <span className="inline-flex flex-wrap items-center gap-1.5">
                             <TShirtIcon
                                 className={
                                     compact
@@ -668,7 +709,7 @@ function ProductAvailabilityNotice({
                                 {availableQuantity === 1 ? 'peça' : 'peças'}
                             </span>
                         </span>
-                        <span className="inline-flex items-center gap-1.5">
+                        <span className="inline-flex flex-wrap items-center gap-1.5">
                             <PackageIcon
                                 className={
                                     compact
@@ -1260,6 +1301,8 @@ export default function ProductsIndex({
         stock_offer_type: filters.stock_offer_type || 'all',
         image: filters.image || 'all',
         status: filters.status,
+        stock: filters.stock,
+        per_page: filters.per_page.toString(),
     });
     const filtersMounted = useRef(false);
     const [galleryProduct, setGalleryProduct] = useState<Product | null>(null);
@@ -1311,6 +1354,22 @@ export default function ProductsIndex({
                     value: 'inactive',
                     label: 'Inativos',
                     icon: ProhibitInsetIcon,
+                },
+            ],
+        },
+        {
+            name: 'stock',
+            label: 'Estoque',
+            value: filterValues.stock,
+            allLabel: 'Todos',
+            allIcon: SquaresFourIcon,
+            display: 'cards',
+            options: [
+                { value: 'with', label: 'Com estoque', icon: PackageIcon },
+                {
+                    value: 'without',
+                    label: 'Sem estoque',
+                    icon: MinusCircleIcon,
                 },
             ],
         },
@@ -1465,10 +1524,45 @@ export default function ProductsIndex({
                             stock_offer_type: 'all',
                             image: 'all',
                             status: 'active',
+                            stock: 'all',
+                            per_page: filterValues.per_page,
                         })
                     }
                     resultCount={products.meta.total}
                 />
+
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm text-muted-foreground">
+                        {products.data.length} de {products.meta.total} produtos
+                    </p>
+                    <Select
+                        value={filterValues.per_page}
+                        onValueChange={(per_page) =>
+                            setFilterValues((current) => ({
+                                ...current,
+                                per_page,
+                            }))
+                        }
+                    >
+                        <SelectTrigger
+                            aria-label="Produtos por página"
+                            label="Por página"
+                            className="w-44"
+                        >
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {[12, 24, 48, 100].map((count) => (
+                                <SelectItem
+                                    key={count}
+                                    value={count.toString()}
+                                >
+                                    {count} produtos
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
 
                 {products.data.length > 0 ? (
                     <>
