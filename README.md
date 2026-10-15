@@ -41,6 +41,12 @@ Campos principais:
 
 A listagem administrativa inicia com produtos ativos e permite filtrar por
 ativos, inativos ou todos. Limpar os filtros restaura a seleção de ativos.
+O filtro de estoque oferece todos, com estoque ou sem estoque, considerando
+sacos com quantidade positiva ainda não consumidos, inclusive os reservados.
+No celular, usa cartões de escolha com ícones; no desktop, uma seleção.
+A listagem permite exibir 12, 24, 48 ou 100 produtos por página. A exclusão
+fica disponível nas ações do produto e mantém os bloqueios para estoque
+físico, reservas e vínculos com pedidos.
 
 Cada produto pode receber uma categoria (por exemplo, calça, bermuda, short ou
 cropped) e uma linha comercial: `Slim` ou `Plus`. Esses campos são opcionais

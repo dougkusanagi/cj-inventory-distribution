@@ -692,3 +692,71 @@ it('keeps the product form usable on a narrow mobile viewport', function () {
         ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
         ->assertNoJavaScriptErrors();
 });
+
+it('filters physical stock with desktop select and mobile radio cards', function () {
+    Product::factory()->create(['name' => 'Produto sem estoque E2E']);
+    $product = Product::factory()->create(['name' => 'Produto com estoque E2E']);
+    $offer = $product->offers()->create(['type' => StockOfferType::NewGrade]);
+    $offer->stockVolumes()->create(['total_quantity' => 5]);
+    $this->actingAs(User::factory()->create());
+
+    visit(route('products.index', [], false))
+        ->resize(1440, 900)
+        ->click('#product-filter-stock')
+        ->click('[role="option"]:has-text("Com estoque")')
+        ->assertSee('Produto com estoque E2E')
+        ->assertDontSee('Produto sem estoque E2E')
+        ->resize(390, 844)
+        ->click('button[aria-label="Abrir filtros de produtos"]')
+        ->click('label[for="mobile-product-filter-stock-without"]')
+        ->click('button[aria-label="Fechar filtros de produtos"]')
+        ->assertSee('Produto sem estoque E2E')
+        ->assertDontSee('Produto com estoque E2E')
+        ->click('button[aria-label="Abrir filtros de produtos"]')
+        ->click('label[for="mobile-product-filter-stock-all"]')
+        ->click('button[aria-label="Fechar filtros de produtos"]')
+        ->assertSee('Produto sem estoque E2E')
+        ->assertSee('Produto com estoque E2E')
+        ->assertScript('document.documentElement.scrollWidth <= document.documentElement.clientWidth')
+        ->assertNoJavaScriptErrors();
+});
+
+it('changes products per page and keeps the selection when filtering', function () {
+    Product::factory()->count(25)->create();
+    $this->actingAs(User::factory()->create());
+
+    visit(route('products.index', [], false))
+        ->assertSee('12 de 25 produtos')
+        ->click('button[aria-label="Produtos por página"]')
+        ->click('[role="option"]:has-text("24 produtos")')
+        ->assertSee('24 de 25 produtos')
+        ->click('#product-filter-stock')
+        ->click('[role="option"]:has-text("Sem estoque")')
+        ->assertSee('24 de 25 produtos')
+        ->click('button[aria-label="Produtos por página"]')
+        ->click('[role="option"]:has-text("100 produtos")')
+        ->assertSee('25 de 25 produtos')
+        ->assertNoJavaScriptErrors();
+});
+
+it('removes a product from the card actions after confirmation', function (bool $compact) {
+    $product = Product::factory()->create(['name' => 'Produto removido pelo card']);
+    $this->actingAs(User::factory()->create());
+    $page = visit(route('products.index', [], false))->resize($compact ? 390 : 1440, 900);
+    $page->click($compact ? 'button[aria-label="Visualização com 2 cards por linha"]' : 'button[aria-label="Visualização em cards"]');
+
+    $page
+        ->click('button[aria-label="Ações de Produto removido pelo card"]')
+        ->click('[role="menuitem"]:text-is("Excluir produto")')
+        ->assertSee('Excluir produto?')
+        ->press('Cancelar')
+        ->assertSee($product->name)
+        ->click('button[aria-label="Ações de Produto removido pelo card"]')
+        ->click('[role="menuitem"]:text-is("Excluir produto")')
+        ->press('Excluir produto')
+        ->assertSee('Produto excluído.')
+        ->assertDontSee($product->name)
+        ->assertNoJavaScriptErrors();
+
+    $this->assertSoftDeleted('products', ['id' => $product->id]);
+})->with(['desktop cards' => false, 'mobile compact cards' => true]);

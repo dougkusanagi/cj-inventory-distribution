@@ -1612,3 +1612,53 @@ test('restoring a product does not restore a size deleted before the product', f
     expect($previouslyDeletedItem->fresh()->trashed())->toBeTrue()
         ->and($cascadedItem->fresh()->trashed())->toBeFalse();
 });
+
+test('stock filters use physical sacks including reservations across every offer', function (string $stock, array $expectedNames) {
+    Product::factory()->create(['name' => 'Sem oferta']);
+    foreach ([
+        ['Zerado', 0, null, null],
+        ['Consumido', 5, now(), null],
+        ['Reservado', 5, null, Order::factory()->create()->id],
+        ['Disponível', 5, null, null],
+    ] as [$name, $quantity, $consumedAt, $orderId]) {
+        $product = Product::factory()->create(['name' => $name]);
+        $offer = $product->offers()->create(['type' => StockOfferType::NewGrade]);
+        $offer->stockVolumes()->create([
+            'total_quantity' => $quantity,
+            'consumed_at' => $consumedAt,
+            'current_order_id' => $orderId,
+        ]);
+        $product->offers()->create(['type' => StockOfferType::Replenishment]);
+    }
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('products.index', ['stock' => $stock]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('filters.stock', $stock)
+            ->where('products.data', fn ($products) => collect($products)->pluck('name')->sort()->values()->all() === $expectedNames));
+})->with([
+    'with physical stock' => ['with', ['Disponível', 'Reservado']],
+    'without physical stock' => ['without', ['Consumido', 'Sem oferta', 'Zerado']],
+    'all stock states' => ['all', ['Consumido', 'Disponível', 'Reservado', 'Sem oferta', 'Zerado']],
+]);
+
+test('product page size is bounded and pagination preserves filters', function (mixed $perPage, int $expectedSize) {
+    Product::factory()->count(101)->create();
+    Product::factory()->create(['is_active' => false]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('products.index', ['per_page' => $perPage, 'stock' => 'without']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('products.data', $expectedSize)
+            ->where('products.meta.total', 101)
+            ->where('filters.per_page', $expectedSize)
+            ->where('products.links', fn ($links) => collect($links)->contains(fn ($link) => $link['url'] !== null && ($perPage === null || str_contains($link['url'], 'per_page=')) && str_contains($link['url'], 'stock=without'))));
+})->with([
+    'default' => [null, 12],
+    '24 products' => [24, 24],
+    '48 products' => [48, 48],
+    'maximum' => [100, 100],
+    'above maximum' => [200, 100],
+    'below minimum' => [0, 1],
+    'invalid' => ['invalid', 1],
+]);
