@@ -1,9 +1,4 @@
-import {
-    MagnifyingGlassIcon,
-    FunnelIcon,
-    PlusCircleIcon,
-    XIcon,
-} from '@phosphor-icons/react';
+import { MagnifyingGlassIcon, FunnelIcon, XIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import type { ComponentProps, ComponentType, CSSProperties } from 'react';
@@ -44,7 +39,7 @@ export type FilterField = {
     allIcon?: FilterIcon;
     options: FilterOption[];
     /** `cards` só afeta o drawer mobile com até três escolhas; no desktop vira select. */
-    onAdd?: () => void;
+    onAdd?: (search: string) => void;
     addLabel?: string;
     display?: 'select' | 'cards' | 'combobox';
 };
@@ -66,12 +61,6 @@ const filterTriggerLabelledClassName = 'h-12 data-[size=default]:h-12';
 /** Destaca em dourado os filtros que fogem do valor padrão. */
 const filterTriggerActiveClassName =
     'border-highlight bg-primary/10 font-medium text-foreground hover:border-highlight hover:bg-primary/15';
-
-/** O brilho de foco envolve o campo e o botão anexo como um único controle. */
-const addonGroupClassName =
-    'group/addon has-[[aria-expanded=true]]:ring-4 has-[[aria-expanded=true]]:ring-ring/15 has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-ring/15';
-const addonGroupItemClassName =
-    'focus-visible:ring-0 aria-expanded:ring-0 group-has-[[aria-expanded=true]]/addon:border-highlight group-has-[:focus-visible]/addon:border-highlight';
 
 function isFieldActive(field: FilterField): boolean {
     return field.value !== (field.defaultValue ?? 'all');
@@ -185,46 +174,24 @@ function FilterCombobox({
     onChange: (value: string) => void;
 }) {
     const combobox = (
-        <div
+        <SearchableSelect
+            id={id}
+            label={field.label}
+            showLabel={!labelled}
+            value={field.value}
+            options={[
+                { value: 'all', label: field.allLabel },
+                ...field.options,
+            ]}
+            onValueChange={onChange}
+            onCreate={field.onAdd}
+            createLabel={field.addLabel}
             className={cn(
-                'flex min-w-0 rounded-2xl transition-shadow duration-200 motion-reduce:transition-none',
-                field.onAdd && addonGroupClassName,
+                filterTriggerClassName,
+                labelled && filterTriggerLabelledClassName,
+                isFieldActive(field) && filterTriggerActiveClassName,
             )}
-        >
-            <SearchableSelect
-                id={id}
-                label={field.label}
-                showLabel={!labelled}
-                value={field.value}
-                options={[
-                    { value: 'all', label: field.allLabel },
-                    ...field.options,
-                ]}
-                onValueChange={onChange}
-                className={cn(
-                    filterTriggerClassName,
-                    'min-w-0 flex-1',
-                    field.onAdd && ['rounded-r-none', addonGroupItemClassName],
-                    labelled && filterTriggerLabelledClassName,
-                    isFieldActive(field) && filterTriggerActiveClassName,
-                )}
-            />
-            {field.onAdd && (
-                <Button
-                    type="button"
-                    variant="ghost"
-                    className={cn(
-                        'h-14 w-11 shrink-0 rounded-l-none rounded-r-2xl border border-l-0 border-input bg-field text-highlight shadow-field hover:bg-field-hover hover:text-highlight',
-                        addonGroupItemClassName,
-                        labelled && 'h-12',
-                    )}
-                    aria-label={field.addLabel}
-                    onClick={field.onAdd}
-                >
-                    <PlusCircleIcon />
-                </Button>
-            )}
-        </div>
+        />
     );
 
     if (!labelled) {
@@ -288,9 +255,9 @@ export function SearchFilterBar({
     const controlFields = fields.map((field) => ({
         ...field,
         onAdd: field.onAdd
-            ? () => {
+            ? (search: string) => {
                   setDrawerOpen(false);
-                  field.onAdd?.();
+                  field.onAdd?.(search);
               }
             : undefined,
     }));

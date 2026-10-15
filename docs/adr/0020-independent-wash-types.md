@@ -20,7 +20,8 @@ ficha técnica quando o módulo de produção for implementado.
   atribuições. Tipos vinculados a produtos, inclusive excluídos logicamente,
   não podem ser excluídos; devem ser desativados ou reclassificados.
 - Seleção e filtros usam busca por texto. O painel permite criar um tipo
-  pelo botão “+” sem abandonar a tela atual. O catálogo público apenas filtra.
+  pela última opção da lista, disponível após pesquisar um nome ainda não
+  cadastrado, sem abandonar a tela atual. O catálogo público apenas filtra.
 - A futura ficha técnica poderá referenciar os mesmos IDs de `WashType` e
   migrar os vínculos atuais. Não é criada uma ficha técnica antecipadamente.
 

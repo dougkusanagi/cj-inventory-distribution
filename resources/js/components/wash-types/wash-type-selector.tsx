@@ -1,8 +1,6 @@
-import { PlusCircleIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
 import { WashTypeCreateDialog } from '@/components/wash-types/wash-type-create-dialog';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import type { WashType } from '@/types';
@@ -21,6 +19,7 @@ export function WashTypeSelector({
     disabled?: boolean;
 }) {
     const [open, setOpen] = useState(false);
+    const [initialName, setInitialName] = useState('');
     const [createdTypes, setCreatedTypes] = useState<WashType[]>([]);
     const options = Array.from(
         new Map(
@@ -45,25 +44,21 @@ export function WashTypeSelector({
                     onValueChange={(next) =>
                         onValueChange(next === 'none' ? '' : next)
                     }
+                    onCreate={(search) => {
+                        setInitialName(search);
+                        setOpen(true);
+                    }}
+                    createLabel="Cadastrar tipo de lavagem"
                     disabled={disabled}
                     invalid={Boolean(error)}
                     className="flex-1"
                 />
-                <Button
-                    type="button"
-                    variant="secondary"
-                    className="size-12 shrink-0"
-                    aria-label="Cadastrar tipo de lavagem"
-                    onClick={() => setOpen(true)}
-                    disabled={disabled}
-                >
-                    <PlusCircleIcon />
-                </Button>
             </div>
             <InputError message={error} />
             <WashTypeCreateDialog
                 key={String(open)}
                 open={open}
+                initialName={initialName}
                 onOpenChange={setOpen}
                 onCreated={(created) => {
                     setCreatedTypes((current) => [...current, created]);

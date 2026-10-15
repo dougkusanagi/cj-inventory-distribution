@@ -1,4 +1,4 @@
-import { CaretDownIcon, CheckIcon } from '@phosphor-icons/react';
+import { CaretDownIcon, CheckIcon, PlusCircleIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import {
     Command,
@@ -22,6 +22,8 @@ type SearchableSelectProps = {
     disabled?: boolean;
     invalid?: boolean;
     showLabel?: boolean;
+    onCreate?: (search: string) => void;
+    createLabel?: string;
 };
 
 export function SearchableSelect({
@@ -34,12 +36,22 @@ export function SearchableSelect({
     disabled,
     invalid,
     showLabel = false,
+    onCreate,
+    createLabel,
 }: SearchableSelectProps) {
     const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const query = search.trim();
+    const canCreate = onCreate && query !== '' && !options.some(
+        (option) => option.label.trim().localeCompare(query, 'pt-BR', { sensitivity: 'base' }) === 0,
+    );
     const selected = options.find((option) => option.value === value);
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover open={open} onOpenChange={(nextOpen) => {
+            setOpen(nextOpen);
+            if (!nextOpen) setSearch('');
+        }}>
             <PopoverTrigger asChild>
                 <button
                     id={id}
@@ -90,6 +102,8 @@ export function SearchableSelect({
                         aria-label={`Buscar ${label.toLowerCase()}`}
                         placeholder={`Buscar ${label.toLowerCase()}`}
                         className="caret-highlight"
+                        value={search}
+                        onValueChange={setSearch}
                     />
                     <CommandList
                         data-vaul-no-drag
@@ -109,6 +123,7 @@ export function SearchableSelect({
                                     onSelect={() => {
                                         onValueChange(option.value);
                                         setOpen(false);
+                                        setSearch('');
                                     }}
                                 >
                                     <span className="flex-1">{option.label}</span>
@@ -121,6 +136,23 @@ export function SearchableSelect({
                                 </CommandItem>
                             ))}
                         </CommandGroup>
+                        {canCreate && (
+                            <CommandGroup forceMount className="border-t p-2">
+                                <CommandItem
+                                    forceMount
+                                    value="create-new-option"
+                                    className="min-h-11 rounded-xl px-3"
+                                    onSelect={() => {
+                                        setOpen(false);
+                                        setSearch('');
+                                        onCreate(query);
+                                    }}
+                                >
+                                    <PlusCircleIcon />
+                                    <span>{createLabel ?? 'Cadastrar nova opção'}</span>
+                                </CommandItem>
+                            </CommandGroup>
+                        )}
                     </CommandList>
                 </Command>
             </PopoverContent>

@@ -44,7 +44,7 @@ function RadioCard({
             className={cn(
                 'group relative flex cursor-pointer rounded-xl border border-border bg-card text-sm leading-tight font-medium text-foreground/75 transition-colors select-none hover:border-input hover:bg-muted/40 has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50 has-[[data-state=checked]]:border-primary/70 has-[[data-state=checked]]:bg-primary/[0.07] has-[[data-state=checked]]:text-foreground has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60',
                 isStacked
-                    ? 'flex-col items-center gap-1.5 px-2 pt-3 pb-2.5 text-center'
+                    ? 'flex-col items-center gap-1.5 px-1 pt-3 pb-2.5 text-center text-xs sm:text-sm'
                     : 'min-h-12 items-center gap-3 px-3 py-2',
                 className,
             )}
@@ -59,7 +59,7 @@ function RadioCard({
                     <Icon className={isStacked ? 'size-6' : 'size-5'} />
                 </span>
             )}
-            <span className={cn('min-w-0 text-balance', !isStacked && 'flex-1')}>
+            <span className={cn('min-w-0', isStacked ? 'whitespace-nowrap' : 'flex-1 text-balance')}>
                 {label}
             </span>
             {isStacked && (
