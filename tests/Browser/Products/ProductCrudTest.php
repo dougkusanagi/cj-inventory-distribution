@@ -772,3 +772,14 @@ it('labels inactive products in normal and compact cards', function (bool $compa
         ->assertVisible('article[aria-label="Produto inativo com badge"] [data-slot="badge"]:has-text("Inativo")')
         ->assertNoJavaScriptErrors();
 })->with(['desktop cards' => false, 'mobile compact cards' => true]);
+
+it('keeps mobile filter radio labels on one line at 360 pixels', function () {
+    $this->actingAs(User::factory()->create());
+
+    visit(route('products.index', [], false))
+        ->resize(360, 800)
+        ->click('button[aria-label="Abrir filtros de produtos"]')
+        ->assertVisible('label[for="mobile-product-filter-stock-with"]')
+        ->assertScript("Array.from(document.querySelectorAll('[data-slot=radio-card]')).every((card) => { const label = card.querySelector(':scope > span:last-of-type'); return label && label.getBoundingClientRect().height <= parseFloat(getComputedStyle(label).lineHeight) + 1 && label.scrollWidth <= card.clientWidth; })")
+        ->assertNoJavaScriptErrors();
+});

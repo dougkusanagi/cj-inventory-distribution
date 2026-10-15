@@ -58,7 +58,8 @@ catálogo.
 Os tipos de lavagem possuem cadastro próprio (`WashType`), com nome único,
 ativação e exclusão lógica. O produto guarda um vínculo opcional
 `wash_type_id`. O formulário oferece seleção com busca por texto e cadastro
-rápido pelo botão “+”; produtos e catálogo podem ser filtrados por lavagem.
+rápido pela última opção da lista, após pesquisar o nome; produtos e catálogo
+podem ser filtrados por lavagem.
 Tipos inativos permanecem nos vínculos existentes, mas não podem receber
 novas atribuições. Tipos vinculados a produtos, inclusive excluídos
 logicamente, devem ser desativados em vez de excluídos.

@@ -28,15 +28,17 @@ export function WashTypeCreateDialog({
     open,
     onOpenChange,
     onCreated,
+    initialName = '',
 }: {
     open: boolean;
+    initialName?: string;
     onOpenChange: (open: boolean) => void;
     onCreated: (washType: WashType) => void;
 }) {
     const [requestError, setRequestError] = useState('');
     const isMobile = useIsMobile();
     const form = useHttp<{ name: string; is_active: boolean }, WashType>({
-        name: '',
+        name: initialName,
         is_active: true,
     });
 

@@ -1,37 +1,37 @@
 {
-  "title": "Mais opções na gestão de produtos",
-  "changes": [
-    {
-      "category": "added",
-      "text": "Adicionado filtro por estoque físico: todos, com estoque ou sem estoque. Considera sacos com quantidade positiva ainda não consumidos, incluindo os reservados, com cartões de escolha no celular e seleção no computador."
-    },
-    {
-      "category": "added",
-      "text": "Adicionada escolha de 12, 24, 48 ou 100 produtos por página e indicação da quantidade exibida sobre o total. A navegação preserva os filtros, e limpar os filtros mantém a quantidade escolhida."
-    },
-    {
-      "category": "improved",
-      "text": "O sistema limita a quantidade por página entre 1 e 100, trata opções inválidas de estoque como “Todos” e acrescenta um critério de desempate à ordenação dos produtos."
-    },
-    {
-      "category": "added",
-      "text": "Adicionada exclusão no menu de ações junto ao título dos cartões normais e compactos, com confirmação e manutenção dos bloqueios por estoque físico, reservas e vínculos com pedidos."
-    },
-    {
-      "category": "improved",
-      "text": "O aviso “Disponível” passa a ter destaque verde, e as quantidades ficam em duas colunas, com quebra de conteúdo nos cartões estreitos."
-    },
-    {
-      "category": "improved",
-      "text": "Ampliados os testes automáticos para filtros de estoque, reservas, limites de paginação, preservação das escolhas e exclusão com confirmação no computador e no celular. A validação também incluiu formatação, verificações de código e tipos, geração da aplicação e testes do sistema e de navegador."
-    },
-    {
-      "category": "improved",
-      "text": "Atualizada a documentação com as regras do estoque físico, as opções de quantidade por página e os bloqueios de exclusão."
-    }
-  ],
-  "pr_number": 65,
-  "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/65",
-  "merged_at": "2026-10-15T12:16:43Z",
-  "commit": "771ff3af31de492fb8446d9757957ffe7994e12c"
+    "title": "Mais opções na gestão de produtos",
+    "changes": [
+        {
+            "category": "added",
+            "text": "Adicionado filtro por estoque físico: todos, com estoque ou sem estoque. Considera sacos com quantidade positiva ainda não consumidos, incluindo os reservados, com cartões de escolha no celular e seleção no computador."
+        },
+        {
+            "category": "added",
+            "text": "Adicionada escolha de 12, 24, 48 ou 100 produtos por página e indicação da quantidade exibida sobre o total. A navegação preserva os filtros, e limpar os filtros mantém a quantidade escolhida."
+        },
+        {
+            "category": "improved",
+            "text": "O sistema limita a quantidade por página entre 1 e 100, trata opções inválidas de estoque como “Todos” e acrescenta um critério de desempate à ordenação dos produtos."
+        },
+        {
+            "category": "added",
+            "text": "Adicionada exclusão no menu de ações junto ao título dos cartões normais e compactos, com confirmação e manutenção dos bloqueios por estoque físico, reservas e vínculos com pedidos."
+        },
+        {
+            "category": "improved",
+            "text": "O aviso “Disponível” passa a ter destaque verde, e as quantidades ficam em duas colunas, com quebra de conteúdo nos cartões estreitos."
+        },
+        {
+            "category": "improved",
+            "text": "Ampliados os testes automáticos para filtros de estoque, reservas, limites de paginação, preservação das escolhas e exclusão com confirmação no computador e no celular. A validação também incluiu formatação, verificações de código e tipos, geração da aplicação e testes do sistema e de navegador."
+        },
+        {
+            "category": "improved",
+            "text": "Atualizada a documentação com as regras do estoque físico, as opções de quantidade por página e os bloqueios de exclusão."
+        }
+    ],
+    "pr_number": 65,
+    "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/65",
+    "merged_at": "2026-10-15T12:16:43Z",
+    "commit": "771ff3af31de492fb8446d9757957ffe7994e12c"
 }

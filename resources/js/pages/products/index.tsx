@@ -1260,6 +1260,7 @@ export default function ProductsIndex({
     cardVariant = 'default',
     indexUrl = productsIndex.url(),
 }: ProductsIndexComponentProps) {
+    const [washTypeInitialName, setWashTypeInitialName] = useState('');
     const [washTypeCreateOpen, setWashTypeCreateOpen] = useState(false);
     const [createdWashTypes, setCreatedWashTypes] = useState<WashType[]>([]);
     const allWashTypes = Array.from(
@@ -1378,7 +1379,10 @@ export default function ProductsIndex({
         categoryFilterField(filterValues.category, categories),
         {
             ...washTypeFilterField(filterValues.wash_type, allWashTypes),
-            onAdd: () => setWashTypeCreateOpen(true),
+            onAdd: (search) => {
+                setWashTypeInitialName(search);
+                setWashTypeCreateOpen(true);
+            },
             addLabel: 'Cadastrar tipo de lavagem',
         },
         lineFilterField(filterValues.line, [
@@ -1705,6 +1709,7 @@ export default function ProductsIndex({
             <WashTypeCreateDialog
                 key={String(washTypeCreateOpen)}
                 open={washTypeCreateOpen}
+                initialName={washTypeInitialName}
                 onOpenChange={setWashTypeCreateOpen}
                 onCreated={(created) => {
                     setCreatedWashTypes((current) => [...current, created]);
