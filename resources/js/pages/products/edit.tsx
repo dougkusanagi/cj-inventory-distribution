@@ -66,6 +66,7 @@ export default function EditProduct({
                     onOpenChange={setIsEntryOpen}
                 />
                 <StockAdjustmentModal
+                    key={isAdjustmentOpen ? 'adjust-open' : 'adjust-closed'}
                     product={product}
                     open={isAdjustmentOpen}
                     onOpenChange={setIsAdjustmentOpen}

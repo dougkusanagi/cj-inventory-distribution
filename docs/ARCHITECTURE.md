@@ -247,6 +247,14 @@ Depois que um saco possui movimentação, o CRUD de produto o exibe em modo de
 leitura e não pode alterar total, grade ou quantidades. Ajustes passam pelas
 actions de estoque e são representados por estornos vinculados.
 
+A correção de contagem permite selecionar vários sacos do mesmo produto e
+aplicar contagens ou remover cadastros incorretos em uma única transação.
+Remover um cadastro gera ajuste de saldo com motivo, autor e snapshots,
+encerra e exclui logicamente o saco. A origem `adjustment` distingue essa
+correção de uma saída operacional. Sacos reservados, consumidos ou alterados
+desde a abertura do formulário impedem toda a correção. Entradas e saídas manuais não
+possuem limite de 50 sacos por lançamento.
+
 ## Auditoria administrativa
 
 `AuditLog` registra criação, alteração, exclusão lógica, restauração e exclusão

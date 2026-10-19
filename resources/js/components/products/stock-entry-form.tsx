@@ -249,6 +249,7 @@ export function StockEntryForm({
                                 form.setData('stock_volumes', volumes)
                             }
                             idPrefix="entry-stock-totals"
+                            maxBagCount={null}
                         />
                     )}
                 </CardContent>

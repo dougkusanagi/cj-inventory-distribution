@@ -24,6 +24,20 @@ não representa o fato ocorrido e aumenta o trabalho da equipe.
 - Ajustes por tamanho não usam o estorno de sacos inteiros. Uma correção é
   registrada por um novo ajuste.
 
+## Correções de cadastro e seleção de vários sacos
+
+A correção permite selecionar vários sacos do mesmo produto, corrigindo a
+contagem de cada um ou removendo cadastros feitos por engano. Todas as mudanças
+da seleção são aplicadas na mesma transação; uma reserva, versão desatualizada
+ou saco de outro produto impede a operação inteira.
+
+A remoção exige motivo e registra um ajuste com autor, total anterior, total
+zero e indicação explícita de cadastro removido no snapshot posterior. O saco
+é zerado, encerrado e excluído logicamente, preservando seus vínculos e o
+histórico. Não é uma saída manual operacional: a origem permanece `adjustment`,
+e a redução de saldo usa o tipo `out`, como nas demais recontagens negativas.
+Uma repetição da mesma solicitação não cria novos ajustes.
+
 ## Consequências
 
 O produto pode oferecer a conferência e a recontagem sem abandonar sua tela. O

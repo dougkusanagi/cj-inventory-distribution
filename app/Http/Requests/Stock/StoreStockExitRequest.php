@@ -23,7 +23,7 @@ class StoreStockExitRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'volume_ids' => ['required', 'array', 'min:1', 'max:50'],
+            'volume_ids' => ['required', 'array', 'min:1'],
             'volume_ids.*' => [
                 'required',
                 'integer',

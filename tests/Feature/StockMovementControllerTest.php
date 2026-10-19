@@ -119,6 +119,42 @@ test('staff can register a manual exit only for an available sack', function () 
     expect(StockMovement::query()->count())->toBe(1);
 });
 
+test('manual exits can register more than fifty sacks atomically', function () {
+    $user = User::factory()->create();
+    $product = Product::factory()->create();
+    $offer = $product->offers()->create(['type' => StockOfferType::Replenishment]);
+    $volumes = StockOfferVolume::factory()->count(51)->withTotal(5)->create(['stock_offer_id' => $offer->id]);
+
+    $this->actingAs($user)->post(route('stock-exits.store'), [
+        'volume_ids' => $volumes->modelKeys(),
+        'reason' => 'Transferência para a loja',
+        'idempotency_key' => 'exit-over-limit',
+    ])->assertRedirect();
+
+    $this->assertDatabaseCount('stock_movements', 1);
+    $this->assertDatabaseCount('stock_movement_items', 51);
+    expect(StockOfferVolume::query()->whereNotNull('consumed_at')->count())->toBe(51);
+});
+
+test('manual exit generic validation errors are translated to Portuguese', function () {
+    $user = User::factory()->create();
+    $volume = movementVolume();
+
+    $this->actingAs($user)->post(route('stock-exits.store'), [
+        'volume_ids' => [$volume->id],
+        'reason' => str_repeat('a', 5001),
+        'notes' => ['invalid'],
+        'idempotency_key' => 'exit-invalid-fields',
+    ])->assertInvalid([
+        'reason' => 'O campo motivo deve conter no máximo 5000 caracteres.',
+        'notes' => 'O campo observação deve ser um texto.',
+    ]);
+
+    $this->assertDatabaseCount('stock_movements', 0);
+    $this->assertDatabaseCount('stock_movement_items', 0);
+    expect($volume->refresh()->consumed_at)->toBeNull();
+});
+
 test('stock entry preselects the product sent from its page', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
@@ -816,3 +852,133 @@ test('movement snapshots remain readable after related stock is soft-deleted', f
             ->where('movement.items.0.product_name', 'Produto histórico')
             ->where('movement.items.0.volume_code', $volume->code));
 });
+
+function stockCorrectionPayload(StockOfferVolume $volume, bool $remove = false): array
+{
+    return [
+        'volume_id' => $volume->id,
+        'expected_version' => $volume->fresh()->stock_version,
+        'remove' => $remove,
+        'items' => $volume->items->map(fn ($item): array => [
+            'id' => $item->id, 'size' => $item->size, 'is_active' => $item->is_active, 'quantity' => $item->quantity,
+        ])->all(),
+        'total_quantity' => $volume->total_quantity,
+    ];
+}
+
+test('staff can correct several sacks and remove a mistaken registration as an audited adjustment', function () {
+    $user = User::factory()->create();
+    $volume = movementVolume();
+    $removed = StockOfferVolume::factory()->withTotal(5)->create(['stock_offer_id' => $volume->stock_offer_id]);
+    $removedSize = $removed->items()->create(['size' => 'G', 'quantity' => 5, 'is_active' => true]);
+    $kept = StockOfferVolume::factory()->withTotal(7)->create(['stock_offer_id' => $volume->stock_offer_id]);
+    $correction = stockCorrectionPayload($volume);
+    $correction['items'][0]['quantity'] = 9;
+    $payload = [
+        'volumes' => [$correction, stockCorrectionPayload($removed, true)],
+        'reason' => 'Correção de cadastro',
+        'idempotency_key' => 'correction-multiple',
+    ];
+
+    $this->actingAs($user)->post(route('products.stock-adjustments.store', $volume->offer->product), $payload)
+        ->assertRedirect(route('products.edit', $volume->offer->product));
+
+    expect($volume->fresh()->total_quantity)->toBe(9)
+        ->and($volume->items()->sole()->quantity)->toBe(9)
+        ->and($kept->fresh()->total_quantity)->toBe(7)
+        ->and($kept->fresh()->consumed_at)->toBeNull();
+    $this->assertSoftDeleted($removed);
+    $this->assertSoftDeleted($removedSize);
+    $removal = StockMovement::query()->whereHas('items', fn ($query) => $query->where('stock_offer_volume_id', $removed->id))->sole();
+    expect($removal->source)->toBe(StockMovementSource::Adjustment)
+        ->and($removal->actor_id)->toBe($user->id)
+        ->and($removal->reason)->toBe('Correção de cadastro')
+        ->and($removal->items->sole()->previous_state['total_quantity'])->toBe(5)
+        ->and($removal->items->sole()->previous_state['sizes'])->toBe([['size' => 'G', 'quantity' => 5]])
+        ->and($removal->items->sole()->resulting_state['total_quantity'])->toBe(0)
+        ->and($removal->items->sole()->resulting_state['removed'])->toBeTrue()
+        ->and($removal->items->sole()->movement_quantity)->toBe(5);
+    $this->assertDatabaseHas('audit_logs', ['auditable_type' => StockOfferVolume::class, 'auditable_id' => $removed->id, 'action' => 'deleted']);
+    $this->assertDatabaseMissing('stock_movements', ['source' => StockMovementSource::Manual->value]);
+    $this->actingAs($user)->post(route('products.stock-adjustments.store', $volume->offer->product), $payload)->assertRedirect();
+    $this->assertDatabaseCount('stock_movements', 2);
+    $this->assertDatabaseCount('stock_movement_items', 2);
+
+    $payload['reason'] = 'Outro motivo';
+    $this->actingAs($user)->post(route('products.stock-adjustments.store', $volume->offer->product), $payload)
+        ->assertInvalid(['volumes.0.idempotency_key']);
+    $this->assertDatabaseCount('stock_movements', 2);
+});
+
+test('batch corrections roll back every sack when another selection is unavailable', function (string $conflict) {
+    $volume = movementVolume();
+    $other = StockOfferVolume::factory()->withTotal(5)->create(['stock_offer_id' => $volume->stock_offer_id]);
+    $second = stockCorrectionPayload($other, true);
+    if ($conflict === 'reserved') {
+        $other->update(['current_order_id' => Order::factory()->create()->id]);
+    } elseif ($conflict === 'stale') {
+        $other->refresh()->update(['total_quantity' => 6]);
+    } else {
+        $other = movementVolume();
+        $second = stockCorrectionPayload($other, true);
+    }
+    $correction = stockCorrectionPayload($volume);
+    $correction['items'][0]['quantity'] = 8;
+
+    $this->actingAs(User::factory()->create())->post(route('products.stock-adjustments.store', $volume->offer->product), [
+        'volumes' => [$correction, $second],
+        'reason' => 'Correção de cadastro',
+        'idempotency_key' => 'correction-conflict-'.$conflict,
+    ])->assertInvalid(['volumes.1.volume_id']);
+
+    expect($volume->fresh()->total_quantity)->toBe(12)
+        ->and($volume->items()->sole()->quantity)->toBe(12);
+    $this->assertNotSoftDeleted($other);
+    $this->assertDatabaseCount('stock_movements', 0);
+    $this->assertDatabaseCount('stock_movement_items', 0);
+})->with(['reserved', 'stale', 'foreign']);
+
+test('batch corrections reject duplicate sacks and missing reasons without removing stock', function () {
+    $volume = movementVolume();
+    $correction = stockCorrectionPayload($volume, true);
+
+    $this->actingAs(User::factory()->create())->post(route('products.stock-adjustments.store', $volume->offer->product), [
+        'volumes' => [$correction, $correction],
+        'reason' => '',
+        'idempotency_key' => 'correction-invalid',
+    ])->assertInvalid(['volumes.0.volume_id', 'volumes.1.volume_id', 'reason']);
+
+    $this->assertNotSoftDeleted($volume);
+    expect($volume->fresh()->total_quantity)->toBe(12);
+    $this->assertDatabaseCount('stock_movements', 0);
+});
+
+test('stock entries accept more than fifty sacks for every offer type', function (StockOfferType $type) {
+    $product = Product::factory()->create();
+    $user = User::factory()->create();
+    $payload = [
+        'product_id' => $product->id,
+        'stock_offer_type' => $type->value,
+        'reason' => 'Recebimento da fábrica',
+        'idempotency_key' => 'entry-over-fifty-'.$type->value,
+        'stock_volumes' => array_fill(0, 51, [
+            'total_quantity' => 2,
+            'items' => $type === StockOfferType::BrokenGrade
+                ? [['size' => 'M', 'is_active' => true, 'quantity' => 2]]
+                : [],
+        ]),
+    ];
+
+    $this->actingAs($user)->post(route('stock-entries.store'), $payload)->assertRedirect();
+
+    $movement = StockMovement::query()->sole();
+    expect($movement->type)->toBe(StockMovementType::In)
+        ->and($movement->items)->toHaveCount(51)
+        ->and($product->offers()->sole()->type)->toBe($type)
+        ->and(StockOfferVolume::query()->count())->toBe(51)
+        ->and(StockOfferVolume::query()->sum('total_quantity'))->toBe(102);
+
+    $this->actingAs($user)->post(route('stock-entries.store'), $payload)->assertRedirect();
+    $this->assertDatabaseCount('stock_movements', 1);
+    $this->assertDatabaseCount('stock_offer_volumes', 51);
+})->with(StockOfferType::cases());

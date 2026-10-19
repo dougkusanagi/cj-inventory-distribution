@@ -41,7 +41,7 @@ class StoreStockEntryRequest extends FormRequest
             ],
             'notes' => ['nullable', 'string', 'max:5000'],
             'idempotency_key' => ['required', 'string', 'max:160', 'regex:/^[A-Za-z0-9._:-]+$/'],
-            'stock_volumes' => ['required', 'array', 'min:1', 'max:50'],
+            'stock_volumes' => ['required', 'array', 'min:1'],
             'stock_volumes.*' => ['required', 'array:total_quantity,items'],
             'stock_volumes.*.total_quantity' => ['nullable', 'integer', 'min:0'],
             'stock_volumes.*.items' => ['nullable', 'array', 'max:50'],

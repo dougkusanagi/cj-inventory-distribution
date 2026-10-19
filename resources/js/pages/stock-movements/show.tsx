@@ -237,6 +237,13 @@ export default function StockMovementShow({
                                                 </Badge>
                                             )}
                                         </div>
+                                        {item.resulting_state?.removed ===
+                                            true && (
+                                            <p className="text-sm font-medium text-destructive">
+                                                Cadastro do saco removido por
+                                                correção.
+                                            </p>
+                                        )}
                                         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-xl bg-muted/50 p-3 tabular-nums">
                                             <div className="grid gap-0.5">
                                                 <span className="text-xs font-medium text-muted-foreground">

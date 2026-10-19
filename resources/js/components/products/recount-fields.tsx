@@ -27,12 +27,14 @@ export function RecountFields({
     onItems,
     onTotal,
     prefix,
+    showHint = true,
 }: {
     items: RecountItem[];
     total: string;
     onItems: (items: RecountItem[]) => void;
     onTotal: (total: string) => void;
     prefix: string;
+    showHint?: boolean;
 }) {
     const known = items.some((item) => item.is_active && item.quantity !== '');
     const update = (index: number, change: Partial<RecountItem>) =>
@@ -43,11 +45,13 @@ export function RecountFields({
         );
     return (
         <div className="grid gap-4">
-            <p className="text-sm text-muted-foreground">
-                Vazio significa quantidade desconhecida; zero significa nenhuma
-                peça. Ao preencher quantidades, o total passa a ser a soma dos
-                tamanhos contados.
-            </p>
+            {showHint && (
+                <p className="text-sm text-muted-foreground">
+                    Vazio significa quantidade desconhecida; zero significa
+                    nenhuma peça. Ao preencher quantidades, o total passa a ser
+                    a soma dos tamanhos contados.
+                </p>
+            )}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {items.map((item, index) => (
                     <div

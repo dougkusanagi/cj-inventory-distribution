@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\StockMovementSource;
 use App\Enums\StockOfferType;
 use App\Models\Order;
 use App\Models\Product;
@@ -190,15 +191,15 @@ test('product stock correction removes only selected sacks and preserves unavail
         ->assertSee('1 saco · 5 peças serão removidas do estoque.')
         ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
         ->click('button:has-text("Confirmar remoção")')
-        ->assertSee('Saída de estoque registrada.')
-        ->assertSee('Saco adicionado por engano')
+        ->assertSee('Correção de estoque registrada.')
         ->assertNoJavaScriptErrors();
 
     $movement = StockMovement::query()->sole();
-    $page->assertRoute('stock-movements.show', [$movement->id]);
+    $page->assertRoute('products.edit', [$offer->product_id]);
 
+    expect($movement->source)->toBe(StockMovementSource::Adjustment);
     expect($movement->items()->pluck('stock_offer_volume_id')->all())->toBe([$volume->id]);
-    expect($volume->fresh()->consumed_at)->not->toBeNull();
+    $this->assertSoftDeleted($volume);
     expect($kept->fresh()->consumed_at)->toBeNull();
     expect($reserved->fresh()->current_order_id)->toBe($reserved->current_order_id);
     expect($reserved->fresh()->consumed_at)->toBeNull();
@@ -207,3 +208,112 @@ test('product stock correction removes only selected sacks and preserves unavail
     'desktop' => [1280, 900],
     'mobile' => [390, 844],
 ]);
+
+test('sack removal keeps the reason reachable and selects many sacks at once', function (int $width, int $height) {
+    $volume = stockMovementBrowserVolume('Produto com muitos sacos', 2);
+    foreach (range(1, 49) as $index) {
+        $volume->offer->stockVolumes()->create([
+            'total_quantity' => 2,
+            'sort_order' => $index,
+            'code' => 'SC-MANY-'.str_pad((string) $index, 2, '0', STR_PAD_LEFT),
+        ]);
+    }
+    $this->actingAs(User::factory()->create());
+
+    visit(route('products.edit', $volume->offer->product, false))
+        ->resize($width, $height)
+        ->click('#product-tab-stock')
+        ->click('[data-testid="stock-more-actions"]')
+        ->click('[role="menuitem"]:has-text("Excluir sacos")')
+        ->assertVisible('#recount-reason')
+        ->fill('input[aria-label="Buscar saco"]', 'SC-MANY-4')
+        ->click('button:has-text("Selecionar 10 encontrados")')
+        ->assertSee('10 sacos · 20 peças serão removidas do estoque.')
+        ->fill('input[aria-label="Buscar saco"]', '')
+        ->click('button:has-text("Selecionar todos")')
+        ->assertSee('50 sacos · 100 peças serão removidas do estoque.')
+        ->assertVisible('button:has-text("Confirmar remoção")')
+        ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
+        ->assertNoJavaScriptErrors();
+})->with([
+    'desktop' => [1280, 900],
+    'mobile' => [390, 844],
+]);
+
+test('manual exit reason stays open on mobile and allows a predefined and custom choice', function () {
+    $volume = stockMovementBrowserVolume('Produto para saída no celular', 5);
+    $this->actingAs(User::factory()->create());
+
+    $page = visit(route('stock-exits.create', [], false))->on()->mobile()
+        ->click('button[aria-label="Selecionar '.$volume->code.'"]')
+        ->click('#exit-reason')
+        ->assertVisible('[role="listbox"]')
+        ->assertVisible('[role="option"]:has-text("Avaria")')
+        ->click('[role="option"]:has-text("Avaria")')
+        ->assertSeeIn('#exit-reason', 'Avaria')
+        ->click('#exit-reason')
+        ->assertVisible('[role="listbox"]')
+        ->click('[role="option"]:has-text("Outro motivo")')
+        ->fill('#exit-reason-other', 'Retirada para exposição da loja')
+        ->click('button[type="submit"]:has-text("Registrar saída")')
+        ->assertSee('Saída de estoque registrada.')
+        ->assertNoJavaScriptErrors();
+
+    expect(StockMovement::query()->sole()->reason)->toBe('Retirada para exposição da loja')
+        ->and($volume->fresh()->consumed_at)->not->toBeNull();
+});
+
+test('stock correction edits one selected sack and removes another in the same panel', function (int $width, int $height) {
+    $volume = stockMovementBrowserVolume('Produto para corrigir vários sacos', 5);
+    $removed = $volume->offer->stockVolumes()->create(['total_quantity' => 7, 'sort_order' => 1, 'code' => 'SC-REMOVE']);
+    $this->actingAs(User::factory()->create());
+
+    $page = visit(route('products.edit', $volume->offer->product, false))
+        ->resize($width, $height)
+        ->click('#product-tab-stock')
+        ->click('[data-testid="stock-more-actions"]')
+        ->click('[role="menuitem"]:has-text("Corrigir contagem")')
+        ->assertVisible('[data-testid="stock-adjustment-drawer"]')
+        ->click('button[aria-label="Selecionar '.$volume->code.'"]')
+        ->click('button[aria-label="Selecionar SC-REMOVE"]')
+        ->fill('#recount-'.$volume->id.'-0', '4')
+        ->click('button[aria-label="Ações SC-REMOVE"]')
+        ->click('[role="menuitem"]:has-text("Remover cadastro incorreto")')
+        ->assertSee('1 saco · 7 peças serão removidas do estoque.')
+        ->click('#recount-reason')
+        ->click('[role="option"]:has-text("Correção de cadastro")')
+        ->click('button:has-text("Confirmar correções")')
+        ->assertSee('Correção de estoque registrada.')
+        ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
+        ->assertNoJavaScriptErrors();
+
+    expect($volume->fresh()->total_quantity)->toBe(4)
+        ->and(StockMovement::query()->where('source', StockMovementSource::Adjustment)->count())->toBe(2);
+    $this->assertSoftDeleted($removed);
+})->with([
+    'desktop' => [1280, 900],
+    'mobile' => [390, 844],
+]);
+
+test('stock entry totals can register more than fifty sacks from the product panel', function () {
+    $product = Product::factory()->create(['name' => 'Produto para entrada grande']);
+    $this->actingAs(User::factory()->create());
+
+    visit(route('products.edit', $product, false))
+        ->resize(390, 844)
+        ->click('#product-tab-stock')
+        ->click('[data-testid="open-stock-entry"]')
+        ->fill('#entry-stock-totals-bag-count', '51')
+        ->assertValue('#entry-stock-totals-bag-count', '51')
+        ->click('button[aria-label="Adicionar um saco"]')
+        ->assertValue('#entry-stock-totals-bag-count', '52')
+        ->fill('#entry-stock-totals-piece-count', '104')
+        ->assertSee('em 52 sacos')
+        ->click('button[type="submit"]:has-text("Registrar entrada")')
+        ->assertSee('Entrada de estoque registrada.')
+        ->assertNoJavaScriptErrors();
+
+    expect(StockMovement::query()->sole()->items)->toHaveCount(52)
+        ->and(StockOfferVolume::query()->count())->toBe(52)
+        ->and(StockOfferVolume::query()->sum('total_quantity'))->toBe(104);
+});

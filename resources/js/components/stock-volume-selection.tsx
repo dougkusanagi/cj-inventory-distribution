@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { StockExitVolume } from '@/types';
@@ -8,12 +9,14 @@ export function StockVolumeSelection({
     onToggle,
     disabled = false,
     showProduct = true,
+    renderDetails,
 }: {
     volumes: StockExitVolume[];
     selectedIds: number[];
     onToggle: (id: number, checked: boolean) => void;
     disabled?: boolean;
     showProduct?: boolean;
+    renderDetails?: (volume: StockExitVolume) => ReactNode;
 }) {
     return volumes.map((volume) => {
         const selected = selectedIds.includes(volume.id);
@@ -21,7 +24,8 @@ export function StockVolumeSelection({
             .filter(Boolean)
             .join(' · ');
 
-        return (
+        const details = selected ? renderDetails?.(volume) : null;
+        const card = (
             <label
                 key={volume.id}
                 data-selected={selected}
@@ -60,6 +64,15 @@ export function StockVolumeSelection({
                     <StockSizeBreakdown sizes={volume.sizes} compact />
                 </span>
             </label>
+        );
+
+        return details ? (
+            <div key={volume.id} className="grid gap-2">
+                {card}
+                {details}
+            </div>
+        ) : (
+            card
         );
     });
 }

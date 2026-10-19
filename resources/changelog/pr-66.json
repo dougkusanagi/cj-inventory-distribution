@@ -1,33 +1,33 @@
 {
-  "title": "Exclusão de produtos e identificação de inativos",
-  "changes": [
-    {
-      "category": "added",
-      "text": "Adicionada a opção de excluir produtos no formulário de edição, com confirmação e botão acessível também no celular. Cancelar a exclusão preserva as alterações não salvas."
-    },
-    {
-      "category": "improved",
-      "text": "Cartões normais e compactos passaram a exibir o selo “Inativo”, além da foto em preto e branco, para identificar a situação do produto."
-    },
-    {
-      "category": "fixed",
-      "text": "Padronizado o ícone de lixeira na opção de excluir dos cartões."
-    },
-    {
-      "category": "improved",
-      "text": "Centralizado o funcionamento da exclusão na listagem e na edição, compartilhando confirmação, envio e mensagens de erro. Durante o envio, a confirmação fica bloqueada. Foram mantidas as restrições existentes para estoque, reservas e histórico de pedidos."
-    },
-    {
-      "category": "improved",
-      "text": "Adicionados testes de navegador para exclusão e cancelamento na edição com alterações não salvas, bloqueio de exclusão com estoque e identificação de inativos nos dois layouts. Executada a verificação completa de qualidade do projeto."
-    },
-    {
-      "category": "improved",
-      "text": "Padronizada a formatação de cinco notas existentes do histórico de atualizações, sem alterar seu conteúdo."
-    }
-  ],
-  "pr_number": 66,
-  "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/66",
-  "merged_at": "2026-10-15T12:57:09Z",
-  "commit": "84c165f896208ad115ec7e52276fcf704e473c62"
+    "title": "Exclusão de produtos e identificação de inativos",
+    "changes": [
+        {
+            "category": "added",
+            "text": "Adicionada a opção de excluir produtos no formulário de edição, com confirmação e botão acessível também no celular. Cancelar a exclusão preserva as alterações não salvas."
+        },
+        {
+            "category": "improved",
+            "text": "Cartões normais e compactos passaram a exibir o selo “Inativo”, além da foto em preto e branco, para identificar a situação do produto."
+        },
+        {
+            "category": "fixed",
+            "text": "Padronizado o ícone de lixeira na opção de excluir dos cartões."
+        },
+        {
+            "category": "improved",
+            "text": "Centralizado o funcionamento da exclusão na listagem e na edição, compartilhando confirmação, envio e mensagens de erro. Durante o envio, a confirmação fica bloqueada. Foram mantidas as restrições existentes para estoque, reservas e histórico de pedidos."
+        },
+        {
+            "category": "improved",
+            "text": "Adicionados testes de navegador para exclusão e cancelamento na edição com alterações não salvas, bloqueio de exclusão com estoque e identificação de inativos nos dois layouts. Executada a verificação completa de qualidade do projeto."
+        },
+        {
+            "category": "improved",
+            "text": "Padronizada a formatação de cinco notas existentes do histórico de atualizações, sem alterar seu conteúdo."
+        }
+    ],
+    "pr_number": 66,
+    "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/66",
+    "merged_at": "2026-10-15T12:57:09Z",
+    "commit": "84c165f896208ad115ec7e52276fcf704e473c62"
 }

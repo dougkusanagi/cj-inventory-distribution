@@ -12,13 +12,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-const maxBagCount = 50;
-
 type StockOfferTotalsFieldsProps = {
     volumes: StockOfferVolumeFormItem[];
     errors: Record<string, string | undefined>;
     onChange: (volumes: StockOfferVolumeFormItem[]) => void;
     idPrefix?: string;
+    maxBagCount?: number | null;
 };
 
 function parseCount(rawValue: string): number | null {
@@ -89,6 +88,7 @@ export function StockOfferTotalsFields({
     errors,
     onChange,
     idPrefix = 'stock-totals',
+    maxBagCount = 50,
 }: StockOfferTotalsFieldsProps) {
     const [bagCount, setBagCount] = useState<number | null>(() =>
         volumes.length > 0 ? volumes.length : null,
@@ -104,7 +104,9 @@ export function StockOfferTotalsFields({
         nextPieceCount: number | null,
     ) => {
         const boundedBagCount =
-            nextBagCount === null ? null : Math.min(nextBagCount, maxBagCount);
+            nextBagCount === null || maxBagCount === null
+                ? nextBagCount
+                : Math.min(nextBagCount, maxBagCount);
 
         setBagCount(boundedBagCount);
         setPieceCount(nextPieceCount);
@@ -158,7 +160,7 @@ export function StockOfferTotalsFields({
                             id={bagCountId}
                             type="number"
                             min="1"
-                            max={maxBagCount}
+                            max={maxBagCount ?? undefined}
                             inputMode="numeric"
                             pattern="[0-9]*"
                             value={bagCount ?? ''}
@@ -180,7 +182,10 @@ export function StockOfferTotalsFields({
                             onClick={() =>
                                 update((bagCount ?? 0) + 1, pieceCount)
                             }
-                            disabled={(bagCount ?? 0) >= maxBagCount}
+                            disabled={
+                                maxBagCount !== null &&
+                                (bagCount ?? 0) >= maxBagCount
+                            }
                             aria-label="Adicionar um saco"
                         >
                             <PlusCircleIcon />

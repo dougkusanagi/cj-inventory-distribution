@@ -17,6 +17,7 @@ export type StockMovementSummary = {
 };
 
 export type StockMovementState = {
+    removed?: boolean;
     volume_id?: number;
     volume_code?: string;
     total_quantity?: number;

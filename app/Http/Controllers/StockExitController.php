@@ -25,7 +25,7 @@ class StockExitController extends Controller
             ? $selectedProductId
             : null;
         $search = trim($request->string('search')->toString());
-        $selectedIds = collect((array) $request->input('selected', []))->filter(fn ($id) => is_numeric($id))->take(100)->map(fn ($id) => (int) $id);
+        $selectedIds = collect((array) $request->input('selected', []))->filter(fn ($id) => is_numeric($id))->map(fn ($id) => (int) $id);
         $query = StockOfferVolume::query()->whereNull('current_order_id')->whereNull('consumed_at')->where('total_quantity', '>', 0)
             ->when($selectedProductId !== null, fn ($query) => $query->whereHas('offer', fn ($offer) => $offer->where('product_id', $selectedProductId)))
             ->with(['items', 'offer.product']);

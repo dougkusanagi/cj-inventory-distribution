@@ -837,10 +837,11 @@ export function ProductForm({
                                                                 contagem
                                                             </span>
                                                             <span className="text-xs text-muted-foreground">
-                                                                Ajuste a
-                                                                quantidade de um
-                                                                saco depois de
-                                                                conferir.
+                                                                Ajuste contagens
+                                                                ou remova
+                                                                cadastros
+                                                                incorretos de
+                                                                sacos.
                                                             </span>
                                                         </span>
                                                     </DropdownMenuItem>
@@ -862,8 +863,8 @@ export function ProductForm({
                                                             </span>
                                                             <span className="text-xs text-muted-foreground">
                                                                 Cadastrados por
-                                                                engano. Saem do
-                                                                estoque.
+                                                                engano. Correção
+                                                                no histórico.
                                                             </span>
                                                         </span>
                                                     </DropdownMenuItem>
@@ -1163,21 +1164,25 @@ export function ProductForm({
                         {form.processing || processingImages ? (
                             <Spinner />
                         ) : (
-                            <FloppyDiskIcon />
+                            <FloppyDiskIcon className="hidden sm:block" />
                         )}
-                        {form.processing
-                            ? 'Salvando...'
-                            : processingImages
-                              ? 'Preparando fotos...'
-                              : isEditing
-                                ? 'Salvar alterações'
-                                : 'Cadastrar produto'}
+                        {form.processing ? (
+                            'Salvando...'
+                        ) : processingImages ? (
+                            'Preparando fotos...'
+                        ) : isEditing ? (
+                            <>
+                                Salvar
+                                <span className="hidden sm:inline">
+                                    {' '}
+                                    alterações
+                                </span>
+                            </>
+                        ) : (
+                            'Cadastrar produto'
+                        )}
                         {form.isDirty && !form.processing && (
                             <>
-                                <span
-                                    aria-hidden="true"
-                                    className="size-2 rounded-full bg-primary-foreground/70 sm:hidden"
-                                />
                                 <span className="sr-only sm:hidden">
                                     Há alterações não salvas
                                 </span>
