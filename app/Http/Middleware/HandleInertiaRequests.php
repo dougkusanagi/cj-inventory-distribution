@@ -40,6 +40,11 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user(),
+                'can' => [
+                    'manageUsers' => $request->user()?->isAdmin() ?? false,
+                    'manageOperations' => $request->user()?->isStaff() ?? false,
+                    'managePhotos' => $request->user()?->canManagePhotos() ?? false,
+                ],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

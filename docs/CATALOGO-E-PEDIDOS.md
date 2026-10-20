@@ -13,7 +13,7 @@ busca por nome/modelo/código,
 filtros por categoria e linha Slim/Plus, seleção de sacos distintos e revisão
 da sacola funcionam localmente no navegador. Grade Nova nunca aparece.
 
-O `CatalogDemoSeeder` cria categorias, classificação Slim/Plus, ofertas em
+O `CatalogDemoSeeder` cria categorias, classificação Slim/Plus, estoques em
 sacos e anexa as fotos de demonstração versionadas pela Media Library. Ele
 prepara o banco local com `php artisan migrate --seed` e pode ser executado
 novamente sem duplicar registros ou mídias. A sacola persiste no `localStorage`
@@ -27,9 +27,8 @@ As factories permitem montar cenários de teste sem repetir atributos:
 
 ```php
 $category = Category::factory()->create();
-$product = Product::factory()->inCategory($category)->plus()->create();
-$offer = StockOffer::factory()->replenishment()->for($product)->create();
-$volume = StockOfferVolume::factory()->for($offer)->withTotal(20)->create();
+$product = Product::factory()->inCategory($category)->plus()->replenishment()->create();
+$volume = StockOfferVolume::factory()->for($product)->withTotal(20)->create();
 StockOfferVolumeItem::factory()->for($volume)->withQuantity(4)->create();
 ```
 
@@ -46,7 +45,7 @@ a largura. Não usamos a home de painéis/colunas verticais, preços, promoçõe
 ou regras de seleção por peça daquele projeto. Mantemos os tokens do estoque,
 suporte a claro/escuro, imagens futuras em 4:5 e os componentes shadcn existentes.
 
-**Código existente relevante:** Product, StockOffer, StockOfferVolume,
+**Código existente relevante:** Product, StockOfferVolume,
 StockOfferVolumeItem e CRUD de produtos já existem. Categorias e a linha
 Slim/Plus já têm model, migration, enum, factories e seeder demonstrativo;
 O CRUD de categorias está conectado ao cadastro de produtos. A gestão interna
@@ -55,7 +54,7 @@ dados enquanto pendente, separar e conferir sacos, registrar e resolver
 divergências, cancelar e finalizar, com reserva transacional e trilha de
 eventos. O catálogo público usa os dados persistidos, registra pedidos com
 chave idempotente e abre o WhatsApp somente depois da persistência. O scope
-`StockOffer::availableForCatalog` exclui Grade Nova e sacos reservados ou já
+`Product::availableForCatalog` exclui Grade Nova e sacos reservados ou já
 consumidos; o dashboard usa uma consulta interna própria para continuar
 mostrando Grade Nova na operação.
 
@@ -131,7 +130,7 @@ limpar a sacola.
 
 Aplicar no servidor, antes de paginação, contagem, filtros e serialização:
 
-1. Produto ativo e oferta existente.
+1. Produto ativo com sacos em estoque.
 2. Oferta **não é Grade Nova** (`new_grade`).
 3. Existe saco com total positivo e disponível para pedido.
 4. Sacos reservados/baixados não participam de opções nem totais públicos.
@@ -139,8 +138,7 @@ Aplicar no servidor, antes de paginação, contagem, filtros e serialização:
 Categoria e linha não podem contornar essa regra. Resultados de busca,
 detalhes, parâmetros de URL e validação do pedido seguem a mesma elegibilidade.
 Não enviar Grade Nova no payload público e apenas escondê-la com JavaScript.
-Um produto com mais de uma oferta deve ser avaliado pelas ofertas elegíveis;
-não mudar o tipo do produto, pois tipo pertence à oferta.
+O tipo de grade pertence ao produto (ADR 0024); cada produto tem um único tipo.
 
 Criar consulta/resource de catálogo com somente os dados necessários. Utilizar
 as relações carregadas e paginação por lotes com botão “Carregar mais”, mantendo
@@ -205,7 +203,7 @@ de peças; não sobrecarregar `quantity` com significados diferentes.
 ### Concorrência e reserva simples
 
 - Registrar pedido e reservar todos os sacos em uma única transação.
-- Bloquear linhas de sacos em ordem estável, revalidar oferta, produto, tipo,
+- Bloquear linhas de sacos em ordem estável, revalidar produto, tipo,
   quantidade e reserva; se um falhar, não registrar parcialmente o pedido.
 - Uma referência de reserva no próprio saco fornece um único proprietário;
   não depender apenas de uma consulta “não existe item pendente”.
@@ -217,7 +215,7 @@ de peças; não sobrecarregar `quantity` com significados diferentes.
   a reserva na mesma transação. Nenhuma repetição causa segunda baixa.
 - Não implementar expiração automática inicialmente; listar pedidos antigos
   pendentes para equipe revisar. Definir prazo operacional antes de automatizar.
-- Revisar a edição atual: `SyncProductStockOffer` apaga sacos omitidos e itens
+- Revisar a edição atual: `SyncProductStock` apaga sacos omitidos e itens
   removidos. Bloquear exclusão/alteração do conteúdo de sacos reservados ou
   consumidos. Desativar produto pode ocultar disponibilidade sem apagar
   pedidos; encerrar estoque deve bloquear quando existirem reservas.

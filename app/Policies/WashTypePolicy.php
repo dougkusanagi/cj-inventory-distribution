@@ -12,7 +12,7 @@ class WashTypePolicy
      */
     public function viewAny(User $user): bool
     {
-        return true;
+        return $user->isStaff();
     }
 
     /**
@@ -20,7 +20,7 @@ class WashTypePolicy
      */
     public function create(User $user): bool
     {
-        return true;
+        return $user->isStaff();
     }
 
     /**
@@ -28,7 +28,7 @@ class WashTypePolicy
      */
     public function update(User $user, WashType $washType): bool
     {
-        return true;
+        return $user->isStaff();
     }
 
     /**
@@ -36,6 +36,6 @@ class WashTypePolicy
      */
     public function delete(User $user, WashType $washType): bool
     {
-        return true;
+        return $user->isStaff();
     }
 }

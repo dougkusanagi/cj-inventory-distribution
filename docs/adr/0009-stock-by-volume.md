@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted; os sacos passaram a pertencer ao produto pela ADR 0024.
 
 ## Contexto
 

@@ -26,7 +26,7 @@ class ManageInventoryCount
 
                 return $existing;
             }
-            $volumes = StockOfferVolume::whereIn('id', $ids)->with(['items', 'offer.product'])->get();
+            $volumes = StockOfferVolume::whereIn('id', $ids)->with(['items', 'product'])->get();
             if ($volumes->count() !== $ids->count()) {
                 throw ValidationException::withMessages(['volume_ids' => 'Um saco selecionado não existe mais. Atualize a seleção.']);
             }
@@ -50,7 +50,7 @@ class ManageInventoryCount
         StockMutation::run(function () use ($count, $itemId, $data): void {
             $this->editable($count, (int) $data['version']);
             $item = $count->items()->findOrFail($itemId);
-            $volume = $item->volume()->with(['items', 'offer.product'])->firstOrFail();
+            $volume = $item->volume()->with(['items', 'product'])->firstOrFail();
             $this->unchanged($item, $volume);
             $normalized = $this->recount->normalize($volume, $data['items'], $data['total_quantity'] ?? null);
             $item->update(['counted_items' => $normalized['items'], 'counted_total' => $normalized['total_quantity']]);
@@ -63,7 +63,7 @@ class ManageInventoryCount
         StockMutation::run(function () use ($count, $itemId, $version): void {
             $this->editable($count, $version);
             $item = $count->items()->findOrFail($itemId);
-            $volume = $item->volume()->with(['items', 'offer.product'])->firstOrFail();
+            $volume = $item->volume()->with(['items', 'product'])->firstOrFail();
             $this->available($volume);
             $item->update(['expected_version' => $volume->stock_version, 'snapshot' => $this->snapshot($volume),
                 'counted_items' => null, 'counted_total' => null]);
@@ -79,7 +79,7 @@ class ManageInventoryCount
                 return;
             }
             $this->editable($count, $version);
-            $items = $count->items()->with(['volume.items', 'volume.offer.product'])->orderBy('stock_offer_volume_id')->get();
+            $items = $count->items()->with(['volume.items', 'volume.product'])->orderBy('stock_offer_volume_id')->get();
             foreach ($items as $item) {
                 if ($item->counted_total === null || $item->counted_items === null) {
                     throw ValidationException::withMessages(['inventory' => 'Conte todos os sacos antes de confirmar o balanço.']);
@@ -92,7 +92,7 @@ class ManageInventoryCount
                 $same = $normalized['total_quantity'] === $volume->total_quantity
                     && $normalized['items'] === $this->snapshot($volume)['items'];
                 if (! $same) {
-                    $movement = $this->adjust->handle($volume->offer->product, [
+                    $movement = $this->adjust->handle($volume->product, [
                         'volume_id' => $volume->id, 'expected_version' => $item->expected_version,
                         'items' => $item->counted_items, 'total_quantity' => $item->counted_total,
                         'reason' => 'Balanço #'.$count->id.': '.$count->reason,
@@ -125,7 +125,7 @@ class ManageInventoryCount
     private function available(StockOfferVolume $volume): void
     {
         if ($volume->trashed() || $volume->current_order_id !== null || $volume->consumed_at !== null
-            || $volume->offer->trashed() || $volume->offer->product->trashed()) {
+            || $volume->product->trashed()) {
             throw ValidationException::withMessages(['inventory' => 'O saco '.$volume->id.' está reservado, consumido ou excluído. Regularize-o antes de contar.']);
         }
     }
@@ -142,7 +142,7 @@ class ManageInventoryCount
     private function snapshot(StockOfferVolume $volume): array
     {
         return ['code' => $volume->code ?? 'SC-'.str_pad((string) $volume->id, 6, '0', STR_PAD_LEFT),
-            'product' => $volume->offer->product->name, 'total_quantity' => $volume->total_quantity,
+            'product' => $volume->product->name, 'total_quantity' => $volume->total_quantity,
             'items' => $volume->items->map(fn ($item): array => ['id' => $item->id, 'size' => $item->size,
                 'is_active' => $item->is_active, 'quantity' => $item->quantity])->all()];
     }

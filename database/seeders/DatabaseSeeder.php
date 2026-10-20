@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -15,19 +16,24 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $testUser = User::query()->firstOrNew([
-            'email' => 'test@example.com',
-        ]);
+        if (! app()->environment(['local', 'testing'])) {
+            return;
+        }
 
-        $testUser->fill([
-            'name' => 'Test User',
-            'password' => 'password',
-        ]);
-        $testUser->forceFill([
-            'email_verified_at' => now(),
-            'is_staff' => true,
-        ]);
-        $testUser->save();
+        foreach ([
+            'test@example.com' => ['Test User', UserRole::Admin],
+            'estoque@example.com' => ['Usuário do Estoque', UserRole::Stock],
+            'marketing@example.com' => ['Usuário do Marketing', UserRole::Marketing],
+        ] as $email => [$name, $role]) {
+            $user = User::query()->firstOrNew(['email' => $email]);
+            if ($user->exists) {
+                continue;
+            }
+
+            $user->fill(['name' => $name, 'password' => 'password']);
+            $user->forceFill(['email_verified_at' => now(), 'role' => $role]);
+            $user->save();
+        }
 
         $this->call(CatalogDemoSeeder::class);
         $this->call(OperationalDemoSeeder::class);

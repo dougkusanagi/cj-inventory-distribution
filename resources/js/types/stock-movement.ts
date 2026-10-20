@@ -1,6 +1,11 @@
 export type StockMovementType = 'in' | 'out' | 'adjustment';
 
-export type StockMovementSource = 'manual' | 'adjustment' | 'order' | 'opening';
+export type StockMovementSource =
+    | 'manual'
+    | 'adjustment'
+    | 'order'
+    | 'opening'
+    | 'reclassification';
 
 export type StockMovementSummary = {
     id: number;
@@ -26,7 +31,6 @@ export type StockMovementState = {
     sizes?: Array<{ size: string; quantity: number | null }>;
     product_id?: number | null;
     product_code?: string | null;
-    offer_id?: number | null;
     offer_type?: string | null;
 };
 

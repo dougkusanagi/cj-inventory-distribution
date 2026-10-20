@@ -31,7 +31,6 @@ export function StockEntryModal({
         <StockEntryForm
             key={open ? 'open' : 'closed'}
             fixedProduct={product}
-            initialStockOfferType={product.stock_offer_type ?? 'replenishment'}
             returnToProduct
             onCancel={() => onOpenChange(false)}
             onSuccess={() => onOpenChange(false)}

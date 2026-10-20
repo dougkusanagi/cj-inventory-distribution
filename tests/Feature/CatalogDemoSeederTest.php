@@ -4,7 +4,6 @@ use App\Enums\ProductLine;
 use App\Enums\StockOfferType;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\StockOffer;
 use Database\Seeders\CatalogDemoSeeder;
 use Database\Seeders\FullSizeCatalogDemoSeeder;
 use Illuminate\Support\Facades\Storage;
@@ -18,36 +17,35 @@ test('seeds a repeatable catalog demo with classified products and physical sack
 
     expect(Category::query()->count())->toBe(6)
         ->and(Product::query()->where('code', 'like', 'DEMO-CJ-%')->count())->toBe(10)
-        ->and(StockOffer::query()->whereHas('product', fn ($query) => $query->where('code', 'like', 'DEMO-CJ-%'))->count())->toBe(10);
+        ->and(Product::query()->where('code', 'like', 'DEMO-CJ-%')->has('stockVolumes')->count())->toBe(10);
 
     $product = Product::query()
-        ->with(['category', 'latestOffer.stockVolumes.items'])
+        ->with(['category', 'stockVolumes.items'])
         ->where('code', 'DEMO-CJ-0001')
         ->firstOrFail();
 
     expect($product->category->slug)->toBe('calca')
         ->and($product->line)->toBe(ProductLine::Slim)
-        ->and($product->latestOffer->type)->toBe(StockOfferType::Replenishment)
-        ->and($product->latestOffer->calculatedTotalQuantity())->toBe(38)
-        ->and($product->latestOffer->stockVolumes->pluck('total_quantity')->all())->toBe([20, 18])
-        ->and($product->latestOffer->stockVolumes->first()->items->pluck('size')->all())->toBe(['34', '36', '38', '40', '42', '44', '46'])
-        ->and($product->latestOffer->stockVolumes->first()->items->pluck('quantity')->all())->toBe([4, 4, 4, 4, 4, null, null])
+        ->and($product->stock_offer_type)->toBe(StockOfferType::Replenishment)
+        ->and($product->stockVolumes->sum('total_quantity'))->toBe(38)
+        ->and($product->stockVolumes->pluck('total_quantity')->all())->toBe([20, 18])
+        ->and($product->stockVolumes->first()->items->pluck('size')->all())->toBe(['34', '36', '38', '40', '42', '44', '46'])
+        ->and($product->stockVolumes->first()->items->pluck('quantity')->all())->toBe([4, 4, 4, 4, 4, null, null])
         ->and($product->getMedia(Product::MEDIA_COLLECTION))->toHaveCount(2)
         ->and($product->getFirstMedia(Product::MEDIA_COLLECTION)?->file_name)->toBe('calca-wide-leg.png');
 
     $newGrade = Product::query()
-        ->with('latestOffer')
         ->where('code', 'DEMO-CJ-0008')
         ->firstOrFail();
 
-    expect($newGrade->latestOffer->type)->toBe(StockOfferType::NewGrade);
+    expect($newGrade->stock_offer_type)->toBe(StockOfferType::NewGrade);
 
     $letterProduct = Product::query()
-        ->with('latestOffer.stockVolumes.items')
+        ->with('stockVolumes.items')
         ->where('code', 'DEMO-CJ-0004')
         ->firstOrFail();
 
-    expect($letterProduct->latestOffer->stockVolumes->first()->items->pluck('size')->all())
+    expect($letterProduct->stockVolumes->first()->items->pluck('size')->all())
         ->toBe(['PP', 'P', 'M', 'G', 'GG']);
 
     $skirt = Product::query()->where('code', 'DEMO-CJ-0007')->firstOrFail();
@@ -65,20 +63,20 @@ test('seeds a repeatable catalog demo with classified products and physical sack
         ->toBe('short-mom.png');
 
     $photoFallback = Product::query()
-        ->with('latestOffer.stockVolumes.items')
+        ->with('stockVolumes.items')
         ->where('code', 'DEMO-CJ-0010')
         ->firstOrFail();
 
     expect($photoFallback->getMedia(Product::MEDIA_COLLECTION))->toHaveCount(0)
-        ->and($photoFallback->latestOffer->stockVolumes->first()->items)->toHaveCount(0)
-        ->and($photoFallback->latestOffer->type)->toBe(StockOfferType::BrokenGrade);
+        ->and($photoFallback->stockVolumes->first()->items)->toHaveCount(0)
+        ->and($photoFallback->stock_offer_type)->toBe(StockOfferType::BrokenGrade);
 
     $unknownQuantities = Product::query()
-        ->with('latestOffer.stockVolumes.items')
+        ->with('stockVolumes.items')
         ->where('code', 'DEMO-CJ-0011')
         ->firstOrFail();
 
-    expect($unknownQuantities->latestOffer->stockVolumes->first()->items->where('is_active', true)->pluck('quantity')->all())
+    expect($unknownQuantities->stockVolumes->first()->items->where('is_active', true)->pluck('quantity')->all())
         ->toBe([null, null, null]);
 });
 

@@ -1,4 +1,5 @@
 import { Link, router, useForm } from '@inertiajs/react';
+import { index as stockMovementsIndex } from '@/routes/stock-movements';
 import {
     CameraPlusIcon,
     PencilSimpleLineIcon,
@@ -108,6 +109,34 @@ const formTabs = [
     { id: 'photos', label: 'Fotos', icon: ImagesIcon },
     { id: 'stock', label: 'Estoque', icon: PaperBag },
 ] as const;
+
+/**
+ * Explains what saving a new stock type changes for the product.
+ */
+function stockTypeChangeNotice(
+    initialType: StockOfferType,
+    type: StockOfferType,
+    hasVolumes: boolean,
+): string | null {
+    if (type === initialType) {
+        return type === 'new_grade'
+            ? 'Grade Nova é só para uso interno: o produto não aparece no catálogo nem entra em pedidos.'
+            : null;
+    }
+
+    const effect =
+        type === 'new_grade'
+            ? 'Ao salvar, o produto deixa de aparecer no catálogo. Sacos reservados em pedidos impedem a mudança.'
+            : initialType === 'new_grade'
+              ? 'Ao salvar, o produto passa a aparecer no catálogo se estiver ativo e com estoque.'
+              : type === 'broken_grade'
+                ? 'Ao salvar, os sacos passam a ter tamanhos; detalhe-os pela recontagem quando quiser.'
+                : 'Ao salvar, os sacos passam a ser registrados só pelo total; os tamanhos já informados continuam guardados.';
+
+    return hasVolumes
+        ? `${effect} A mudança fica registrada no histórico de estoque.`
+        : effect;
+}
 
 function tabForError(field: string): ProductFormTab {
     if (
@@ -318,6 +347,14 @@ export function ProductForm({
               ? 'Não aparece para as vendedoras: estoque zerado.'
               : 'Aparece para as vendedoras.';
 
+    const stockTypeNotice = product
+        ? stockTypeChangeNotice(
+              product.stock_offer_type ?? 'new_grade',
+              form.data.stock_offer_type || 'new_grade',
+              product.stock_volumes.length > 0,
+          )
+        : null;
+
     const changeOfferType = (type: StockOfferType) => {
         form.setData((previousData) => ({
             ...previousData,
@@ -374,7 +411,6 @@ export function ProductForm({
             if (!isEditing) return data;
             const payload: Partial<ProductFormData> = { ...data };
             delete payload.stock_volumes;
-            delete payload.stock_offer_type;
             return payload;
         });
 
@@ -801,7 +837,7 @@ export function ProductForm({
                                         Estoque do produto
                                     </h2>
                                     <CardDescription className="text-sm leading-6">
-                                        Todos os sacos e ofertas. Entradas,
+                                        Todos os sacos do produto. Entradas,
                                         saídas e recontagens ficam registradas
                                         no histórico.
                                     </CardDescription>
@@ -933,6 +969,30 @@ export function ProductForm({
                             </CardHeader>
                         </Card>
 
+                        <Card
+                            className="gap-0 rounded-2xl border-border p-0 shadow-none"
+                            data-testid="product-stock-type"
+                        >
+                            <CardContent className="grid gap-4 p-5 sm:p-6">
+                                <StockOfferTypeSelector
+                                    idPrefix="product-stock-type"
+                                    value={form.data.stock_offer_type}
+                                    onChange={(type) =>
+                                        form.setData('stock_offer_type', type)
+                                    }
+                                    error={error('stock_offer_type')}
+                                />
+                                {stockTypeNotice && (
+                                    <p
+                                        className="rounded-xl bg-muted/60 px-3 py-2.5 text-sm leading-5 text-muted-foreground"
+                                        aria-live="polite"
+                                    >
+                                        {stockTypeNotice}
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
+
                         {product.stock_volumes.length > 0 ? (
                             <div className="grid gap-3 md:grid-cols-2">
                                 {product.stock_volumes.map((volume) => {
@@ -999,11 +1059,20 @@ export function ProductForm({
                             <div className="grid justify-items-center gap-2 rounded-2xl border border-dashed border-border p-8 text-center">
                                 <PaperBag className="size-8 text-muted-foreground" />
                                 <p className="text-sm text-muted-foreground">
-                                    Nenhum saco cadastrado. Registre uma entrada
+                                    Nenhum saco em estoque. Registre uma entrada
                                     para disponibilizar estoque.
                                 </p>
                             </div>
                         )}
+                        <Button variant="outline" asChild>
+                            <Link
+                                href={stockMovementsIndex({
+                                    query: { product: product.id },
+                                })}
+                            >
+                                Ver histórico de movimentações
+                            </Link>
+                        </Button>
                     </div>
                 ) : (
                     <>

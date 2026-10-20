@@ -18,10 +18,9 @@ auditoria foram adicionadas nos ADRs 0016 e 0017.
 ## Modelo de domínio
 
 ```text
-Product
-  └── StockOffer
-        └── StockOfferVolume
-              └── StockOfferVolumeItem
+Product (stock_offer_type)
+  └── StockOfferVolume
+        └── StockOfferVolumeItem
 
 Order
   └── OrderItem -> StockOfferVolume
@@ -76,12 +75,10 @@ Exemplo:
 ```
 
 Um produto sem modelo continua plenamente utilizável.
-O produto inicia ativo, mas pode ser desativado independentemente das ofertas
-de estoque. Produtos inativos não aparecem no catálogo compartilhado.
+O produto inicia ativo, mas pode ser desativado independentemente do estoque.
+Produtos inativos não aparecem no catálogo compartilhado.
 
-Um produto também pode ser salvo sem uma oferta de estoque. A oferta é criada
-ao adicionar o primeiro saco e removida ao encerrar o estoque. Toda oferta
-possui ao menos um saco.
+Um produto também pode ser salvo sem sacos em estoque.
 
 ## Tipos de lavagem
 
@@ -126,23 +123,12 @@ Esses presets são apenas conveniência de interface. O domínio aceita qualquer
 tamanho válido e não inclui presets masculino ou de tamanho único sem requisito
 explícito.
 
-## StockOffer
+## Tipo de grade
 
-Representa uma disponibilidade atual de estoque. A classificação pertence à
-oferta, não ao produto nem ao saco.
+O tipo de grade pertence ao produto (`products.stock_offer_type`, ADR 0024),
+que tem um único tipo, mesmo sem estoque. O padrão é Grade Nova.
 
-Campos sugeridos:
-
-```text
-id
-product_id
-type
-notes nullable
-created_at
-updated_at
-```
-
-Tipos iniciais:
+Tipos:
 
 ```text
 replenishment
@@ -158,34 +144,41 @@ Grade Nova
 Grade Furada
 ```
 
-O cadastro não infere o tipo a partir das quantidades. Ao adicionar sacos, o
-tipo é informado explicitamente e existe pelo menos um `StockOfferVolume`.
+O cadastro não infere o tipo a partir das quantidades. A entrada de estoque usa
+o tipo do produto: Reposição e Grade Nova pedem só o total de sacos e de peças;
+Grade Furada pede motivo e permite tamanhos por saco.
 
-A disponibilidade usa a soma de `StockOfferVolume.total_quantity`: a oferta
-só aparece quando o produto está ativo, existe ao menos um saco disponível e o
-total agregado é maior que zero.
+A edição do produto pode mudar o tipo. Com sacos em estoque, a mudança gera
+uma movimentação de origem `reclassification`, sem alterar quantidades, com o
+tipo anterior e o novo nos estados de cada saco. Pedidos e movimentações
+preservam o tipo em seus snapshots. Como Grade Nova não entra em pedidos, a
+mudança para Grade Nova é bloqueada enquanto houver sacos reservados.
+
+A disponibilidade usa a soma de `StockOfferVolume.total_quantity`: o produto
+só aparece quando está ativo, existe ao menos um saco disponível e o total
+agregado é maior que zero.
 
 Além dessas condições, o catálogo para lojistas **nunca mostra Grade Nova**.
-O scope de backend aplica essa exclusão antes de enviar os dados ao frontend.
-Grade Nova continua
-válida para gestão interna, sem opção de publicá-la no catálogo.
+O scope `Product::availableForCatalog` aplica essa exclusão antes de enviar os
+dados ao frontend. Grade Nova continua válida para gestão interna, sem opção
+de publicá-la no catálogo.
 
 ## StockOfferVolume
 
-Representa um saco físico da oferta.
+Representa um saco físico do produto.
 
 Campos sugeridos:
 
 ```text
 id
-stock_offer_id
+product_id
 sort_order
 total_quantity
 created_at
 updated_at
 ```
 
-Uma oferta precisa de ao menos um saco. A posição define o nome exibido
+A posição define o nome exibido
 (`Saco 1`, `Saco 2`) e pode mudar sem trocar a identidade persistida.
 
 ## StockOfferVolumeItem
@@ -218,7 +211,7 @@ Cada saco usa um dos dois modos:
 
 O segundo modo também é acionado quando a quantidade é zero. Valores nulos
 representam contagem desconhecida e não impedem registrar a presença do
-tamanho. O total da oferta é a soma dos totais dos seus sacos.
+tamanho. O total do produto é a soma dos totais dos seus sacos.
 
 ## Migração do modelo de estoque
 
@@ -231,7 +224,7 @@ sacos persistidos.
 
 `StockOfferVolume` continua sendo a fonte canônica do estado físico atual.
 `StockMovement` e `StockMovementItem` registram entradas, saídas e estornos de
-sacos inteiros, com snapshots do produto, oferta, saco, grade e estados
+sacos inteiros, com snapshots do produto, tipo de grade, saco, tamanhos e estados
 anterior/posterior. As duas entidades são imutáveis e não usam `SoftDeletes`.
 
 Entradas e saídas manuais exigem usuário da equipe, motivo e chave de
@@ -258,7 +251,7 @@ possuem limite de 50 sacos por lançamento.
 ## Auditoria administrativa
 
 `AuditLog` registra criação, alteração, exclusão lógica, restauração e exclusão
-definitiva de produtos, categorias, tipos de lavagem, ofertas, sacos, tamanhos, configurações e
+definitiva de produtos, categorias, tipos de lavagem, sacos, tamanhos, configurações e
 usuários. O registro é imutável, não usa `SoftDeletes` e remove atributos de
 autenticação dos snapshots. Ele não substitui `OrderEvent` nem participa do
 cálculo de estoque.
@@ -319,6 +312,9 @@ O registro público exige uma chave de idempotência. A criação, reserva e
 snapshot acontecem em uma transação; repetir a mesma chave com o mesmo payload
 retorna o pedido original e usar a chave com outro payload é rejeitado.
 Separação, conferência e divergência são progresso do status `Pendente`.
+O envio público aceita até 10 tentativas por minuto e 30 por hora por IP,
+além de 10 por hora por sessão. As reservas não expiram automaticamente;
+a equipe finaliza ou cancela os pedidos pendentes.
 Finalizar exige todos os sacos conferidos, sem divergência aberta e ainda
 reservados. Cada mudança relevante grava um `OrderEvent` com autor, motivo e
 metadados mínimos.
@@ -326,7 +322,7 @@ metadados mínimos.
 ```text
 Vendedora acessa tela compartilhada
         ↓
-Visualiza ofertas disponíveis
+Visualiza produtos disponíveis
         ↓
 Seleciona produto/tamanho/quantidade
         ↓
@@ -383,6 +379,15 @@ limite de cinco imagens por produto. As listagens devem preferir a conversão
 `thumb`, em WebP, para reduzir o carregamento; o formulário pode usar a imagem
 original quando necessário.
 
+O servidor rejeita uploads com largura ou altura superior a 4096 px antes
+de decodificar a imagem. A normalização do arquivo principal acontece antes
+da transação de estoque. Alterações exclusivas de fotos bloqueiam somente o
+produto em uma transação própria, sem adquirir o lock global de estoque.
+
+As listagens e o formulário carregam somente sacos não consumidos; totais
+históricos são agregados pelo banco. Os sacos consumidos permanecem
+consultáveis no histórico paginado de movimentações do produto.
+
 Tratamentos necessários:
 
 - corte;
@@ -410,14 +415,35 @@ Para o MVP, a tela deve priorizar simplicidade e uso mobile.
 
 Requisitos:
 
-- listar somente ofertas disponíveis;
-- não listar ofertas sem saco físico ou com soma de sacos igual a zero;
+- listar somente produtos disponíveis;
+- não listar produtos sem saco físico ou com soma de sacos igual a zero;
 - mostrar a foto de capa, nome, modelo quando houver, tipo e estoque disponível;
 - permitir selecionar sacos físicos distintos, sem multiplicar um mesmo saco;
 - manter uma sacola;
 - revisar antes de enviar.
 
 A forma de autenticação/compartilhamento deve permanecer simples. Não criar um sistema complexo de usuários e permissões antes de existir necessidade.
+
+## Perfis de acesso
+
+O painel tem três perfis (ADR 0023): Administrador e Estoque operam produtos,
+estoque, pedidos e configurações do catálogo; Marketing acessa apenas a tela
+“Fotos dos produtos”, onde adiciona, remove, recorta, gira e ordena fotos e
+escolhe a capa. As restrições ficam nas rotas e policies, não apenas no menu.
+Somente Administrador acessa a tela “Usuários”, com criação, edição de
+nome/e-mail/perfil, desativação/reativação e envio de link para definir a senha.
+As contas novas recebem senha aleatória que não é exibida. O link usa o broker
+nativo de recuperação do Laravel, expira em 60 minutos e confirma o e-mail
+quando utilizado. Falha no envio preserva a conta e permite reenvio.
+
+`User.is_active` bloqueia autenticação e sessões de contas desativadas, sem
+apagar o histórico. Mudanças de acesso invalidam tokens de lembrança,
+links de senha e sessões armazenadas no banco. O próprio administrador não
+pode remover seu acesso pela gestão e a aplicação impede remover o último
+administrador ativo, inclusive na exclusão do próprio perfil.
+
+O cadastro público permanece fechado. O comando `php artisan user:create`,
+que pergunta o perfil, continua disponível.
 
 ## Evolução futura
 

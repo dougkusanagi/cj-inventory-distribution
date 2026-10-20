@@ -13,7 +13,7 @@ import {
     volumesForOfferType,
 } from '@/components/products/stock-offer-totals-fields';
 import {
-    StockOfferTypeSelector,
+    stockOfferTypeLabels,
     stockOfferTypeTracksSizes,
 } from '@/components/products/stock-offer-type-selector';
 import { StockOfferVolumeEditor } from '@/components/products/stock-offer-volume-editor';
@@ -37,13 +37,15 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { idempotencyKey } from '@/lib/idempotency-key';
 import { index as inventoryIndex } from '@/routes/stock-movements';
-import type { Product, StockOfferType } from '@/types';
+import type { Product } from '@/types';
 
-type EntryProduct = Pick<Product, 'id' | 'code' | 'name' | 'model'>;
+type EntryProduct = Pick<
+    Product,
+    'id' | 'code' | 'name' | 'model' | 'stock_offer_type'
+>;
 
 type StockEntryFormData = {
     product_id: number | null;
-    stock_offer_type: StockOfferType;
     reason: string;
     notes: string;
     idempotency_key: string;
@@ -54,7 +56,6 @@ type StockEntryFormProps = {
     products?: EntryProduct[];
     selectedProductId?: number | null;
     fixedProduct?: EntryProduct;
-    initialStockOfferType?: StockOfferType;
     returnToProduct?: boolean;
     onCancel?: () => void;
     onSuccess?: () => void;
@@ -64,7 +65,6 @@ export function StockEntryForm({
     products = [],
     selectedProductId = null,
     fixedProduct,
-    initialStockOfferType = 'replenishment',
     returnToProduct = false,
     onCancel,
     onSuccess,
@@ -72,22 +72,29 @@ export function StockEntryForm({
     const [formId] = useState(idempotencyKey);
     const form = useForm<StockEntryFormData>({
         product_id: fixedProduct?.id ?? selectedProductId,
-        stock_offer_type: initialStockOfferType,
         reason: '',
         notes: '',
         idempotency_key: `entry-${formId}`,
         stock_volumes: [],
     });
-    const tracksSizes = stockOfferTypeTracksSizes(form.data.stock_offer_type);
+    const productStockType = (productId: number | null) =>
+        (fixedProduct ?? products.find((product) => product.id === productId))
+            ?.stock_offer_type ?? null;
+    const stockOfferType = productStockType(form.data.product_id);
+    const tracksSizes = stockOfferTypeTracksSizes(stockOfferType ?? '');
 
-    const changeOfferType = (type: StockOfferType) => {
+    const changeProduct = (productId: number) => {
+        const tracksProductSizes = stockOfferTypeTracksSizes(
+            productStockType(productId) ?? '',
+        );
+
         form.setData((previousData) => ({
             ...previousData,
-            stock_offer_type: type,
-            reason: stockOfferTypeTracksSizes(type) ? previousData.reason : '',
+            product_id: productId,
+            reason: tracksProductSizes ? previousData.reason : '',
             stock_volumes: volumesForOfferType(
                 previousData.stock_volumes,
-                stockOfferTypeTracksSizes(type),
+                tracksProductSizes,
             ),
         }));
     };
@@ -157,7 +164,7 @@ export function StockEntryForm({
                                         : String(form.data.product_id)
                                 }
                                 onValueChange={(value) =>
-                                    form.setData('product_id', Number(value))
+                                    changeProduct(Number(value))
                                 }
                             >
                                 <SelectTrigger
@@ -184,13 +191,20 @@ export function StockEntryForm({
                         <InputError message={form.errors.product_id} />
                     </div>
 
-                    <StockOfferTypeSelector
-                        value={form.data.stock_offer_type}
-                        onChange={changeOfferType}
-                        error={form.errors.stock_offer_type}
-                        idPrefix="entry-stock-offer-type"
-                        className="sm:col-span-2"
-                    />
+                    {stockOfferType && (
+                        <p
+                            className="rounded-xl bg-muted/60 px-3 py-2.5 text-sm leading-5 text-muted-foreground sm:col-span-2"
+                            data-testid="entry-stock-offer-type"
+                        >
+                            <span className="font-semibold text-foreground">
+                                {stockOfferTypeLabels[stockOfferType]}
+                            </span>{' '}
+                            · tipo de grade definido no cadastro do produto.
+                            {tracksSizes
+                                ? ' Informe os tamanhos de cada saco.'
+                                : ' Informe só o total de sacos e de peças.'}
+                        </p>
+                    )}
 
                     {tracksSizes && (
                         <div className="sm:col-span-2">
@@ -242,7 +256,7 @@ export function StockEntryForm({
                         />
                     ) : (
                         <StockOfferTotalsFields
-                            key={form.data.stock_offer_type}
+                            key={form.data.product_id ?? 'none'}
                             volumes={form.data.stock_volumes}
                             errors={form.errors as Record<string, string>}
                             onChange={(volumes) =>

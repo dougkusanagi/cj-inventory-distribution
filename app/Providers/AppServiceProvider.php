@@ -5,15 +5,17 @@ namespace App\Providers;
 use App\Models\CatalogSetting;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
 use App\Models\StockOfferVolumeItem;
 use App\Models\User;
 use App\Models\WashType;
 use App\Observers\ModelAuditObserver;
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -34,11 +36,16 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
 
+        RateLimiter::for('catalog-orders', fn (Request $request): array => [
+            Limit::perMinute(10)->by('catalog-minute:'.$request->ip()),
+            Limit::perHour(30)->by('catalog-hour:'.$request->ip()),
+            Limit::perHour(10)->by('catalog-session:'.$request->session()->getId()),
+        ]);
+
         foreach ([
             Product::class,
             Category::class,
             WashType::class,
-            StockOffer::class,
             StockOfferVolume::class,
             StockOfferVolumeItem::class,
             CatalogSetting::class,

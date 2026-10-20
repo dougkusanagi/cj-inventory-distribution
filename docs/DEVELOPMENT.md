@@ -33,9 +33,23 @@ Para visualizar o catálogo com dados demonstrativos, execute:
 php artisan migrate --seed
 ```
 
-O `DatabaseSeeder` cria o usuário local `test@example.com` e chama o
+O `DatabaseSeeder` só executa em ambientes `local` e `testing`. Ele cria as
+contas demonstrativas que ainda não existem, sem redefinir senhas ou perfis
+de contas existentes. Nunca use essas contas como contas reais de produção;
+crie usuários da equipe com `php artisan user:create`. O painel exige a
+verificação do e-mail, inclusive depois de alterar o endereço no perfil.
+
+Administradores também podem criar contas e gerenciar acessos pela tela
+“Usuários”. A pessoa define a própria senha pelo link enviado por e-mail;
+configure um transporte real de e-mail em produção. O mailer `log` serve
+somente para conferir mensagens em desenvolvimento. Nenhuma senha provisória
+é mostrada na interface. O broker limita reenvios a um por minuto e expira
+os links em 60 minutos. Após uma falha de envio, use “Enviar link” na conta
+já criada, em vez de criar outra conta.
+
+O seeder cria o usuário local `test@example.com` e chama o
 `CatalogDemoSeeder`, que é idempotente. Ele cadastra categorias, produtos
-classificados como Slim/Plus e ofertas com sacos e quantidades. O produto de
+classificados como Slim/Plus e estoque com sacos e quantidades. O produto de
 tipo Grade Nova existe apenas para testar a regra de exclusão do catálogo;
 fotos reais ainda precisam ser enviadas pelo cadastro de produtos.
 
@@ -126,29 +140,25 @@ notes: opcional
 stock_volumes: zero ou mais; quando informados, ao menos um saco
 ```
 
-Um produto pode existir sem oferta de estoque inicialmente; a grade é definida
-por saco quando uma oferta é cadastrada.
+Um produto pode ser salvo sem sacos em estoque. O tipo de grade pertence ao
+produto (Grade Nova por padrão) e cada saco precisa de total manual ou
+calculado.
 
-Um produto pode ser salvo sem oferta de estoque. Ao informar sacos, o tipo deve
-ser informado explicitamente e cada saco precisa de total manual ou calculado.
-
-## Validação de oferta
+## Validação do estoque
 
 ```text
 product: obrigatório
-type: obrigatório quando houver sacos
-stock_volumes: ao menos um saco quando houver oferta
+stock_offer_type: do produto; não é enviado na entrada
+stock_volumes: ao menos um saco por entrada
 stock_volumes.*.total_quantity: inteiro >= 0; manual ou calculado por saco
 stock_volumes.*.items.*.size: string, distinto dentro do saco
 stock_volumes.*.items.*.quantity: inteiro >= 0 ou null
 ```
 
-O tipo não deve ser deduzido das quantidades por tamanho. A ausência de sacos
-não cria uma `StockOffer`.
+O tipo não deve ser deduzido das quantidades por tamanho.
 
 Todos os tipos usam sacos físicos. O catálogo usa a existência de sacos e a
-soma dos seus totais, não um contador agregado legado. Encerrar o estoque
-remove a oferta e seus sacos.
+soma dos seus totais, não um contador agregado legado.
 
 Em cada saco, o modo por tamanho é inferido quando houver pelo menos uma
 quantidade definida em um tamanho ativo, inclusive zero. Nesse modo, o total é
@@ -157,16 +167,7 @@ não é a fonte de verdade. Quantidades nulas continuam permitidas e não
 representam zero conhecido.
 
 Sem quantidades por tamanho, o operador informa o total manualmente de cada
-saco. O total público da oferta é a soma dos totais persistidos dos sacos.
-
-Para verificar a integridade das ofertas, execute:
-
-```bash
-php artisan stock-offers:audit-volumes
-php artisan stock-offers:audit-volumes --json
-```
-
-O comando retorna código de falha e lista as ofertas sem saco físico.
+saco. O total público do produto é a soma dos totais persistidos dos sacos.
 
 ## Pedido
 
@@ -189,7 +190,7 @@ Cobrir primeiro regras que podem causar inconsistência:
 - modelo opcional;
 - tamanhos numéricos e alfabéticos;
 - grades diferentes em sacos diferentes;
-- estoque total obrigatório quando houver oferta;
+- estoque total obrigatório em cada saco;
 - total manual por saco quando não houver quantidade conhecida;
 - soma server-side dos totais dos sacos;
 - quantidade por tamanho nullable;

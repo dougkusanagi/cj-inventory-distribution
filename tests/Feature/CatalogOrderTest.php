@@ -1,17 +1,17 @@
 <?php
 
 use App\Enums\OrderStatus;
+use App\Enums\StockOfferType;
 use App\Models\CatalogSetting;
 use App\Models\Order;
 use App\Models\Product;
-use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
 
 function catalogOrderVolume(): StockOfferVolume
 {
     $product = Product::factory()->create(['name' => 'Calça Reta']);
-    $offer = StockOffer::factory()->replenishment()->for($product)->create();
-    $volume = StockOfferVolume::factory()->for($offer)->withTotal(12)->create();
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $volume = StockOfferVolume::factory()->for($product)->withTotal(12)->create();
     $volume->items()->create([
         'size' => 'M',
         'is_active' => true,

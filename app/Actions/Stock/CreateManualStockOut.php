@@ -56,7 +56,7 @@ class CreateManualStockOut
 
             $volumes = StockOfferVolume::query()
                 ->whereIn('id', $volumeIds)
-                ->with(['items', 'offer.product.category'])
+                ->with(['items', 'product.category'])
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get();

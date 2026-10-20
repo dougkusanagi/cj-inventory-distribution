@@ -9,7 +9,6 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\StockMovementItem;
-use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
 use App\Models\StockOfferVolumeItem;
 use App\Models\User;
@@ -23,7 +22,6 @@ test('soft-deletable application entities use soft deletes', function (string $m
     Order::class,
     OrderItem::class,
     Product::class,
-    StockOffer::class,
     StockOfferVolume::class,
     StockOfferVolumeItem::class,
     User::class,

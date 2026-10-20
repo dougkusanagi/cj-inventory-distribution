@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Actions\Fortify\CreateNewUser;
+use App\Enums\UserRole;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -12,6 +13,7 @@ use Illuminate\Validation\Rules\Password;
 use function Laravel\Prompts\intro;
 use function Laravel\Prompts\outro;
 use function Laravel\Prompts\password;
+use function Laravel\Prompts\select;
 use function Laravel\Prompts\text;
 
 #[Signature('user:create')]
@@ -51,15 +53,24 @@ class CreateUser extends Command
             validate: fn (string $value): ?string => $value === $userPassword ? null : 'As senhas não coincidem.',
         );
 
+        $role = select(
+            label: 'Perfil de acesso',
+            options: collect(UserRole::cases())
+                ->mapWithKeys(fn (UserRole $role): array => [$role->value => $role->label()])
+                ->all(),
+            default: UserRole::Stock->value,
+            hint: 'Administrador e Estoque operam o sistema; Marketing gerencia apenas as fotos dos produtos.',
+        );
+
         $user = $createNewUser->create([
             'name' => trim($name),
             'email' => $email,
             'password' => $userPassword,
             'password_confirmation' => $userPassword,
         ]);
-        $user->forceFill(['is_staff' => true])->save();
+        $user->forceFill(['role' => UserRole::from((string) $role)])->save();
 
-        outro("Usuário {$user->email} criado com sucesso.");
+        outro("Usuário {$user->email} criado com o perfil {$user->role?->label()}.");
 
         return self::SUCCESS;
     }

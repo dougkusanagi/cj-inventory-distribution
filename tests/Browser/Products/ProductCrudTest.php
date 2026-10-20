@@ -29,10 +29,8 @@ it('shows the grade type, commercial line, and category in product cards and tab
         ->inCategory($category)
         ->slim()
         ->create(['name' => 'Produto classificado E2E']);
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::BrokenGrade,
-    ]);
-    $offer->stockVolumes()->create(['total_quantity' => 3]);
+    $product->update(['stock_offer_type' => StockOfferType::BrokenGrade]);
+    $product->stockVolumes()->create(['total_quantity' => 3]);
 
     $this->actingAs($user);
 
@@ -64,10 +62,8 @@ it('renders the refined product card preview with compact stock details', functi
         ]);
     $product->addMedia(UploadedFile::fake()->image('refined-card.jpg', 800, 1000))
         ->toMediaCollection(Product::MEDIA_COLLECTION);
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::BrokenGrade,
-    ]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 24]);
+    $product->update(['stock_offer_type' => StockOfferType::BrokenGrade]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 24]);
     $volume->items()->createMany([
         ['size' => '36', 'sort_order' => 0, 'is_active' => true, 'quantity' => 8],
         ['size' => '38', 'sort_order' => 1, 'is_active' => true, 'quantity' => 8],
@@ -138,10 +134,8 @@ it('renders the v3 product card preview with the catalog pattern', function () {
         ->toMediaCollection(Product::MEDIA_COLLECTION);
     $product->addMedia(UploadedFile::fake()->image('v3-card-back.jpg', 800, 1000))
         ->toMediaCollection(Product::MEDIA_COLLECTION);
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::BrokenGrade,
-    ]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 24]);
+    $product->update(['stock_offer_type' => StockOfferType::BrokenGrade]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 24]);
     $volume->items()->createMany([
         ['size' => '36', 'sort_order' => 0, 'is_active' => true, 'quantity' => 8],
         ['size' => '38', 'sort_order' => 1, 'is_active' => true, 'quantity' => 8],
@@ -179,7 +173,8 @@ it('renders the v3 product card preview with the catalog pattern', function () {
         ->assertPresent('a[aria-label="Editar Produto no card v3"]')
         ->click('button[aria-label="Ver mais informações de Produto no card v3"]')
         ->assertDontSee('Quantidade por tamanho')
-        ->assertSee('Quantidade por saco')
+        ->assertSee('Sacos em estoque')
+        ->assertSee('Ver histórico de movimentações')
         ->assertSee('Estoque físico')
         ->assertSee('Sacos disponíveis')
         ->assertPresent('button[aria-label="Excluir Produto no card v3"]')
@@ -281,9 +276,9 @@ it('creates a grade nova product with only the sack and piece totals', function 
         ->assertSee('Produto cadastrado.')
         ->assertNoJavaScriptErrors();
 
-    $offer = Product::query()->sole()->latestOffer()->with('stockVolumes.items')->sole();
+    $offer = Product::query()->with('stockVolumes.items')->sole();
 
-    expect($offer->type)->toBe(StockOfferType::NewGrade)
+    expect($offer->stock_offer_type)->toBe(StockOfferType::NewGrade)
         ->and($offer->stockVolumes->pluck('total_quantity')->sort()->values()->all())->toBe([12, 13])
         ->and($offer->stockVolumes->flatMap->items)->toBeEmpty();
 });
@@ -396,17 +391,17 @@ it('creates a product without a stock offer from the form', function () {
         ->assertRoute('products.index')
         ->assertSee('Blusa básica E2E')
         ->assertSee('CJ-000001')
-        ->assertSee('Sem oferta de estoque')
+        ->assertSee('Sem estoque')
         ->assertSee('Produto cadastrado.')
         ->assertNoJavaScriptErrors();
 
-    $product = Product::query()->with('latestOffer')->sole();
+    $product = Product::query()->with('stockVolumes')->sole();
 
     $this->assertModelExists($product);
     expect($product->code)->toBe('CJ-000001');
     expect($product->model)->toBe('MOD-E2E-001');
     expect($product->notes)->toBe('Produto criado pelo fluxo principal.');
-    expect($product->latestOffer)->toBeNull();
+    expect($product->stockVolumes)->toBeEmpty();
 });
 
 it('keeps a stock quantity when disabling a size is cancelled', function () {
@@ -447,15 +442,15 @@ it('keeps a stock quantity when disabling a size is cancelled', function () {
         ->assertSee('Produto cadastrado.')
         ->assertNoJavaScriptErrors();
 
-    $product = Product::query()->with('latestOffer.stockVolumes.items')->sole();
+    $product = Product::query()->with('stockVolumes.items')->sole();
 
     $this->assertModelExists($product);
-    expect($product->latestOffer)->not->toBeNull();
-    expect($product->latestOffer->type)->toBe(StockOfferType::BrokenGrade);
-    expect($product->latestOffer->calculatedTotalQuantity())->toBe(7);
-    expect($product->latestOffer->stockVolumes)->toHaveCount(1);
+    expect($product->stockVolumes)->not->toBeEmpty();
+    expect($product->stock_offer_type)->toBe(StockOfferType::BrokenGrade);
+    expect($product->stockVolumes->sum('total_quantity'))->toBe(7);
+    expect($product->stockVolumes)->toHaveCount(1);
 
-    $medium = $product->latestOffer->stockVolumes->sole()->items->firstWhere('size', 'M');
+    $medium = $product->stockVolumes->sole()->items->firstWhere('size', 'M');
 
     expect($medium)->not->toBeNull();
     expect($medium->is_active)->toBeTrue();
@@ -469,10 +464,8 @@ it('edits product details while keeping existing stock read only', function () {
         'model' => 'MODELO-ANTIGO',
     ]);
     $originalCode = $product->code;
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::NewGrade,
-    ]);
-    $volume = $offer->stockVolumes()->create([
+    $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    $volume = $product->stockVolumes()->create([
         'sort_order' => 0,
         'total_quantity' => 4,
     ]);
@@ -508,23 +501,21 @@ it('edits product details while keeping existing stock read only', function () {
         ->assertSee('Produto atualizado.')
         ->assertNoJavaScriptErrors();
 
-    $product->refresh()->load('latestOffer.stockVolumes.items');
+    $product->refresh()->load('stockVolumes.items');
 
     expect($product->code)->toBe($originalCode);
     expect($product->name)->toBe('Produto atualizado E2E');
-    expect($product->latestOffer)->not->toBeNull();
-    expect($product->latestOffer->type)->toBe(StockOfferType::NewGrade);
-    expect($product->latestOffer->calculatedTotalQuantity())->toBe(4);
-    expect($product->latestOffer->stockVolumes)->toHaveCount(1);
+    expect($product->stockVolumes)->not->toBeEmpty();
+    expect($product->stock_offer_type)->toBe(StockOfferType::NewGrade);
+    expect($product->stockVolumes->sum('total_quantity'))->toBe(4);
+    expect($product->stockVolumes)->toHaveCount(1);
 });
 
 it('saves a product recount and records its stock adjustment', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create(['name' => 'Produto com tamanho editável E2E']);
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::NewGrade,
-    ]);
-    $volume = $offer->stockVolumes()->create([
+    $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    $volume = $product->stockVolumes()->create([
         'sort_order' => 0,
         'total_quantity' => 4,
     ]);
@@ -576,10 +567,8 @@ it('saves a product recount and records its stock adjustment', function () {
 it('keeps zero stock history read only in the product form', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create(['name' => 'Produto sem saldo E2E']);
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::Replenishment,
-    ]);
-    $volume = $offer->stockVolumes()->create([
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $volume = $product->stockVolumes()->create([
         'sort_order' => 0,
         'total_quantity' => 0,
     ]);
@@ -695,8 +684,8 @@ it('keeps the product form usable on a narrow mobile viewport', function () {
 it('filters physical stock with desktop select and mobile radio cards', function () {
     Product::factory()->create(['name' => 'Produto sem estoque E2E']);
     $product = Product::factory()->create(['name' => 'Produto com estoque E2E']);
-    $offer = $product->offers()->create(['type' => StockOfferType::NewGrade]);
-    $offer->stockVolumes()->create(['total_quantity' => 5]);
+    $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    $product->stockVolumes()->create(['total_quantity' => 5]);
     $this->actingAs(User::factory()->create());
 
     visit(route('products.index', [], false))
@@ -745,14 +734,13 @@ it('removes a product from the card actions after confirmation', function (bool 
     $page->click($compact ? 'button[aria-label="Visualização com 2 cards por linha"]' : 'button[aria-label="Visualização em cards"]');
 
     $page
-        ->click('button[aria-label="Ações de Produto removido pelo card"]')
-        ->click('[role="menuitem"]:text-is("Excluir produto")')
+        ->click('button[aria-label="Ver mais informações de Produto removido pelo card"]')
+        ->click('button[aria-label="Excluir Produto removido pelo card"]')
         ->assertSee('Excluir produto?')
         ->press('Cancelar')
-        ->assertSee($product->name)
-        ->click('button[aria-label="Ações de Produto removido pelo card"]')
-        ->click('[role="menuitem"]:text-is("Excluir produto")')
-        ->press('Excluir produto')
+        ->assertVisible('button[aria-label="Excluir Produto removido pelo card"]')
+        ->click('button[aria-label="Excluir Produto removido pelo card"]')
+        ->click('button:has-text("Excluir produto"):not([aria-label])')
         ->assertSee('Produto excluído.')
         ->assertDontSee($product->name)
         ->assertNoJavaScriptErrors();

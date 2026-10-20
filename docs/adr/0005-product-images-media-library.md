@@ -27,13 +27,17 @@ O editor do formulário é obrigatório e normaliza o enquadramento para a
 proporção 4:5. O navegador pode receber imagens maiores que 5 MB e reduz a
 imagem de origem antes de abrir o editor, reduzindo o consumo de dados no
 celular. O servidor mantém apenas um limite técnico de 25 MB para o arquivo
-recebido e aceita JPG, PNG e WebP.
+recebido e aceita JPG, PNG e WebP. Para limitar o consumo de memória durante
+a decodificação, o servidor rejeita imagens maiores que 4096 px em qualquer
+eixo. O navegador continua reduzindo fotos grandes antes do envio.
 
 Independentemente do formato enviado, o servidor orienta, limita a imagem
 principal a 1600 × 2000 px sem ampliar nem alterar o enquadramento escolhido e
 salva uma versão canônica em WebP com qualidade 84. Assim, todas as fotos da
 coleção têm uma qualidade e peso previsíveis, inclusive quando o upload não
-vem do formulário. A conversão thumb continua em WebP 480 × 600 para listas.
+vem do formulário. Essa normalização acontece antes de adquirir o lock de
+estoque; alterações exclusivas de fotos usam uma transação apenas do produto.
+A conversão thumb continua em WebP 480 × 600 para listas.
 
 ## Consequências
 

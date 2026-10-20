@@ -7,8 +7,8 @@ Sistema Laravel interno da Crônicas Jeans para organizar estoque disponível pa
 Entregar um fluxo simples:
 
 1. Cadastrar produtos.
-2. Quando houver uma oferta, organizar um ou mais sacos, cada um com sua grade e seu total.
-3. Classificar a disponibilidade como:
+2. Quando houver estoque, organizar um ou mais sacos, cada um com sua grade e seu total.
+3. Classificar o tipo de grade do produto como:
     - `Reposição`
     - `Grade Nova`
     - `Grade Furada`
@@ -70,7 +70,7 @@ produção continuam fora do escopo atual.
 
 ### Tamanho
 
-Representa um tamanho presente em um saco de uma oferta.
+Representa um tamanho presente em um saco.
 
 Exemplos:
 
@@ -87,7 +87,7 @@ em sacos diferentes e possui quantidade opcional em cada saco.
 
 ### Saco de estoque
 
-Cada oferta é composta por pelo menos um saco. Cada saco guarda:
+O estoque de um produto é composto por sacos. Cada saco guarda:
 
 - sua ordem de exibição;
 - seu total de peças;
@@ -96,23 +96,17 @@ Cada oferta é composta por pelo menos um saco. Cada saco guarda:
 
 Quando alguma quantidade numérica de tamanho ativo é informada, o total do saco
 é recalculado no servidor pela soma dessas quantidades. Sem quantidades
-conhecidas, o total é manual. O total público da oferta é a soma dos sacos.
+conhecidas, o total é manual. O total público do produto é a soma dos sacos.
 
-### Oferta de estoque
+### Tipo de grade
 
-Representa uma disponibilidade atual de um produto.
+Todo produto tem um tipo de grade: `Reposição`, `Grade Nova` ou `Grade Furada`
+(Grade Nova por padrão). O tipo pertence ao produto e pode ser alterado na
+edição; com sacos em estoque, a mudança fica registrada no histórico.
 
-Ela guarda:
-
-- tipo: `Reposição`, `Grade Nova` ou `Grade Furada`
-- um ou mais sacos
-- total agregado calculado pela soma dos sacos
-
-O tipo pertence à oferta de estoque, e não ao produto.
-Ativar ou desativar o produto não altera os dados da oferta de estoque.
-Todos os tipos usam sacos físicos. Para aparecer no catálogo, o produto precisa
-estar ativo, existir ao menos um saco disponível com total positivo e a oferta
-não pode ser Grade Nova.
+Ativar ou desativar o produto não altera o estoque. Todos os tipos usam sacos
+físicos. Para aparecer no catálogo, o produto precisa estar ativo, existir ao
+menos um saco disponível com total positivo e não ser Grade Nova.
 
 **Regra atualizada do catálogo para lojistas:** Grade Nova nunca aparece,
 mesmo com produto ativo e estoque positivo. A exclusão é aplicada

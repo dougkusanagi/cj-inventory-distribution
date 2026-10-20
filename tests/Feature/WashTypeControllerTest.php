@@ -1,9 +1,9 @@
 <?php
 
 use App\Enums\AuditAction;
+use App\Enums\StockOfferType;
 use App\Models\AuditLog;
 use App\Models\Product;
-use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
 use App\Models\User;
 use App\Models\WashType;
@@ -159,8 +159,8 @@ test('wash-types in use cannot be deleted', function () {
     $this->assertModelExists($washType);
 });
 
-test('non staff users cannot manage wash types', function () {
-    $this->actingAs(User::factory()->create(['is_staff' => false]))
+test('marketing users cannot manage wash types', function () {
+    $this->actingAs(User::factory()->marketing()->create())
         ->postJson(route('wash-types.store'), ['name' => 'Stone'])
         ->assertForbidden();
     $this->assertDatabaseCount('wash_types', 0);
@@ -246,12 +246,12 @@ test('product and public catalog filters select matching washes while retaining 
     $matching = Product::factory()->create(['wash_type_id' => $washType->id]);
     $different = Product::factory()->create(['wash_type_id' => $other->id]);
     foreach ([$matching, $different] as $product) {
-        $offer = StockOffer::factory()->replenishment()->for($product)->create();
-        StockOfferVolume::factory()->for($offer)->withTotal(8)->create();
+        $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+        StockOfferVolume::factory()->for($product)->withTotal(8)->create();
     }
     $hidden = Product::factory()->create(['wash_type_id' => $washType->id]);
-    $offer = StockOffer::factory()->for($hidden)->create();
-    StockOfferVolume::factory()->for($offer)->withTotal(8)->create();
+    $hidden->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    StockOfferVolume::factory()->for($hidden)->withTotal(8)->create();
 
     $this->actingAs(User::factory()->create())->get(route('products.index', ['wash_type' => $washType->id]))->assertInertia(fn (Assert $page) => $page->has('products.data', 2)->where('filters.wash_type', $washType->id));
     $this->get(route('catalog', ['wash_type' => $washType->id]))->assertInertia(fn (Assert $page) => $page->has('products.data', 1)->where('products.data.0.id', $matching->id)->where('products.data.0.wash_type', $washType->name)->where('filters.wash_type', $washType->id));

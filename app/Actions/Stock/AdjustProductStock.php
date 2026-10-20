@@ -89,12 +89,12 @@ class AdjustProductStock
 
             $volume = StockOfferVolume::query()
                 ->whereKey($volumeId)
-                ->whereHas('offer', fn ($query) => $query->where('product_id', $product->getKey()))
-                ->with(['items', 'offer.product.category'])
+                ->where('product_id', $product->getKey())
+                ->with(['items', 'product.category'])
                 ->lockForUpdate()
                 ->first();
 
-            if ($volume === null || $volume->offer->trashed() || $volume->offer->product->trashed() || $volume->current_order_id !== null || $volume->consumed_at !== null) {
+            if ($volume === null || $volume->product->trashed() || $volume->current_order_id !== null || $volume->consumed_at !== null) {
                 throw ValidationException::withMessages(['volume_id' => 'Selecione um saco disponível, sem reserva e sem retirada registrada.']);
             }
             if ($volume->stock_version !== (int) ($data['expected_version'] ?? 0)) {
@@ -117,7 +117,7 @@ class AdjustProductStock
             }
             $nextTotalQuantity = $normalized['total_quantity'];
             $volume->update(['total_quantity' => $nextTotalQuantity, ...($remove ? ['consumed_at' => now()] : [])]);
-            $volume->load(['items', 'offer.product.category']);
+            $volume->load(['items', 'product.category']);
             $resultingStates = [$volume->getKey() => $this->recorder->snapshot($volume)];
 
             if ($remove) {

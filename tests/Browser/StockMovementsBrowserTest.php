@@ -20,8 +20,8 @@ function stockMovementBrowserVolume(string $name, int $quantity, ?string $model 
         'name' => $name,
         'model' => $model,
     ]);
-    $offer = $product->offers()->create(['type' => StockOfferType::Replenishment]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => $quantity]);
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => $quantity]);
     $volume->items()->create([
         'size' => 'M',
         'sort_order' => 0,
@@ -32,7 +32,7 @@ function stockMovementBrowserVolume(string $name, int $quantity, ?string $model 
         'code' => 'SC-'.str_pad((string) $volume->id, 6, '0', STR_PAD_LEFT),
     ]);
 
-    return $volume->load('offer.product');
+    return $volume->load('product');
 }
 
 test('manual exit keeps selected sacks through search and records both selections', function () {
@@ -164,18 +164,18 @@ test('a manual stock movement can be reversed from its details screen', function
 
 test('product stock correction removes only selected sacks and preserves unavailable sacks', function (int $width, int $height) {
     $volume = stockMovementBrowserVolume('Produto com saco cadastrado errado', 5);
-    $offer = $volume->offer;
-    $kept = $offer->stockVolumes()->create(['total_quantity' => 7, 'sort_order' => 1, 'code' => 'SC-KEPT']);
-    $reserved = $offer->stockVolumes()->create([
+    $product = $volume->product;
+    $kept = $product->stockVolumes()->create(['total_quantity' => 7, 'sort_order' => 1, 'code' => 'SC-KEPT']);
+    $reserved = $product->stockVolumes()->create([
         'total_quantity' => 4, 'sort_order' => 2, 'code' => 'SC-RESERVED',
         'current_order_id' => Order::factory()->create()->id,
     ]);
-    $consumed = $offer->stockVolumes()->create([
+    $consumed = $product->stockVolumes()->create([
         'total_quantity' => 3, 'sort_order' => 3, 'code' => 'SC-CONSUMED', 'consumed_at' => now(),
     ]);
     $this->actingAs(User::factory()->create());
 
-    $page = visit(route('products.edit', $offer->product, false))
+    $page = visit(route('products.edit', $product, false))
         ->resize($width, $height)
         ->click('#product-tab-stock')
         ->click('[data-testid="stock-more-actions"]')
@@ -195,7 +195,7 @@ test('product stock correction removes only selected sacks and preserves unavail
         ->assertNoJavaScriptErrors();
 
     $movement = StockMovement::query()->sole();
-    $page->assertRoute('products.edit', [$offer->product_id]);
+    $page->assertRoute('products.edit', [$product->id]);
 
     expect($movement->source)->toBe(StockMovementSource::Adjustment);
     expect($movement->items()->pluck('stock_offer_volume_id')->all())->toBe([$volume->id]);
@@ -212,7 +212,7 @@ test('product stock correction removes only selected sacks and preserves unavail
 test('sack removal keeps the reason reachable and selects many sacks at once', function (int $width, int $height) {
     $volume = stockMovementBrowserVolume('Produto com muitos sacos', 2);
     foreach (range(1, 49) as $index) {
-        $volume->offer->stockVolumes()->create([
+        $volume->product->stockVolumes()->create([
             'total_quantity' => 2,
             'sort_order' => $index,
             'code' => 'SC-MANY-'.str_pad((string) $index, 2, '0', STR_PAD_LEFT),
@@ -220,7 +220,7 @@ test('sack removal keeps the reason reachable and selects many sacks at once', f
     }
     $this->actingAs(User::factory()->create());
 
-    visit(route('products.edit', $volume->offer->product, false))
+    visit(route('products.edit', $volume->product, false))
         ->resize($width, $height)
         ->click('#product-tab-stock')
         ->click('[data-testid="stock-more-actions"]')
@@ -265,10 +265,10 @@ test('manual exit reason stays open on mobile and allows a predefined and custom
 
 test('stock correction edits one selected sack and removes another in the same panel', function (int $width, int $height) {
     $volume = stockMovementBrowserVolume('Produto para corrigir vários sacos', 5);
-    $removed = $volume->offer->stockVolumes()->create(['total_quantity' => 7, 'sort_order' => 1, 'code' => 'SC-REMOVE']);
+    $removed = $volume->product->stockVolumes()->create(['total_quantity' => 7, 'sort_order' => 1, 'code' => 'SC-REMOVE']);
     $this->actingAs(User::factory()->create());
 
-    $page = visit(route('products.edit', $volume->offer->product, false))
+    $page = visit(route('products.edit', $volume->product, false))
         ->resize($width, $height)
         ->click('#product-tab-stock')
         ->click('[data-testid="stock-more-actions"]')

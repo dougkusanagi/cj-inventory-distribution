@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\ProductLine;
+use App\Enums\StockOfferType;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -25,6 +26,7 @@ class ProductFactory extends Factory
             'name' => fake()->words(3, true),
             'category_id' => null,
             'line' => null,
+            'stock_offer_type' => StockOfferType::NewGrade,
             'notes' => fake()->optional()->sentence(),
             'is_active' => true,
         ];
@@ -57,6 +59,26 @@ class ProductFactory extends Factory
     {
         return $this->state([
             'line' => ProductLine::Plus,
+        ]);
+    }
+
+    /**
+     * Classify the product stock as regular replenishment.
+     */
+    public function replenishment(): static
+    {
+        return $this->state([
+            'stock_offer_type' => StockOfferType::Replenishment,
+        ]);
+    }
+
+    /**
+     * Classify the product stock as a broken grade.
+     */
+    public function brokenGrade(): static
+    {
+        return $this->state([
+            'stock_offer_type' => StockOfferType::BrokenGrade,
         ]);
     }
 }

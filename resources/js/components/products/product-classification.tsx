@@ -18,7 +18,7 @@ export function ProductClassification({ product }: { product: Product }) {
 
     const classifications = [
         product.is_active ? 'Ativo' : 'Inativo',
-        `Grade: ${stockOfferType ? stockOfferTypeLabels[stockOfferType] : 'Sem oferta'}`,
+        `Grade: ${stockOfferType ? stockOfferTypeLabels[stockOfferType] : 'Sem tipo'}`,
         productLine ? productLineLabels[productLine] : null,
         product.category?.name ?? null,
         product.wash_type?.name ?? null,

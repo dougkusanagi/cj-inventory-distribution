@@ -5,7 +5,6 @@ namespace Database\Factories;
 use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\StockMovementItem;
-use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -25,7 +24,6 @@ class StockMovementItemFactory extends Factory
             'stock_movement_id' => StockMovement::factory(),
             'stock_offer_volume_id' => StockOfferVolume::factory(),
             'product_id' => Product::factory(),
-            'stock_offer_id' => StockOffer::factory(),
             'volume_code_snapshot' => fake()->unique()->numerify('SC-######'),
             'product_code_snapshot' => fake()->unique()->numerify('CJ-######'),
             'product_name_snapshot' => fake()->words(3, true),

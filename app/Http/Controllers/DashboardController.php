@@ -5,9 +5,10 @@ namespace App\Http\Controllers;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\Product;
-use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -17,26 +18,18 @@ class DashboardController extends Controller
     /**
      * Display operational metrics separately from the product catalog.
      */
-    public function index(): Response
+    public function index(Request $request): Response|RedirectResponse
     {
+        if (! $request->user()?->isStaff()) {
+            return to_route('product-photos.index');
+        }
+
         Gate::authorize('viewAny', Product::class);
 
-        $activeStockOffers = StockOffer::query()
-            ->whereHas('product', fn (Builder $query) => $query->where('is_active', true))
-            ->whereHas('stockVolumes', fn (Builder $query) => $query
-                ->where('total_quantity', '>', 0)
-                ->whereNull('current_order_id')
-                ->whereNull('consumed_at'));
-        $activeStockOffersForStats = (clone $activeStockOffers)
-            ->with(['stockVolumes' => fn ($query) => $query
-                ->select(['id', 'stock_offer_id', 'total_quantity'])
-                ->whereNull('current_order_id')
-                ->whereNull('consumed_at')])
-            ->get();
         $trackedPhysicalStock = StockOfferVolume::query()
             ->where('total_quantity', '>', 0)
             ->whereNull('consumed_at')
-            ->whereHas('offer.product', fn (Builder $query) => $query->where('is_active', true));
+            ->whereHas('product', fn (Builder $query) => $query->where('is_active', true));
 
         return Inertia::render('dashboard', [
             'stats' => [
@@ -45,12 +38,18 @@ class DashboardController extends Controller
                     ->whereHas('media', fn (Builder $query): Builder => $query->where('collection_name', Product::MEDIA_COLLECTION))
                     ->count(),
                 'withSizes' => Product::query()
-                    ->whereHas('offers.stockVolumes.items')
+                    ->whereHas('stockVolumes.items')
                     ->count(),
-                'activeOffers' => (clone $activeStockOffers)->distinct('product_id')->count('product_id'),
-                'stockUnits' => (int) $activeStockOffersForStats->sum(
-                    fn (StockOffer $offer): int => (int) $offer->stockVolumes->sum('total_quantity'),
-                ),
+                'activeOffers' => Product::query()
+                    ->where('is_active', true)
+                    ->whereHas('stockVolumes', fn (Builder $query) => $query
+                        ->where('total_quantity', '>', 0)
+                        ->whereNull('current_order_id')
+                        ->whereNull('consumed_at'))
+                    ->count(),
+                'stockUnits' => (int) (clone $trackedPhysicalStock)
+                    ->whereNull('current_order_id')
+                    ->sum('total_quantity'),
                 'reservedStockUnits' => (int) (clone $trackedPhysicalStock)
                     ->whereNotNull('current_order_id')
                     ->sum('total_quantity'),

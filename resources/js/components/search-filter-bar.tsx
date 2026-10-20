@@ -1,7 +1,12 @@
 import { MagnifyingGlassIcon, FunnelIcon, XIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { SearchableSelect } from '@/components/ui/searchable-select';
-import type { ComponentProps, ComponentType, CSSProperties } from 'react';
+import type {
+    ComponentProps,
+    ComponentType,
+    CSSProperties,
+    ReactNode,
+} from 'react';
 import { Button } from '@/components/ui/button';
 import {
     Drawer,
@@ -52,6 +57,8 @@ type SearchFilterBarProps = {
     onFieldChange: (name: string, value: string) => void;
     onClear: () => void;
     resultCount: number;
+    /** Extra controls shown beside the result count on desktop, such as view toggles. */
+    toolbar?: ReactNode;
     className?: string;
 };
 
@@ -246,6 +253,7 @@ export function SearchFilterBar({
     onFieldChange,
     onClear,
     resultCount,
+    toolbar,
     className,
 }: SearchFilterBarProps) {
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -351,17 +359,20 @@ export function SearchFilterBar({
                     {activeCount > 0 &&
                         ` · ${activeCount} ${activeCount === 1 ? 'filtro aplicado' : 'filtros aplicados'}`}
                 </p>
-                {hasFilters && (
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={onClear}
-                    >
-                        <XIcon weight="bold" />
-                        Limpar filtros
-                    </Button>
-                )}
+                <div className="flex items-center gap-2">
+                    {hasFilters && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={onClear}
+                        >
+                            <XIcon weight="bold" />
+                            Limpar filtros
+                        </Button>
+                    )}
+                    {toolbar}
+                </div>
             </div>
 
             <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded pela ADR 0024, que removeu a oferta de estoque.
 
 ## Contexto
 

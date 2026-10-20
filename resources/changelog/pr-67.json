@@ -1,33 +1,33 @@
 {
-  "title": "Filtros e cadastro de lavagens aprimorados",
-  "changes": [
-    {
-      "category": "fixed",
-      "text": "Ajustados os rótulos dos filtros no celular para permanecerem em uma linha, inclusive em telas de 360 px, mantendo as três opções lado a lado com ícones e indicadores."
-    },
-    {
-      "category": "improved",
-      "text": "O cadastro rápido de lavagem passou do botão externo para a última opção da lista pesquisável, nos filtros e no formulário. A ação aparece após digitar um nome e fica oculta quando ele já existe, desconsiderando diferenças de maiúsculas e acentos."
-    },
-    {
-      "category": "improved",
-      "text": "O cadastro de lavagem abre com o nome pesquisado preenchido e preserva os dados do produto. A busca é limpa ao selecionar uma opção ou fechar a lista."
-    },
-    {
-      "category": "improved",
-      "text": "Centralizado o suporte ao cadastro pela busca no controle de seleção compartilhado, removendo os botões externos e os ajustes visuais associados."
-    },
-    {
-      "category": "improved",
-      "text": "Atualizados os testes de navegador no computador e no celular para verificar busca, posição da ação de cadastro, nomes já existentes, preenchimento do nome e preservação do formulário. Adicionado teste dos rótulos em 360 px e executada a verificação completa do projeto."
-    },
-    {
-      "category": "improved",
-      "text": "Atualizada a documentação para explicar o cadastro de lavagens pela busca e padronizada a formatação de uma nota anterior do histórico."
-    }
-  ],
-  "pr_number": 67,
-  "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/67",
-  "merged_at": "2026-10-15T13:55:27Z",
-  "commit": "40d1873cfe5ddd72bcf6dc0ae855279bd0b503af"
+    "title": "Filtros e cadastro de lavagens aprimorados",
+    "changes": [
+        {
+            "category": "fixed",
+            "text": "Ajustados os rótulos dos filtros no celular para permanecerem em uma linha, inclusive em telas de 360 px, mantendo as três opções lado a lado com ícones e indicadores."
+        },
+        {
+            "category": "improved",
+            "text": "O cadastro rápido de lavagem passou do botão externo para a última opção da lista pesquisável, nos filtros e no formulário. A ação aparece após digitar um nome e fica oculta quando ele já existe, desconsiderando diferenças de maiúsculas e acentos."
+        },
+        {
+            "category": "improved",
+            "text": "O cadastro de lavagem abre com o nome pesquisado preenchido e preserva os dados do produto. A busca é limpa ao selecionar uma opção ou fechar a lista."
+        },
+        {
+            "category": "improved",
+            "text": "Centralizado o suporte ao cadastro pela busca no controle de seleção compartilhado, removendo os botões externos e os ajustes visuais associados."
+        },
+        {
+            "category": "improved",
+            "text": "Atualizados os testes de navegador no computador e no celular para verificar busca, posição da ação de cadastro, nomes já existentes, preenchimento do nome e preservação do formulário. Adicionado teste dos rótulos em 360 px e executada a verificação completa do projeto."
+        },
+        {
+            "category": "improved",
+            "text": "Atualizada a documentação para explicar o cadastro de lavagens pela busca e padronizada a formatação de uma nota anterior do histórico."
+        }
+    ],
+    "pr_number": 67,
+    "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/67",
+    "merged_at": "2026-10-15T13:55:27Z",
+    "commit": "40d1873cfe5ddd72bcf6dc0ae855279bd0b503af"
 }

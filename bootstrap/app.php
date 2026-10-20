@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\EnsureUserHasPanelAccess;
+use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\EnsureUserIsStaff;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -22,11 +24,15 @@ return Application::configure(basePath: dirname(__DIR__))
         __DIR__.'/../app/Console/Commands',
     ])
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->alias(['staff' => EnsureUserIsStaff::class]);
+        $middleware->alias([
+            'panel' => EnsureUserHasPanelAccess::class,
+            'staff' => EnsureUserIsStaff::class,
+        ]);
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(
             append: [
+                EnsureUserIsActive::class,
                 HandleAppearance::class,
                 HandleInertiaRequests::class,
                 AddLinkHeadersForPreloadedAssets::class,

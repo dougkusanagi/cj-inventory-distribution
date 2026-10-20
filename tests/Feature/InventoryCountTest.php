@@ -15,11 +15,11 @@ use Inertia\Testing\AssertableInertia as Assert;
 function inventoryVolume(): StockOfferVolume
 {
     $product = Product::factory()->create();
-    $offer = $product->offers()->create(['type' => StockOfferType::Replenishment]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 10]);
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 10]);
     $volume->items()->create(['size' => 'M', 'sort_order' => 0, 'is_active' => true, 'quantity' => 10]);
 
-    return $volume->refresh()->load(['items', 'offer.product']);
+    return $volume->refresh()->load(['items', 'product']);
 }
 
 /** @param array<int, StockOfferVolume> $volumes */

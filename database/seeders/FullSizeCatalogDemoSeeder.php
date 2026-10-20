@@ -29,17 +29,13 @@ class FullSizeCatalogDemoSeeder extends Seeder
                     'name' => 'Calça Jeans 34 a 46',
                     'category_id' => $category->getKey(),
                     'line' => ProductLine::Slim,
+                    'stock_offer_type' => StockOfferType::Replenishment,
                     'notes' => 'Produto de demonstração com grade completa para comparação dos cartões.',
                     'is_active' => true,
                 ],
             );
 
-            $offer = $product->offers()->firstOrCreate(
-                ['type' => StockOfferType::Replenishment],
-                ['notes' => 'Oferta de demonstração com tamanhos de 34 a 46.'],
-            );
-
-            $volume = $offer->stockVolumes()->firstOrCreate(
+            $volume = $product->stockVolumes()->firstOrCreate(
                 ['sort_order' => 0],
                 ['total_quantity' => 14],
             );
