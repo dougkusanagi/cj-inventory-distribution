@@ -63,7 +63,7 @@ class ReverseStockMovement
             $volumeIds = $original->items->pluck('stock_offer_volume_id')->filter()->map(fn (mixed $id): int => (int) $id);
             $volumes = StockOfferVolume::withTrashed()
                 ->whereIn('id', $volumeIds)
-                ->with(['items', 'offer.product.category'])
+                ->with(['items', 'product.category'])
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get();

@@ -17,8 +17,8 @@ beforeEach(function (): void {
 it('selects, counts, and confirms a stock balance, applying its adjustment', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create(['name' => 'Calça para conferir']);
-    $offer = $product->offers()->create(['type' => StockOfferType::Replenishment]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 10]);
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 10]);
     $size = $volume->items()->create([
         'size' => 'M',
         'sort_order' => 0,

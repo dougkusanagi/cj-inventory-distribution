@@ -740,7 +740,7 @@ function ProductTable({
                                     </>
                                 ) : (
                                     <span className="text-muted-foreground">
-                                        Sem oferta
+                                        Sem estoque
                                     </span>
                                 )}
                             </td>

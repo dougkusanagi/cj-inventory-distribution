@@ -1,8 +1,11 @@
+export type UserRole = 'admin' | 'stock' | 'marketing';
+
 export type User = {
     id: number;
     name: string;
     email: string;
-    is_staff: boolean;
+    role: UserRole | null;
+    is_active: boolean;
     avatar?: string;
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
@@ -13,6 +16,11 @@ export type User = {
 
 export type Auth = {
     user: User;
+    can: {
+        manageUsers: boolean;
+        manageOperations: boolean;
+        managePhotos: boolean;
+    };
 };
 
 export type Passkey = {

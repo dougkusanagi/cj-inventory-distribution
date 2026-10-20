@@ -2,11 +2,19 @@
 
 namespace App\Actions\Products;
 
+use App\Actions\Stock\StockMovementRecorder;
 use App\Actions\Stock\StockMutation;
+use App\Enums\StockMovementSource;
+use App\Enums\StockMovementType;
+use App\Enums\StockOfferType;
 use App\Models\Product;
+use App\Models\StockOfferVolume;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Throwable;
@@ -15,35 +23,122 @@ class UpdateProduct
 {
     public function __construct(
         private readonly StoreProductImage $storeProductImage,
-        private readonly SyncProductStockOffer $syncProductStockOffer,
+        private readonly SyncProductStock $syncProductStock,
+        private readonly StockMovementRecorder $stockMovementRecorder,
     ) {}
 
     /**
-     * Update a product and its stock offer atomically.
+     * Update a product and its stock atomically.
      *
      * @param  array<string, mixed>  $data
      */
     public function handle(Product $product, array $data): Product
     {
+        return $this->persist($product, $data, function (Product $lockedProduct) use ($data): void {
+            $lockedProduct->update([
+                'name' => $data['name'],
+                'model' => $data['model'] ?? null,
+                'category_id' => $data['category_id'] ?? null,
+                'wash_type_id' => array_key_exists('wash_type_id', $data) ? $data['wash_type_id'] : $lockedProduct->wash_type_id,
+                'line' => $data['line'] ?? null,
+                'notes' => $data['notes'] ?? null,
+                'is_active' => $data['is_active'] ?? true,
+            ]);
+
+            $this->changeStockType($lockedProduct, $data['stock_offer_type'] ?? null);
+            $this->syncProductStock->handle($lockedProduct, $data);
+        });
+    }
+
+    /**
+     * Change the product's stock type and record it in the stock history.
+     *
+     * Orders and movements keep the type in their own snapshots. Grade Nova
+     * never enters orders, so sacks reserved by pending orders block it.
+     */
+    private function changeStockType(Product $product, ?string $value): void
+    {
+        $type = $value === null ? null : StockOfferType::from($value);
+
+        if ($type === null || $type === $product->stock_offer_type) {
+            return;
+        }
+
+        $volumes = $product->stockVolumes()
+            ->whereNull('consumed_at')
+            ->with('items')
+            ->lockForUpdate()
+            ->get();
+
+        if ($type === StockOfferType::NewGrade && $volumes->contains(fn (StockOfferVolume $volume): bool => $volume->current_order_id !== null)) {
+            throw ValidationException::withMessages([
+                'stock_offer_type' => 'Há sacos reservados em pedidos. Finalize ou cancele os pedidos antes de mudar para Grade Nova.',
+            ]);
+        }
+
+        $previousType = $product->stock_offer_type;
+        $product->loadMissing('category');
+        $volumes->each(fn (StockOfferVolume $volume) => $volume->setRelation('product', $product));
+        $previousStates = $volumes->mapWithKeys(fn (StockOfferVolume $volume): array => [
+            $volume->getKey() => $this->stockMovementRecorder->snapshot($volume),
+        ])->all();
+
+        $product->update(['stock_offer_type' => $type]);
+
+        if ($volumes->isEmpty()) {
+            return;
+        }
+
+        $this->stockMovementRecorder->handle(
+            StockMovementType::Adjustment,
+            StockMovementSource::Reclassification,
+            $volumes,
+            Auth::user(),
+            reason: "Tipo de grade alterado de {$previousType->label()} para {$type->label()}",
+            previousStates: $previousStates,
+            resultingStates: $volumes->mapWithKeys(fn (StockOfferVolume $volume): array => [
+                $volume->getKey() => $this->stockMovementRecorder->snapshot($volume),
+            ])->all(),
+        );
+    }
+
+    /**
+     * Add, remove and reorder product photos without touching other product data.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function updateImages(Product $product, array $data): Product
+    {
+        return $this->persist($product, $data);
+    }
+
+    /**
+     * Lock the product, apply optional attribute changes and sync its photos atomically.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  (callable(Product): void)|null  $updateAttributes
+     */
+    private function persist(Product $product, array $data, ?callable $updateAttributes = null): Product
+    {
         $addedMedia = [];
         $mediaBackups = [];
+        $images = [];
+        foreach ($data['images'] ?? [] as $index => $image) {
+            if ($image instanceof UploadedFile) {
+                $images[$index] = $this->storeProductImage->prepare($image);
+            }
+        }
 
         try {
-            $updatedProduct = StockMutation::run(function () use ($product, $data, &$addedMedia, &$mediaBackups): Product {
+            $persist = function () use ($product, $data, $images, $updateAttributes, &$addedMedia, &$mediaBackups): Product {
                 $lockedProduct = Product::query()
                     ->whereKey($product->getKey())
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                $lockedProduct->update([
-                    'name' => $data['name'],
-                    'model' => $data['model'] ?? null,
-                    'category_id' => $data['category_id'] ?? null,
-                    'wash_type_id' => array_key_exists('wash_type_id', $data) ? $data['wash_type_id'] : $lockedProduct->wash_type_id,
-                    'line' => $data['line'] ?? null,
-                    'notes' => $data['notes'] ?? null,
-                    'is_active' => $data['is_active'] ?? true,
-                ]);
+                if ($updateAttributes !== null) {
+                    $updateAttributes($lockedProduct);
+                }
 
                 $rawRemoveMediaIds = $data['remove_media_ids'] ?? [];
                 $rawRemoveMediaIds = is_array($rawRemoveMediaIds) ? $rawRemoveMediaIds : [];
@@ -67,10 +162,13 @@ class UpdateProduct
                     ->whereNotIn('id', $removeMediaIds)
                     ->count();
 
-                $this->syncProductStockOffer->handle($lockedProduct, $data);
+                if ($remainingMediaCount + count($images) > Product::MAX_IMAGES) {
+                    throw ValidationException::withMessages(['images' => 'Um produto pode ter no máximo 5 fotos.']);
+                }
+
                 $addedMedia = $this->storeImages(
                     $lockedProduct,
-                    $data['images'] ?? [],
+                    $images,
                     $remainingMediaCount,
                 );
                 $this->reorderImages(
@@ -87,7 +185,10 @@ class UpdateProduct
                 });
 
                 return $lockedProduct;
-            });
+            };
+            $updatedProduct = $updateAttributes === null
+                ? DB::transaction($persist, 5)
+                : StockMutation::run($persist);
         } catch (Throwable $exception) {
             foreach ($addedMedia as $media) {
                 try {
@@ -111,7 +212,7 @@ class UpdateProduct
         }
 
         return $updatedProduct->fresh()->load([
-            'latestOffer.stockVolumes.items',
+            'stockVolumes.items',
             'media',
         ]);
     }
@@ -134,7 +235,7 @@ class UpdateProduct
 
         try {
             foreach ($images as $index => $image) {
-                if ($image instanceof UploadedFile) {
+                if (is_string($image)) {
                     $addedMedia[$index] = $this->storeProductImage->handle(
                         $product,
                         $image,

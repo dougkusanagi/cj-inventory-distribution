@@ -133,13 +133,10 @@ class EdgeCaseCatalogDemoSeeder extends Seeder
                 continue;
             }
 
-            $offer = $product->offers()->updateOrCreate(
-                ['type' => $definition['type']],
-                ['notes' => 'Oferta de demonstração para testar limites do layout.'],
-            );
+            $product->update(['stock_offer_type' => $definition['type']]);
 
             foreach ($definition['volumes'] as $sortOrder => $volumeDefinition) {
-                $volume = $offer->stockVolumes()->updateOrCreate(
+                $volume = $product->stockVolumes()->updateOrCreate(
                     ['sort_order' => $sortOrder],
                     ['total_quantity' => $volumeDefinition['total']],
                 );

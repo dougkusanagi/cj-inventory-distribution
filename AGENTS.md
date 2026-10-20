@@ -27,8 +27,9 @@ Depois, inspecione o código e os componentes relacionados antes de propor ou im
   por letras e personalizada.
 - O campo `model` do produto é opcional.
 - O código interno do produto é obrigatório e gerado pelo sistema.
-- `Reposição`, `Grade Nova` e `Grade Furada` classificam uma oferta de estoque, não o produto.
-- O estoque total é obrigatório quando houver uma oferta de estoque ativa.
+- `Reposição`, `Grade Nova` e `Grade Furada` são o tipo de grade do produto
+  (ADR 0024). Não recrie uma oferta de estoque entre produto e sacos.
+- O estoque total é obrigatório para cada saco cadastrado.
 - Quantidades por tamanho são opcionais.
 - Não assuma que a soma por tamanho sempre estará disponível.
 

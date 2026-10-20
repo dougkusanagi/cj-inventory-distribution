@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\StockOffer;
+use App\Models\Product;
 use App\Models\StockOfferVolume;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -19,7 +19,7 @@ class StockOfferVolumeFactory extends Factory
     public function definition(): array
     {
         return [
-            'stock_offer_id' => StockOffer::factory(),
+            'product_id' => Product::factory(),
             'sort_order' => 0,
             'total_quantity' => 0,
         ];

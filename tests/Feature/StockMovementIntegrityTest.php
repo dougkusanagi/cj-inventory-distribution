@@ -68,8 +68,8 @@ test('a deleted category cannot be assigned to a new product', function () {
 test('a product with available stock cannot be moved to the trash', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
-    $offer = $product->offers()->create(['type' => StockOfferType::Replenishment]);
-    $offer->stockVolumes()->create(['total_quantity' => 5]);
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $product->stockVolumes()->create(['total_quantity' => 5]);
 
     $this->actingAs($user)
         ->delete(route('products.destroy', $product))
@@ -80,8 +80,8 @@ test('a product with available stock cannot be moved to the trash', function () 
 
 test('restoring a product restores its soft-deleted stock tree without resurrecting a reservation', function () {
     $product = Product::factory()->create();
-    $offer = $product->offers()->create(['type' => StockOfferType::NewGrade]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 0]);
+    $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 0]);
     $item = $volume->items()->create(['size' => 'M', 'is_active' => false]);
 
     $product->delete();
@@ -90,7 +90,7 @@ test('restoring a product restores its soft-deleted stock tree without resurrect
     $product->restore();
 
     expect($product->fresh()->trashed())->toBeFalse()
-        ->and($offer->fresh()->trashed())->toBeFalse()
+        ->and($product->fresh()->trashed())->toBeFalse()
         ->and($volume->fresh()->trashed())->toBeFalse()
         ->and($item->fresh()->trashed())->toBeFalse()
         ->and($volume->fresh()->current_order_id)->toBeNull();
@@ -99,8 +99,8 @@ test('restoring a product restores its soft-deleted stock tree without resurrect
 test('the catalog tolerates a historically deleted category', function () {
     $category = Category::factory()->create(['name' => 'Categoria removida']);
     $product = Product::factory()->create(['category_id' => $category->id]);
-    $offer = $product->offers()->create(['type' => StockOfferType::Replenishment]);
-    $offer->stockVolumes()->create(['total_quantity' => 4]);
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $product->stockVolumes()->create(['total_quantity' => 4]);
     $category->delete();
 
     $this->get(route('home'))
@@ -112,9 +112,9 @@ test('the catalog tolerates a historically deleted category', function () {
 
 test('a pending order cannot be soft-deleted while it reserves a sack', function () {
     $product = Product::factory()->create();
-    $offer = $product->offers()->create(['type' => StockOfferType::Replenishment]);
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
     $order = Order::factory()->create();
-    $volume = $offer->stockVolumes()->create([
+    $volume = $product->stockVolumes()->create([
         'total_quantity' => 4,
         'current_order_id' => $order->id,
     ]);

@@ -62,7 +62,7 @@ test('email verification status is unchanged when the email address is unchanged
 });
 
 test('user can delete their account', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->stock()->create();
 
     $response = $this
         ->actingAs($user)

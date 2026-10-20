@@ -1078,48 +1078,48 @@ export default function Catalog({
                         }
                         onClear={clearFilters}
                         resultCount={products.meta.total}
+                        toolbar={
+                            <div
+                                role="group"
+                                aria-label="Colunas do catálogo"
+                                className="hidden items-center gap-1 rounded-xl border border-border bg-card p-1 xl:flex"
+                            >
+                                <button
+                                    type="button"
+                                    aria-label="Visualizar 3 produtos por linha"
+                                    aria-pressed={gridColumns === 3}
+                                    onClick={() => changeGridColumns(3)}
+                                    className={cn(
+                                        'ds-press flex size-9 items-center justify-center rounded-lg text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                                        gridColumns === 3 &&
+                                            'bg-secondary text-foreground shadow-sm',
+                                    )}
+                                >
+                                    <SquaresFourIcon
+                                        className="size-5"
+                                        aria-hidden="true"
+                                    />
+                                </button>
+                                <button
+                                    type="button"
+                                    aria-label="Visualizar 4 produtos por linha"
+                                    aria-pressed={gridColumns === 4}
+                                    onClick={() => changeGridColumns(4)}
+                                    className={cn(
+                                        'ds-press flex size-9 items-center justify-center rounded-lg text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                                        gridColumns === 4 &&
+                                            'bg-secondary text-foreground shadow-sm',
+                                    )}
+                                >
+                                    <GridNineIcon
+                                        className="size-5"
+                                        aria-hidden="true"
+                                    />
+                                </button>
+                            </div>
+                        }
                     />
 
-                    <div className="mb-4 hidden justify-end xl:flex">
-                        <div
-                            role="group"
-                            aria-label="Colunas do catálogo"
-                            className="flex items-center gap-1 rounded-xl border border-border bg-card p-1"
-                        >
-                            <button
-                                type="button"
-                                aria-label="Visualizar 3 produtos por linha"
-                                aria-pressed={gridColumns === 3}
-                                onClick={() => changeGridColumns(3)}
-                                className={cn(
-                                    'ds-press flex size-9 items-center justify-center rounded-lg text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-                                    gridColumns === 3 &&
-                                        'bg-secondary text-foreground shadow-sm',
-                                )}
-                            >
-                                <SquaresFourIcon
-                                    className="size-5"
-                                    aria-hidden="true"
-                                />
-                            </button>
-                            <button
-                                type="button"
-                                aria-label="Visualizar 4 produtos por linha"
-                                aria-pressed={gridColumns === 4}
-                                onClick={() => changeGridColumns(4)}
-                                className={cn(
-                                    'ds-press flex size-9 items-center justify-center rounded-lg text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-                                    gridColumns === 4 &&
-                                        'bg-secondary text-foreground shadow-sm',
-                                )}
-                            >
-                                <GridNineIcon
-                                    className="size-5"
-                                    aria-hidden="true"
-                                />
-                            </button>
-                        </div>
-                    </div>
                     {filtering ? (
                         <div
                             className={cn(

@@ -32,10 +32,12 @@ class StoreStockEntryRequest extends FormRequest
                 'integer',
                 Rule::exists(Product::class, 'id')->whereNull('deleted_at'),
             ],
-            'stock_offer_type' => ['required', Rule::enum(StockOfferType::class)],
             'reason' => [
                 'nullable',
-                Rule::requiredIf(fn (): bool => $this->input('stock_offer_type') === StockOfferType::BrokenGrade->value),
+                Rule::requiredIf(fn (): bool => Product::query()
+                    ->whereKey($this->integer('product_id'))
+                    ->where('stock_offer_type', StockOfferType::BrokenGrade->value)
+                    ->exists()),
                 'string',
                 'max:5000',
             ],
@@ -98,8 +100,6 @@ class StoreStockEntryRequest extends FormRequest
     {
         return [
             'product_id.exists' => 'Selecione um produto válido.',
-            'stock_offer_type.required' => 'Informe o tipo do estoque.',
-            'stock_offer_type.enum' => 'Selecione um tipo de estoque válido.',
             'reason.required' => 'Informe o motivo da entrada.',
             'idempotency_key.required' => 'Não foi possível registrar a entrada. Atualize a página e tente novamente.',
             'idempotency_key.regex' => 'Não foi possível registrar a entrada. Atualize a página e tente novamente.',

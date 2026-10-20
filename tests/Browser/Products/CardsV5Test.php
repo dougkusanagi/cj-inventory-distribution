@@ -15,8 +15,8 @@ it('shows stock first and keeps secondary details behind an explicit action', fu
         'name' => 'Calça V5 para estoque',
         'notes' => 'Separar por tonalidade',
     ]);
-    $offer = $product->offers()->create(['type' => StockOfferType::Replenishment]);
-    $volume = $offer->stockVolumes()->create(['sort_order' => 0, 'total_quantity' => 4]);
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $volume = $product->stockVolumes()->create(['sort_order' => 0, 'total_quantity' => 4]);
     $volume->items()->create([
         'size' => '38',
         'sort_order' => 0,

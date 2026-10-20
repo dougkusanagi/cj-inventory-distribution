@@ -1,9 +1,9 @@
 <?php
 
+use App\Enums\StockOfferType;
 use App\Models\CatalogSetting;
 use App\Models\Order;
 use App\Models\Product;
-use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
 use Database\Seeders\CatalogDemoSeeder;
 use Database\Seeders\FullSizeCatalogDemoSeeder;
@@ -43,8 +43,8 @@ it('loads the next product batch without depending on translated pagination labe
         $product = Product::factory()->create([
             'name' => sprintf('ZZ Produto adicional %02d', $index),
         ]);
-        $offer = StockOffer::factory()->replenishment()->for($product)->create();
-        StockOfferVolume::factory()->for($offer)->withTotal(4)->create();
+        $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+        StockOfferVolume::factory()->for($product)->withTotal(4)->create();
     }
 
     visit(route('catalog', [], false))
@@ -270,7 +270,7 @@ it('restores the selected sacks after reloading the catalog', function () {
 
 it('identifies a selected sack that became unavailable', function () {
     $product = Product::query()->where('name', 'Calça Wide Leg')->firstOrFail();
-    $volume = $product->latestOffer->stockVolumes->sortBy('sort_order')->firstOrFail();
+    $volume = $product->stockVolumes->sortBy('sort_order')->firstOrFail();
 
     $page = visit(route('catalog', [], false))->resize(390, 844);
     $page->script('localStorage.removeItem("catalog-bag");');
@@ -303,5 +303,17 @@ it('selects each physical sack once and removes it from the preview bag', functi
         ->assertDontSee('Esta é uma demonstração.')
         ->click('button[aria-label="Remover Saco 01 de Calça Wide Leg"]')
         ->assertSee('Sua sacola está vazia.')
+        ->assertNoJavaScriptErrors();
+});
+
+it('keeps the catalog column toggle inside the filter card on wide screens', function () {
+    visit(route('catalog', [], false))
+        ->resize(1366, 900)
+        ->assertVisible('[data-testid="catalog-filters"] [aria-label="Colunas do catálogo"]')
+        ->click('button[aria-label="Visualizar 4 produtos por linha"]')
+        ->assertAttribute('button[aria-label="Visualizar 4 produtos por linha"]', 'aria-pressed', 'true')
+        ->screenshot(filename: 'catalog-column-toggle-1366')
+        ->resize(390, 844)
+        ->assertMissing('[aria-label="Colunas do catálogo"]:visible')
         ->assertNoJavaScriptErrors();
 });

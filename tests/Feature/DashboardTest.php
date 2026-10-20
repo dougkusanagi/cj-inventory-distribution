@@ -24,11 +24,8 @@ test('authenticated users can visit the dashboard', function () {
     $product = Product::factory()->create();
     $product->addMedia(UploadedFile::fake()->image('shirt.jpg'))
         ->toMediaCollection(Product::MEDIA_COLLECTION);
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::NewGrade,
-        'is_active' => true,
-    ]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 12]);
+    $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 12]);
     $volume->items()->create(['size' => 'M', 'is_active' => true]);
     $pendingOrder = Order::factory()->create();
     OrderItem::factory()->for($pendingOrder)->create([
@@ -63,15 +60,12 @@ test('the dashboard and internal resources use the Portuguese panel paths', func
 test('dashboard stock units are summed from physical sacks', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::NewGrade,
-        'is_active' => true,
-    ]);
-    $firstVolume = $offer->stockVolumes()->create([
+    $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    $firstVolume = $product->stockVolumes()->create([
         'sort_order' => 0,
         'total_quantity' => 4,
     ]);
-    $secondVolume = $offer->stockVolumes()->create([
+    $secondVolume = $product->stockVolumes()->create([
         'sort_order' => 1,
         'total_quantity' => 6,
     ]);
@@ -91,13 +85,10 @@ test('dashboard stock units are summed from physical sacks', function () {
 test('dashboard separates available and reserved stock units', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::Replenishment,
-        'is_active' => true,
-    ]);
-    $offer->stockVolumes()->create(['total_quantity' => 4]);
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $product->stockVolumes()->create(['total_quantity' => 4]);
     $reservedOrder = Order::factory()->create();
-    $offer->stockVolumes()->create([
+    $product->stockVolumes()->create([
         'total_quantity' => 6,
         'current_order_id' => $reservedOrder->id,
     ]);

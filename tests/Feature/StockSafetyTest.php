@@ -1,14 +1,14 @@
 <?php
 
+use App\Enums\StockOfferType;
 use App\Models\Product;
-use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('the public catalog keeps unknown size quantities distinct from zero', function () {
     $product = Product::factory()->create();
-    $offer = StockOffer::factory()->replenishment()->for($product)->create();
-    $volume = StockOfferVolume::factory()->for($offer)->withTotal(7)->create();
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $volume = StockOfferVolume::factory()->for($product)->withTotal(7)->create();
     $volume->items()->create([
         'size' => 'M',
         'sort_order' => 0,

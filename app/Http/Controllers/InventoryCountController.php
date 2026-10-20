@@ -21,14 +21,14 @@ class InventoryCountController extends Controller
         Gate::authorize('create', StockMovement::class);
         $search = trim($request->string('search')->toString());
         $volumes = StockOfferVolume::query()->whereNull('current_order_id')->whereNull('consumed_at')
-            ->whereHas('offer', fn ($query) => $query->whereNull('deleted_at')->whereHas('product', fn ($products) => $products->whereNull('deleted_at')))
+            ->whereHas('product', fn ($products) => $products->whereNull('deleted_at'))
             ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
                 ->where('code', 'like', '%'.$search.'%')
-                ->orWhereHas('offer.product', fn ($products) => $products->where('name', 'like', '%'.$search.'%')->orWhere('code', 'like', '%'.$search.'%')->orWhere('model', 'like', '%'.$search.'%'))))
-            ->with('offer.product')->orderBy('id')->paginate(30)->withQueryString()
+                ->orWhereHas('product', fn ($products) => $products->where('name', 'like', '%'.$search.'%')->orWhere('code', 'like', '%'.$search.'%')->orWhere('model', 'like', '%'.$search.'%'))))
+            ->with('product')->orderBy('id')->paginate(30)->withQueryString()
             ->through(fn (StockOfferVolume $volume): array => [
                 'id' => $volume->id, 'code' => $volume->code ?? 'SC-'.str_pad((string) $volume->id, 6, '0', STR_PAD_LEFT),
-                'product' => $volume->offer->product->name, 'total_quantity' => $volume->total_quantity,
+                'product' => $volume->product->name, 'total_quantity' => $volume->total_quantity,
             ]);
 
         return Inertia::render('inventory/index', [

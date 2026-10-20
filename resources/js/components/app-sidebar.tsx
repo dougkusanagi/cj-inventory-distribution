@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     ArrowsLeftRightIcon,
     ClipboardTextIcon,
@@ -9,6 +9,8 @@ import {
     DropIcon,
     WarehouseIcon,
     NewspaperIcon,
+    ImagesIcon,
+    UsersIcon,
 } from '@phosphor-icons/react';
 import AppLogo from '@/components/app-logo';
 import AppearanceToggleTab from '@/components/appearance-tabs';
@@ -31,9 +33,11 @@ import { index as categoriesIndex } from '@/routes/categories';
 import { index as ordersIndex } from '@/routes/orders';
 import { index as stockMovementsIndex } from '@/routes/stock-movements';
 import { index as inventoryIndex } from '@/routes/inventory';
+import { index as productPhotosIndex } from '@/routes/product-photos';
+import { index as usersIndex } from '@/routes/users';
 import type { NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
+const operationNavItems: NavItem[] = [
     {
         title: 'Painel',
         href: dashboard(),
@@ -73,11 +77,31 @@ const mainNavItems: NavItem[] = [
             },
         ],
     },
-    { title: 'Novidades', href: changelog(), icon: NewspaperIcon },
 ];
+
+const photosNavItem: NavItem = {
+    title: 'Fotos dos produtos',
+    href: productPhotosIndex(),
+    icon: ImagesIcon,
+};
+
+const changelogNavItem: NavItem = {
+    title: 'Novidades',
+    href: changelog(),
+    icon: NewspaperIcon,
+};
 
 export function AppSidebar() {
     const { isMobile, state } = useSidebar();
+    const { can } = usePage().props.auth;
+    const mainNavItems = [
+        ...(can.manageOperations ? operationNavItems : []),
+        ...(can.managePhotos ? [photosNavItem] : []),
+        ...(can.manageUsers
+            ? [{ title: 'Usuários', href: usersIndex(), icon: UsersIcon }]
+            : []),
+        changelogNavItem,
+    ];
 
     return (
         <Sidebar collapsible="icon" variant="inset">

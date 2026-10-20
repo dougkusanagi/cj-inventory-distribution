@@ -93,14 +93,14 @@ class ProductController extends Controller
         Gate::authorize('update', $product);
 
         return Inertia::render('products/edit', [
-            'product' => ProductResource::make($product->load([
-                'offers.stockVolumes' => function (Relation $query): void {
-                    $query->withExists([
+            'product' => ProductResource::make($product->newQuery()->withStockSummary()->findOrFail($product->id)->load([
+                'stockVolumes' => function (Relation $query): void {
+                    $query->whereNull('consumed_at')->withExists([
                         'orderItems as has_order_items',
                         'stockMovementItems as has_stock_movements',
                     ]);
                 },
-                'offers.stockVolumes.items',
+                'stockVolumes.items',
                 'category:id,name,is_active',
                 'washType:id,name,is_active',
                 'media',
@@ -164,14 +164,15 @@ class ProductController extends Controller
         }
 
         $products = Product::query()
-            ->select(['id', 'code', 'model', 'name', 'category_id', 'wash_type_id', 'line', 'notes', 'is_active', 'created_at', 'updated_at'])
+            ->select(['id', 'code', 'model', 'name', 'category_id', 'wash_type_id', 'line', 'stock_offer_type', 'notes', 'is_active', 'created_at', 'updated_at'])
+            ->withStockSummary()
             ->with([
                 'category:id,name,is_active',
                 'washType:id,name,is_active',
-                'offers.stockVolumes' => function (Relation $query): void {
-                    $query->select([
+                'stockVolumes' => function (Relation $query): void {
+                    $query->whereNull('consumed_at')->select([
                         'id',
-                        'stock_offer_id',
+                        'product_id',
                         'sort_order',
                         'total_quantity',
                         'current_order_id',
@@ -181,7 +182,7 @@ class ProductController extends Controller
                         'stockMovementItems as has_stock_movements',
                     ]);
                 },
-                'offers.stockVolumes.items:id,stock_offer_volume_id,size,sort_order,is_active,quantity',
+                'stockVolumes.items:id,stock_offer_volume_id,size,sort_order,is_active,quantity',
                 'media',
             ])
             ->when($status !== 'all', fn (Builder $query) => $query->where('is_active', $status === 'active'))
@@ -191,11 +192,11 @@ class ProductController extends Controller
             ->when($washTypeId > 0, fn (Builder $query) => $query->where('wash_type_id', $washTypeId))
             ->when($categoryId > 0, fn (Builder $query) => $query->where('category_id', $categoryId))
             ->when(in_array($line, array_column(ProductLine::cases(), 'value'), true), fn (Builder $query) => $query->where('line', $line))
-            ->when(in_array($stockOfferType, array_column(StockOfferType::cases(), 'value'), true), fn (Builder $query) => $query->whereHas('offers', fn (Builder $query) => $query->where('type', $stockOfferType)))
+            ->when(in_array($stockOfferType, array_column(StockOfferType::cases(), 'value'), true), fn (Builder $query) => $query->where('stock_offer_type', $stockOfferType))
             ->when($image === 'with', fn (Builder $query) => $query->whereHas('media', fn (Builder $query) => $query->where('collection_name', Product::MEDIA_COLLECTION)))
             ->when($image === 'without', fn (Builder $query) => $query->whereDoesntHave('media', fn (Builder $query) => $query->where('collection_name', Product::MEDIA_COLLECTION)))
             ->when($stock !== 'all', fn (Builder $query) => $query->has(
-                'offers.stockVolumes',
+                'stockVolumes',
                 $stock === 'with' ? '>=' : '<',
                 1,
                 'and',

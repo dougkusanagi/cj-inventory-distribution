@@ -1,12 +1,13 @@
 <?php
 
+use App\Enums\UserRole;
 use App\Models\Order;
 use App\Models\User;
 use App\Policies\OrderPolicy;
 
-test('only staff can access and change orders', function (bool $isStaff, bool $allowed) {
+test('only staff can access and change orders', function (?UserRole $role, bool $allowed) {
     $user = new User;
-    $user->forceFill(['is_staff' => $isStaff]);
+    $user->forceFill(['role' => $role]);
     $order = new Order;
     $policy = new OrderPolicy;
 
@@ -16,6 +17,8 @@ test('only staff can access and change orders', function (bool $isStaff, bool $a
         ->and($policy->update($user, $order))->toBe($allowed)
         ->and($policy->delete($user, $order))->toBeFalse();
 })->with([
-    'staff' => [true, true],
-    'non-staff' => [false, false],
+    'admin' => [UserRole::Admin, true],
+    'stock' => [UserRole::Stock, true],
+    'marketing' => [UserRole::Marketing, false],
+    'no role' => [null, false],
 ]);

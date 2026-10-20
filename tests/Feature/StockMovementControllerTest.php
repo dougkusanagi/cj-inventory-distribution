@@ -15,19 +15,18 @@ use App\Models\User;
 function movementVolume(): StockOfferVolume
 {
     $product = Product::factory()->create();
-    $offer = $product->offers()->create(['type' => StockOfferType::Replenishment]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 12]);
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 12]);
     $volume->items()->create(['size' => 'M', 'quantity' => 12, 'is_active' => true]);
 
-    return $volume->load(['items', 'offer.product.category']);
+    return $volume->load(['items', 'product.category']);
 }
 
 test('staff can register a whole-sack entry and retries are idempotent', function () {
     $user = User::factory()->create();
-    $product = Product::factory()->create();
+    $product = Product::factory()->replenishment()->create();
     $payload = [
         'product_id' => $product->id,
-        'stock_offer_type' => StockOfferType::Replenishment->value,
         'reason' => 'Recebimento da fábrica',
         'notes' => 'Lote de setembro',
         'idempotency_key' => 'entry-september-001',
@@ -60,11 +59,10 @@ test('staff can register a whole-sack entry and retries are idempotent', functio
 
 test('grade nova and reposição entries only need sack totals', function (StockOfferType $type) {
     $user = User::factory()->create();
-    $product = Product::factory()->create();
+    $product = Product::factory()->create(['stock_offer_type' => $type]);
 
     $this->actingAs($user)->post(route('stock-entries.store'), [
         'product_id' => $product->id,
-        'stock_offer_type' => $type->value,
         'idempotency_key' => 'entry-totals-'.$type->value,
         'stock_volumes' => [
             ['total_quantity' => 13, 'items' => []],
@@ -75,6 +73,7 @@ test('grade nova and reposição entries only need sack totals', function (Stock
     $movement = StockMovement::query()->sole();
 
     expect($movement->reason)->toBe('Entrada de '.$type->label())
+        ->and($movement->items->pluck('offer_type_snapshot')->unique()->all())->toBe([$type->value])
         ->and(StockOfferVolume::query()->sum('total_quantity'))->toBe(25)
         ->and(StockOfferVolume::query()->count())->toBe(2);
 })->with([
@@ -84,11 +83,10 @@ test('grade nova and reposição entries only need sack totals', function (Stock
 
 test('grade furada entries still require a reason', function () {
     $user = User::factory()->create();
-    $product = Product::factory()->create();
+    $product = Product::factory()->brokenGrade()->create();
 
     $this->actingAs($user)->post(route('stock-entries.store'), [
         'product_id' => $product->id,
-        'stock_offer_type' => StockOfferType::BrokenGrade->value,
         'idempotency_key' => 'entry-broken-without-reason',
         'stock_volumes' => [['total_quantity' => 5, 'items' => []]],
     ])->assertSessionHasErrors(['reason' => 'Informe o motivo da entrada.']);
@@ -153,7 +151,7 @@ test('stock entry returns to the product when started from its stock tab', funct
         ->assertRedirect(route('products.edit', $product));
 
     expect(StockMovement::query()->count())->toBe(1)
-        ->and($product->fresh()->latestOffer->type)->toBe(StockOfferType::NewGrade);
+        ->and($product->fresh()->stock_offer_type)->toBe(StockOfferType::NewGrade);
 });
 
 test('stock exit lists only the selected product available sacks', function () {
@@ -163,11 +161,11 @@ test('stock exit lists only the selected product available sacks', function () {
 
     $this->actingAs($user)
         ->get(route('stock-exits.create', [
-            'product' => $selectedVolume->offer->product_id,
+            'product' => $selectedVolume->product_id,
         ]))
         ->assertInertia(fn ($page) => $page
             ->component('stock-movements/exit')
-            ->where('selectedProductId', $selectedVolume->offer->product_id)
+            ->where('selectedProductId', $selectedVolume->product_id)
             ->has('volumes', 1)
             ->where('volumes.0.id', $selectedVolume->id));
 
@@ -179,7 +177,7 @@ test('staff can recount known sizes from the product and records the difference'
     $item = $volume->items->sole();
 
     $this->actingAs($user)
-        ->post(route('products.stock-adjustments.store', $volume->offer->product), [
+        ->post(route('products.stock-adjustments.store', $volume->product), [
             'volume_id' => $volume->id,
             'expected_version' => $volume->fresh()->stock_version,
             'items' => [[
@@ -190,7 +188,7 @@ test('staff can recount known sizes from the product and records the difference'
             'reason' => 'Contagem física',
             'idempotency_key' => 'adjustment-size-001',
         ])
-        ->assertRedirect(route('products.edit', $volume->offer->product));
+        ->assertRedirect(route('products.edit', $volume->product));
 
     $movement = StockMovement::query()->sole();
 
@@ -224,7 +222,7 @@ test('adjustments reject a stale sack version without overwriting a newer recoun
     $item = $volume->items->sole();
     $expectedVersion = $volume->fresh()->stock_version;
 
-    $this->actingAs($user)->post(route('products.stock-adjustments.store', $volume->offer->product), [
+    $this->actingAs($user)->post(route('products.stock-adjustments.store', $volume->product), [
         'volume_id' => $volume->id,
         'expected_version' => $expectedVersion,
         'items' => [['id' => $item->id, 'is_active' => true, 'quantity' => 8]],
@@ -232,7 +230,7 @@ test('adjustments reject a stale sack version without overwriting a newer recoun
         'idempotency_key' => 'adjustment-first-count-001',
     ])->assertRedirect();
 
-    $this->actingAs($user)->post(route('products.stock-adjustments.store', $volume->offer->product), [
+    $this->actingAs($user)->post(route('products.stock-adjustments.store', $volume->product), [
         'volume_id' => $volume->id,
         'expected_version' => $expectedVersion,
         'items' => [['id' => $item->id, 'is_active' => true, 'quantity' => 9]],
@@ -252,7 +250,7 @@ test('staff can redistribute a sack between sizes without changing its total', f
     $secondItem = $volume->items()->create(['size' => 'G', 'quantity' => 0, 'is_active' => true]);
 
     $this->actingAs($user)
-        ->post(route('products.stock-adjustments.store', $volume->offer->product), [
+        ->post(route('products.stock-adjustments.store', $volume->product), [
             'volume_id' => $volume->id,
             'expected_version' => $volume->fresh()->stock_version,
             'items' => [
@@ -275,7 +273,7 @@ test('non-staff cannot adjust product stock', function () {
     $item = $volume->items->sole();
 
     $this->actingAs($user)
-        ->post(route('products.stock-adjustments.store', $volume->offer->product), [
+        ->post(route('products.stock-adjustments.store', $volume->product), [
             'volume_id' => $volume->id,
             'expected_version' => $volume->fresh()->stock_version,
             'items' => [[
@@ -301,7 +299,7 @@ test('adjustments reject reserved sacks without changing stock', function () {
     $volume->update(['current_order_id' => $order->id]);
 
     $this->actingAs($user)
-        ->post(route('products.stock-adjustments.store', $volume->offer->product), [
+        ->post(route('products.stock-adjustments.store', $volume->product), [
             'volume_id' => $volume->id,
             'expected_version' => $volume->fresh()->stock_version,
             'items' => [[
@@ -327,7 +325,7 @@ test('adjustments reject a recount that does not change the sack', function () {
     $item = $volume->items->sole();
 
     $this->actingAs($user)
-        ->post(route('products.stock-adjustments.store', $volume->offer->product), [
+        ->post(route('products.stock-adjustments.store', $volume->product), [
             'volume_id' => $volume->id,
             'expected_version' => $volume->fresh()->stock_version,
             'items' => [[
@@ -364,10 +362,10 @@ test('adjustments are idempotent', function () {
     ];
 
     $this->actingAs($user)
-        ->post(route('products.stock-adjustments.store', $volume->offer->product), $payload)
+        ->post(route('products.stock-adjustments.store', $volume->product), $payload)
         ->assertRedirect();
     $this->actingAs($user)
-        ->post(route('products.stock-adjustments.store', $volume->offer->product), $payload)
+        ->post(route('products.stock-adjustments.store', $volume->product), $payload)
         ->assertRedirect();
 
     expect(StockMovement::query()->count())->toBe(1)
@@ -396,8 +394,8 @@ test('manual exits cannot consume a reserved sack', function () {
 test('manual exits can consume a Grade Nova sack', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
-    $offer = $product->offers()->create(['type' => StockOfferType::NewGrade]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 3]);
+    $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 3]);
 
     $this->actingAs($user)
         ->post(route('stock-exits.store'), [
@@ -515,7 +513,7 @@ test('history filters isolate products and responsible users in its counters', f
         'idempotency_key' => 'exit-filter-second',
     ]);
     $thirdVolume = movementVolume();
-    $fourthVolume = $firstVolume->offer->stockVolumes()->create(['total_quantity' => 12]);
+    $fourthVolume = $firstVolume->product->stockVolumes()->create(['total_quantity' => 12]);
     $this->actingAs($firstUser)->post(route('stock-exits.store'), [
         'volume_ids' => [$thirdVolume->id], 'reason' => 'Outro produto da Ana', 'idempotency_key' => 'exit-filter-third',
     ])->assertRedirect();
@@ -527,13 +525,13 @@ test('history filters isolate products and responsible users in its counters', f
         ->get(route('stock-movements.index', [
             'type' => StockMovementType::Out->value,
             'actor' => $firstUser->id,
-            'product' => $firstVolume->offer->product_id,
+            'product' => $firstVolume->product_id,
         ]))
         ->assertInertia(fn ($page) => $page
             ->has('movements.data', 1)
             ->where('movements.data.0.actor', $firstUser->name)
             ->where('filters.actor', $firstUser->id)
-            ->where('filters.product', $firstVolume->offer->product_id)
+            ->where('filters.product', $firstVolume->product_id)
             ->where('summary.count', 1)
             ->where('summary.exits', 1)
             ->where('summary.manual_exits', 1)
@@ -557,7 +555,7 @@ test('recounts reject incomplete repeated and foreign size selections without ch
     }
 
     $this->actingAs(User::factory()->create())
-        ->post(route('products.stock-adjustments.store', $volume->offer->product), [
+        ->post(route('products.stock-adjustments.store', $volume->product), [
             'volume_id' => $volume->id, 'expected_version' => $volume->fresh()->stock_version,
             'items' => $items, 'total_quantity' => 9, 'reason' => 'Recontagem', 'idempotency_key' => 'invalid-selection',
         ])->assertInvalid(['items' => $message]);
@@ -576,9 +574,9 @@ test('recounts reject incomplete repeated and foreign size selections without ch
 test('history searches order codes and product model snapshots', function () {
     $user = User::factory()->create();
     $firstVolume = movementVolume();
-    $firstVolume->offer->product->update(['model' => 'MODELO-UM']);
+    $firstVolume->product->update(['model' => 'MODELO-UM']);
     $secondVolume = movementVolume();
-    $secondVolume->offer->product->update(['model' => 'MODELO-DOIS']);
+    $secondVolume->product->update(['model' => 'MODELO-DOIS']);
 
     $this->actingAs($user)->post(route('stock-exits.store'), [
         'volume_ids' => [$firstVolume->id],

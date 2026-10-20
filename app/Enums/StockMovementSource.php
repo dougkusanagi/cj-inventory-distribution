@@ -8,6 +8,7 @@ enum StockMovementSource: string
     case Adjustment = 'adjustment';
     case Order = 'order';
     case Opening = 'opening';
+    case Reclassification = 'reclassification';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum StockMovementSource: string
             self::Adjustment => 'Ajuste por tamanho',
             self::Order => 'Pedido',
             self::Opening => 'Abertura inicial',
+            self::Reclassification => 'Reclassificação de grade',
         };
     }
 }

@@ -4,7 +4,6 @@ namespace App\Http\Resources;
 
 use App\Enums\StockOfferType;
 use App\Models\Product;
-use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
 use App\Models\StockOfferVolumeItem;
 use Illuminate\Http\Request;
@@ -23,17 +22,14 @@ class ProductResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $offer = $this->relationLoaded('latestOffer') ? $this->latestOffer : null;
-        $stockVolumes = $offer && $offer->relationLoaded('stockVolumes')
-            ? $offer->stockVolumes
-            : collect();
-        if ($this->relationLoaded('offers')) {
-            $offer = $this->offers->sortByDesc('id')->first();
-            $stockVolumes = $this->offers->flatMap(fn (StockOffer $stockOffer) => $stockOffer->stockVolumes);
-        }
-        $totalQuantity = $offer === null
+        $stockVolumes = $this->relationLoaded('stockVolumes') ? $this->stockVolumes : collect();
+        $recordedVolumeCount = (int) ($this->resource->getAttribute('recorded_volume_count') ?? $stockVolumes->count());
+        $hasStock = $this->relationLoaded('stockVolumes')
+            ? $stockVolumes->contains(fn (StockOfferVolume $volume): bool => $volume->consumed_at === null)
+            : $recordedVolumeCount > 0;
+        $totalQuantity = ! $hasStock
             ? null
-            : (int) $stockVolumes->sum('total_quantity');
+            : (int) ($this->resource->getAttribute('recorded_quantity') ?? $stockVolumes->sum('total_quantity'));
         $availableVolumes = $stockVolumes->filter(fn (StockOfferVolume $volume): bool => $volume->total_quantity > 0
             && $volume->current_order_id === null
             && $volume->consumed_at === null);
@@ -46,14 +42,17 @@ class ProductResource extends JsonResource
         $consumedQuantity = (int) $stockVolumes
             ->filter(fn (StockOfferVolume $volume): bool => $volume->consumed_at !== null)
             ->sum('total_quantity');
+        if (array_key_exists('recorded_quantity', $this->resource->getAttributes())) {
+            $consumedQuantity = (int) $totalQuantity - (int) $stockVolumes->sum('total_quantity');
+        }
         $availableQuantity = (int) $availableVolumes->sum('total_quantity');
         $physicalQuantity = (int) $physicalVolumes->sum('total_quantity');
         $hasPositiveStock = ($totalQuantity ?? 0) > 0;
         $hasAvailableVolumes = $availableVolumes->isNotEmpty();
 
-        $availableForDistribution = $this->is_active && $availableVolumes->contains(
-            fn (StockOfferVolume $volume): bool => $volume->offer->type !== StockOfferType::NewGrade,
-        );
+        $availableForDistribution = $this->is_active
+            && $this->stock_offer_type !== StockOfferType::NewGrade
+            && $availableVolumes->isNotEmpty();
 
         return [
             'id' => $this->id,
@@ -91,14 +90,14 @@ class ProductResource extends JsonResource
                 ->all()),
             'notes' => $this->notes,
             'available_for_distribution' => $availableForDistribution,
-            'distribution_status' => $availableForDistribution ? 'Disponível para distribuição' : $this->distributionStatus($offer, $hasPositiveStock, $hasAvailableVolumes),
-            'stock_offer_type' => $offer?->type?->value,
+            'distribution_status' => $availableForDistribution ? 'Disponível para distribuição' : $this->distributionStatus($hasStock, $hasPositiveStock, $hasAvailableVolumes),
+            'stock_offer_type' => $this->stock_offer_type->value,
             'total_quantity' => $totalQuantity,
             'physical_quantity' => $physicalQuantity,
             'available_quantity' => $availableQuantity,
             'reserved_quantity' => $reservedQuantity,
             'consumed_quantity' => $consumedQuantity,
-            'stock_volume_count' => $stockVolumes->count(),
+            'stock_volume_count' => $recordedVolumeCount,
             'physical_stock_volume_count' => $physicalVolumes->count(),
             'available_stock_volume_count' => $availableVolumes->count(),
             'stock_volumes' => $stockVolumes
@@ -126,7 +125,7 @@ class ProductResource extends JsonResource
             'stock_version' => $volume->stock_version,
             'can_recount' => $volume->current_order_id === null && $volume->consumed_at === null,
             'status' => $volume->consumed_at !== null ? 'Consumido' : ($volume->current_order_id !== null ? 'Reservado' : 'Disponível'),
-            'offer_type' => $volume->offer->type->label(),
+            'offer_type' => $this->stock_offer_type->label(),
             'items' => $volume->relationLoaded('items')
                 ? $volume->items->map(fn (StockOfferVolumeItem $item): array => [
                     'id' => $item->id,
@@ -139,17 +138,17 @@ class ProductResource extends JsonResource
         ];
     }
 
-    private function distributionStatus(?StockOffer $offer, bool $hasPositiveStock, bool $hasAvailableVolumes): string
+    private function distributionStatus(bool $hasStock, bool $hasPositiveStock, bool $hasAvailableVolumes): string
     {
         if (! $this->is_active) {
             return 'Produto oculto';
         }
 
-        if ($offer === null) {
+        if (! $hasStock) {
             return 'Sem estoque disponível';
         }
 
-        if ($offer->type === StockOfferType::NewGrade) {
+        if ($this->stock_offer_type === StockOfferType::NewGrade) {
             return 'Disponível apenas para a equipe (Grade Nova)';
         }
 

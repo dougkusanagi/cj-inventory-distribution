@@ -50,7 +50,7 @@ class OpenInitialStock
                 ->whereNull('current_order_id')
                 ->whereNull('consumed_at')
                 ->whereDoesntHave('stockMovementItems')
-                ->with(['items', 'offer.product.category'])
+                ->with(['items', 'product.category'])
                 ->orderBy('id')
                 ->lockForUpdate();
 

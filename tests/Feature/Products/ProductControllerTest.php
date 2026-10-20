@@ -1,12 +1,14 @@
 <?php
 
 use App\Enums\ProductLine;
+use App\Enums\StockMovementSource;
+use App\Enums\StockMovementType;
 use App\Enums\StockOfferType;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
-use App\Models\StockOffer;
+use App\Models\StockMovement;
 use App\Models\StockOfferVolume;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -58,11 +60,8 @@ test('authenticated users can view the product catalog', function () {
         'name' => 'Calça Wide Leg',
         'line' => ProductLine::Slim,
     ]);
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::NewGrade,
-        'is_active' => true,
-    ]);
-    $volume = $offer->stockVolumes()->create([
+    $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    $volume = $product->stockVolumes()->create([
         'sort_order' => 0,
         'total_quantity' => 0,
     ]);
@@ -174,13 +173,13 @@ test('product catalog searches by name, model, and internal code', function () {
 test('product catalog labels physical, reserved, consumed, and available stock separately', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
-    $offer = StockOffer::factory()->replenishment()->for($product)->create();
-    $offer->stockVolumes()->create(['total_quantity' => 10]);
-    $offer->stockVolumes()->create([
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $product->stockVolumes()->create(['total_quantity' => 10]);
+    $product->stockVolumes()->create([
         'total_quantity' => 5,
         'current_order_id' => Order::factory()->create()->id,
     ]);
-    $offer->stockVolumes()->create([
+    $product->stockVolumes()->create([
         'total_quantity' => 7,
         'consumed_at' => now(),
     ]);
@@ -250,15 +249,9 @@ test('activation combines with search and remains in pagination links', function
 test('product catalog filters products by their latest stock offer type', function () {
     $user = User::factory()->create();
     $replenishmentProduct = Product::factory()->create();
-    $replenishmentProduct->offers()->create([
-        'type' => StockOfferType::Replenishment,
-        'is_active' => true,
-    ]);
+    $replenishmentProduct->update(['stock_offer_type' => StockOfferType::Replenishment]);
     $newGradeProduct = Product::factory()->create();
-    $newGradeProduct->offers()->create([
-        'type' => StockOfferType::NewGrade,
-        'is_active' => true,
-    ]);
+    $newGradeProduct->update(['stock_offer_type' => StockOfferType::NewGrade]);
 
     $this->actingAs($user)
         ->get(route('products.index', ['stock_offer_type' => 'replenishment']))
@@ -272,17 +265,11 @@ test('product catalog filters products by their latest stock offer type', functi
 test('product catalog explains when a product is available for distribution', function () {
     $user = User::factory()->create();
     $hiddenProduct = Product::factory()->create(['is_active' => false]);
-    $hiddenOffer = $hiddenProduct->offers()->create([
-        'type' => StockOfferType::NewGrade,
-        'is_active' => true,
-    ]);
-    $hiddenOffer->stockVolumes()->create(['total_quantity' => 12]);
+    $hiddenProduct->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    $hiddenProduct->stockVolumes()->create(['total_quantity' => 12]);
     $availableProduct = Product::factory()->create();
-    $availableOffer = $availableProduct->offers()->create([
-        'type' => StockOfferType::Replenishment,
-        'is_active' => true,
-    ]);
-    $availableOffer->stockVolumes()->create(['total_quantity' => 12]);
+    $availableProduct->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $availableProduct->stockVolumes()->create(['total_quantity' => 12]);
 
     $this->actingAs($user)
         ->get(route('products.index', ['status' => 'all']))
@@ -317,10 +304,8 @@ test('product catalog keeps image URLs on the application origin', function () {
 test('authenticated users can open the product forms', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::NewGrade,
-    ]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 8]);
+    $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 8]);
     $volume->items()->create([
         'size' => 'M',
         'quantity' => 8,
@@ -348,10 +333,8 @@ test('authenticated users can open the product forms', function () {
 test('editing a product keeps its stock data available', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::Replenishment,
-    ]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 10]);
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 10]);
     $volume->items()->create([
         'size' => 'M',
         'quantity' => 10,
@@ -391,18 +374,18 @@ test('authenticated users can create a product with optional model, ordered size
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('products.index'));
 
-    $product = Product::query()->with('latestOffer.stockVolumes.items')->sole();
+    $product = Product::query()->with('stockVolumes.items')->sole();
 
     $this->assertModelExists($product);
     expect($product->code)->toBe('CJ-000001');
     expect($product->name)->toBe('Jaqueta Jeans Oversized');
     expect($product->model)->toBeNull();
-    expect($product->latestOffer)->not->toBeNull();
-    expect($product->latestOffer->type)->toBe(StockOfferType::NewGrade);
-    expect($product->latestOffer->calculatedTotalQuantity())->toBe(15);
-    expect($product->latestOffer->stockVolumes->sole()->items->pluck('is_active')->all())
+    expect($product->stockVolumes)->not->toBeEmpty();
+    expect($product->stock_offer_type)->toBe(StockOfferType::NewGrade);
+    expect($product->stockVolumes->sum('total_quantity'))->toBe(15);
+    expect($product->stockVolumes->sole()->items->pluck('is_active')->all())
         ->toBe([true, true, true]);
-    expect($product->latestOffer->stockVolumes->sole()->items->pluck('quantity')->all())
+    expect($product->stockVolumes->sole()->items->pluck('quantity')->all())
         ->toBe([5, 5, 5]);
 });
 
@@ -443,7 +426,7 @@ test('stock entered while updating a product must use the stock entry flow', fun
     ]);
 
     $response->assertInvalid(['stock_volumes']);
-    expect($product->offers()->count())->toBe(0);
+    expect($product->stockVolumes()->count())->toBe(0);
 });
 
 test('product creation preserves the selected image order', function () {
@@ -492,12 +475,12 @@ test('stock total is calculated from active size quantities', function () {
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('products.index'));
 
-    $product = Product::query()->with('latestOffer.stockVolumes.items')->sole();
+    $product = Product::query()->with('stockVolumes.items')->sole();
 
-    expect($product->latestOffer->calculatedTotalQuantity())->toBe(4);
-    expect($product->latestOffer->stockVolumes->sole()->items->pluck('is_active')->all())
+    expect($product->stockVolumes->sum('total_quantity'))->toBe(4);
+    expect($product->stockVolumes->sole()->items->pluck('is_active')->all())
         ->toBe([true, true, false]);
-    expect($product->latestOffer->stockVolumes->sole()->items->pluck('quantity')->all())
+    expect($product->stockVolumes->sole()->items->pluck('quantity')->all())
         ->toBe([0, 4, null]);
 });
 
@@ -512,21 +495,17 @@ test('authenticated users can save a product without creating a stock offer', fu
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('products.index'));
 
-    $product = Product::query()->with('latestOffer')->sole();
+    $product = Product::query()->with('stockVolumes')->sole();
 
     expect($product->is_active)->toBeTrue();
-    expect($product->latestOffer)->toBeNull();
-    expect(StockOffer::query()->where('product_id', $product->id)->count())->toBe(0);
+    expect($product->stockVolumes)->toBeEmpty();
 });
 
 test('product activation is independent from its stock offer', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::NewGrade,
-        'is_active' => true,
-    ]);
-    $volume = $offer->stockVolumes()->create([
+    $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    $volume = $product->stockVolumes()->create([
         'total_quantity' => 10,
     ]);
     $volume->items()->create([
@@ -557,7 +536,7 @@ test('product activation is independent from its stock offer', function () {
         ->assertRedirect(route('products.index'));
 
     expect($product->fresh()->is_active)->toBeFalse();
-    expect($offer->fresh()->type)->toBe(StockOfferType::NewGrade);
+    expect($product->fresh()->stock_offer_type)->toBe(StockOfferType::NewGrade);
 });
 
 test('stock offer type is persisted from the explicit request value', function () {
@@ -576,10 +555,10 @@ test('stock offer type is persisted from the explicit request value', function (
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('products.index'));
 
-    $product = Product::query()->with('latestOffer')->sole();
+    $product = Product::query()->with('stockVolumes')->sole();
 
-    expect($product->latestOffer->type)->toBe(StockOfferType::Replenishment);
-    expect($product->latestOffer->stockVolumes()->count())->toBe(1);
+    expect($product->stock_offer_type)->toBe(StockOfferType::Replenishment);
+    expect($product->stockVolumes()->count())->toBe(1);
 });
 
 test('a product without sacks does not create a stock offer', function () {
@@ -594,60 +573,24 @@ test('a product without sacks does not create a stock offer', function () {
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('products.index'));
 
-    expect(Product::query()->sole()->latestOffer)->toBeNull();
+    expect(Product::query()->sole()->stockVolumes)->toBeEmpty();
 });
 
-test('the shared catalog excludes offers without physical stock', function () {
-    $product = Product::factory()->create();
-    $availableOffer = $product->offers()->create([
-        'type' => StockOfferType::Replenishment,
-        'is_active' => true,
-    ]);
-    $availableOffer->stockVolumes()->create(['total_quantity' => 12]);
-    $exhaustedOffer = $product->offers()->create([
-        'type' => StockOfferType::Replenishment,
-        'is_active' => true,
-    ]);
-    $exhaustedOffer->stockVolumes()->create(['total_quantity' => 0]);
-    $availableBrokenGradeOffer = $product->offers()->create([
-        'type' => StockOfferType::BrokenGrade,
-    ]);
-    $availableBrokenGradeOffer->stockVolumes()->create(['total_quantity' => 12]);
-    $newGradeOffer = $product->offers()->create([
-        'type' => StockOfferType::NewGrade,
-        'is_active' => true,
-    ]);
-    $newGradeOffer->stockVolumes()->create(['total_quantity' => 12]);
-    $zeroStockOffer = $product->offers()->create([
-        'type' => StockOfferType::NewGrade,
-        'is_active' => true,
-    ]);
-    $zeroStockOffer->stockVolumes()->create(['total_quantity' => 0]);
-    $inactiveProduct = Product::factory()->create(['is_active' => false]);
-    $inactiveProductOffer = $inactiveProduct->offers()->create([
-        'type' => StockOfferType::NewGrade,
-        'is_active' => true,
-    ]);
-    $inactiveProductOffer->stockVolumes()->create(['total_quantity' => 12]);
+test('the shared catalog lists only active products with available sacks outside Grade Nova', function () {
+    $available = Product::factory()->replenishment()->create();
+    $available->stockVolumes()->create(['total_quantity' => 0]);
+    $available->stockVolumes()->create(['total_quantity' => 12]);
+    $brokenGrade = Product::factory()->brokenGrade()->create();
+    $brokenGrade->stockVolumes()->create(['total_quantity' => 12]);
+    $withoutStock = Product::factory()->replenishment()->create();
+    $withoutStock->stockVolumes()->create(['total_quantity' => 0]);
+    $newGrade = Product::factory()->create();
+    $newGrade->stockVolumes()->create(['total_quantity' => 12]);
+    $inactive = Product::factory()->replenishment()->create(['is_active' => false]);
+    $inactive->stockVolumes()->create(['total_quantity' => 12]);
 
-    $availableOfferIds = StockOffer::query()
-        ->whereBelongsTo($product)
-        ->availableForCatalog()
-        ->orderBy('id')
-        ->pluck('id')
-        ->all();
-
-    expect($availableOfferIds)->toBe([$availableOffer->id, $availableBrokenGradeOffer->id]);
-    expect($availableOfferIds)->not->toContain($exhaustedOffer->id);
-    expect($availableOfferIds)->not->toContain($newGradeOffer->id);
-    expect($availableOfferIds)->not->toContain($zeroStockOffer->id);
-    expect(
-        StockOffer::query()
-            ->availableForCatalog()
-            ->whereKey($inactiveProductOffer->getKey())
-            ->exists(),
-    )->toBeFalse();
-    expect($product->fresh()->latestAvailableOffer->is($availableBrokenGradeOffer))->toBeTrue();
+    expect(Product::query()->availableForCatalog()->orderBy('id')->pluck('id')->all())
+        ->toBe([$available->id, $brokenGrade->id]);
 });
 
 test('product creation stores up to five images with thumbnails', function () {
@@ -787,12 +730,12 @@ test('authenticated users can save which sizes are present without quantities', 
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('products.index'));
 
-    $product = Product::query()->with('latestOffer.stockVolumes.items')->sole();
+    $product = Product::query()->with('stockVolumes.items')->sole();
 
-    expect($product->latestOffer)->not->toBeNull();
-    expect($product->latestOffer->stockVolumes->sole()->items->pluck('is_active')->all())
+    expect($product->stockVolumes)->not->toBeEmpty();
+    expect($product->stockVolumes->sole()->items->pluck('is_active')->all())
         ->toBe([true, false, true]);
-    expect($product->latestOffer->stockVolumes->sole()->items->pluck('quantity')->all())
+    expect($product->stockVolumes->sole()->items->pluck('quantity')->all())
         ->toBe([null, null, null]);
 });
 
@@ -879,7 +822,7 @@ test('authenticated users can update product details without changing its code',
     expect($product->code)->toBe($originalCode);
     expect($product->name)->toBe('Short Mom');
     expect($product->model)->toBe('3002');
-    expect($product->offers()->count())->toBe(0);
+    expect($product->stockVolumes()->count())->toBe(0);
 });
 
 test('product updates preserve valid text values that PHP treats as false', function () {
@@ -908,11 +851,8 @@ test('product updates preserve valid text values that PHP treats as false', func
 test('updating a product preserves its stock data', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::Replenishment,
-        'is_active' => true,
-    ]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 10]);
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 10]);
     $item = $volume->items()->create([
         'size' => 'M',
         'quantity' => 10,
@@ -938,20 +878,17 @@ test('updating a product preserves its stock data', function () {
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('products.index'));
 
-    $offer->refresh();
-    expect($offer->stockVolumes()->sole()->total_quantity)->toBe(10);
-    expect($offer->stockVolumes()->sole()->items()->sole()->is_active)->toBeTrue();
-    expect($offer->stockVolumes()->sole()->items()->sole()->quantity)->toBe(10);
+    $product->refresh();
+    expect($product->stockVolumes()->sole()->total_quantity)->toBe(10);
+    expect($product->stockVolumes()->sole()->items()->sole()->is_active)->toBeTrue();
+    expect($product->stockVolumes()->sole()->items()->sole()->quantity)->toBe(10);
 });
 
 test('ending the current stock is rejected while a sack still has stock', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::Replenishment,
-        'is_active' => true,
-    ]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 10]);
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 10]);
     $item = $volume->items()->create([
         'size' => 'M',
         'quantity' => 10,
@@ -971,7 +908,7 @@ test('ending the current stock is rejected while a sack still has stock', functi
         ])
         ->assertRedirect(route('products.edit', $product));
 
-    expect($offer->fresh())->not->toBeNull()
+    expect($product->fresh())->not->toBeNull()
         ->and($volume->fresh())->not->toBeNull()
         ->and($item->fresh())->not->toBeNull();
 });
@@ -979,8 +916,8 @@ test('ending the current stock is rejected while a sack still has stock', functi
 test('ending stock is rejected when a sack has been referenced by an order', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
-    $offer = StockOffer::factory()->for($product)->replenishment()->create();
-    $volume = StockOfferVolume::factory()->for($offer)->withTotal(10)->create();
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $volume = StockOfferVolume::factory()->for($product)->withTotal(10)->create();
     OrderItem::factory()
         ->for($volume, 'stockVolume')
         ->for($product)
@@ -999,18 +936,14 @@ test('ending stock is rejected when a sack has been referenced by an order', fun
         ])
         ->assertRedirect(route('products.edit', $product));
 
-    $this->assertModelExists($offer);
     $this->assertModelExists($volume);
 });
 
 test('a recount can zero stock and remove it from the shared catalog', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::NewGrade,
-        'is_active' => true,
-    ]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 10]);
+    $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 10]);
     $item = $volume->items()->create([
         'size' => 'M',
         'quantity' => 10,
@@ -1027,15 +960,12 @@ test('a recount can zero stock and remove it from the shared catalog', function 
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('products.edit', $product));
 
-    $offer->refresh();
-    expect($offer->stockVolumes()->sole()->total_quantity)->toBe(0);
-    expect($offer->stockVolumes()->sole()->items()->sole()->is_active)->toBeFalse();
-    expect($offer->stockVolumes()->sole()->items()->sole()->quantity)->toBeNull();
+    $product->refresh();
+    expect($product->stockVolumes()->sole()->total_quantity)->toBe(0);
+    expect($product->stockVolumes()->sole()->items()->sole()->is_active)->toBeFalse();
+    expect($product->stockVolumes()->sole()->items()->sole()->quantity)->toBeNull();
     expect(
-        StockOffer::query()
-            ->availableForCatalog()
-            ->whereKey($offer->getKey())
-            ->exists(),
+        Product::query()->availableForCatalog()->whereKey($product->id)->exists(),
     )->toBeFalse();
 });
 
@@ -1200,11 +1130,8 @@ test('replacing any position in a full gallery preserves every other image', fun
 test('invalid stock sack payload cannot erase existing product sizes', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::NewGrade,
-        'is_active' => true,
-    ]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 0]);
+    $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 0]);
     $item = $volume->items()->create([
         'size' => 'M',
         'is_active' => false,
@@ -1308,11 +1235,8 @@ test('authenticated users can move a product and its stock sacks to the trash', 
         ->toMediaCollection(Product::MEDIA_COLLECTION);
     $imagePath = $media->getPathRelativeToRoot();
     $thumbPath = $media->getPathRelativeToRoot('thumb');
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::NewGrade,
-        'is_active' => true,
-    ]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 0]);
+    $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 0]);
     $volume->items()->create(['size' => 'M', 'quantity' => null, 'is_active' => false]);
 
     $response = $this->actingAs($user)->delete(route('products.destroy', $product));
@@ -1322,7 +1246,6 @@ test('authenticated users can move a product and its stock sacks to the trash', 
         ->assertRedirect(route('products.index'));
 
     $this->assertSoftDeleted('products', ['id' => $product->id]);
-    $this->assertSoftDeleted('stock_offers', ['id' => $offer->id]);
     $this->assertSoftDeleted('stock_offer_volumes', ['id' => $volume->id]);
     $this->assertSoftDeleted('stock_offer_volume_items', ['stock_offer_volume_id' => $volume->id]);
     $this->assertModelExists($media);
@@ -1359,10 +1282,10 @@ test('authenticated users can create a product with independent stock sacks', fu
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('products.index'));
 
-    $product = Product::query()->with('latestOffer.stockVolumes.items')->sole();
-    $offer = $product->latestOffer;
+    $product = Product::query()->with('stockVolumes.items')->sole();
+    $offer = $product;
 
-    expect($offer->type)->toBe(StockOfferType::NewGrade);
+    expect($offer->stock_offer_type)->toBe(StockOfferType::NewGrade);
     expect($offer->stockVolumes->pluck('total_quantity')->all())->toBe([10, 18]);
     expect($offer->stockVolumes[0]->items->pluck('size')->all())->toBe(['36', '38', '40']);
     expect($offer->stockVolumes[0]->items->pluck('quantity')->all())->toBe([4, 6, null]);
@@ -1398,7 +1321,7 @@ test('a sack keeps its manual total when its active quantities are unknown', fun
 
     $response->assertSessionHasNoErrors();
 
-    $offer = Product::query()->with('latestOffer.stockVolumes.items')->sole()->latestOffer;
+    $offer = Product::query()->with('stockVolumes.items')->sole();
 
     expect($offer->stockVolumes->sole()->total_quantity)->toBe(7);
     expect($offer->stockVolumes->sole()->items->pluck('quantity')->all())->toBe([null, null]);
@@ -1477,12 +1400,9 @@ test('the same size is allowed in different sacks but not twice in one sack', fu
 test('the product editor cannot reorder or remove physical sacks', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create();
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::NewGrade,
-        'is_active' => true,
-    ]);
-    $firstVolume = $offer->stockVolumes()->create(['sort_order' => 0, 'total_quantity' => 0]);
-    $secondVolume = $offer->stockVolumes()->create(['sort_order' => 1, 'total_quantity' => 7]);
+    $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    $firstVolume = $product->stockVolumes()->create(['sort_order' => 0, 'total_quantity' => 0]);
+    $secondVolume = $product->stockVolumes()->create(['sort_order' => 1, 'total_quantity' => 7]);
     $firstItem = $firstVolume->items()->create([
         'size' => 'P',
         'sort_order' => 0,
@@ -1525,7 +1445,7 @@ test('the product editor cannot reorder or remove physical sacks', function () {
     ]);
 
     $reorderResponse->assertSessionHasNoErrors();
-    expect($offer->fresh()->stockVolumes()->pluck('id')->all())
+    expect($product->fresh()->stockVolumes()->pluck('id')->all())
         ->toBe([$firstVolume->id, $secondVolume->id]);
 
     $removeResponse = $this->actingAs($user)->put(route('products.update', $product), [
@@ -1547,36 +1467,28 @@ test('the product editor cannot reorder or remove physical sacks', function () {
     $removeResponse->assertInvalid(['stock_volumes']);
     expect(StockOfferVolume::query()->whereKey($firstVolume->id)->exists())->toBeTrue();
     expect(StockOfferVolume::query()->whereKey($secondVolume->id)->exists())->toBeTrue();
-    expect($offer->fresh()->calculatedTotalQuantity())->toBe(7);
+    expect($product->stockVolumes()->sum('total_quantity'))->toBe(7);
 });
 
 test('catalog availability uses physical sack totals', function () {
     $product = Product::factory()->create();
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::Replenishment,
-        'is_active' => true,
-    ]);
-    $offer->stockVolumes()->create([
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $product->stockVolumes()->create([
         'sort_order' => 0,
         'total_quantity' => 0,
     ]);
 
     expect(
-        StockOffer::query()
-            ->availableForCatalog()
-            ->whereKey($offer->id)
-            ->exists(),
+        Product::query()->availableForCatalog()->whereKey($product->id)->exists(),
     )->toBeFalse();
 });
 
-test('product updates preserve sacks from every stock offer', function () {
+test('product updates preserve every sack', function () {
     $user = User::factory()->create();
-    $product = Product::factory()->create();
-    $olderOffer = $product->offers()->create(['type' => StockOfferType::Replenishment]);
-    $olderVolume = $olderOffer->stockVolumes()->create(['sort_order' => 0, 'total_quantity' => 9]);
+    $product = Product::factory()->brokenGrade()->create();
+    $olderVolume = $product->stockVolumes()->create(['sort_order' => 0, 'total_quantity' => 9]);
     $olderItem = $olderVolume->items()->create(['size' => '36', 'sort_order' => 0, 'is_active' => true, 'quantity' => 9]);
-    $latestOffer = $product->offers()->create(['type' => StockOfferType::BrokenGrade]);
-    $latestVolume = $latestOffer->stockVolumes()->create(['sort_order' => 0, 'total_quantity' => 4]);
+    $latestVolume = $product->stockVolumes()->create(['sort_order' => 1, 'total_quantity' => 4]);
     $latestItem = $latestVolume->items()->create(['size' => 'M', 'sort_order' => 0, 'is_active' => true, 'quantity' => 4]);
 
     $this->actingAs($user)->put(route('products.update', $product), [
@@ -1600,8 +1512,8 @@ test('product updates preserve sacks from every stock offer', function () {
 
 test('restoring a product does not restore a size deleted before the product', function () {
     $product = Product::factory()->create();
-    $offer = $product->offers()->create(['type' => StockOfferType::NewGrade]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 0]);
+    $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 0]);
     $previouslyDeletedItem = $volume->items()->create(['size' => 'P', 'sort_order' => 0, 'is_active' => false]);
     $cascadedItem = $volume->items()->create(['size' => 'M', 'sort_order' => 1, 'is_active' => false]);
 
@@ -1622,13 +1534,13 @@ test('stock filters use physical sacks including reservations across every offer
         ['Disponível', 5, null, null],
     ] as [$name, $quantity, $consumedAt, $orderId]) {
         $product = Product::factory()->create(['name' => $name]);
-        $offer = $product->offers()->create(['type' => StockOfferType::NewGrade]);
-        $offer->stockVolumes()->create([
+        $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
+        $product->stockVolumes()->create([
             'total_quantity' => $quantity,
             'consumed_at' => $consumedAt,
             'current_order_id' => $orderId,
         ]);
-        $product->offers()->create(['type' => StockOfferType::Replenishment]);
+        $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
     }
 
     $this->actingAs(User::factory()->create())
@@ -1662,3 +1574,66 @@ test('product page size is bounded and pagination preserves filters', function (
     'below minimum' => [0, 1],
     'invalid' => ['invalid', 1],
 ]);
+
+test('editing the stock type records the change in the stock history', function (StockOfferType $from, StockOfferType $to) {
+    $user = User::factory()->create();
+    $product = Product::factory()->create(['stock_offer_type' => $from]);
+    $product->stockVolumes()->create(['total_quantity' => 12]);
+
+    $this->actingAs($user)
+        ->put(route('products.update', $product), [
+            'name' => $product->name,
+            'stock_offer_type' => $to->value,
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($product->refresh()->stock_offer_type)->toBe($to)
+        ->and($product->stockVolumes()->sole()->total_quantity)->toBe(12)
+        ->and(Product::query()->availableForCatalog()->whereKey($product->id)->exists())->toBe($to !== StockOfferType::NewGrade);
+
+    $movement = StockMovement::query()->with('items')->sole();
+    expect($movement->type)->toBe(StockMovementType::Adjustment)
+        ->and($movement->source)->toBe(StockMovementSource::Reclassification)
+        ->and($movement->actor_id)->toBe($user->id)
+        ->and($movement->reason)->toBe("Tipo de grade alterado de {$from->label()} para {$to->label()}")
+        ->and($movement->items->sole()->offer_type_snapshot)->toBe($to->value)
+        ->and($movement->items->sole()->movement_quantity)->toBe(0)
+        ->and($movement->items->sole()->previous_state['offer_type'])->toBe($from->value)
+        ->and($movement->items->sole()->resulting_state['offer_type'])->toBe($to->value);
+})->with([
+    'Grade Nova to replenishment' => [StockOfferType::NewGrade, StockOfferType::Replenishment],
+    'Grade Nova to broken grade' => [StockOfferType::NewGrade, StockOfferType::BrokenGrade],
+    'replenishment to Grade Nova' => [StockOfferType::Replenishment, StockOfferType::NewGrade],
+]);
+
+test('editing the stock type of a product without sacks records no movement', function () {
+    $product = Product::factory()->create();
+
+    $this->actingAs(User::factory()->create())
+        ->put(route('products.update', $product), [
+            'name' => $product->name,
+            'stock_offer_type' => StockOfferType::BrokenGrade->value,
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($product->refresh()->stock_offer_type)->toBe(StockOfferType::BrokenGrade)
+        ->and(StockMovement::query()->count())->toBe(0);
+});
+
+test('reserved sacks block changing the stock type to Grade Nova', function () {
+    $product = Product::factory()->replenishment()->create();
+    $product->stockVolumes()->create([
+        'total_quantity' => 5,
+        'current_order_id' => Order::factory()->create()->id,
+    ]);
+
+    $this->actingAs(User::factory()->create())
+        ->put(route('products.update', $product), [
+            'name' => $product->name,
+            'stock_offer_type' => StockOfferType::NewGrade->value,
+        ])
+        ->assertSessionHasErrors('stock_offer_type');
+
+    expect($product->refresh()->stock_offer_type)->toBe(StockOfferType::Replenishment)
+        ->and(StockMovement::query()->count())->toBe(0);
+});

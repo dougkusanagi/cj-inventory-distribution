@@ -4,6 +4,7 @@ namespace App\Http\Requests\Products;
 
 use App\Enums\ProductLine;
 use App\Enums\StockOfferType;
+use App\Http\Requests\Products\Concerns\ValidatesProductImages;
 use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
@@ -12,6 +13,8 @@ use Illuminate\Validation\Validator;
 
 abstract class ProductRequest extends FormRequest
 {
+    use ValidatesProductImages;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -81,11 +84,7 @@ abstract class ProductRequest extends FormRequest
             'line' => ['nullable', Rule::enum(ProductLine::class)],
             'notes' => ['nullable', 'string', 'max:5000'],
             'is_active' => ['required', 'boolean'],
-            'stock_offer_type' => [
-                'nullable',
-                Rule::requiredIf(fn (): bool => $this->input('stock_volumes', []) !== []),
-                Rule::enum(StockOfferType::class),
-            ],
+            'stock_offer_type' => ['nullable', Rule::enum(StockOfferType::class)],
             'stock_volumes' => [
                 'nullable',
                 'array',
@@ -101,21 +100,7 @@ abstract class ProductRequest extends FormRequest
             'stock_volumes.*.items.*.sort_order' => ['nullable', 'integer', 'min:0'],
             'stock_volumes.*.items.*.is_active' => ['required', 'boolean'],
             'stock_volumes.*.items.*.quantity' => ['nullable', 'integer', 'min:0'],
-            'images' => ['nullable', 'array', 'max:5'],
-            'images.*' => [
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:'.Product::MAX_IMAGE_UPLOAD_SIZE_KB,
-            ],
-            'image_order' => ['nullable', 'array', 'max:5'],
-            'image_order.*' => [
-                'required',
-                'string',
-                'distinct',
-                'regex:/^(media:[1-9][0-9]*|new:[0-9]+)$/',
-            ],
-            'remove_media_ids' => ['nullable', 'array', 'max:5'],
-            'remove_media_ids.*' => ['integer', 'distinct', 'exists:media,id'],
+            ...$this->imageRules(),
         ];
     }
 
@@ -135,8 +120,7 @@ abstract class ProductRequest extends FormRequest
             'line.enum' => 'Selecione uma linha válida.',
             'notes.max' => 'A observação deve ter no máximo 5.000 caracteres.',
             'is_active.boolean' => 'Informe se o produto está ativo.',
-            'stock_offer_type.enum' => 'Selecione um tipo de estoque válido.',
-            'stock_offer_type.required' => 'Informe o tipo do estoque.',
+            'stock_offer_type.enum' => 'Selecione um tipo de grade válido.',
             'stock_volumes.required' => 'Adicione pelo menos um saco ao estoque.',
             'stock_volumes.array' => 'Envie os sacos em uma lista válida.',
             'stock_volumes.max' => 'Cadastre no máximo 50 sacos por oferta.',
@@ -154,20 +138,7 @@ abstract class ProductRequest extends FormRequest
             'stock_volumes.*.items.*.is_active.boolean' => 'Informe se o tamanho está disponível neste saco.',
             'stock_volumes.*.items.*.quantity.integer' => 'A quantidade do tamanho deve ser um número.',
             'stock_volumes.*.items.*.quantity.min' => 'A quantidade do tamanho não pode ser negativa.',
-            'images.array' => 'Envie as fotos em uma lista válida.',
-            'images.max' => 'Adicione no máximo 5 fotos por produto.',
-            'images.*.image' => 'Envie imagens válidas.',
-            'images.*.mimes' => 'As fotos devem estar em JPG, PNG ou WebP.',
-            'images.*.max' => 'Cada foto deve ter no máximo '.Product::MAX_IMAGE_UPLOAD_SIZE_MB.' MB.',
-            'image_order.array' => 'Envie a ordem das fotos em uma lista válida.',
-            'image_order.max' => 'Ordene no máximo 5 fotos por produto.',
-            'image_order.*.required' => 'A ordem das fotos está incompleta.',
-            'image_order.*.distinct' => 'Cada foto deve aparecer uma única vez na ordem.',
-            'image_order.*.regex' => 'A ordem das fotos enviada é inválida.',
-            'remove_media_ids.array' => 'Envie as fotos removidas em uma lista válida.',
-            'remove_media_ids.*.integer' => 'A foto selecionada para remoção é inválida.',
-            'remove_media_ids.*.distinct' => 'Cada foto deve ser removida uma única vez.',
-            'remove_media_ids.*.exists' => 'A foto selecionada para remoção não existe.',
+            ...$this->imageMessages(),
         ];
     }
 
@@ -233,56 +204,7 @@ abstract class ProductRequest extends FormRequest
                 $this->validateVolumePayload($validator);
                 $this->validateVolumePayloadReferences($validator);
 
-                $product = $this->route('product');
-                $removeMediaIds = $this->input('remove_media_ids', []);
-                $removeMediaIds = is_array($removeMediaIds) ? $removeMediaIds : [];
-                $uploadedImages = $this->file('images', []);
-                $uploadedImages = is_array($uploadedImages) ? $uploadedImages : [];
-                $productImageCount = 0;
-
-                if ($product instanceof Product) {
-                    $ownedMediaIds = $product->media()
-                        ->where('collection_name', Product::MEDIA_COLLECTION)
-                        ->whereKey($removeMediaIds)
-                        ->pluck('id')
-                        ->map(fn ($id): int => (int) $id)
-                        ->all();
-
-                    if (count($ownedMediaIds) !== count($removeMediaIds)) {
-                        $validator->errors()->add(
-                            'remove_media_ids',
-                            'Só é possível remover imagens deste produto.',
-                        );
-                    }
-
-                    $productImageCount = $product->media()
-                        ->where('collection_name', Product::MEDIA_COLLECTION)
-                        ->whereNotIn('id', $removeMediaIds)
-                        ->count();
-                }
-
-                if ($productImageCount + count($uploadedImages) > Product::MAX_IMAGES) {
-                    $validator->errors()->add(
-                        'images',
-                        'Um produto pode ter no máximo 5 fotos.',
-                    );
-                }
-
-                $imageOrder = $this->input('image_order');
-
-                if (is_array($imageOrder)) {
-                    if ($product instanceof Product) {
-                        $this->validateImageOrder(
-                            $validator,
-                            $product,
-                            $removeMediaIds,
-                            $uploadedImages,
-                            $imageOrder,
-                        );
-                    } else {
-                        $this->validateNewImageOrder($validator, $uploadedImages, $imageOrder);
-                    }
-                }
+                $this->validateProductImages($validator);
             },
         ];
     }
@@ -361,11 +283,7 @@ abstract class ProductRequest extends FormRequest
             return;
         }
 
-        $existingVolumes = $product->offers()
-            ->with('stockVolumes.items')
-            ->get()
-            ->flatMap(fn ($offer) => $offer->stockVolumes)
-            ->keyBy('id');
+        $existingVolumes = $product->stockVolumes()->with('items')->get()->keyBy('id');
         $stockVolumes = $this->input('stock_volumes', []);
 
         if (! is_array($stockVolumes)) {
@@ -410,108 +328,6 @@ abstract class ProductRequest extends FormRequest
                     );
                 }
             }
-        }
-    }
-
-    /**
-     * Ensure an image order references exactly this product's retained media and uploads.
-     *
-     * @param  array<int, mixed>  $removeMediaIds
-     * @param  array<int|string, mixed>  $uploadedImages
-     * @param  array<int, mixed>  $imageOrder
-     */
-    private function validateImageOrder(
-        Validator $validator,
-        Product $product,
-        array $removeMediaIds,
-        array $uploadedImages,
-        array $imageOrder,
-    ): void {
-        $hasValidTokens = collect($imageOrder)->every(
-            fn (mixed $token): bool => is_string($token)
-                && preg_match('/^(media:[1-9][0-9]*|new:[0-9]+)$/', $token) === 1,
-        );
-
-        if (! $hasValidTokens) {
-            return;
-        }
-
-        $normalizedRemoveMediaIds = collect($removeMediaIds)
-            ->filter(fn (mixed $id): bool => is_numeric($id))
-            ->map(fn (mixed $id): int => (int) $id)
-            ->values()
-            ->all();
-        $expectedMediaIds = $product->media()
-            ->where('collection_name', Product::MEDIA_COLLECTION)
-            ->whereNotIn('id', $normalizedRemoveMediaIds)
-            ->pluck('id')
-            ->map(fn (mixed $id): int => (int) $id)
-            ->all();
-        $orderedMediaIds = [];
-        $orderedUploadIndexes = [];
-
-        foreach ($imageOrder as $token) {
-            if (str_starts_with($token, 'media:')) {
-                $orderedMediaIds[] = (int) substr($token, strlen('media:'));
-
-                continue;
-            }
-
-            $orderedUploadIndexes[] = (int) substr($token, strlen('new:'));
-        }
-
-        $expectedUploadIndexes = array_map(
-            fn (int|string $index): int => (int) $index,
-            array_keys($uploadedImages),
-        );
-        sort($expectedMediaIds);
-        sort($orderedMediaIds);
-        sort($expectedUploadIndexes);
-        sort($orderedUploadIndexes);
-
-        if (
-            $expectedMediaIds !== $orderedMediaIds
-            || $expectedUploadIndexes !== $orderedUploadIndexes
-            || count($imageOrder) !== count($expectedMediaIds) + count($expectedUploadIndexes)
-        ) {
-            $validator->errors()->add(
-                'image_order',
-                'A ordem das fotos deve conter somente imagens válidas deste produto.',
-            );
-        }
-    }
-
-    /**
-     * Ensure a new product orders every uploaded image exactly once.
-     *
-     * @param  array<int|string, mixed>  $uploadedImages
-     * @param  array<int, mixed>  $imageOrder
-     */
-    private function validateNewImageOrder(
-        Validator $validator,
-        array $uploadedImages,
-        array $imageOrder,
-    ): void {
-        $orderedUploadIndexes = collect($imageOrder)
-            ->filter(fn (mixed $token): bool => is_string($token) && str_starts_with($token, 'new:'))
-            ->map(fn (string $token): int => (int) Str::after($token, 'new:'))
-            ->sort()
-            ->values()
-            ->all();
-        $expectedUploadIndexes = collect(array_keys($uploadedImages))
-            ->map(fn (int|string $index): int => (int) $index)
-            ->sort()
-            ->values()
-            ->all();
-
-        if (
-            $orderedUploadIndexes !== $expectedUploadIndexes
-            || count($imageOrder) !== count($expectedUploadIndexes)
-        ) {
-            $validator->errors()->add(
-                'image_order',
-                'A ordem das fotos deve conter todas as imagens enviadas.',
-            );
         }
     }
 }

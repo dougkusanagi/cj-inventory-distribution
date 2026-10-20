@@ -8,21 +8,42 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryCountController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductPhotoController;
 use App\Http\Controllers\ProductStockAdjustmentController;
 use App\Http\Controllers\StockEntryController;
 use App\Http\Controllers\StockExitController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\StockMovementReversalController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserPasswordLinkController;
 use App\Http\Controllers\WashTypeController;
+use App\Models\Product;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', CatalogController::class)->name('home');
 Route::get('catalog', CatalogController::class)->name('catalog');
 Route::get('novidades', ChangelogController::class)->name('changelog');
 Route::post('catalog/pedidos', CatalogOrderController::class)
-    ->middleware('throttle:10,1')
+    ->middleware('throttle:catalog-orders')
     ->name('catalog-orders.store');
 Route::inertia('design-system', 'design-system')->name('design-system');
+
+Route::middleware(['auth', 'verified', 'panel'])->prefix('painel')->group(function () {
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('fotos', [ProductPhotoController::class, 'index'])
+        ->middleware('can:managePhotos,'.Product::class)
+        ->name('product-photos.index');
+    Route::put('fotos/{product}', [ProductPhotoController::class, 'update'])
+        ->middleware('can:managePhotos,'.Product::class)
+        ->name('product-photos.update');
+});
+
+Route::middleware(['auth', 'verified', 'panel', 'can:viewAny,'.User::class])->prefix('painel')->group(function () {
+    Route::resource('usuarios', UserController::class)->parameters(['usuarios' => 'user'])->names('users')->only(['index', 'store', 'update']);
+    Route::post('usuarios/{user}/link-de-acesso', UserPasswordLinkController::class)
+        ->middleware('throttle:6,1')->name('users.access-link');
+});
 
 Route::middleware(['auth', 'verified', 'staff'])->prefix('painel')->group(function () {
     Route::get('estoque/balancos', [InventoryCountController::class, 'index'])->name('inventory.index');
@@ -32,7 +53,6 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('painel')->group(functi
     Route::post('estoque/balancos/{inventory}/sacos/{item}/atualizar', [InventoryCountController::class, 'refreshItem'])->name('inventory.refresh-item');
     Route::post('estoque/balancos/{inventory}/confirmar', [InventoryCountController::class, 'confirm'])->name('inventory.confirm');
     Route::post('estoque/balancos/{inventory}/cancelar', [InventoryCountController::class, 'cancel'])->name('inventory.cancel');
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('produtos/cards-v2', [ProductController::class, 'cardPreview'])
         ->name('products.card-preview');
     Route::get('produtos/cards-v3', [ProductController::class, 'cardPreviewV3'])

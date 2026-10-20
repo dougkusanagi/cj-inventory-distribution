@@ -91,7 +91,7 @@ Possíveis evoluções:
   autor, valores anteriores e posteriores e contexto mínimo;
 - gerenciamento de estoque com entradas, saídas e histórico imutável de
   movimentações, integrado aos sacos e aos pedidos;
-- usuários, lojas e permissões;
+- lojas e permissões além dos perfis Administrador, Estoque e Marketing;
 - ficha técnica versionada;
 - integração com catálogo existente;
 - integração com Bling;

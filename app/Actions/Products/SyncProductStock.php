@@ -5,43 +5,37 @@ namespace App\Actions\Products;
 use App\Actions\Stock\CreateStockEntry;
 use App\Actions\Stock\StockMutation;
 use App\Models\Product;
-use App\Models\StockOffer;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
-class SyncProductStockOffer
+class SyncProductStock
 {
-    /** @param array<string, mixed> $data */
-    public function handle(Product $product, array $data): ?StockOffer
+    /**
+     * Register the initial sacks of a new product, or ensure an existing
+     * product's sacks are submitted unchanged; stock changes go through movements.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function handle(Product $product, array $data): void
     {
-        return StockMutation::run(function () use ($product, $data): ?StockOffer {
-            $offer = $product->offers()->latest('id')->first();
+        StockMutation::run(function () use ($product, $data): void {
             if (! array_key_exists('stock_volumes', $data)) {
-                return $offer;
+                return;
             }
             $submitted = $data['stock_volumes'] ?? [];
             if ($product->wasRecentlyCreated) {
                 if ($submitted === []) {
-                    return null;
+                    return;
                 }
-                $movement = app(CreateStockEntry::class)->handle($product, [
+                app(CreateStockEntry::class)->handle($product, [
                     ...$data, 'notes' => null, 'reason' => 'Estoque inicial confirmado no cadastro do produto',
                     'idempotency_key' => 'product-opening:'.Str::uuid(),
                 ], Auth::user(), allowZero: true);
 
-                return $product->offers()->find($movement->items->first()->stock_offer_id);
+                return;
             }
-            // A product can have physical sacks from more than one offer. The
-            // product form renders all of them in read-only mode, so compare
-            // against the complete persisted set instead of only the latest
-            // offer. Otherwise merely editing product information would reject
-            // older sacks as if they had been created in the form.
-            $stored = $product->offers()
-                ->with('stockVolumes.items')
-                ->get()
-                ->flatMap(fn (StockOffer $stockOffer) => $stockOffer->stockVolumes)
-                ->keyBy('id');
+            $stored = $product->stockVolumes()->with('items')->get()->keyBy('id');
             if ($submitted === [] && $stored->isNotEmpty()) {
                 if ($stored->contains(fn ($volume) => $volume->orderItems()->exists())) {
                     throw ValidationException::withMessages(['stock_volumes' => 'Sacos vinculados a pedidos não podem ser removidos.']);
@@ -86,11 +80,6 @@ class SyncProductStockOffer
             if (count($submitted) !== $stored->count()) {
                 throw ValidationException::withMessages(['stock_volumes' => 'Use a saída ou a recontagem para alterar o estoque.']);
             }
-            if ($offer && isset($data['stock_offer_type']) && $offer->type->value !== $data['stock_offer_type']) {
-                throw ValidationException::withMessages(['stock_offer_type' => 'A classificação do estoque é definida na entrada.']);
-            }
-
-            return $offer;
         });
     }
 }
