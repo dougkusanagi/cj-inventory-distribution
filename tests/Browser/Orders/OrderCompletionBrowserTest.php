@@ -13,11 +13,8 @@ beforeEach(function (): void {
 
 test('enables order completion after all sacks are checked without WhatsApp', function () {
     $product = Product::factory()->create();
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::Replenishment,
-        'is_active' => true,
-    ]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 12]);
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 12]);
     $volume->items()->create(['size' => 'M', 'is_active' => true, 'quantity' => 12]);
     $user = User::factory()->create();
 
@@ -87,11 +84,8 @@ test('enables order completion after all sacks are checked without WhatsApp', fu
 
 test('provides return and cancellation actions while editing an order', function () {
     $product = Product::factory()->create();
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::Replenishment,
-        'is_active' => true,
-    ]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 12]);
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 12]);
     $volume->items()->create(['size' => 'M', 'is_active' => true, 'quantity' => 12]);
     $user = User::factory()->create();
 
@@ -127,8 +121,8 @@ test('provides return and cancellation actions while editing an order', function
 
 test('creates, reads, updates, and cancels an order through the interface', function () {
     $product = Product::factory()->create(['name' => 'Produto pedido CRUD E2E']);
-    $offer = $product->offers()->create(['type' => StockOfferType::Replenishment]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 8]);
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 8]);
     $volume->items()->create(['size' => 'M', 'is_active' => true, 'quantity' => 8]);
     $volume->refresh();
     $this->actingAs(User::factory()->create());

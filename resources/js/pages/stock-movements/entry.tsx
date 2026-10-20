@@ -2,6 +2,7 @@ import { Head } from '@inertiajs/react';
 import { PlusCircleIcon } from '@phosphor-icons/react';
 import { StockEntryForm } from '@/components/products/stock-entry-form';
 import { index } from '@/routes/stock-movements';
+import type { StockOfferType } from '@/types';
 
 type EntryProduct = {
     id: number;
@@ -9,6 +10,7 @@ type EntryProduct = {
     name: string;
     model: string | null;
     category: string | null;
+    stock_offer_type: StockOfferType;
 };
 
 export default function StockEntry({
@@ -31,8 +33,8 @@ export default function StockEntry({
                             Registrar entrada de estoque
                         </h1>
                         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                            Registre os sacos recebidos e informe a
-                            classificação deste estoque.
+                            Registre os sacos recebidos. O tipo de grade vem do
+                            cadastro do produto.
                         </p>
                     </div>
                 </header>

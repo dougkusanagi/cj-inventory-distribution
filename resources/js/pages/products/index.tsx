@@ -34,6 +34,7 @@ import {
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { WashTypeCreateDialog } from '@/components/wash-types/wash-type-create-dialog';
 import { destroy } from '@/actions/App/Http/Controllers/ProductController';
+import { index as stockMovementsIndex } from '@/routes/stock-movements';
 import { Badge } from '@/components/ui/badge';
 import {
     categoryFilterField,
@@ -46,12 +47,6 @@ import {
     type FilterField,
 } from '@/components/search-filter-bar';
 import { Button } from '@/components/ui/button';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
     Select,
     SelectContent,
@@ -323,7 +318,7 @@ function RefinedProductCard({
                             </>
                         ) : (
                             <p className="text-sm font-semibold text-muted-foreground">
-                                Sem oferta de estoque
+                                Sem estoque
                             </p>
                         )}
                     </div>
@@ -422,7 +417,7 @@ function ProductCardV3({
                     compact ? 'gap-2.5 p-3 sm:p-4' : 'gap-3 p-4 sm:p-5',
                 )}
             >
-                <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
                     <div className="min-w-0">
                         <p className="truncate font-mono text-xs leading-4 text-muted-foreground">
                             {product.code}
@@ -442,27 +437,6 @@ function ProductCardV3({
                             {product.name}
                         </TextLink>
                     </div>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-11 shrink-0"
-                                aria-label={`Ações de ${product.name}`}
-                            >
-                                <DotsThreeIcon weight="bold" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                                variant="destructive"
-                                onSelect={() => onDelete(product)}
-                            >
-                                <MinusCircleIcon />
-                                Excluir produto
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
                 </div>
 
                 {(product.stock_offer_type ||
@@ -648,7 +622,10 @@ function isProductAvailable(product: Product): boolean {
 
 function isProductInternalUse(product: Product): boolean {
     return (
-        Boolean(product.is_active) && product.stock_offer_type === 'new_grade'
+        Boolean(product.is_active) &&
+        product.stock_offer_type === 'new_grade' &&
+        product.total_quantity !== null &&
+        product.total_quantity !== undefined
     );
 }
 
@@ -742,7 +719,7 @@ function ProductAvailabilityNotice({
             ) : hasStock ? (
                 (product.distribution_status ?? 'Sem sacos disponíveis')
             ) : (
-                'Sem oferta de estoque'
+                'Sem estoque'
             )}
         </div>
     );
@@ -812,11 +789,20 @@ function ProductDetailsDrawer({
                             consumedQuantity={product.consumed_quantity ?? 0}
                             className="[&_dd]:font-semibold [&_dd]:text-card-foreground"
                         />
+                        <Button variant="outline" size="sm" asChild>
+                            <Link
+                                href={stockMovementsIndex({
+                                    query: { product: product.id },
+                                })}
+                            >
+                                Ver histórico de movimentações
+                            </Link>
+                        </Button>
                     </section>
                     {volumes.length > 0 ? (
                         <div className="grid gap-3">
                             <p className="text-sm font-medium text-card-foreground">
-                                Quantidade por saco
+                                Sacos em estoque
                             </p>
                             <div className="grid gap-2.5">
                                 {volumes.map((volume, index) => {
@@ -879,7 +865,7 @@ function ProductDetailsDrawer({
                             </div>
                         </div>
                     ) : (
-                        <p>Este produto ainda não tem sacos cadastrados.</p>
+                        <p>Este produto não tem sacos em estoque.</p>
                     )}
                 </div>
                 <DrawerFooter className="border-t border-border p-5">
@@ -1116,7 +1102,7 @@ function ProductTable({
                                                           product
                                                               .stock_offer_type
                                                       ]
-                                                    : 'Sem oferta'}
+                                                    : 'Sem tipo'}
                                             </ProductTableAttribute>
                                             {product.line && (
                                                 <ProductTableAttribute
@@ -1491,7 +1477,7 @@ export default function ProductsIndex({
                                 ? 'Foto em cima e leitura em Z: identificação, estoque, grade e sacos no mesmo padrão do catálogo.'
                                 : isRefinedCardPreview
                                   ? 'Foto, identificação, grade e estoque em uma linha de leitura única, no padrão das listas de catálogo.'
-                                  : 'A identidade de cada peça fica aqui. Depois, ela pode receber diferentes ofertas e condições de estoque.'}
+                                  : 'A identidade de cada peça fica aqui, com o tipo de grade e o estoque em sacos.'}
                         </p>
                     </div>
                     <Button asChild size="lg" className="w-full sm:w-fit">

@@ -218,7 +218,9 @@ class StockMovementController extends Controller
         return [
             'id' => $movement->id,
             'type' => $movement->type->value,
-            'type_label' => $movement->type->label(),
+            'type_label' => $movement->source === StockMovementSource::Reclassification
+                ? 'Reclassificação'
+                : $movement->type->label(),
             'source' => $movement->source->value,
             'source_label' => $movement->source->label(),
             'actor' => $movement->actor?->name,

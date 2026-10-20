@@ -14,7 +14,6 @@ use LogicException;
  * @property int $stock_movement_id
  * @property int|null $stock_offer_volume_id
  * @property int|null $product_id
- * @property int|null $stock_offer_id
  * @property string $volume_code_snapshot
  * @property string|null $product_code_snapshot
  * @property string|null $product_name_snapshot
@@ -27,7 +26,7 @@ use LogicException;
  * @property array<string, mixed>|null $previous_state
  * @property array<string, mixed>|null $resulting_state
  */
-#[Fillable(['stock_movement_id', 'stock_offer_volume_id', 'product_id', 'stock_offer_id', 'volume_code_snapshot', 'product_code_snapshot', 'product_name_snapshot', 'product_model_snapshot', 'category_snapshot', 'line_snapshot', 'offer_type_snapshot', 'movement_quantity', 'total_quantity', 'size_grid_snapshot', 'previous_state', 'resulting_state'])]
+#[Fillable(['stock_movement_id', 'stock_offer_volume_id', 'product_id', 'volume_code_snapshot', 'product_code_snapshot', 'product_name_snapshot', 'product_model_snapshot', 'category_snapshot', 'line_snapshot', 'offer_type_snapshot', 'movement_quantity', 'total_quantity', 'size_grid_snapshot', 'previous_state', 'resulting_state'])]
 class StockMovementItem extends Model
 {
     /** @use HasFactory<StockMovementItemFactory> */
@@ -57,12 +56,6 @@ class StockMovementItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class)->withTrashed();
-    }
-
-    /** @return BelongsTo<StockOffer, $this> */
-    public function offer(): BelongsTo
-    {
-        return $this->belongsTo(StockOffer::class, 'stock_offer_id')->withTrashed();
     }
 
     /** @return array<string, string> */

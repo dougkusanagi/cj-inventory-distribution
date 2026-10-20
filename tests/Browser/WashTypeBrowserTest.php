@@ -1,9 +1,9 @@
 <?php
 
 use App\Enums\ProductLine;
+use App\Enums\StockOfferType;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
 use App\Models\User;
 use App\Models\WashType;
@@ -66,8 +66,8 @@ it('searches public catalog washes, combines filters, and clears every selection
         ['name' => 'Calça sem lavagem', 'category_id' => $pants->id, 'wash_type_id' => null, 'line' => ProductLine::Plus],
     ] as $attributes) {
         $product = Product::factory()->create($attributes);
-        $offer = StockOffer::factory()->replenishment()->for($product)->create();
-        StockOfferVolume::factory()->for($offer)->withTotal(8)->create();
+        $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+        StockOfferVolume::factory()->for($product)->withTotal(8)->create();
     }
 
     $page = visit(route('catalog', [], false))->resize($width, $height)

@@ -13,7 +13,7 @@ Route::middleware(['auth'])->prefix('painel')->group(function () {
     Route::patch('configuracoes/perfil', [ProfileController::class, 'update'])->name('profile.update');
 });
 
-Route::middleware(['auth', 'verified', 'staff'])->prefix('painel')->group(function () {
+Route::middleware(['auth', 'verified', 'panel'])->prefix('painel')->group(function () {
     Route::delete('configuracoes/perfil', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('configuracoes/seguranca', [SecurityController::class, 'edit'])
@@ -27,8 +27,10 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('painel')->group(functi
     Route::inertia('configuracoes/aparencia', 'settings/appearance')->name('appearance.edit');
 
     Route::get('configuracoes/catalogo', [CatalogSettingsController::class, 'edit'])
+        ->middleware('staff')
         ->name('catalog-settings.edit');
     Route::put('configuracoes/catalogo', [CatalogSettingsController::class, 'update'])
+        ->middleware('staff')
         ->name('catalog-settings.update');
 });
 

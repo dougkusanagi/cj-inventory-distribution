@@ -28,13 +28,14 @@ class StockEntryController extends Controller
             'products' => Product::query()
                 ->with('category:id,name')
                 ->orderBy('name')
-                ->get(['id', 'code', 'name', 'model', 'category_id'])
+                ->get(['id', 'code', 'name', 'model', 'category_id', 'stock_offer_type'])
                 ->map(fn (Product $product): array => [
                     'id' => $product->id,
                     'code' => $product->code,
                     'name' => $product->name,
                     'model' => $product->model,
                     'category' => $product->category?->name,
+                    'stock_offer_type' => $product->stock_offer_type->value,
                 ])->values()->all(),
             'categories' => Category::query()->orderBy('name')->get(['id', 'name'])->toArray(),
             'selectedProductId' => $selectedProductId,

@@ -17,11 +17,8 @@ use Inertia\Testing\AssertableInertia as Assert;
 function availableOrderVolume(): StockOfferVolume
 {
     $product = Product::factory()->create();
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::Replenishment,
-        'is_active' => true,
-    ]);
-    $volume = $offer->stockVolumes()->create(['total_quantity' => 12]);
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $volume = $product->stockVolumes()->create(['total_quantity' => 12]);
     $volume->items()->create(['size' => 'M', 'is_active' => true, 'quantity' => 12]);
 
     return $volume;
@@ -37,7 +34,7 @@ test('terminal orders reject editing cancellation and completion without changin
     $volume = availableOrderVolume();
     OrderItem::factory()->for($order)->create([
         'stock_offer_volume_id' => $volume->id,
-        'product_id' => $volume->offer->product_id,
+        'product_id' => $volume->product_id,
         'total_quantity' => 12,
         'separated_at' => now(), 'checked_at' => now(),
     ]);
@@ -100,7 +97,7 @@ test('non-staff users cannot access the internal order panel', function () {
 test('order creation lists only eligible unreserved sacks', function () {
     $available = availableOrderVolume();
     $newGrade = availableOrderVolume();
-    $newGrade->offer->update(['type' => StockOfferType::NewGrade]);
+    $newGrade->product->update(['stock_offer_type' => StockOfferType::NewGrade]);
     $reserved = availableOrderVolume();
     $reserved->update(['current_order_id' => Order::factory()->create()->id]);
 
@@ -127,7 +124,7 @@ test('authenticated users can create an order that snapshots and reserves sacks'
     expect($order->code)->toBe('PED-000001')
         ->and($order->status)->toBe(OrderStatus::Pending)
         ->and($order->items)->toHaveCount(1)
-        ->and($order->items->sole()->product_name_snapshot)->toBe($volume->offer->product->name)
+        ->and($order->items->sole()->product_name_snapshot)->toBe($volume->product->name)
         ->and($volume->refresh()->current_order_id)->toBe($order->id)
         ->and($volume->code)->toBe('SC-'.str_pad((string) $volume->id, 6, '0', STR_PAD_LEFT));
 });
@@ -135,7 +132,7 @@ test('authenticated users can create an order that snapshots and reserves sacks'
 test('order details include the product thumbnail for conference', function () {
     Storage::fake('public');
     $volume = availableOrderVolume();
-    $media = $volume->offer->product
+    $media = $volume->product
         ->addMedia(UploadedFile::fake()->image('produto.jpg'))
         ->toMediaCollection(Product::MEDIA_COLLECTION);
 

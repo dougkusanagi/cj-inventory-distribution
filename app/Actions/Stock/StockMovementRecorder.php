@@ -97,8 +97,7 @@ class StockMovementRecorder
     /** @return array<string, mixed> */
     public function snapshot(StockOfferVolume $volume): array
     {
-        $offer = $volume->offer;
-        $product = $offer?->product;
+        $product = $volume->product;
 
         return [
             'volume_id' => $volume->getKey(),
@@ -116,8 +115,7 @@ class StockMovementRecorder
                 ->all(),
             'product_id' => $product?->getKey(),
             'product_code' => $product?->code,
-            'offer_id' => $offer?->getKey(),
-            'offer_type' => $offer?->type?->value,
+            'offer_type' => $product?->stock_offer_type->value,
         ];
     }
 
@@ -143,22 +141,20 @@ class StockMovementRecorder
         ?array $resultingState,
         StockMovementSource $source,
     ): array {
-        $offer = $volume->offer;
-        $product = $offer?->product;
+        $product = $volume->product;
 
         return [
             'stock_offer_volume_id' => $volume->getKey(),
             'product_id' => $product?->getKey(),
-            'stock_offer_id' => $offer?->getKey(),
             'volume_code_snapshot' => $volume->code ?? $this->volumeCode($volume),
             'product_code_snapshot' => $product?->code,
             'product_name_snapshot' => $product?->name,
             'product_model_snapshot' => $product?->model,
             'category_snapshot' => $product?->category?->name,
             'line_snapshot' => $product?->line?->value,
-            'offer_type_snapshot' => $offer?->type?->value,
+            'offer_type_snapshot' => $product?->stock_offer_type->value,
             'total_quantity' => (int) $volume->total_quantity,
-            'movement_quantity' => $source === StockMovementSource::Adjustment
+            'movement_quantity' => in_array($source, [StockMovementSource::Adjustment, StockMovementSource::Reclassification], true)
                 ? abs((int) ($resultingState['total_quantity'] ?? 0) - (int) ($previousState['total_quantity'] ?? 0))
                 : (int) $volume->total_quantity,
             'size_grid_snapshot' => $volume->items

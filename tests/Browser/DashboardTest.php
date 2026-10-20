@@ -28,7 +28,7 @@ it('marks only the current top-level page as active', function () {
             'data-active',
             'true',
         )
-        ->click('[data-sidebar="menu-button"]:has-text("Produtos")')
+        ->click('[data-sidebar="menu-button"][aria-label="Produtos"]')
         ->assertRoute('products.index')
         ->assertAttribute(
             '[data-sidebar="menu-button"]:has-text("Painel")',
@@ -36,7 +36,7 @@ it('marks only the current top-level page as active', function () {
             'false',
         )
         ->assertAttribute(
-            '[data-sidebar="menu-button"]:has-text("Produtos")',
+            '[data-sidebar="menu-button"][aria-label="Produtos"]',
             'data-active',
             'true',
         )
@@ -47,7 +47,7 @@ it('groups stock operations under the stock navigation', function () {
     $this->actingAs(User::factory()->create());
 
     visit(route('dashboard', [], false))
-        ->assertScript("Array.from(document.querySelectorAll('[data-sidebar=\"content\"] [data-sidebar=\"menu-button\"] span')).map((item) => item.textContent?.trim()).join('|') === 'Painel|Produtos|Categorias|Tipos de lavagem|Pedidos|Estoque|Novidades'")
+        ->assertScript("Array.from(document.querySelectorAll('[data-sidebar=\"content\"] [data-sidebar=\"menu-button\"] span')).map((item) => item.textContent?.trim()).join('|') === 'Painel|Produtos|Categorias|Tipos de lavagem|Pedidos|Estoque|Fotos dos produtos|Usuários|Novidades'")
         ->click('[data-sidebar="menu-button"]:has-text("Estoque")')
         ->assertScript("Array.from(document.querySelectorAll('[data-sidebar=\"content\"] [data-sidebar=\"menu-sub-button\"] span')).map((item) => item.textContent?.trim()).join('|') === 'Balanço de estoque|Histórico de estoque'")
         ->assertNoJavaScriptErrors();
@@ -82,11 +82,8 @@ it('opens stock submenus from the compact sidebar', function () {
 it('shows the stock summary and opens the product catalog', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create(['name' => 'Produto do painel E2E']);
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::NewGrade,
-        'is_active' => true,
-    ]);
-    $volume = $offer->stockVolumes()->create([
+    $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    $volume = $product->stockVolumes()->create([
         'sort_order' => 0,
         'total_quantity' => 8,
     ]);
@@ -154,7 +151,7 @@ it('closes the mobile sidebar after navigating from it', function () {
     $page
         ->click('[data-slot="sidebar-trigger"]')
         ->assertVisible('[data-slot="sidebar"][data-mobile="true"]')
-        ->click('[data-sidebar="menu-button"]:has-text("Produtos")')
+        ->click('[data-sidebar="menu-button"][aria-label="Produtos"]')
         ->assertRoute('products.index')
         ->assertMissing('[data-slot="sidebar"][data-mobile="true"]')
         ->assertNoJavaScriptErrors();

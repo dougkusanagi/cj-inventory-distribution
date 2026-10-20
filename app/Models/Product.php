@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Concerns\RestoresStockSafely;
 use App\Enums\ProductLine;
+use App\Enums\StockOfferType;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -11,7 +12,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
@@ -28,11 +28,11 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property ProductLine|null $line
  * @property string|null $notes
  * @property bool $is_active
- * @property-read StockOffer|null $latestOffer
+ * @property StockOfferType $stock_offer_type
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['code', 'model', 'name', 'category_id', 'wash_type_id', 'line', 'notes', 'is_active'])]
+#[Fillable(['code', 'model', 'name', 'category_id', 'wash_type_id', 'line', 'stock_offer_type', 'notes', 'is_active'])]
 class Product extends Model implements HasMedia
 {
     /** @use HasFactory<ProductFactory> */
@@ -43,14 +43,14 @@ class Product extends Model implements HasMedia
     protected static function booted(): void
     {
         static::deleting(function (self $product): void {
-            $children = $product->offers()->get();
+            $children = $product->stockVolumes()->get();
             $product->forceFill(['deleted_child_ids' => $children->modelKeys()])->saveQuietly();
             $children->each->delete();
         });
 
         static::restored(function (self $product): void {
-            $product->offers()->withTrashed()->whereIn('id', $product->deleted_child_ids ?? [])->get()
-                ->filter(fn (StockOffer $offer): bool => $offer->trashed())
+            $product->stockVolumes()->withTrashed()->whereIn('id', $product->deleted_child_ids ?? [])->get()
+                ->filter(fn (StockOfferVolume $volume): bool => $volume->trashed())
                 ->each->restore();
         });
     }
@@ -72,15 +72,18 @@ class Product extends Model implements HasMedia
      */
     public const MAX_IMAGE_UPLOAD_SIZE_MB = 25;
 
+    public const MAX_IMAGE_INPUT_DIMENSION = 4096;
+
     public const MAX_IMAGE_UPLOAD_SIZE_KB = self::MAX_IMAGE_UPLOAD_SIZE_MB * 1024;
 
     /**
      * The model's default attribute values.
      *
-     * @var array<string, bool>
+     * @var array<string, bool|string>
      */
     protected $attributes = [
         'is_active' => true,
+        'stock_offer_type' => 'new_grade',
     ];
 
     /** @return BelongsTo<WashType, $this> */
@@ -100,36 +103,38 @@ class Product extends Model implements HasMedia
     }
 
     /**
-     * Get all stock offers for the product.
+     * Get the physical sacks of the product.
      *
-     * @return HasMany<StockOffer, $this>
+     * @return HasMany<StockOfferVolume, $this>
      */
-    public function offers(): HasMany
+    public function stockVolumes(): HasMany
     {
-        return $this->hasMany(StockOffer::class);
+        return $this->hasMany(StockOfferVolume::class)
+            ->orderBy('sort_order')
+            ->orderBy('id');
+    }
+
+    /** @param Builder<Product> $query */
+    public function scopeWithStockSummary(Builder $query): void
+    {
+        $query->withSum('stockVolumes as recorded_quantity', 'total_quantity')
+            ->withCount('stockVolumes as recorded_volume_count');
     }
 
     /**
-     * Get the latest stock offer for the product, including hidden offers.
+     * Limit products to the stock that can be shown in the shared catalog.
      *
-     * @return HasOne<StockOffer, $this>
+     * @param  Builder<Product>  $query
      */
-    public function latestOffer(): HasOne
+    public function scopeAvailableForCatalog(Builder $query): void
     {
-        return $this->hasOne(StockOffer::class)
-            ->latestOfMany();
-    }
-
-    /**
-     * Get the latest stock offer that is available in the shared catalog.
-     *
-     * @return HasOne<StockOffer, $this>
-     */
-    public function latestAvailableOffer(): HasOne
-    {
-        return $this->hasOne(StockOffer::class)
-            ->ofMany(['id' => 'MAX'], function (Builder $query): void {
-                StockOffer::applyAvailableForCatalog($query);
+        $query
+            ->where('is_active', true)
+            ->where('stock_offer_type', '!=', StockOfferType::NewGrade->value)
+            ->whereHas('stockVolumes', function (Builder $query): void {
+                $query->where('total_quantity', '>', 0)
+                    ->whereNull('current_order_id')
+                    ->whereNull('consumed_at');
             });
     }
 
@@ -143,6 +148,7 @@ class Product extends Model implements HasMedia
         return [
             'is_active' => 'boolean',
             'line' => ProductLine::class,
+            'stock_offer_type' => StockOfferType::class,
             'deleted_child_ids' => 'array',
         ];
     }

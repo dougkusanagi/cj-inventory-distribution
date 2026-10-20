@@ -42,12 +42,10 @@ it('shows validation feedback and does not save an invalid stock offer', functio
 it('keeps existing sacks read only in the product form', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create(['name' => 'Produto com dois sacos E2E']);
-    $offer = $product->offers()->create([
-        'type' => StockOfferType::NewGrade,
-    ]);
+    $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
 
     foreach ([4, 3] as $sortOrder => $totalQuantity) {
-        $volume = $offer->stockVolumes()->create([
+        $volume = $product->stockVolumes()->create([
             'sort_order' => $sortOrder,
             'total_quantity' => $totalQuantity,
         ]);
@@ -79,10 +77,10 @@ it('keeps existing sacks read only in the product form', function () {
         ->assertSee('Excluir sacos')
         ->assertNoJavaScriptErrors();
 
-    expect($offer->stockVolumes()->count())->toBe(2);
+    expect($product->stockVolumes()->count())->toBe(2);
 });
 
-it('opens product stock entry in a dialog or drawer with grade cards', function () {
+it('opens product stock entry in a dialog or drawer with the product grade', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create(['name' => 'Produto para entrada rápida']);
 
@@ -93,21 +91,20 @@ it('opens product stock entry in a dialog or drawer with grade cards', function 
         ->click('[data-testid="open-stock-entry"]')
         ->assertPresent('[data-testid="stock-entry-dialog"]')
         ->assertPresent('[data-testid="stock-entry-form"]')
-        ->assertPresent('[data-testid="entry-stock-offer-type-selector"]')
-        ->assertPresent('#entry-stock-offer-type-new_grade')
+        ->assertSeeIn('[data-testid="entry-stock-offer-type"]', 'Grade Nova')
         ->click('[data-testid="stock-entry-form"] button:has-text("Cancelar")')
         ->assertMissing('[data-testid="stock-entry-dialog"]')
         ->resize(390, 844)
         ->click('[data-testid="open-stock-entry"]')
         ->assertVisible('[data-slot="drawer-content"]')
         ->assertPresent('[data-testid="stock-entry-drawer"]')
-        ->assertPresent('[data-testid="entry-stock-offer-type-selector"]')
+        ->assertPresent('[data-testid="entry-stock-offer-type"]')
         ->assertNoJavaScriptErrors();
 });
 
 it('registers stock from the product dialog and returns to the product', function () {
     $user = User::factory()->create();
-    $product = Product::factory()->create(['name' => 'Produto lançado pelo modal']);
+    $product = Product::factory()->replenishment()->create(['name' => 'Produto lançado pelo modal']);
 
     $this->actingAs($user);
 
@@ -133,33 +130,39 @@ it('registers stock from the product dialog and returns to the product', functio
         ->and(StockOfferVolume::query()->count())->toBe(2);
 });
 
-it('asks for the reason and sizes only for grade furada entries', function () {
+it('asks for the reason and sizes only for grade furada products', function () {
     $user = User::factory()->create();
-    $product = Product::factory()->create(['name' => 'Produto com grade furada']);
+    $brokenGrade = Product::factory()->brokenGrade()->create(['name' => 'Produto com grade furada']);
+    $replenishment = Product::factory()->replenishment()->create(['name' => 'Produto de reposição']);
 
     $this->actingAs($user);
 
-    visit(route('products.edit', [$product->id], false))
+    visit(route('products.edit', [$brokenGrade->id], false))
         ->click('#product-tab-stock')
         ->click('[data-testid="open-stock-entry"]')
-        ->click('#entry-stock-offer-type-broken_grade')
+        ->assertSeeIn('[data-testid="entry-stock-offer-type"]', 'Grade Furada')
         ->assertPresent('#entry-reason')
         ->press('Adicionar saco')
         ->assertPresent('#volume-0-active-0')
-        ->click('#entry-stock-offer-type-new_grade')
+        ->assertNoJavaScriptErrors();
+
+    visit(route('products.edit', [$replenishment->id], false))
+        ->click('#product-tab-stock')
+        ->click('[data-testid="open-stock-entry"]')
+        ->assertSeeIn('[data-testid="entry-stock-offer-type"]', 'Reposição')
         ->assertMissing('#entry-reason')
         ->assertPresent('#entry-stock-totals-bag-count')
-        ->assertValue('#entry-stock-totals-bag-count', '1')
         ->assertNoJavaScriptErrors();
 });
 
-it('uses the grade cards on the standalone stock entry form', function () {
+it('shows the selected product grade on the standalone stock entry form', function () {
+    $product = Product::factory()->brokenGrade()->create(['name' => 'Produto avulso de grade furada']);
     $this->actingAs(User::factory()->create());
 
-    visit(route('stock-entries.create', [], false))
-        ->assertPresent('[data-testid="entry-stock-offer-type-selector"]')
-        ->assertPresent('#entry-stock-offer-type-broken_grade')
-        ->assertMissing('#entry-type')
+    visit(route('stock-entries.create', ['product' => $product->id], false))
+        ->assertSeeIn('[data-testid="entry-stock-offer-type"]', 'Grade Furada')
+        ->assertPresent('#entry-reason')
+        ->assertMissing('[data-testid="entry-stock-offer-type-selector"]')
         ->assertNoJavaScriptErrors();
 });
 
@@ -259,8 +262,8 @@ it('requires confirmation before deleting a product and allows cancellation', fu
 it('explains why a product with available stock cannot be moved to the trash', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create(['name' => 'Produto com estoque ativo E2E']);
-    $offer = $product->offers()->create(['type' => StockOfferType::Replenishment]);
-    $offer->stockVolumes()->create(['total_quantity' => 5]);
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $product->stockVolumes()->create(['total_quantity' => 5]);
 
     $this->actingAs($user);
 
@@ -274,3 +277,35 @@ it('explains why a product with available stock cannot be moved to the trash', f
 
     expect($product->refresh()->trashed())->toBeFalse();
 });
+
+it('changes the product grade from the product form and records it', function (int $width, int $height) {
+    $user = User::factory()->create();
+    $product = Product::factory()->create(['name' => 'Produto Grade Nova para liberar', 'is_active' => true]);
+    $product->stockVolumes()->create(['sort_order' => 0, 'total_quantity' => 9]);
+
+    $this->actingAs($user);
+
+    $page = visit(route('products.edit', [$product->id], false))
+        ->resize($width, $height)
+        ->click('#product-tab-stock')
+        ->assertVisible('[data-testid="product-stock-type"]')
+        ->assertSee('Grade Nova é só para uso interno')
+        ->click('#product-stock-type-replenishment')
+        ->assertSee('Ao salvar, o produto passa a aparecer no catálogo')
+        ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
+        ->screenshot(filename: "product-stock-type-{$width}");
+
+    $page->submit();
+
+    $page->assertRoute('products.index')->assertNoJavaScriptErrors();
+
+    expect($product->refresh()->stock_offer_type)->toBe(StockOfferType::Replenishment);
+
+    visit(route('stock-movements.index', ['product' => $product->id], false))
+        ->resize($width, $height)
+        ->assertSee('Reclassificação de grade')
+        ->assertNoJavaScriptErrors();
+})->with([
+    'mobile' => [390, 844],
+    'desktop' => [1280, 900],
+]);

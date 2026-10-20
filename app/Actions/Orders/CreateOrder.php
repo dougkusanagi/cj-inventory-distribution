@@ -49,7 +49,7 @@ class CreateOrder
 
                 $volumes = StockOfferVolume::query()
                     ->whereKey($volumeIds)
-                    ->with(['items', 'offer.product.category'])
+                    ->with(['items', 'product.category'])
                     ->orderBy('id')
                     ->lockForUpdate()
                     ->get();
@@ -89,7 +89,7 @@ class CreateOrder
                 foreach ($volumes as $volume) {
                     $volumeCode = $volume->code ?? 'SC-'.str_pad((string) $volume->id, 6, '0', STR_PAD_LEFT);
                     $volume->update(['code' => $volumeCode, 'current_order_id' => $order->id]);
-                    $product = $volume->offer->product;
+                    $product = $volume->product;
 
                     $order->items()->create([
                         'stock_offer_volume_id' => $volume->id,
@@ -99,7 +99,7 @@ class CreateOrder
                         'product_model_snapshot' => $product->model,
                         'category_snapshot' => $product->category?->name,
                         'line_snapshot' => $product->line?->value,
-                        'offer_type_snapshot' => $volume->offer->type->value,
+                        'offer_type_snapshot' => $volume->product->stock_offer_type->value,
                         'volume_code_snapshot' => $volumeCode,
                         'total_quantity' => $volume->total_quantity,
                         'size_grid' => $volume->items->where('is_active', true)->map(fn ($item): array => [
@@ -141,8 +141,8 @@ class CreateOrder
         return $volume->current_order_id === null
             && $volume->consumed_at === null
             && $volume->total_quantity > 0
-            && $volume->offer->type !== StockOfferType::NewGrade
-            && $volume->offer->product->is_active;
+            && $volume->product->stock_offer_type !== StockOfferType::NewGrade
+            && $volume->product->is_active;
     }
 
     /**

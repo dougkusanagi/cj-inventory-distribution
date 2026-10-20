@@ -7,10 +7,8 @@ use App\Enums\StockMovementType;
 use App\Enums\StockOfferType;
 use App\Models\Product;
 use App\Models\StockMovement;
-use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -30,7 +28,7 @@ class CreateStockEntry
             ]);
         }
 
-        $type = $this->movementType($data['stock_offer_type'] ?? null);
+        $type = $product->stock_offer_type;
         $volumes = $this->normalizeVolumes($data['stock_volumes'] ?? []);
         $notes = $this->normalizeText($data['notes'] ?? null);
         $reason = $this->normalizeText($data['reason'] ?? null)
@@ -51,7 +49,7 @@ class CreateStockEntry
 
         $payloadHash = $this->payloadHash($product, $type, $volumes, $notes, $reason);
 
-        return StockMutation::run(function () use ($product, $type, $volumes, $notes, $reason, $idempotencyKey, $payloadHash, $actor, $allowZero): StockMovement {
+        return StockMutation::run(function () use ($product, $volumes, $notes, $reason, $idempotencyKey, $payloadHash, $actor, $allowZero): StockMovement {
             $existing = $this->recorder->findIdempotent($idempotencyKey, $payloadHash);
 
             if ($existing !== null) {
@@ -66,28 +64,7 @@ class CreateStockEntry
                 ]);
             }
 
-            $offer = StockOffer::query()
-                ->where('product_id', $lockedProduct->getKey())
-                ->where('type', $type->value)
-                ->where(function (Builder $query) use ($notes): void {
-                    if ($notes === null) {
-                        $query->whereNull('notes');
-                    } else {
-                        $query->where('notes', $notes);
-                    }
-                })
-                ->latest('id')
-                ->lockForUpdate()
-                ->first();
-
-            if ($offer === null) {
-                $offer = $lockedProduct->offers()->create([
-                    'type' => $type,
-                    'notes' => $notes,
-                ]);
-            }
-
-            $nextSortOrder = ((int) $offer->stockVolumes()->max('sort_order')) + 1;
+            $nextSortOrder = ((int) $lockedProduct->stockVolumes()->max('sort_order')) + 1;
             $createdVolumes = collect();
 
             foreach ($volumes as $offset => $rawVolume) {
@@ -101,14 +78,14 @@ class CreateStockEntry
                     ]);
                 }
 
-                $volume = $offer->stockVolumes()->create([
+                $volume = $lockedProduct->stockVolumes()->create([
                     'sort_order' => $nextSortOrder + $offset,
                     'total_quantity' => $totalQuantity,
                 ]);
 
                 $this->recorder->ensureVolumeCode($volume);
                 $this->createItems($volume, $items);
-                $volume->load(['items', 'offer.product.category']);
+                $volume->load(['items', 'product.category']);
                 $createdVolumes->push($volume);
             }
 
@@ -130,19 +107,6 @@ class CreateStockEntry
                 $resultingStates,
             );
         });
-    }
-
-    private function movementType(mixed $value): StockOfferType
-    {
-        $type = $value instanceof StockOfferType ? $value : StockOfferType::tryFrom((string) $value);
-
-        if ($type === null) {
-            throw ValidationException::withMessages([
-                'stock_offer_type' => 'Selecione um tipo de estoque válido.',
-            ]);
-        }
-
-        return $type;
     }
 
     /** @return Collection<int, array<string, mixed>> */

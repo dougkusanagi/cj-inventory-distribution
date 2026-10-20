@@ -142,9 +142,10 @@ class OperationalDemoSeeder extends Seeder
             ->all();
 
         $volumes = StockOfferVolume::query()
-            ->with(['items', 'offer.product.category'])
-            ->whereHas('offer', fn (Builder $query) => $query->where('type', '!=', StockOfferType::NewGrade->value))
-            ->whereHas('offer.product', fn (Builder $query) => $query->where('code', 'like', 'DEMO-CJ-%'))
+            ->with(['items', 'product.category'])
+            ->whereHas('product', fn (Builder $query) => $query
+                ->where('stock_offer_type', '!=', StockOfferType::NewGrade->value)
+                ->where('code', 'like', 'DEMO-CJ-%'))
             ->orderBy('id')
             ->get()
             ->keyBy(fn (StockOfferVolume $volume): string => $this->volumeKey($volume));
@@ -293,13 +294,13 @@ class OperationalDemoSeeder extends Seeder
 
                 $order->items()->create([
                     'stock_offer_volume_id' => $volume->getKey(),
-                    'product_id' => $volume->offer->product->getKey(),
-                    'product_code_snapshot' => $volume->offer->product->code,
-                    'product_name_snapshot' => $volume->offer->product->name,
-                    'product_model_snapshot' => $volume->offer->product->model,
-                    'category_snapshot' => $volume->offer->product->category?->name,
-                    'line_snapshot' => $volume->offer->product->line?->value,
-                    'offer_type_snapshot' => $volume->offer->type->value,
+                    'product_id' => $volume->product->getKey(),
+                    'product_code_snapshot' => $volume->product->code,
+                    'product_name_snapshot' => $volume->product->name,
+                    'product_model_snapshot' => $volume->product->model,
+                    'category_snapshot' => $volume->product->category?->name,
+                    'line_snapshot' => $volume->product->line?->value,
+                    'offer_type_snapshot' => $volume->product->stock_offer_type->value,
                     'volume_code_snapshot' => $volumeCode,
                     'total_quantity' => $volume->total_quantity,
                     'size_grid' => $volume->items
@@ -457,6 +458,6 @@ class OperationalDemoSeeder extends Seeder
 
     private function volumeKey(StockOfferVolume $volume): string
     {
-        return $volume->offer->product->code.':'.$volume->sort_order;
+        return $volume->product->code.':'.$volume->sort_order;
     }
 }

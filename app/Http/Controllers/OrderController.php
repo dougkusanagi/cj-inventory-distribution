@@ -206,10 +206,10 @@ class OrderController extends Controller
             ->whereNull('current_order_id')
             ->whereNull('consumed_at')
             ->where('total_quantity', '>', 0)
-            ->whereHas('offer', fn (Builder $query) => $query
-                ->where('type', '!=', StockOfferType::NewGrade->value)
-                ->whereHas('product', fn (Builder $query) => $query->where('is_active', true)))
-            ->with(['items', 'offer.product.category'])
+            ->whereHas('product', fn (Builder $query) => $query
+                ->where('stock_offer_type', '!=', StockOfferType::NewGrade->value)
+                ->where('is_active', true))
+            ->with(['items', 'product.category'])
             ->orderBy('id')
             ->get()
             ->map(fn (StockOfferVolume $volume): array => [
@@ -217,10 +217,10 @@ class OrderController extends Controller
                 'code' => $volume->code ?? 'SC-'.str_pad((string) $volume->id, 6, '0', STR_PAD_LEFT),
                 'total_quantity' => $volume->total_quantity,
                 'product' => [
-                    'code' => $volume->offer->product->code,
-                    'name' => $volume->offer->product->name,
-                    'model' => $volume->offer->product->model,
-                    'category' => $volume->offer->product->category?->name,
+                    'code' => $volume->product->code,
+                    'name' => $volume->product->name,
+                    'model' => $volume->product->model,
+                    'category' => $volume->product->category?->name,
                 ],
                 'sizes' => $volume->items->where('is_active', true)->map(fn (StockOfferVolumeItem $item): array => [
                     'size' => $item->size,

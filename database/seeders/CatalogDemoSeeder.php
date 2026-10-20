@@ -6,7 +6,6 @@ use App\Enums\ProductLine;
 use App\Enums\StockOfferType;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\StockOffer;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -227,18 +226,12 @@ class CatalogDemoSeeder extends Seeder
                     ->toMediaCollection(Product::MEDIA_COLLECTION);
             }
 
-            $offer = $product->offers()->latest('id')->first() ?? new StockOffer;
-            $offer->product()->associate($product);
-            $offer->fill([
-                'type' => $definition['type'],
-                'notes' => 'Oferta de demonstração para testes.',
-            ]);
-            $offer->save();
+            $product->update(['stock_offer_type' => $definition['type']]);
 
             $sortOrders = [];
             foreach ($definition['volumes'] as $sortOrder => $volumeDefinition) {
                 $sortOrders[] = $sortOrder;
-                $volume = $offer->stockVolumes()->updateOrCreate(
+                $volume = $product->stockVolumes()->updateOrCreate(
                     ['sort_order' => $sortOrder],
                     ['total_quantity' => $volumeDefinition['total']],
                 );
@@ -256,7 +249,7 @@ class CatalogDemoSeeder extends Seeder
                 }
             }
 
-            $offer->stockVolumes()->whereNotIn('sort_order', $sortOrders)->delete();
+            $product->stockVolumes()->whereNotIn('sort_order', $sortOrders)->delete();
         }
     }
 }

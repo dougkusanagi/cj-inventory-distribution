@@ -3,6 +3,7 @@
 namespace App\Actions\Products;
 
 use App\Actions\Stock\StockMutation;
+use App\Enums\StockOfferType;
 use App\Models\Product;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
@@ -14,11 +15,11 @@ class CreateProduct
 {
     public function __construct(
         private readonly StoreProductImage $storeProductImage,
-        private readonly SyncProductStockOffer $syncProductStockOffer,
+        private readonly SyncProductStock $syncProductStock,
     ) {}
 
     /**
-     * Create a product and its stock offer atomically.
+     * Create a product and its initial stock atomically.
      *
      * @param  array<string, mixed>  $data
      */
@@ -26,9 +27,15 @@ class CreateProduct
     {
         $product = null;
         $addedMedia = [];
+        $images = [];
+        foreach ($data['images'] ?? [] as $index => $image) {
+            if ($image instanceof UploadedFile) {
+                $images[$index] = $this->storeProductImage->prepare($image);
+            }
+        }
 
         try {
-            return StockMutation::run(function () use ($data, &$product, &$addedMedia): Product {
+            return StockMutation::run(function () use ($data, $images, &$product, &$addedMedia): Product {
                 $product = Product::create([
                     'code' => 'PENDING-'.Str::uuid(),
                     'name' => $data['name'],
@@ -36,6 +43,7 @@ class CreateProduct
                     'category_id' => $data['category_id'] ?? null,
                     'wash_type_id' => $data['wash_type_id'] ?? null,
                     'line' => $data['line'] ?? null,
+                    'stock_offer_type' => $data['stock_offer_type'] ?? StockOfferType::NewGrade,
                     'notes' => $data['notes'] ?? null,
                     'is_active' => $data['is_active'] ?? true,
                 ]);
@@ -44,12 +52,12 @@ class CreateProduct
                     'code' => 'CJ-'.str_pad((string) $product->id, 6, '0', STR_PAD_LEFT),
                 ]);
 
-                $this->syncProductStockOffer->handle($product, $data);
-                $addedMedia = $this->storeImages($product, $data['images'] ?? []);
+                $this->syncProductStock->handle($product, $data);
+                $addedMedia = $this->storeImages($product, $images);
                 $this->reorderImages($product, $data['image_order'] ?? null, $addedMedia);
 
                 return $product->load([
-                    'latestOffer.stockVolumes.items',
+                    'stockVolumes.items',
                     'media',
                 ]);
             });
@@ -81,7 +89,7 @@ class CreateProduct
 
         try {
             foreach ($images as $index => $image) {
-                if ($image instanceof UploadedFile) {
+                if (is_string($image)) {
                     $addedMedia[$index] = $this->storeProductImage->handle($product, $image, $index);
                 }
             }

@@ -13,11 +13,8 @@ beforeEach(function (): void {
     $user = User::factory()->create();
     $volumeIds = collect(range(1, 2))->map(function () {
         $product = Product::factory()->create();
-        $offer = $product->offers()->create([
-            'type' => StockOfferType::Replenishment,
-            'is_active' => true,
-        ]);
-        $volume = $offer->stockVolumes()->create(['total_quantity' => 12]);
+        $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+        $volume = $product->stockVolumes()->create(['total_quantity' => 12]);
         $volume->items()->create(['size' => 'M', 'is_active' => true, 'quantity' => 12]);
 
         return $volume->id;

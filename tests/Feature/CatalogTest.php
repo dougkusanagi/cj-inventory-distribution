@@ -1,10 +1,10 @@
 <?php
 
+use App\Enums\StockOfferType;
 use App\Models\CatalogSetting;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\Product;
-use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -16,8 +16,8 @@ test('renders database products with available stock in the public catalog', fun
         'name' => 'Produto persistido',
         'code' => 'CJ-BANCO',
     ]);
-    $offer = StockOffer::factory()->replenishment()->for($product)->create();
-    $volume = StockOfferVolume::factory()->for($offer)->withTotal(12)->create();
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $volume = StockOfferVolume::factory()->for($product)->withTotal(12)->create();
     $volume->items()->create([
         'size' => 'M',
         'sort_order' => 0,
@@ -44,10 +44,10 @@ test('renders database products with available stock in the public catalog', fun
 
 test('catalog renders the latest available offer instead of an older exhausted offer', function () {
     $product = Product::factory()->create(['name' => 'Produto com histórico']);
-    $exhaustedOffer = StockOffer::factory()->replenishment()->for($product)->create();
-    StockOfferVolume::factory()->for($exhaustedOffer)->withTotal(0)->create();
-    $availableOffer = StockOffer::factory()->brokenGrade()->for($product)->create();
-    $availableVolume = StockOfferVolume::factory()->for($availableOffer)->withTotal(7)->create();
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    StockOfferVolume::factory()->for($product)->withTotal(0)->create();
+    $product->update(['stock_offer_type' => StockOfferType::BrokenGrade]);
+    $availableVolume = StockOfferVolume::factory()->for($product)->withTotal(7)->create();
 
     $this->get(route('catalog'))
         ->assertInertia(fn (Assert $page) => $page
@@ -66,8 +66,8 @@ test('disables catalog checkout until a WhatsApp destination is configured', fun
 
 test('does not expose new grade products in the public catalog', function () {
     $product = Product::factory()->create();
-    $offer = StockOffer::factory()->for($product)->create();
-    StockOfferVolume::factory()->for($offer)->withTotal(10)->create();
+    $product->update(['stock_offer_type' => StockOfferType::NewGrade]);
+    StockOfferVolume::factory()->for($product)->withTotal(10)->create();
 
     $response = $this->get(route('catalog'));
 
@@ -82,8 +82,8 @@ test('catalog uses the configured public URL for product images', function () {
     config(['filesystems.disks.public.url' => 'https://inventario.cronicasjeans.com.br/storage']);
 
     $product = Product::factory()->create(['name' => 'Produto com foto']);
-    $offer = StockOffer::factory()->replenishment()->for($product)->create();
-    StockOfferVolume::factory()->for($offer)->withTotal(12)->create();
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    StockOfferVolume::factory()->for($product)->withTotal(12)->create();
     $media = $product->addMedia(UploadedFile::fake()->image('product.jpg'))
         ->toMediaCollection(Product::MEDIA_COLLECTION);
 
@@ -97,8 +97,8 @@ test('catalog exposes every product image in display order', function () {
     Storage::fake('public');
 
     $product = Product::factory()->create(['name' => 'Produto com galeria']);
-    $offer = StockOffer::factory()->replenishment()->for($product)->create();
-    StockOfferVolume::factory()->for($offer)->withTotal(12)->create();
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    StockOfferVolume::factory()->for($product)->withTotal(12)->create();
     $firstMedia = $product->addMedia(UploadedFile::fake()->image('first.jpg'))
         ->toMediaCollection(Product::MEDIA_COLLECTION);
     $secondMedia = $product->addMedia(UploadedFile::fake()->image('second.jpg'))
@@ -117,8 +117,8 @@ test('catalog exposes every product image in display order', function () {
 test('catalog filters and paginates products on the server', function () {
     $category = Category::factory()->create(['name' => 'Calças']);
     $accentedProduct = Product::factory()->create(['name' => 'CALÇA ACENTUADA']);
-    $accentedOffer = StockOffer::factory()->replenishment()->for($accentedProduct)->create();
-    StockOfferVolume::factory()->for($accentedOffer)->withTotal(4)->create();
+    $accentedProduct->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    StockOfferVolume::factory()->for($accentedProduct)->withTotal(4)->create();
 
     foreach (range(1, 13) as $index) {
         $product = Product::factory()->create([
@@ -126,8 +126,8 @@ test('catalog filters and paginates products on the server', function () {
             'category_id' => $category->id,
             'model' => "MODELO-{$index}",
         ]);
-        $offer = StockOffer::factory()->replenishment()->for($product)->create();
-        StockOfferVolume::factory()->for($offer)->withTotal(4)->create();
+        $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+        StockOfferVolume::factory()->for($product)->withTotal(4)->create();
     }
 
     $this->get(route('catalog', [
@@ -160,8 +160,8 @@ test('catalog filters and paginates products on the server', function () {
 
 test('catalog search stays within SQLite parser limits with an available offer', function () {
     $product = Product::factory()->create(['name' => 'Teste de busca']);
-    $offer = StockOffer::factory()->replenishment()->for($product)->create();
-    StockOfferVolume::factory()->for($offer)->withTotal(4)->create();
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    StockOfferVolume::factory()->for($product)->withTotal(4)->create();
 
     $this->get(route('catalog', ['search' => 'teste']))
         ->assertOk()
@@ -172,9 +172,9 @@ test('catalog search stays within SQLite parser limits with an available offer',
 
 test('catalog keeps selected unavailable sacks identifiable for the bag', function () {
     $product = Product::factory()->create();
-    $offer = StockOffer::factory()->replenishment()->for($product)->create();
-    $available = StockOfferVolume::factory()->for($offer)->withTotal(4)->create();
-    $reserved = StockOfferVolume::factory()->for($offer)->withTotal(5)->create([
+    $product->update(['stock_offer_type' => StockOfferType::Replenishment]);
+    $available = StockOfferVolume::factory()->for($product)->withTotal(4)->create();
+    $reserved = StockOfferVolume::factory()->for($product)->withTotal(5)->create([
         'current_order_id' => Order::factory()->create()->id,
     ]);
 

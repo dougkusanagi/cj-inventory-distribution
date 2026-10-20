@@ -6,7 +6,6 @@ use App\Enums\ProductLine;
 use App\Models\CatalogSetting;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\StockOffer;
 use App\Models\StockOfferVolume;
 use App\Models\StockOfferVolumeItem;
 use App\Models\WashType;
@@ -34,7 +33,7 @@ class CatalogController extends Controller
         $bagVolumeIds = collect($this->normalizeBagVolumeIds($request->input('bag', [])));
 
         $products = Product::query()
-            ->whereHas('latestAvailableOffer')
+            ->availableForCatalog()
             ->when($search !== '', function (Builder $query) use ($search): void {
                 NormalizedSearch::apply($query, $search, ['name', 'model', 'code']);
             })
@@ -45,12 +44,12 @@ class CatalogController extends Controller
                 'category:id,name',
                 'washType:id,name',
                 'media',
-                'latestAvailableOffer.stockVolumes' => function (Relation $query): void {
+                'stockVolumes' => function (Relation $query): void {
                     $query->where('total_quantity', '>', 0)
                         ->whereNull('current_order_id')
                         ->whereNull('consumed_at');
                 },
-                'latestAvailableOffer.stockVolumes.items' => function (Relation $query): void {
+                'stockVolumes.items' => function (Relation $query): void {
                     $query->where('is_active', true);
                 },
             ])
@@ -58,14 +57,7 @@ class CatalogController extends Controller
             ->orderBy('id')
             ->paginate(12)
             ->withQueryString()
-            ->through(function (Product $product): array {
-                $offer = $product->latestAvailableOffer;
-                if ($offer === null) {
-                    throw new LogicException('Catalog product loaded without an available offer.');
-                }
-
-                return $this->catalogProductData($product, $offer, $offer->stockVolumes);
-            });
+            ->through(fn (Product $product): array => $this->catalogProductData($product, $product->stockVolumes));
 
         $availableBagVolumeIds = $bagVolumeIds->isEmpty()
             ? collect()
@@ -74,7 +66,7 @@ class CatalogController extends Controller
                 ->where('total_quantity', '>', 0)
                 ->whereNull('current_order_id')
                 ->whereNull('consumed_at')
-                ->whereIn('stock_offer_id', StockOffer::query()
+                ->whereIn('product_id', Product::query()
                     ->availableForCatalog()
                     ->select('id'))
                 ->pluck('id');
@@ -84,23 +76,23 @@ class CatalogController extends Controller
             : StockOfferVolume::query()
                 ->whereIn('id', $availableBagVolumeIds)
                 ->with([
-                    'offer.product.category',
-                    'offer.product.washType',
-                    'offer.product.media',
+                    'product.category',
+                    'product.washType',
+                    'product.media',
                     'items' => function (Relation $query): void {
                         $query->where('is_active', true);
                     },
                 ])
                 ->get()
-                ->groupBy(fn (StockOfferVolume $volume): int => $volume->offer->product->id)
+                ->groupBy(fn (StockOfferVolume $volume): int => $volume->product->id)
                 ->map(function (Collection $volumes): array {
                     $volume = $volumes->first();
                     if ($volume === null) {
                         throw new LogicException('Catalog bag loaded without a stock volume.');
                     }
-                    $product = $volume->offer->product;
+                    $product = $volume->product;
 
-                    return $this->catalogProductData($product, $volume->offer, $volumes);
+                    return $this->catalogProductData($product, $volumes);
                 })
                 ->values();
 
@@ -145,7 +137,7 @@ class CatalogController extends Controller
      * @param  Collection<int, StockOfferVolume>  $stockVolumes
      * @return array<string, mixed>
      */
-    private function catalogProductData(Product $product, StockOffer $offer, Collection $stockVolumes): array
+    private function catalogProductData(Product $product, Collection $stockVolumes): array
     {
         $images = $product->media
             ->where('collection_name', Product::MEDIA_COLLECTION)
@@ -172,7 +164,7 @@ class CatalogController extends Controller
             'category_id' => $product->category_id,
             'wash_type' => $product->washType?->name,
             'line' => $product->line?->label(),
-            'type' => $offer->type->label(),
+            'type' => $product->stock_offer_type->label(),
             'volumes' => $stockVolumes->map(fn (StockOfferVolume $volume): array => [
                 'id' => $volume->id,
                 'name' => 'Saco '.str_pad((string) ($volume->sort_order + 1), 2, '0', STR_PAD_LEFT),

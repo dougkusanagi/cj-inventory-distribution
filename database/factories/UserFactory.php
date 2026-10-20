@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -28,7 +29,7 @@ class UserFactory extends Factory
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
-            'is_staff' => true,
+            'role' => UserRole::Admin,
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
             'two_factor_secret' => null,
@@ -53,8 +54,43 @@ class UserFactory extends Factory
     public function nonStaff(): static
     {
         return $this->state(fn (array $attributes): array => [
-            'is_staff' => false,
+            'role' => null,
         ]);
+    }
+
+    /**
+     * Indicate that the user has full access to the panel.
+     */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'role' => UserRole::Admin,
+        ]);
+    }
+
+    /**
+     * Indicate that the user operates stock without administrative access.
+     */
+    public function stock(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'role' => UserRole::Stock,
+        ]);
+    }
+
+    /**
+     * Indicate that the user only manages product photos.
+     */
+    public function marketing(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'role' => UserRole::Marketing,
+        ]);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes): array => ['is_active' => false]);
     }
 
     /**

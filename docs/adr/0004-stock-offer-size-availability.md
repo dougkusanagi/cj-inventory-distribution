@@ -3,7 +3,7 @@
 ## Status
 
 Accepted; a regra de definição do total foi parcialmente substituída pela ADR
-0008.
+0008. A oferta de estoque foi removida pela ADR 0024.
 
 ## Contexto
 

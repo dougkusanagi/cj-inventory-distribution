@@ -29,6 +29,12 @@ export const stockOfferTypeOptions: StockOfferTypeOption[] = [
     },
 ];
 
+export const stockOfferTypeLabels: Record<StockOfferType, string> = {
+    new_grade: 'Grade Nova',
+    replenishment: 'Reposição',
+    broken_grade: 'Grade Furada',
+};
+
 /**
  * Only Grade Furada needs the sizes of each sack; the other offers are
  * registered by their number of sacks and total of pieces.
