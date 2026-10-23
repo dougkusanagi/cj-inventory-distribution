@@ -4,6 +4,7 @@ import {
     ImageBrokenIcon,
     ImagesIcon,
     ListBulletsIcon,
+    XIcon,
 } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import ProductPhotoController from '@/actions/App/Http/Controllers/ProductPhotoController';
@@ -304,20 +305,31 @@ function ProductPhotosDrawer({
             >
                 <DrawerContent
                     side={isMobile ? 'bottom' : 'right'}
-                    className="max-h-[95dvh] sm:max-w-2xl"
+                    className="max-h-[calc(100dvh-1rem)] overflow-hidden sm:max-w-2xl"
                     data-testid="product-photos-drawer"
                 >
-                    <DrawerHeader>
-                        <DrawerTitle className="break-words">
+                    <DrawerHeader className="relative shrink-0 pr-16 text-left">
+                        <DrawerTitle className="min-w-0 [overflow-wrap:anywhere]">
                             {product.name}
                         </DrawerTitle>
-                        <DrawerDescription>
+                        <DrawerDescription className="[overflow-wrap:anywhere]">
                             {[product.code, product.model]
                                 .filter(Boolean)
                                 .join(' · ')}
                         </DrawerDescription>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-5 right-4"
+                            aria-label="Fechar fotos do produto"
+                            disabled={form.processing}
+                            onClick={requestClose}
+                        >
+                            <XIcon weight="bold" />
+                        </Button>
                     </DrawerHeader>
-                    <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-5">
+                    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-5 sm:px-6">
                         <ProductPhotoManager
                             value={form.data.images}
                             existingImages={product.images}
@@ -337,7 +349,7 @@ function ProductPhotosDrawer({
                             onProcessingChange={setProcessingImages}
                         />
                     </div>
-                    <DrawerFooter className="shrink-0 gap-3 border-t pt-4">
+                    <DrawerFooter className="shrink-0 gap-3 border-t px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-6">
                         <div aria-live="polite" className="grid gap-1">
                             {errorMessages.length > 0 ? (
                                 <p

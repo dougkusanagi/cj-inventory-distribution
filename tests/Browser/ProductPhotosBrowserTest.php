@@ -22,6 +22,16 @@ test('marketing lands on the photo screen and manages photos from a drawer', fun
         ->click('[data-testid="photo-product-'.$withPhotos->id.'"]')
         ->assertVisible('[data-testid="product-photos-drawer"]')
         ->assertDisabled('button:has-text("Salvar fotos")')
+        ->assertScript(<<<'JS'
+            Array.from(document.querySelectorAll('[data-testid="product-photos-drawer"] article')).every(card => {
+                const bounds = card.getBoundingClientRect();
+                return Array.from(card.querySelectorAll('button, img')).every(element => {
+                    const rect = element.getBoundingClientRect();
+                    return rect.left >= bounds.left && rect.right <= bounds.right + 1;
+                });
+            })
+            JS)
+        ->screenshot(filename: 'product-photos-'.$width)
         ->click('[aria-label="Remover a foto 2"]')
         ->click('[role="dialog"] button:has-text("Remover foto")')
         ->assertSee('Alterações ainda não salvas.')
@@ -44,6 +54,7 @@ test('marketing lands on the photo screen and manages photos from a drawer', fun
 })->with([
     'desktop' => [1280, 900],
     'mobile' => [390, 844],
+    'narrow mobile' => [320, 640],
 ]);
 
 test('closing the photo drawer with unsaved changes asks before discarding', function () {
