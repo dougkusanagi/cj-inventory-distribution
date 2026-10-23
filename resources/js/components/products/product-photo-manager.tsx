@@ -712,7 +712,7 @@ export function ProductPhotoManager({
 
     return (
         <section
-            className="grid gap-4"
+            className="@container grid min-w-0 gap-4"
             aria-labelledby="product-photos-title"
             aria-invalid={inputError ? true : undefined}
             tabIndex={inputError ? -1 : undefined}
@@ -736,7 +736,7 @@ export function ProductPhotoManager({
                             variant="outline"
                             onClick={() => setOrganizerOpen(true)}
                             disabled={processing}
-                            className="h-10 flex-1 sm:flex-none"
+                            className="h-11 flex-1 sm:h-10 sm:flex-none"
                             title="Mudar a ordem das fotos"
                         >
                             <ArrowsDownUpIcon />
@@ -749,7 +749,7 @@ export function ProductPhotoManager({
                         disabled={
                             currentItems.length >= MAX_IMAGES || processing
                         }
-                        className="h-10 flex-1 sm:flex-none"
+                        className="h-11 flex-1 sm:h-10 sm:flex-none"
                     >
                         <CameraPlusIcon />
                         Adicionar
@@ -781,13 +781,13 @@ export function ProductPhotoManager({
                 </button>
             ) : (
                 <div className="grid gap-3">
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                    <div className="grid grid-cols-2 gap-3 @min-[36rem]:grid-cols-3 @min-[56rem]:grid-cols-5">
                         {state.items.map((item) => {
                             if (item.removed) {
                                 return (
                                     <div
                                         key={item.key}
-                                        className="col-span-full flex min-h-20 items-center justify-between gap-3 rounded-2xl border border-dashed border-border bg-muted/30 p-3"
+                                        className="col-span-full flex min-h-20 flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-border bg-muted/30 p-3"
                                     >
                                         <div className="flex min-w-0 items-center gap-3">
                                             <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
@@ -797,7 +797,7 @@ export function ProductPhotoManager({
                                                 <p className="text-sm font-semibold text-foreground">
                                                     Foto removida
                                                 </p>
-                                                <p className="truncate text-xs text-muted-foreground">
+                                                <p className="text-xs text-muted-foreground">
                                                     A remoção só será aplicada
                                                     ao salvar.
                                                 </p>
@@ -810,7 +810,7 @@ export function ProductPhotoManager({
                                                 handleUndoRemove(item)
                                             }
                                             disabled={processing}
-                                            className="h-10 shrink-0 px-3"
+                                            className="h-11 shrink-0"
                                         >
                                             <ArrowUUpLeftIcon />
                                             Desfazer
@@ -981,7 +981,7 @@ function PhotoRow({
                     : 'border-border bg-background',
             )}
         >
-            <div className="relative">
+            <div className="relative min-w-0">
                 <button
                     type="button"
                     onClick={onPreview}
@@ -992,7 +992,7 @@ function PhotoRow({
                         <img
                             src={imageUrl}
                             alt=""
-                            className="size-full object-cover"
+                            className="absolute inset-0 size-full object-cover"
                             loading="lazy"
                             decoding="async"
                         />
