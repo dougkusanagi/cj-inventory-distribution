@@ -856,7 +856,7 @@ export function ProductPhotoManager({
                 ref={cameraInputRef}
                 id="product-images-camera"
                 type="file"
-                accept={ACCEPTED_IMAGE_TYPES.join(',')}
+                accept="image/*"
                 capture="environment"
                 className="sr-only"
                 onChange={handleAddFromCamera}
@@ -866,7 +866,7 @@ export function ProductPhotoManager({
                 ref={galleryInputRef}
                 id="product-images-gallery"
                 type="file"
-                accept={ACCEPTED_IMAGE_TYPES.join(',')}
+                accept="image/*"
                 multiple
                 className="sr-only"
                 onChange={handleAddFromGallery}

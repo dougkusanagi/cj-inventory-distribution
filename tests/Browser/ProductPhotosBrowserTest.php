@@ -31,6 +31,8 @@ test('marketing lands on the photo screen and manages photos from a drawer', fun
         ->click('button:has-text("Ver 1 produto sem foto")')
         ->assertDontSee('Jaqueta com fotos')
         ->click('[data-testid="photo-product-'.$product->id.'"]')
+        ->assertAttribute('#product-images-gallery', 'accept', 'image/*')
+        ->assertAttribute('#product-images-camera', 'accept', 'image/*')
         ->attach('#product-images-gallery', base_path('public/apple-touch-icon.png'))
         ->press('Cortar e usar foto')
         ->assertSee('Alterações ainda não salvas.')
