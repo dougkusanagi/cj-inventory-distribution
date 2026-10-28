@@ -287,6 +287,7 @@ it('confirms deletion from the edit form even when the form has unsaved changes'
         ->click('button[aria-label="Excluir produto"]')
         ->assertSee('Excluir produto?')
         ->click('[role="dialog"] button:has-text("Cancelar")')
+        ->assertNotPresent('[role="dialog"]')
         ->assertValue('#product-name', 'Alteração ainda não salva');
 
     $this->assertModelExists($product);

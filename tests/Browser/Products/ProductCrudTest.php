@@ -738,6 +738,7 @@ it('removes a product from the card actions after confirmation', function (bool 
         ->click('button[aria-label="Excluir Produto removido pelo card"]')
         ->assertSee('Excluir produto?')
         ->press('Cancelar')
+        ->assertNotPresent('[role="dialog"][data-state="closed"]')
         ->assertVisible('button[aria-label="Excluir Produto removido pelo card"]')
         ->click('button[aria-label="Excluir Produto removido pelo card"]')
         ->click('button:has-text("Excluir produto"):not([aria-label])')
