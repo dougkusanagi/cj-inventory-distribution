@@ -1,25 +1,25 @@
 {
-  "title": "Correção da galeria de fotos",
-  "changes": [
-    {
-      "category": "fixed",
-      "text": "Corrigida a galeria de fotos dos produtos para ajustar as colunas à largura do painel e manter imagens e botões dentro de suas áreas, preservando o recorte das fotos em 4:5."
-    },
-    {
-      "category": "improved",
-      "text": "Adicionado botão de fechamento ao painel e melhorados a quebra de textos longos, a rolagem, o tamanho dos botões e o espaço na parte inferior do celular."
-    },
-    {
-      "category": "improved",
-      "text": "Ampliados os testes de navegador para verificar os limites das imagens e dos botões e registrar capturas em telas de 320, 390 e 1280 pixels. As verificações do projeto foram executadas localmente."
-    },
-    {
-      "category": "improved",
-      "text": "Registrada a correção no histórico de mudanças do projeto."
-    }
-  ],
-  "pr_number": 69,
-  "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/69",
-  "merged_at": "2026-10-23T19:13:36Z",
-  "commit": "9e994fdf40be976907b973e3809623273a63130b"
+    "title": "Correção da galeria de fotos",
+    "changes": [
+        {
+            "category": "fixed",
+            "text": "Corrigida a galeria de fotos dos produtos para ajustar as colunas à largura do painel e manter imagens e botões dentro de suas áreas, preservando o recorte das fotos em 4:5."
+        },
+        {
+            "category": "improved",
+            "text": "Adicionado botão de fechamento ao painel e melhorados a quebra de textos longos, a rolagem, o tamanho dos botões e o espaço na parte inferior do celular."
+        },
+        {
+            "category": "improved",
+            "text": "Ampliados os testes de navegador para verificar os limites das imagens e dos botões e registrar capturas em telas de 320, 390 e 1280 pixels. As verificações do projeto foram executadas localmente."
+        },
+        {
+            "category": "improved",
+            "text": "Registrada a correção no histórico de mudanças do projeto."
+        }
+    ],
+    "pr_number": 69,
+    "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/69",
+    "merged_at": "2026-10-23T19:13:36Z",
+    "commit": "9e994fdf40be976907b973e3809623273a63130b"
 }

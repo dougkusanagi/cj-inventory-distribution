@@ -599,7 +599,7 @@ it('rejects an invalid image without adding it to the form', function () {
     visit(route('products.create', [], false))
         ->click('#product-tab-photos')
         ->attach('#product-images-gallery', base_path('README.md'))
-        ->assertSee('README.md: use JPG, PNG ou WebP.')
+        ->assertSee('README.md: use JPG, PNG, WebP, HEIC ou HEIF.')
         ->assertSee('0/5')
         ->assertNotPresent('Cortar e usar foto')
         ->assertNoJavaScriptErrors();

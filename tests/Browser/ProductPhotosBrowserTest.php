@@ -73,3 +73,23 @@ test('closing the photo drawer with unsaved changes asks before discarding', fun
 
     expect($product->fresh()->getMedia(Product::MEDIA_COLLECTION))->toHaveCount(0);
 });
+
+test('HEIC photos can be prepared and edited before saving', function (int $width, int $height) {
+    $product = Product::factory()->create(['name' => 'Produto com foto HEIC']);
+    $this->actingAs(User::factory()->marketing()->create());
+
+    visit(route('product-photos.index', [], false))
+        ->resize($width, $height)
+        ->click('[data-testid="photo-product-'.$product->id.'"]')
+        ->attach('#product-images-gallery', base_path('tests/Fixtures/images/example.heic'))
+        ->press('Cortar e usar foto')
+        ->assertSee('Alterações ainda não salvas.')
+        ->assertEnabled('button:has-text("Salvar fotos")')
+        ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
+        ->assertScript("Array.from(document.querySelectorAll('article img')).some(image => image.complete && image.naturalWidth > 0)")
+        ->screenshot(filename: 'heic-photo-'.$width)
+        ->assertNoJavaScriptErrors();
+})->with([
+    'desktop' => [1280, 900],
+    'mobile' => [390, 844],
+]);

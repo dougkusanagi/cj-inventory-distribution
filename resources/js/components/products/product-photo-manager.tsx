@@ -43,6 +43,17 @@ const MAX_SOURCE_IMAGE_SIZE_BYTES = 25 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 2400;
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
+function isHeifSource(file: File): boolean {
+    return (
+        /^image\/(heic|heif)(-sequence)?$/i.test(file.type) ||
+        /\.(heic|heif)$/i.test(file.name)
+    );
+}
+
+function isAcceptedSource(file: File): boolean {
+    return ACCEPTED_IMAGE_TYPES.includes(file.type) || isHeifSource(file);
+}
+
 type ExistingPhotoItem = {
     key: string;
     kind: 'existing';
@@ -497,9 +508,12 @@ export function ProductPhotoManager({
         setProcessing(true);
 
         try {
-            const preparedFiles = await Promise.all(
-                filesToProcess.map((file) => resizeImageForUpload(file)),
-            );
+            const preparedFiles: File[] = [];
+
+            for (const file of filesToProcess) {
+                setAnnouncement('Preparando foto…');
+                preparedFiles.push(await resizeImageForUpload(file));
+            }
 
             if (isRetake) {
                 const preparedFile = preparedFiles[0];
@@ -762,6 +776,8 @@ export function ProductPhotoManager({
                 foto para ampliar.
             </p>
 
+            {processing && <p role="status">Preparando foto…</p>}
+
             {state.items.length === 0 ? (
                 <button
                     type="button"
@@ -776,7 +792,8 @@ export function ProductPhotoManager({
                         Adicione fotos da peça
                     </span>
                     <span className="text-xs text-muted-foreground">
-                        JPG, PNG ou WebP · escolha uma foto nítida da peça
+                        JPG, PNG, WebP, HEIC ou HEIF · escolha uma foto nítida
+                        da peça
                     </span>
                 </button>
             ) : (
@@ -1333,19 +1350,17 @@ function validateSelectedFiles(files: File[], truncated: boolean): boolean {
         !truncated &&
         files.every(
             (file) =>
-                ACCEPTED_IMAGE_TYPES.includes(file.type) &&
+                isAcceptedSource(file) &&
                 file.size <= MAX_SOURCE_IMAGE_SIZE_BYTES,
         )
     );
 }
 
 function getSelectedFilesError(files: File[], truncated: boolean): string {
-    const invalidType = files.find(
-        (file) => !ACCEPTED_IMAGE_TYPES.includes(file.type),
-    );
+    const invalidType = files.find((file) => !isAcceptedSource(file));
 
     if (invalidType) {
-        return invalidType.name + ': use JPG, PNG ou WebP.';
+        return invalidType.name + ': use JPG, PNG, WebP, HEIC ou HEIF.';
     }
 
     const tooLarge = files.find(
@@ -1362,6 +1377,25 @@ function getSelectedFilesError(files: File[], truncated: boolean): string {
 }
 
 async function resizeImageForUpload(file: File): Promise<File> {
+    if (isHeifSource(file)) {
+        const { heicTo, isHeic } = await import('heic-to');
+
+        if (!(await isHeic(file))) {
+            throw new Error('Arquivo HEIC/HEIF inválido.');
+        }
+
+        const converted = await heicTo({
+            blob: file,
+            type: 'image/jpeg',
+            quality: 0.95,
+        });
+        file = new File(
+            [converted],
+            file.name.replace(/\.[^.]+$/, '') + '.jpg',
+            { type: 'image/jpeg' },
+        );
+    }
+
     const image = await loadImage(file);
     const scale = Math.min(
         1,
