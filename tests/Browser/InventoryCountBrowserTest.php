@@ -62,6 +62,7 @@ it('selects, counts, and confirms a stock balance, applying its adjustment', fun
         ->press('Confirmar balanço')
         ->assertVisible('[role="dialog"]')
         ->click('[role="dialog"] button:has-text("Voltar")')
+        ->assertNotPresent('[role="dialog"]')
         ->assertSee('Em andamento')
         ->assertEnabled('Confirmar balanço');
 
