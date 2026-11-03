@@ -5,10 +5,13 @@ namespace Database\Seeders;
 use App\Actions\Production\ManageProductionBatch;
 use App\Enums\ProductionStage;
 use App\Enums\UserRole;
+use App\Enums\WorkshopType;
 use App\Models\Product;
 use App\Models\ProductionBatch;
 use App\Models\User;
+use App\Models\Workshop;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class ProductionDemoSeeder extends Seeder
 {
@@ -25,6 +28,12 @@ class ProductionDemoSeeder extends Seeder
         }
         $longNameProduct = Product::query()->where('is_active', true)->orderByRaw('length(name) desc')->first() ?? $product;
         $action = app(ManageProductionBatch::class);
+        $workshops = collect(WorkshopType::cases())->mapWithKeys(fn (WorkshopType $type): array => [
+            $type->value => Workshop::query()->firstOrCreate(
+                ['slug' => Str::slug('Oficina Demonstração '.$type->label()), 'type' => $type],
+                ['name' => 'Oficina Demonstração '.$type->label(), 'is_active' => true],
+            ),
+        ]);
         $stages = ProductionStage::cases();
         foreach ($stages as $index => $stage) {
             $marker = 'Demonstração de produção: '.$stage->value;
@@ -38,7 +47,11 @@ class ProductionDemoSeeder extends Seeder
                 if ($batch->received_at === null) {
                     $batch = $action->receive($batch, $batch->version, $actor);
                 }
-                $batch = $action->advance($batch, $batch->stage, $stages[$i], $batch->version, $actor);
+                $workshop = $stages[$i] === $stage ? $workshops->get($stage->value) : null;
+                if ($workshop !== null && ! $workshop->is_active) {
+                    $workshop = null;
+                }
+                $batch = $action->advance($batch, $batch->stage, $stages[$i], $batch->version, $actor, $workshop?->id);
             }
             if (in_array($stage, [ProductionStage::Washing, ProductionStage::Finishing], true)) {
                 $action->receive($batch, $batch->version, $actor);

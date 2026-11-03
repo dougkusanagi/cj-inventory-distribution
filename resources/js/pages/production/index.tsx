@@ -14,6 +14,11 @@ import {
     undo,
 } from '@/actions/App/Http/Controllers/ProductionBatchController';
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
+import {
+    AdvanceWorkshopDrawer,
+    ManageWorkshopsDrawer,
+    type Workshop,
+} from '@/components/production/workshop-drawer';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -57,6 +62,7 @@ type Event = {
     to: string;
     actor: string;
     notes: string | null;
+    workshop: string | null;
     occurred_at: string;
 };
 type Batch = {
@@ -68,6 +74,7 @@ type Batch = {
     stage: string;
     version: number;
     stage_entered_at: string;
+    workshop: string | null;
     awaiting_receipt: boolean;
     notes: string | null;
     can_delete: boolean;
@@ -84,6 +91,7 @@ type Props = {
     canCreate: boolean;
     maxQuantity: number;
     isAdmin: boolean;
+    workshops: Workshop[];
 };
 const sequence = [
     'cutting',
@@ -256,6 +264,7 @@ function DetailsDrawer({
                                     'pt-BR',
                                 )}
                             </p>
+                            {event.workshop && <p>Oficina: {event.workshop}</p>}
                             {event.notes && (
                                 <p className="break-words">{event.notes}</p>
                             )}
@@ -337,6 +346,7 @@ export default function ProductionIndex({
     canCreate,
     maxQuantity,
     isAdmin,
+    workshops,
 }: Props) {
     const [creating, setCreating] = useState(false);
     const [details, setDetails] = useState<Batch | null>(null);
@@ -346,6 +356,8 @@ export default function ProductionIndex({
         kind: 'finish' | 'delete';
     } | null>(null);
     const [busy, setBusy] = useState<number | null>(null);
+    const [advanceBatch, setAdvanceBatch] = useState<Batch | null>(null);
+    const [managingWorkshops, setManagingWorkshops] = useState(false);
     const { errors } = usePage().props;
     function send(batch: Batch) {
         const target = sequence[sequence.indexOf(batch.stage) + 1];
@@ -373,6 +385,12 @@ export default function ProductionIndex({
             },
         );
     }
+    function requestAdvance(batch: Batch) {
+        const target = sequence[sequence.indexOf(batch.stage) + 1];
+        if (['sewing', 'washing', 'dyeing'].includes(target))
+            setAdvanceBatch(batch);
+        else send(batch);
+    }
     return (
         <>
             <Head title="Produção" />
@@ -391,6 +409,15 @@ export default function ProductionIndex({
                         >
                             <PlusCircleIcon />
                             Novo lote
+                        </Button>
+                    )}
+                    {isAdmin && (
+                        <Button
+                            variant="outline"
+                            className="h-11"
+                            onClick={() => setManagingWorkshops(true)}
+                        >
+                            Oficinas
                         </Button>
                     )}
                 </div>
@@ -614,7 +641,7 @@ export default function ProductionIndex({
                                                                                                 kind: 'finish',
                                                                                             },
                                                                                         )
-                                                                                      : send(
+                                                                                      : requestAdvance(
                                                                                             batch,
                                                                                         )
                                                                             }
@@ -696,7 +723,7 @@ export default function ProductionIndex({
                                                                                             kind: 'finish',
                                                                                         },
                                                                                     )
-                                                                                  : send(
+                                                                                  : requestAdvance(
                                                                                         batch,
                                                                                     )
                                                                         }
@@ -713,6 +740,8 @@ export default function ProductionIndex({
                                                                 <p className="text-sm text-muted-foreground">
                                                                     {batch.awaiting_receipt &&
                                                                         'A receber · '}
+                                                                    {batch.workshop &&
+                                                                        `Oficina: ${batch.workshop} · `}
                                                                     {
                                                                         batch.quantity
                                                                     }{' '}
@@ -762,6 +791,28 @@ export default function ProductionIndex({
                 <UndoDrawer
                     batch={undoBatch}
                     onClose={() => setUndoBatch(null)}
+                />
+            )}
+            {advanceBatch && (
+                <AdvanceWorkshopDrawer
+                    batch={advanceBatch}
+                    target={sequence[sequence.indexOf(advanceBatch.stage) + 1]}
+                    label={
+                        labels[
+                            sequence[sequence.indexOf(advanceBatch.stage) + 1]
+                        ]
+                    }
+                    workshops={workshops}
+                    onClose={() => setAdvanceBatch(null)}
+                />
+            )}
+            {managingWorkshops && (
+                <ManageWorkshopsDrawer
+                    workshops={workshops}
+                    onClose={() => {
+                        setManagingWorkshops(false);
+                        router.reload({ only: ['workshops'] });
+                    }}
                 />
             )}
             <ConfirmationDialog

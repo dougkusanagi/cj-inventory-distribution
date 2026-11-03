@@ -202,7 +202,7 @@ entrega separada.
       painel mostra separados "a receber" e "no setor". Opcional: informar
       quantidade recebida diferente da enviada, com motivo (não implementada;
       depende de regra própria para divergências).
-- [ ] **Oficinas e terceiros:** cadastro simples (`workshops`: nome, tipo
+- [x] **Oficinas e terceiros:** cadastro simples (`workshops`: nome, tipo
       costura/lavanderia/tinturaria, ativo). Ao avançar para uma etapa
       externa, escolher a oficina. Mesmo padrão de cadastro rápido do
       `WashType`.
@@ -351,7 +351,7 @@ padrão, apontamentos, custo realizado, RFID e integração com Bling.
 
 ## Próximo passo
 
-A Fase 1 foi integrada ao master. A confirmação de recebimento da Fase 2
-passou em `composer ci:verify`: 400 testes principais e 117 de navegador.
-Integrar essa entrega e seguir com oficinas e divisão de lotes. O SQLite
-anterior permanece no disco, sem importação.
+A Fase 1 e a confirmação de recebimento foram integradas ao master. Na branch
+`feat/oficinas-producao`, o cadastro e envio para oficinas passaram em
+`composer ci:verify`: 404 testes principais e 119 de navegador. Integrar essa
+entrega e seguir com divisão de lotes. O SQLite anterior permanece no disco.

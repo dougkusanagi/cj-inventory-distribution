@@ -22,11 +22,13 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $completed_at
  * @property Carbon|null $received_at
  * @property int|null $received_by
+ * @property int|null $workshop_id
+ * @property-read Workshop|null $workshop
  * @property string|null $notes
  * @property int $version
  * @property int $created_by
  */
-#[Fillable(['code', 'product_id', 'quantity', 'stage', 'stage_entered_at', 'completed_at', 'received_at', 'received_by', 'notes', 'version', 'created_by'])]
+#[Fillable(['code', 'product_id', 'quantity', 'stage', 'stage_entered_at', 'completed_at', 'received_at', 'received_by', 'workshop_id', 'notes', 'version', 'created_by'])]
 class ProductionBatch extends Model
 {
     public const MAX_QUANTITY = 1000000;
@@ -40,6 +42,12 @@ class ProductionBatch extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class)->withTrashed();
+    }
+
+    /** @return BelongsTo<Workshop, $this> */
+    public function workshop(): BelongsTo
+    {
+        return $this->belongsTo(Workshop::class)->withTrashed();
     }
 
     /** @return HasMany<ProductionBatchEvent, $this> */

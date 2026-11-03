@@ -56,3 +56,5 @@ ADRs iniciais:
 - [0025 — Painel de produção por lotes](0025-painel-de-producao-por-lotes.md)
 
 - [0029 — Confirmação de recebimento de lotes](0029-recebimento-de-lotes.md)
+
+- [0030 — Oficinas nas etapas de produção](0030-oficinas-de-producao.md)

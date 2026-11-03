@@ -11,6 +11,7 @@ use App\Models\StockOfferVolume;
 use App\Models\StockOfferVolumeItem;
 use App\Models\User;
 use App\Models\WashType;
+use App\Models\Workshop;
 use App\Observers\ModelAuditObserver;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -50,6 +51,7 @@ class AppServiceProvider extends ServiceProvider
             ProductionStageAssignment::class,
             Category::class,
             WashType::class,
+            Workshop::class,
             StockOfferVolume::class,
             StockOfferVolumeItem::class,
             CatalogSetting::class,

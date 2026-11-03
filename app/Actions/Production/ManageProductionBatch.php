@@ -6,6 +6,7 @@ use App\Enums\ProductionStage;
 use App\Models\Product;
 use App\Models\ProductionBatch;
 use App\Models\User;
+use App\Models\Workshop;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -45,9 +46,9 @@ class ManageProductionBatch
         }, 5);
     }
 
-    public function advance(ProductionBatch $batch, ProductionStage $expected, ProductionStage $target, int $version, User $actor): ProductionBatch
+    public function advance(ProductionBatch $batch, ProductionStage $expected, ProductionStage $target, int $version, User $actor, ?int $workshopId = null): ProductionBatch
     {
-        return DB::transaction(function () use ($batch, $expected, $target, $version, $actor): ProductionBatch {
+        return DB::transaction(function () use ($batch, $expected, $target, $version, $actor, $workshopId): ProductionBatch {
             $actor = User::query()->whereKey($actor->id)->lockForUpdate()->firstOrFail();
             if (! $actor->canManageProductionStage($expected)) {
                 throw new AuthorizationException;
@@ -66,16 +67,23 @@ class ManageProductionBatch
                 throw ValidationException::withMessages(['stage' => 'O lote só pode seguir para a próxima etapa.']);
             }
 
+            $workshop = $workshopId === null ? null : Workshop::query()->whereKey($workshopId)->lockForUpdate()->first();
+            if ($workshopId !== null && ($workshop === null || ! $workshop->is_active || $workshop->type->value !== $target->value)) {
+                throw ValidationException::withMessages(['workshop_id' => 'Selecione uma oficina ativa para a etapa de destino.']);
+            }
+
             $from = $batch->stage;
+            $fromWorkshop = $batch->workshop;
             $batch->update([
                 'stage' => $target,
                 'stage_entered_at' => now(),
                 'completed_at' => $target === ProductionStage::Completed ? now() : null,
                 'received_at' => $target === ProductionStage::Completed ? now() : null,
                 'received_by' => null,
+                'workshop_id' => $workshop?->id,
                 'version' => $batch->version + 1,
             ]);
-            $this->record($batch, $from, $target, $actor, null);
+            $this->record($batch, $from, $target, $actor, null, $fromWorkshop, $workshop);
 
             return $batch;
         }, 5);
@@ -92,7 +100,7 @@ class ManageProductionBatch
                 throw ValidationException::withMessages(['batch' => 'Este lote já foi recebido.']);
             }
             $batch->update(['received_at' => now(), 'received_by' => $actor->id, 'version' => $batch->version + 1]);
-            $this->record($batch, $batch->stage, $batch->stage, $actor, null);
+            $this->record($batch, $batch->stage, $batch->stage, $actor, null, $batch->workshop, $batch->workshop);
 
             return $batch;
         }, 5);
@@ -115,8 +123,10 @@ class ManageProductionBatch
             }
             $from = $batch->stage;
             $target = $last->from_stage;
-            $batch->update(['stage' => $target, 'stage_entered_at' => now(), 'completed_at' => null, 'received_at' => now(), 'received_by' => null, 'version' => $batch->version + 1]);
-            $this->record($batch, $from, $target, $actor, $reason);
+            $fromWorkshop = $batch->workshop;
+            $previousWorkshop = $last->from_workshop_id === null ? null : Workshop::withTrashed()->findOrFail($last->from_workshop_id);
+            $batch->update(['stage' => $target, 'stage_entered_at' => now(), 'completed_at' => null, 'received_at' => now(), 'received_by' => null, 'workshop_id' => $previousWorkshop?->id, 'version' => $batch->version + 1]);
+            $this->record($batch, $from, $target, $actor, $reason, $fromWorkshop, $previousWorkshop);
 
             return $batch;
         }, 5);
@@ -143,7 +153,7 @@ class ManageProductionBatch
         }
     }
 
-    private function record(ProductionBatch $batch, ?ProductionStage $from, ProductionStage $to, User $actor, ?string $notes): void
+    private function record(ProductionBatch $batch, ?ProductionStage $from, ProductionStage $to, User $actor, ?string $notes, ?Workshop $fromWorkshop = null, ?Workshop $toWorkshop = null): void
     {
         $batch->events()->create([
             'from_stage' => $from,
@@ -152,6 +162,10 @@ class ManageProductionBatch
             'actor_id' => $actor->id,
             'notes' => $notes,
             'occurred_at' => now(),
+            'from_workshop_id' => $fromWorkshop?->id,
+            'to_workshop_id' => $toWorkshop?->id,
+            'from_workshop_name' => $fromWorkshop?->name,
+            'to_workshop_name' => $toWorkshop?->name,
         ]);
     }
 }

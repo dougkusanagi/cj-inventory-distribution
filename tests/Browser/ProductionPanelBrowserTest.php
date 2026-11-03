@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Production\ManageProductionBatch;
 use App\Models\Product;
 use App\Models\ProductionBatch;
 use App\Models\User;
@@ -31,6 +32,7 @@ it('creates and advances a production batch in the panel', function (int $width)
         ->assertScript("!document.querySelector('[data-testid=production-batch]').closest('details').open")
         ->click('summary:has-text("Corte")')
         ->click('button:visible:has-text("Avançar para Costura")')
+        ->click('Enviar lote')
         ->assertVisible('button:visible:has-text("Recebi")')
         ->screenshot(filename: "recebimento-{$width}")
         ->click('button:visible:has-text("Recebi")')
@@ -56,3 +58,23 @@ it('returns keyboard focus to the button that opened the new batch panel', funct
         ->assertScript("document.activeElement?.textContent?.includes('Novo lote') === true")
         ->assertNoJavaScriptErrors();
 });
+
+it('creates and selects a workshop when sending a batch', function (int $width): void {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $batch = app(ManageProductionBatch::class)->create(Product::factory()->create(['is_active' => true]), 12, null, $admin);
+
+    visit(route('production.index', [], false))->resize($width, 844)
+        ->click('button:visible:has-text("Avançar para Costura")')
+        ->click('#workshop-select')
+        ->fill('[aria-label="Buscar oficina"]', 'Oficina Horizonte')
+        ->click('Cadastrar oficina')
+        ->fill('#workshop-name', 'Oficina Horizonte')
+        ->click('button:visible:has-text("Cadastrar oficina")')
+        ->assertSee('Oficina Horizonte')
+        ->screenshot(filename: "oficina-{$width}")
+        ->click('Enviar lote')
+        ->assertSee('Oficina: Oficina Horizonte')
+        ->assertNoJavaScriptErrors();
+    expect($batch->fresh()->workshop?->name)->toBe('Oficina Horizonte');
+})->with([390, 1366]);

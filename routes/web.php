@@ -18,6 +18,7 @@ use App\Http\Controllers\StockMovementReversalController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPasswordLinkController;
 use App\Http\Controllers\WashTypeController;
+use App\Http\Controllers\WorkshopController;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -47,6 +48,11 @@ Route::middleware(['auth', 'verified', 'panel'])->prefix('painel/producao')->nam
     Route::post('{batch}/receber', [ProductionBatchController::class, 'receive'])->name('receive');
     Route::post('{batch}/desfazer', [ProductionBatchController::class, 'undo'])->name('undo');
     Route::delete('{batch}', [ProductionBatchController::class, 'destroy'])->name('destroy');
+});
+
+Route::middleware(['auth', 'verified', 'panel'])->prefix('painel/oficinas')->name('workshops.')->group(function () {
+    Route::post('/', [WorkshopController::class, 'store'])->name('store');
+    Route::patch('{workshop}', [WorkshopController::class, 'update'])->name('update');
 });
 
 Route::middleware(['auth', 'verified', 'panel', 'can:viewAny,'.User::class])->prefix('painel')->group(function () {
