@@ -12,9 +12,12 @@ use Illuminate\Validation\ValidationException;
 
 class UpdateUserAccount
 {
-    public function __construct(private readonly ProtectAdministratorAccess $protectAdministratorAccess) {}
+    public function __construct(
+        private readonly ProtectAdministratorAccess $protectAdministratorAccess,
+        private readonly SyncProductionStages $syncProductionStages,
+    ) {}
 
-    /** @param array{name: string, email: string, role: string, is_active: bool|int|string} $data */
+    /** @param array{name: string, email: string, role: string, is_active: bool|int|string, production_stages?: array<int, string>} $data */
     public function handle(User $user, array $data, User $actor): User
     {
         return DB::transaction(function () use ($user, $data, $actor): User {
@@ -28,7 +31,13 @@ class UpdateUserAccount
                 throw ValidationException::withMessages(['role' => 'Você não pode remover o próprio acesso de administrador.']);
             }
 
-            $accessChanged = $lockedUser->role !== $role || $lockedUser->is_active !== $active || $lockedUser->email !== $data['email'];
+            $stages = $role === UserRole::Production ? ($data['production_stages'] ?? []) : [];
+            sort($stages);
+            $previousStages = $lockedUser->productionStages()->orderBy('stage')->pluck('stage')->all();
+            $accessChanged = $lockedUser->role !== $role || $lockedUser->is_active !== $active || $lockedUser->email !== $data['email'] || $previousStages !== $stages;
+            if ($previousStages !== $stages) {
+                $this->syncProductionStages->handle($lockedUser, $stages);
+            }
             if ($accessChanged) {
                 Password::broker()->deleteToken($lockedUser);
             }

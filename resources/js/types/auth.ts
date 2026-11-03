@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'stock' | 'marketing';
+export type UserRole = 'admin' | 'stock' | 'marketing' | 'production';
 
 export type User = {
     id: number;
@@ -20,6 +20,7 @@ export type Auth = {
         manageUsers: boolean;
         manageOperations: boolean;
         managePhotos: boolean;
+        manageProduction: boolean;
     };
 };
 

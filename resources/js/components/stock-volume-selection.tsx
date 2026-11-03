@@ -66,13 +66,11 @@ export function StockVolumeSelection({
             </label>
         );
 
-        return details ? (
+        return (
             <div key={volume.id} className="grid gap-2">
                 {card}
                 {details}
             </div>
-        ) : (
-            card
         );
     });
 }

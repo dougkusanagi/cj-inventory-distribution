@@ -60,3 +60,24 @@ test('stock users do not see the account management menu', function () {
         ->assertDontSee('Usuários')
         ->assertNoJavaScriptErrors();
 });
+
+test('an administrator assigns production sectors to a new user', function (int $width, int $height) {
+    $this->actingAs(User::factory()->admin()->create());
+    Notification::fake();
+
+    visit(route('users.index', [], false))->resize($width, $height)
+        ->press('Novo usuário')
+        ->fill('#account-name', 'Responsável da costura')
+        ->fill('#account-email', 'costura-browser@example.test')
+        ->click('[data-testid="user-account-drawer"] label:has-text("Produção")')
+        ->click('[data-testid="user-account-drawer"] label:has-text("Costura")')
+        ->screenshot(filename: "usuario-producao-{$width}")
+        ->press('Criar e enviar link')
+        ->assertMissing('[data-testid="user-account-drawer"]')
+        ->assertSee('Responsável da costura')
+        ->assertNoJavaScriptErrors();
+
+    $user = User::where('email', 'costura-browser@example.test')->sole();
+    expect($user->role)->toBe(UserRole::Production)
+        ->and($user->productionStages()->pluck('stage')->all())->toBe(['sewing']);
+})->with(['mobile' => [390, 844], 'desktop' => [1280, 900]]);

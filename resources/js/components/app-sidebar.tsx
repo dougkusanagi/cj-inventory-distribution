@@ -11,6 +11,7 @@ import {
     NewspaperIcon,
     ImagesIcon,
     UsersIcon,
+    FactoryIcon,
 } from '@phosphor-icons/react';
 import AppLogo from '@/components/app-logo';
 import AppearanceToggleTab from '@/components/appearance-tabs';
@@ -34,6 +35,7 @@ import { index as ordersIndex } from '@/routes/orders';
 import { index as stockMovementsIndex } from '@/routes/stock-movements';
 import { index as inventoryIndex } from '@/routes/inventory';
 import { index as productPhotosIndex } from '@/routes/product-photos';
+import { index as productionIndex } from '@/routes/production';
 import { index as usersIndex } from '@/routes/users';
 import type { NavItem } from '@/types';
 
@@ -96,6 +98,15 @@ export function AppSidebar() {
     const { can } = usePage().props.auth;
     const mainNavItems = [
         ...(can.manageOperations ? operationNavItems : []),
+        ...(can.manageProduction
+            ? [
+                  {
+                      title: 'Produção',
+                      href: productionIndex(),
+                      icon: FactoryIcon,
+                  },
+              ]
+            : []),
         ...(can.managePhotos ? [photosNavItem] : []),
         ...(can.manageUsers
             ? [{ title: 'Usuários', href: usersIndex(), icon: UsersIcon }]

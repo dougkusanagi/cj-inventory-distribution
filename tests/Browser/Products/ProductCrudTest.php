@@ -536,8 +536,11 @@ it('saves a product recount and records its stock adjustment', function () {
         ->assertMissing('#volume-0-quantity-0')
         ->click('[data-testid="stock-more-actions"]')
         ->click('[role="menuitem"]:has-text("Corrigir contagem")')
-        ->assertVisible('[data-testid="stock-adjustment-drawer"]')
-        ->click('button[aria-label="Selecionar SC-'.str_pad((string) $volume->id, 6, '0', STR_PAD_LEFT).'"]')
+        ->assertVisible('[data-testid="stock-adjustment-drawer"]');
+
+    $selector = 'button[aria-label="Selecionar SC-'.str_pad((string) $volume->id, 6, '0', STR_PAD_LEFT).'"]';
+    $page->page()->locator($selector)->click(['timeout' => 10000]);
+    $page->assertScript('document.activeElement?.getAttribute("aria-label") === '.json_encode('Selecionar SC-'.str_pad((string) $volume->id, 6, '0', STR_PAD_LEFT)))
         ->assertPresent('#recount-'.$volume->id.'-0')
         ->assertValue('#recount-'.$volume->id.'-0', '4')
         ->clear('#recount-'.$volume->id.'-0')

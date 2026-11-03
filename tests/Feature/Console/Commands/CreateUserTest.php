@@ -19,3 +19,18 @@ it('creates a user through interactive prompts', function () {
         ->and($user->role)->toBe(UserRole::Marketing)
         ->and(password_verify('password', $user->password))->toBeTrue();
 });
+
+it('assigns sectors when creating a production user', function () {
+    $this->artisan('user:create')
+        ->expectsQuestion('Nome completo', 'Pessoa da costura')
+        ->expectsQuestion('E-mail', 'costura@example.com')
+        ->expectsQuestion('Senha', 'password')
+        ->expectsQuestion('Confirme a senha', 'password')
+        ->expectsQuestion('Perfil de acesso', 'production')
+        ->expectsQuestion('Setores responsáveis', ['sewing', 'washing'])
+        ->assertSuccessful();
+
+    $user = User::query()->sole();
+    expect($user->role)->toBe(UserRole::Production)
+        ->and($user->productionStages()->orderBy('stage')->pluck('stage')->all())->toBe(['sewing', 'washing']);
+});

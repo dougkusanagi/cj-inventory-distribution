@@ -350,6 +350,7 @@ padrão, apontamentos, custo realizado, RFID e integração com Bling.
 
 ## Próximo passo
 
-Concluir a Fase 1 na branch `feat/painel-producao`. A conferência completa
-passou no PostgreSQL (382 testes e 110 testes de navegador). O SQLite anterior
-continua no disco e não foi importado para o banco local novo.
+A Fase 1 passou em `composer ci:verify` no PostgreSQL: 398 testes funcionais e
+unitários e 117 testes de navegador, além de formatadores, análises e build.
+Revisar e integrar a branch `feat/painel-producao` antes da Fase 2. O SQLite
+anterior permanece no disco, sem importação.

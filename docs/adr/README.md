@@ -52,3 +52,5 @@ ADRs iniciais:
 - [0022 — Rastreio de erros com Bugsink](0022-bugsink-error-tracking.md)
 - [0023 — Perfis de acesso Administrador, Estoque e Marketing](0023-perfis-de-acesso.md)
 - [0024 — Tipo de grade no produto e fim da oferta de estoque](0024-tipo-de-grade-no-produto.md)
+
+- [0025 — Painel de produção por lotes](0025-painel-de-producao-por-lotes.md)

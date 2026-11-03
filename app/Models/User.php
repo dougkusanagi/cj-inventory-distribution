@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ProductionStage;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -9,9 +10,11 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -60,6 +63,17 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function hasPanelAccess(): bool
     {
         return $this->is_active && $this->role !== null;
+    }
+
+    public function canManageProductionStage(ProductionStage $stage): bool
+    {
+        return $this->isAdmin() || ($this->is_active && $this->role === UserRole::Production
+            && $this->productionStages()->where('stage', $stage->value)->exists());
+    }
+
+    public function productionStages(): Builder
+    {
+        return DB::table('production_stage_user')->where('user_id', $this->id)->whereNull('deleted_at');
     }
 
     public function canManagePhotos(): bool

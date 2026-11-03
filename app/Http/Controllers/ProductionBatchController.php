@@ -1,0 +1,125 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Actions\Production\ManageProductionBatch;
+use App\Enums\ProductionStage;
+use App\Models\Product;
+use App\Models\ProductionBatch;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class ProductionBatchController extends Controller
+{
+    public function index(Request $request): Response
+    {
+        Gate::authorize('viewAny', ProductionBatch::class);
+        $user = $request->user();
+        $allowedStages = $user->isAdmin()
+            ? array_column(ProductionStage::cases(), 'value')
+            : $user->productionStages()->pluck('stage')->all();
+        $filters = $request->validate([
+            'product' => ['nullable', 'integer'],
+            'stage' => ['nullable', Rule::enum(ProductionStage::class)],
+        ]);
+        $query = ProductionBatch::query()->whereIn('stage', $allowedStages)
+            ->with(['product:id,name,code,model,deleted_at', 'events.actor:id,name,deleted_at']);
+        $summary = (clone $query)->selectRaw('stage, count(*) as batches, sum(quantity) as pieces')->groupBy('stage')->toBase()->get()->keyBy('stage');
+        $visibleProductIds = (clone $query)->select('product_id')->distinct()->pluck('product_id');
+        $filterProducts = Product::withTrashed()->whereIn('id', $visibleProductIds)->orderBy('name')->get(['id', 'name']);
+        $batches = $query->when($filters['product'] ?? null, fn ($query, $product) => $query->where('product_id', $product))
+            ->when($filters['stage'] ?? null, fn ($query, $stage) => $query->where('stage', $stage))
+            ->orderBy('stage_entered_at')->orderBy('id')->get();
+
+        return Inertia::render('production/index', [
+            'stages' => collect(ProductionStage::cases())->filter(fn (ProductionStage $stage): bool => in_array($stage->value, $allowedStages, true))
+                ->map(fn (ProductionStage $stage): array => [
+                    'value' => $stage->value,
+                    'label' => $stage->label(),
+                    'batches' => (int) ($summary->get($stage->value)->batches ?? 0),
+                    'pieces' => (int) ($summary->get($stage->value)->pieces ?? 0),
+                ])->values(),
+            'batches' => $batches->map(fn (ProductionBatch $batch): array => [
+                'id' => $batch->id,
+                'code' => $batch->code,
+                'product_id' => $batch->product_id,
+                'product_name' => $batch->product->name,
+                'quantity' => $batch->quantity,
+                'stage' => $batch->stage->value,
+                'version' => $batch->version,
+                'stage_entered_at' => $batch->stage_entered_at->toISOString(),
+                'notes' => $batch->notes,
+                'can_delete' => $batch->events->every(fn ($event): bool => $event->from_stage === null),
+                'can_undo' => ($last = $batch->events->last()) && $last->from_stage !== null && $last->from_stage->canMoveTo($last->to_stage),
+                'events' => $batch->events->map(fn ($event): array => [
+                    'id' => $event->id,
+                    'from' => $event->from_stage?->label(),
+                    'to' => $event->to_stage->label(),
+                    'actor' => $event->actor->name,
+                    'notes' => $event->notes,
+                    'occurred_at' => $event->occurred_at->toISOString(),
+                ]),
+            ]),
+            'filterProducts' => $filterProducts,
+            'products' => Gate::allows('create', ProductionBatch::class)
+                ? Product::query()->where('is_active', true)->orderBy('name')->get(['id', 'name', 'code', 'model'])
+                : [],
+            'filters' => ['product' => $filters['product'] ?? null, 'stage' => $filters['stage'] ?? null],
+            'maxQuantity' => ProductionBatch::MAX_QUANTITY,
+            'canCreate' => Gate::allows('create', ProductionBatch::class),
+            'isAdmin' => $user->isAdmin(),
+        ]);
+    }
+
+    public function store(Request $request, ManageProductionBatch $action): RedirectResponse
+    {
+        Gate::authorize('create', ProductionBatch::class);
+        $data = $request->validate([
+            'product_id' => ['required', 'integer', Rule::exists('products', 'id')->whereNull('deleted_at')],
+            'quantity' => ['required', 'integer', 'min:1', 'max:'.ProductionBatch::MAX_QUANTITY],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ], [], ['product_id' => 'produto', 'quantity' => 'quantidade de peças', 'notes' => 'observações']);
+        $action->create(Product::query()->whereKey($data['product_id'])->firstOrFail(), (int) $data['quantity'], $data['notes'] ?? null, $request->user());
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Lote criado no Corte.']);
+
+        return back();
+    }
+
+    public function advance(Request $request, ProductionBatch $batch, ManageProductionBatch $action): RedirectResponse
+    {
+        Gate::authorize('viewAny', ProductionBatch::class);
+        $data = $request->validate([
+            'stage' => ['required', Rule::enum(ProductionStage::class)],
+            'target' => ['required', Rule::enum(ProductionStage::class)],
+            'version' => ['required', 'integer', 'min:1'],
+        ], [], ['stage' => 'etapa atual', 'target' => 'próxima etapa', 'version' => 'lote']);
+        $action->advance($batch, ProductionStage::from($data['stage']), ProductionStage::from($data['target']), (int) $data['version'], $request->user());
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Lote enviado para a próxima etapa.']);
+
+        return back();
+    }
+
+    public function undo(Request $request, ProductionBatch $batch, ManageProductionBatch $action): RedirectResponse
+    {
+        Gate::authorize('undo', $batch);
+        $data = $request->validate(['reason' => ['required', 'string', 'max:2000'], 'version' => ['required', 'integer', 'min:1']], [], ['reason' => 'motivo', 'version' => 'lote']);
+        $action->undo($batch, $data['reason'], (int) $data['version'], $request->user());
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Último avanço desfeito.']);
+
+        return back();
+    }
+
+    public function destroy(Request $request, ProductionBatch $batch, ManageProductionBatch $action): RedirectResponse
+    {
+        Gate::authorize('delete', $batch);
+        $data = $request->validate(['version' => ['required', 'integer', 'min:1']], [], ['version' => 'lote']);
+        $action->delete($batch, (int) $data['version'], $request->user());
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Lote excluído.']);
+
+        return back();
+    }
+}

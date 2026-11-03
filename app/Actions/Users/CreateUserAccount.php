@@ -10,7 +10,9 @@ use Illuminate\Support\Str;
 
 class CreateUserAccount
 {
-    /** @param array{name: string, email: string, role: string} $data */
+    public function __construct(private readonly SyncProductionStages $syncProductionStages) {}
+
+    /** @param array{name: string, email: string, role: string, production_stages?: array<int, string>} $data */
     public function handle(array $data, User $actor): User
     {
         return DB::transaction(function () use ($data, $actor): User {
@@ -18,6 +20,9 @@ class CreateUserAccount
             Gate::forUser($actor)->authorize('create', User::class);
             $user = new User(['name' => $data['name'], 'email' => $data['email'], 'password' => Str::password(64)]);
             $user->forceFill(['role' => UserRole::from($data['role']), 'is_active' => true])->save();
+            if ($user->role === UserRole::Production) {
+                $this->syncProductionStages->handle($user, $data['production_stages'] ?? []);
+            }
 
             return $user;
         }, 5);

@@ -8,6 +8,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryCountController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductionBatchController;
 use App\Http\Controllers\ProductPhotoController;
 use App\Http\Controllers\ProductStockAdjustmentController;
 use App\Http\Controllers\StockEntryController;
@@ -37,6 +38,14 @@ Route::middleware(['auth', 'verified', 'panel'])->prefix('painel')->group(functi
     Route::put('fotos/{product}', [ProductPhotoController::class, 'update'])
         ->middleware('can:managePhotos,'.Product::class)
         ->name('product-photos.update');
+});
+
+Route::middleware(['auth', 'verified', 'panel'])->prefix('painel/producao')->name('production.')->group(function () {
+    Route::get('/', [ProductionBatchController::class, 'index'])->name('index');
+    Route::post('/', [ProductionBatchController::class, 'store'])->name('store');
+    Route::post('{batch}/avancar', [ProductionBatchController::class, 'advance'])->name('advance');
+    Route::post('{batch}/desfazer', [ProductionBatchController::class, 'undo'])->name('undo');
+    Route::delete('{batch}', [ProductionBatchController::class, 'destroy'])->name('destroy');
 });
 
 Route::middleware(['auth', 'verified', 'panel', 'can:viewAny,'.User::class])->prefix('painel')->group(function () {

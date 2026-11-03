@@ -17,21 +17,32 @@ auditoria foram adicionadas nos ADRs 0016 e 0017.
 
 ## Modelo de domínio
 
-```text
-Product (stock_offer_type)
-  └── StockOfferVolume
-        └── StockOfferVolumeItem
-
-Order
-  └── OrderItem -> StockOfferVolume
-  └── OrderEvent -> User (actor)
-
-StockMovement
-  └── StockMovementItem -> StockOfferVolume
-
-AuditLog
-  └── auditable -> entidade administrativa
+```mermaid
+erDiagram
+    Product ||--o{ StockOfferVolume : possui
+    StockOfferVolume ||--o{ StockOfferVolumeItem : contem
+    Order ||--o{ OrderItem : contem
+    OrderItem }o--|| StockOfferVolume : reserva
+    Order ||--o{ OrderEvent : registra
+    User ||--o{ OrderEvent : realiza
+    StockMovement ||--o{ StockMovementItem : registra
+    StockMovementItem }o--o| StockOfferVolume : referencia
+    Product ||--o{ ProductionBatch : possui
+    ProductionBatch ||--o{ ProductionBatchEvent : registra
+    User ||--o{ ProductionBatchEvent : realiza
+    User ||--o{ ProductionStageAssignment : responde
+    AuditLog }o--|| AdministrativeEntity : audita
 ```
+
+## Painel de produção
+
+`ProductionBatch` representa uma quantidade de um produto em uma etapa fixa.
+A criação começa no Corte; cada avanço ou correção registra um evento imutável
+com autor e horário. A versão impede que operações simultâneas sobrescrevam
+mudanças. O administrador vê todos os lotes; usuários de Produção veem e
+movem apenas os lotes em seus setores atribuídos. O administrador pode desfazer
+o último avanço com motivo e excluir um lote apenas antes do primeiro avanço.
+Concluir um lote não altera sacos ou movimentações de estoque (ADR 0025).
 
 ## Product
 
@@ -426,10 +437,12 @@ A forma de autenticação/compartilhamento deve permanecer simples. Não criar u
 
 ## Perfis de acesso
 
-O painel tem três perfis (ADR 0023): Administrador e Estoque operam produtos,
+O painel tem quatro perfis (ADRs 0023 e 0025): Administrador e Estoque operam produtos,
 estoque, pedidos e configurações do catálogo; Marketing acessa apenas a tela
 “Fotos dos produtos”, onde adiciona, remove, recorta, gira e ordena fotos e
-escolhe a capa. As restrições ficam nas rotas e policies, não apenas no menu.
+escolhe a capa. Produção acompanha e envia lotes apenas nos setores atribuídos,
+sem acesso ao estoque, pedidos ou catálogo. As restrições ficam nas rotas e
+policies, não apenas no menu.
 Somente Administrador acessa a tela “Usuários”, com criação, edição de
 nome/e-mail/perfil, desativação/reativação e envio de link para definir a senha.
 As contas novas recebem senha aleatória que não é exibida. O link usa o broker

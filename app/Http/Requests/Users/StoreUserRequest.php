@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Users;
 
+use App\Enums\ProductionStage;
 use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
@@ -22,6 +23,8 @@ class StoreUserRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique(User::class)],
             'role' => ['required', Rule::enum(UserRole::class)],
+            'production_stages' => ['exclude_unless:role,production', 'required', 'array', 'min:1'],
+            'production_stages.*' => ['required', 'distinct', Rule::enum(ProductionStage::class)],
         ];
     }
 
@@ -43,6 +46,9 @@ class StoreUserRequest extends FormRequest
             'email.required' => 'Informe o e-mail da pessoa.',
             'email.email' => 'Informe um e-mail válido.',
             'email.unique' => 'Este e-mail já está cadastrado.',
+            'production_stages.required' => 'Selecione pelo menos um setor.',
+            'production_stages.min' => 'Selecione pelo menos um setor.',
+            'production_stages.*' => 'Selecione setores válidos, sem repetições.',
             'role.required' => 'Escolha o perfil de acesso.',
             'role' => 'Escolha um perfil de acesso válido.',
         ];

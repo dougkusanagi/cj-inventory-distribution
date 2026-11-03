@@ -11,6 +11,7 @@ import {
     UsersIcon,
     WarehouseIcon,
     ImagesIcon,
+    FactoryIcon,
 } from '@phosphor-icons/react';
 import { useState, type FormEvent } from 'react';
 import { store, update } from '@/actions/App/Http/Controllers/UserController';
@@ -20,6 +21,7 @@ import { Pagination } from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Drawer,
     DrawerContent,
@@ -57,7 +59,7 @@ type ManagedUser = Pick<
     | 'is_active'
     | 'email_verified_at'
     | 'created_at'
->;
+> & { production_stages: string[] };
 type RoleOption = { value: UserRole; label: string };
 type Filters = { search: string; role: string; status: string };
 
@@ -65,21 +67,25 @@ const roleIcons = {
     admin: ShieldCheckIcon,
     stock: WarehouseIcon,
     marketing: ImagesIcon,
+    production: FactoryIcon,
 };
 const roleDescriptions = {
     admin: 'Gerencia usuários, produtos, estoque, pedidos e configurações.',
     stock: 'Opera produtos, estoque, pedidos e configurações do catálogo.',
     marketing:
         'Gerencia somente as fotos dos produtos e as próprias configurações de conta.',
+    production: 'Acompanha e envia lotes dos setores atribuídos.',
 };
 
 function UserAccountDrawer({
     user,
     roles,
+    productionStages,
     onClose,
 }: {
     user?: ManagedUser;
     roles: RoleOption[];
+    productionStages: { value: string; label: string }[];
     onClose: () => void;
 }) {
     const mobile = useIsMobile();
@@ -90,6 +96,7 @@ function UserAccountDrawer({
         email: user?.email ?? '',
         role: user?.role ?? ('marketing' as UserRole),
         is_active: user?.is_active ?? true,
+        production_stages: user?.production_stages ?? ([] as string[]),
     });
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -188,6 +195,45 @@ function UserAccountDrawer({
                             </p>
                             <InputError message={form.errors.role} />
                         </div>
+                        {form.data.role === 'production' && (
+                            <fieldset className="grid gap-3">
+                                <legend className="font-medium">
+                                    Setores responsáveis
+                                </legend>
+                                {productionStages.map((stage) => (
+                                    <label
+                                        key={stage.value}
+                                        className="flex min-h-11 items-center gap-3"
+                                    >
+                                        <Checkbox
+                                            checked={form.data.production_stages.includes(
+                                                stage.value,
+                                            )}
+                                            onCheckedChange={(checked) =>
+                                                form.setData(
+                                                    'production_stages',
+                                                    checked
+                                                        ? [
+                                                              ...form.data
+                                                                  .production_stages,
+                                                              stage.value,
+                                                          ]
+                                                        : form.data.production_stages.filter(
+                                                              (value) =>
+                                                                  value !==
+                                                                  stage.value,
+                                                          ),
+                                                )
+                                            }
+                                        />
+                                        {stage.label}
+                                    </label>
+                                ))}
+                                <InputError
+                                    message={form.errors.production_stages}
+                                />
+                            </fieldset>
+                        )}
                     </div>
                     <DrawerFooter className="border-t border-border">
                         <Button
@@ -222,10 +268,12 @@ export default function UsersIndex({
     users,
     filters,
     roles,
+    productionStages,
 }: {
     users: Paginated<ManagedUser> & { total: number };
     filters: Filters;
     roles: RoleOption[];
+    productionStages: { value: string; label: string }[];
 }) {
     const { auth, errors } = usePage().props;
     const [editor, setEditor] = useState<{ user?: ManagedUser } | null>(null);
@@ -477,6 +525,7 @@ export default function UsersIndex({
                     key={editor.user?.id ?? 'new'}
                     user={editor.user}
                     roles={roles}
+                    productionStages={productionStages}
                     onClose={() => setEditor(null)}
                 />
             )}
@@ -508,6 +557,7 @@ export default function UsersIndex({
                             email: accessChange.email,
                             role: accessChange.role,
                             is_active: !accessChange.is_active,
+                            production_stages: accessChange.production_stages,
                         },
                         {
                             preserveScroll: true,

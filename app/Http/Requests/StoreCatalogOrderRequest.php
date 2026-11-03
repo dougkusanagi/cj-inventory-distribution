@@ -2,13 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\UserRole;
 use App\Http\Requests\Orders\StoreOrderRequest;
 
 class StoreCatalogOrderRequest extends StoreOrderRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->role !== UserRole::Production;
     }
 
     /** @return array<string, array<int, mixed>|string> */

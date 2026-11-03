@@ -276,6 +276,7 @@ test('stock correction edits one selected sack and removes another in the same p
         ->assertVisible('[data-testid="stock-adjustment-drawer"]')
         ->click('button[aria-label="Selecionar '.$volume->code.'"]')
         ->click('button[aria-label="Selecionar SC-REMOVE"]')
+        ->screenshot(filename: "stock-volume-selection-{$width}")
         ->fill('#recount-'.$volume->id.'-0', '4')
         ->click('button[aria-label="Ações SC-REMOVE"]')
         ->click('[role="menuitem"]:has-text("Remover cadastro incorreto")')

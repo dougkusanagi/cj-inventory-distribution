@@ -3,14 +3,18 @@
 namespace App\Console\Commands;
 
 use App\Actions\Fortify\CreateNewUser;
+use App\Actions\Users\SyncProductionStages;
+use App\Enums\ProductionStage;
 use App\Enums\UserRole;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
 
 use function Laravel\Prompts\intro;
+use function Laravel\Prompts\multiselect;
 use function Laravel\Prompts\outro;
 use function Laravel\Prompts\password;
 use function Laravel\Prompts\select;
@@ -23,7 +27,7 @@ class CreateUser extends Command
     /**
      * Execute the console command.
      */
-    public function handle(CreateNewUser $createNewUser): int
+    public function handle(CreateNewUser $createNewUser, SyncProductionStages $syncProductionStages): int
     {
         intro('Criar usuário da equipe');
 
@@ -59,16 +63,31 @@ class CreateUser extends Command
                 ->mapWithKeys(fn (UserRole $role): array => [$role->value => $role->label()])
                 ->all(),
             default: UserRole::Stock->value,
-            hint: 'Administrador e Estoque operam o sistema; Marketing gerencia apenas as fotos dos produtos.',
+            hint: 'Produção acompanha os setores atribuídos; Marketing gerencia fotos.',
         );
 
-        $user = $createNewUser->create([
-            'name' => trim($name),
-            'email' => $email,
-            'password' => $userPassword,
-            'password_confirmation' => $userPassword,
-        ]);
-        $user->forceFill(['role' => UserRole::from((string) $role)])->save();
+        $stages = $role === UserRole::Production->value
+            ? multiselect(
+                label: 'Setores responsáveis',
+                options: collect(ProductionStage::cases())
+                    ->mapWithKeys(fn (ProductionStage $stage): array => [$stage->value => $stage->label()])
+                    ->all(),
+                required: 'Selecione ao menos um setor.',
+                hint: 'Use a barra de espaço para selecionar.',
+            )
+            : [];
+        $user = DB::transaction(function () use ($createNewUser, $syncProductionStages, $name, $email, $userPassword, $role, $stages) {
+            $user = $createNewUser->create([
+                'name' => trim($name),
+                'email' => $email,
+                'password' => $userPassword,
+                'password_confirmation' => $userPassword,
+            ]);
+            $user->forceFill(['role' => UserRole::from((string) $role)])->save();
+            $syncProductionStages->handle($user, array_map(fn (int|string $stage): string => ProductionStage::from((string) $stage)->value, $stages));
+
+            return $user;
+        });
 
         outro("Usuário {$user->email} criado com o perfil {$user->role?->label()}.");
 

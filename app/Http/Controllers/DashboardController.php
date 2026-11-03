@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\OrderStatus;
+use App\Enums\UserRole;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\StockOfferVolume;
@@ -20,6 +21,10 @@ class DashboardController extends Controller
      */
     public function index(Request $request): Response|RedirectResponse
     {
+        if ($request->user()?->role === UserRole::Production) {
+            return to_route('production.index');
+        }
+
         if (! $request->user()?->isStaff()) {
             return to_route('product-photos.index');
         }

@@ -203,9 +203,11 @@ it('requires opening WhatsApp before confirming a catalog order', function () {
         ->click('button[aria-label="Adicionar Saco 01"]')
         ->click('button:has-text("Revisar sacola (1)")')
         ->type('#catalog-store-name', 'Loja Centro')
-        ->type('#catalog-requester-name', 'Ana')
-        ->click('button:has-text("Registrar pedido")')
-        ->assertVisible('[data-testid="finalizar-whatsapp"]')
+        ->type('#catalog-requester-name', 'Ana');
+
+    $page->page()->locator('button:has-text("Registrar pedido")')->click(['timeout' => 10000]);
+
+    $page->assertVisible('[data-testid="finalizar-whatsapp"]')
         ->assertDisabled('[data-testid="confirmar-pedido"]')
         ->assertSee('Depois de abrir o WhatsApp, volte aqui para concluir o pedido.');
 

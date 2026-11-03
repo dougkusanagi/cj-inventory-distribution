@@ -116,6 +116,15 @@ categorias, Slim/Plus, pedidos, conferência e WhatsApp. A home lista o estoque
 persistido disponível, registra pedidos com reserva dos sacos e só então gera o
 link para abertura da mensagem no WhatsApp.
 
+### Produção
+
+O painel de produção acompanha lotes de produtos ativos por Corte, Costura,
+Lavagem, Tinturaria, Acabamento, Ensacamento e Concluído. Cada responsável
+acessa os setores atribuídos e envia lotes apenas à próxima etapa; o
+administrador pode desfazer o último envio com motivo. O histórico registra
+cada mudança e evita sobrescritas por alterações simultâneas. Concluir um lote
+não cadastra sacos de estoque, que continuam sendo registrados manualmente.
+
 ### Pedido
 
 Uma seleção feita por uma vendedora a partir dos produtos disponíveis.

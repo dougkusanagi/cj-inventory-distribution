@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\ProductionBatch;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -43,6 +44,7 @@ class HandleInertiaRequests extends Middleware
                 'can' => [
                     'manageUsers' => $request->user()?->isAdmin() ?? false,
                     'manageOperations' => $request->user()?->isStaff() ?? false,
+                    'manageProduction' => $request->user()?->can('viewAny', ProductionBatch::class) ?? false,
                     'managePhotos' => $request->user()?->canManagePhotos() ?? false,
                 ],
             ],

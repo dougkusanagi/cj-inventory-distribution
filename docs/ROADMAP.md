@@ -2,6 +2,13 @@
 
 O roadmap descreve direção, não compromisso de implementação imediata.
 
+## Produção e ficha técnica
+
+O painel inicial de lotes acompanha as etapas fixas da fábrica; a evolução
+para confirmação de recebimento, oficinas e ficha técnica está no
+[plano de produção e ficha técnica](plans/producao-e-ficha-tecnica.md).
+A produção não cria sacos automaticamente.
+
 ## Catálogo e pedidos para lojistas — plano vigente
 
 O [plano de catálogo e pedidos](CATALOGO-E-PEDIDOS.md) detalha a sequência atual,

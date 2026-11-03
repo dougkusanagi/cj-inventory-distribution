@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Models\CatalogSetting;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductionBatch;
+use App\Models\ProductionStageAssignment;
 use App\Models\StockOfferVolume;
 use App\Models\StockOfferVolumeItem;
 use App\Models\User;
@@ -44,6 +46,8 @@ class AppServiceProvider extends ServiceProvider
 
         foreach ([
             Product::class,
+            ProductionBatch::class,
+            ProductionStageAssignment::class,
             Category::class,
             WashType::class,
             StockOfferVolume::class,
