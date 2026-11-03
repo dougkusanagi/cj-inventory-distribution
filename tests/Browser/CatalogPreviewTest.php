@@ -73,12 +73,12 @@ it('renders generated photos and a compact fallback for visible product cards', 
         ->assertScript("(() => Array.from(document.querySelectorAll('img[data-testid^=\"catalog-product-image-\"]')).every((image) => image.getAttribute('src')?.startsWith('/storage/')))()")
         ->assertScript("document.querySelector('img[data-testid^=\"catalog-product-image-\"]').naturalWidth > 0")
         ->assertAttributeContains(
-            'img[data-testid="catalog-product-image-1"]',
+            'img[data-testid="catalog-product-image-'.$wideLeg->id.'"]',
             'src',
             '/storage/',
         )
         ->assertAttribute(
-            'img[data-testid="catalog-product-image-1"]',
+            'img[data-testid="catalog-product-image-'.$wideLeg->id.'"]',
             'alt',
             'Calça Wide Leg - Imagem 1',
         )
@@ -108,10 +108,12 @@ it('navigates through all product images in the card carousel', function () {
 });
 
 it('opens the product image gallery when a catalog image is clicked', function () {
+    $wideLeg = Product::query()->where('code', 'DEMO-CJ-0001')->firstOrFail();
+
     visit(route('catalog', [], false))
         ->resize(390, 844)
         ->click('button[aria-label="Ampliar imagem de Calça Wide Leg"]')
-        ->assertVisible('[data-testid="galeria-produto-1"]')
+        ->assertVisible('[data-testid="galeria-produto-'.$wideLeg->id.'"]')
         ->assertVisible('input[aria-label="Zoom da imagem de Calça Wide Leg"]')
         ->assertNoJavaScriptErrors();
 });

@@ -121,7 +121,7 @@ test('authenticated users can create an order that snapshots and reserves sacks'
 
     $order = Order::query()->with('items')->sole();
     $response->assertRedirect(route('orders.show', $order));
-    expect($order->code)->toBe('PED-000001')
+    expect($order->code)->toBe('PED-'.str_pad((string) $order->id, 6, '0', STR_PAD_LEFT))
         ->and($order->status)->toBe(OrderStatus::Pending)
         ->and($order->items)->toHaveCount(1)
         ->and($order->items->sole()->product_name_snapshot)->toBe($volume->product->name)

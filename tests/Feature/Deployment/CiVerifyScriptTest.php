@@ -50,10 +50,10 @@ test('the local verification command covers the repository quality checks', func
     expect($phpunit)
         ->not->toBeFalse()
         ->toContain('<server name="APP_ENV" value="testing"/>')
-        ->toContain('<server name="DB_CONNECTION" value="sqlite"/>')
-        ->toContain('<server name="DB_DATABASE" value=":memory:"/>')
+        ->toContain('<server name="DB_CONNECTION" value="pgsql"/>')
+        ->toContain('<server name="DB_DATABASE" value="inventario_testing"/>')
         ->toContain('<env name="APP_ENV" value="testing" force="true"/>')
-        ->toContain('<env name="DB_CONNECTION" value="sqlite" force="true"/>')
-        ->toContain('<env name="DB_DATABASE" value=":memory:" force="true"/>')
+        ->toContain('<env name="DB_CONNECTION" value="pgsql" force="true"/>')
+        ->toContain('<env name="DB_DATABASE" value="inventario_testing" force="true"/>')
         ->toContain('<env name="QUEUE_CONNECTION" value="sync" force="true"/>');
 });

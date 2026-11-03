@@ -77,11 +77,11 @@ test('wash type names are unique after normalization', function () {
 test('the database rejects duplicate wash slugs even when a wash is inactive', function (bool $active) {
     WashType::factory()->create(['name' => 'Stone', 'slug' => 'stone', 'is_active' => $active]);
 
-    expect(fn () => DB::table('wash_types')->insert([
+    expect(fn () => DB::transaction(fn () => DB::table('wash_types')->insert([
         'name' => 'Outra Stone',
         'slug' => 'stone',
         'is_active' => true,
-    ]))->toThrow(QueryException::class);
+    ])))->toThrow(QueryException::class);
 
     $this->assertDatabaseCount('wash_types', 1);
 })->with(['active' => true, 'inactive' => false]);

@@ -8,16 +8,17 @@ use App\Models\StockOfferVolume;
 use App\Models\StockOfferVolumeItem;
 use App\Models\User;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 test('the database allows one active category slug and reuses a deleted slug', function () {
     $category = Category::factory()->create(['name' => 'Reposição', 'slug' => 'reposicao']);
 
-    expect(fn () => Category::query()->create([
+    expect(fn () => DB::transaction(fn () => Category::query()->create([
         'name' => 'Outra reposição',
         'slug' => 'reposicao',
         'is_active' => true,
-    ]))->toThrow(QueryException::class);
+    ])))->toThrow(QueryException::class);
 
     $category->delete();
     $replacement = Category::query()->create([
@@ -33,13 +34,13 @@ test('the database treats active sizes case-insensitively within one sack', func
     $volume = StockOfferVolume::factory()->withTotal(4)->create();
     StockOfferVolumeItem::factory()->for($volume, 'volume')->create(['size' => 'M']);
 
-    expect(fn () => StockOfferVolumeItem::query()->create([
+    expect(fn () => DB::transaction(fn () => StockOfferVolumeItem::query()->create([
         'stock_offer_volume_id' => $volume->id,
         'size' => 'm',
         'sort_order' => 1,
         'is_active' => true,
         'quantity' => null,
-    ]))->toThrow(QueryException::class);
+    ])))->toThrow(QueryException::class);
 
     $volume->items()->firstOrFail()->delete();
     $replacement = $volume->items()->create([

@@ -126,6 +126,13 @@ Status iniciais:
 - `Finalizado`
 - `Cancelado`
 
+## Desenvolvimento e testes
+
+O ambiente local usa PostgreSQL. Configure a conexão no `.env` e crie os
+bancos `inventario` e `inventario_testing`; a suíte usa o segundo e recria
+suas tabelas. Nunca aponte o banco de testes para dados que precise preservar.
+Execute `composer ci:verify` para a conferência completa local.
+
 ## Documentação
 
 - [Arquitetura](docs/ARCHITECTURE.md)

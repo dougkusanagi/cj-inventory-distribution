@@ -31,3 +31,4 @@ yarn-error.log
 
 /scripts/changelog/__pycache__/
 /.impeccable/review/
+.env.lerd_override

@@ -377,7 +377,7 @@ test('authenticated users can create a product with optional model, ordered size
     $product = Product::query()->with('stockVolumes.items')->sole();
 
     $this->assertModelExists($product);
-    expect($product->code)->toBe('CJ-000001');
+    expect($product->code)->toBe('CJ-'.str_pad((string) $product->id, 6, '0', STR_PAD_LEFT));
     expect($product->name)->toBe('Jaqueta Jeans Oversized');
     expect($product->model)->toBeNull();
     expect($product->stockVolumes)->not->toBeEmpty();

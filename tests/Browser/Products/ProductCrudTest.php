@@ -387,18 +387,18 @@ it('creates a product without a stock offer from the form', function () {
 
     $page->submit();
 
+    $product = Product::query()->with('stockVolumes')->sole();
+
     $page
         ->assertRoute('products.index')
         ->assertSee('Blusa básica E2E')
-        ->assertSee('CJ-000001')
+        ->assertSee($product->code)
         ->assertSee('Sem estoque')
         ->assertSee('Produto cadastrado.')
         ->assertNoJavaScriptErrors();
 
-    $product = Product::query()->with('stockVolumes')->sole();
-
     $this->assertModelExists($product);
-    expect($product->code)->toBe('CJ-000001');
+    expect($product->code)->toBe('CJ-'.str_pad((string) $product->id, 6, '0', STR_PAD_LEFT));
     expect($product->model)->toBe('MOD-E2E-001');
     expect($product->notes)->toBe('Produto criado pelo fluxo principal.');
     expect($product->stockVolumes)->toBeEmpty();
@@ -537,7 +537,7 @@ it('saves a product recount and records its stock adjustment', function () {
         ->click('[data-testid="stock-more-actions"]')
         ->click('[role="menuitem"]:has-text("Corrigir contagem")')
         ->assertVisible('[data-testid="stock-adjustment-drawer"]')
-        ->click('button[aria-label="Selecionar SC-000001"]')
+        ->click('button[aria-label="Selecionar SC-'.str_pad((string) $volume->id, 6, '0', STR_PAD_LEFT).'"]')
         ->assertPresent('#recount-'.$volume->id.'-0')
         ->assertValue('#recount-'.$volume->id.'-0', '4')
         ->clear('#recount-'.$volume->id.'-0')

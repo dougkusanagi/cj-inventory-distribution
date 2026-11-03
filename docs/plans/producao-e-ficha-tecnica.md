@@ -102,14 +102,14 @@ fica para um plano próprio.
 - [x] Confirmar quem avança lotes (responsável de cada setor).
 - [x] Confirmar se uma peça pode pular etapas: não pode; a sequência é
       sempre a mesma.
-- [ ] Trocar o banco local e o dos testes para PostgreSQL no Podman (serviço
+- [x] Trocar o banco local e o dos testes para PostgreSQL no Podman (serviço
       do lerd), igual à produção. Ajustar `.env`, `.env.example`,
       `phpunit.xml` (hoje SQLite em memória), `composer ci:verify` e o
       README. Rodar a suíte completa e corrigir o que depender de SQLite.
       Commit próprio, antes da Fase 1. Motivo: o SQLite ignora
       `lockForUpdate`, então os testes de concorrência só valem em
       PostgreSQL.
-- [ ] Escrever `docs/adr/0025-painel-de-producao-por-lotes.md`: lote como
+- [x] Escrever `docs/adr/0025-painel-de-producao-por-lotes.md`: lote como
       unidade do painel, etapas fixas em enum, painel não cria estoque.
 
 ### Fase 1 — Painel de produção ("A mínima")
@@ -340,7 +340,7 @@ padrão, apontamentos, custo realizado, RFID e integração com Bling.
 
 ## Tentativas que falharam
 
-- Nenhuma ainda.
+- A primeira suíte PostgreSQL revelou expectativas de IDs sequenciais, transações abortadas após violações de unicidade e ausência de Bash no contêiner. Os testes afetados foram corrigidos e passam no host; a primeira execução de navegador também revelou expectativas de IDs, corrigidas e verificadas. A conferência completa foi reiniciada no host.
 
 ## Dúvidas abertas
 
@@ -350,5 +350,6 @@ padrão, apontamentos, custo realizado, RFID e integração com Bling.
 
 ## Próximo passo
 
-Responder às dúvidas da Fase 0, escrever o ADR 0025 e abrir a branch
-`feat/painel-producao`.
+Concluir a Fase 1 na branch `feat/painel-producao`. A conferência completa
+passou no PostgreSQL (382 testes e 110 testes de navegador). O SQLite anterior
+continua no disco e não foi importado para o banco local novo.
