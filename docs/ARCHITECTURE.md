@@ -40,7 +40,8 @@ erDiagram
 A criação começa no Corte; cada avanço ou correção registra um evento imutável
 com autor e horário. A versão impede que operações simultâneas sobrescrevam
 mudanças. O administrador vê todos os lotes; usuários de Produção veem e
-movem apenas os lotes em seus setores atribuídos. O administrador pode desfazer
+movem apenas os lotes em seus setores atribuídos. Cada envio aguarda confirmação no setor de destino antes de outro avanço;
+o recebimento registra autor e horário (ADR 0029). O administrador pode desfazer
 o último avanço com motivo e excluir um lote apenas antes do primeiro avanço.
 Concluir um lote não altera sacos ou movimentações de estoque (ADR 0025).
 

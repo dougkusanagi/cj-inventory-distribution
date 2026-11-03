@@ -33,6 +33,7 @@ it('creates an identified cutting batch and its first event', function (): void 
     expect($batch->code)->toBe('L-'.str_pad((string) $batch->id, 6, '0', STR_PAD_LEFT))
         ->and($batch->stage)->toBe(ProductionStage::Cutting)
         ->and($batch->quantity)->toBe(12)
+        ->and($batch->received_by)->toBeNull()
         ->and($batch->events()->sole()->actor_id)->toBe($worker->id);
 });
 
@@ -67,16 +68,20 @@ it('completes without changing stock and lets an administrator undo with a reaso
     $admin = User::factory()->admin()->create();
     $batch = $action->create(Product::factory()->create(['is_active' => true]), 6, null, $admin);
     foreach ([ProductionStage::Sewing, ProductionStage::Washing, ProductionStage::Dyeing, ProductionStage::Finishing, ProductionStage::Bagging, ProductionStage::Completed] as $target) {
+        if ($batch->received_at === null) {
+            $batch = $action->receive($batch, $batch->version, $admin);
+        }
         $batch = $action->advance($batch, $batch->stage, $target, $batch->version, $admin);
     }
     expect($batch->completed_at)->not->toBeNull()
+        ->and($batch->received_by)->toBeNull()
         ->and(StockOfferVolume::count())->toBe(0)
         ->and(StockMovement::count())->toBe(0);
     expect(fn () => $action->undo($batch, '', $batch->version, $admin))->toThrow(ValidationException::class);
     $batch = $action->undo($batch, 'Envio incorreto', $batch->version, $admin);
     expect($batch->stage)->toBe(ProductionStage::Bagging)
         ->and($batch->completed_at)->toBeNull()
-        ->and($batch->events()->count())->toBe(8);
+        ->and($batch->events()->count())->toBe(13);
     expect(fn () => $action->undo($batch, 'Outra tentativa', $batch->version, $admin))->toThrow(ValidationException::class);
 });
 
@@ -226,4 +231,49 @@ it('restores an existing sector assignment without duplicating its history', fun
     $sync->handle($worker, ['sewing']);
     expect($worker->canManageProductionStage(ProductionStage::Sewing))->toBeTrue()
         ->and(ProductionStageAssignment::withTrashed()->where('user_id', $worker->id)->count())->toBe(1);
+});
+
+it('requires the destination sector to receive a batch before advancing it', function (): void {
+    $admin = User::factory()->admin()->create();
+    $cutting = productionWorker(ProductionStage::Cutting);
+    $sewing = productionWorker(ProductionStage::Sewing);
+    $action = app(ManageProductionBatch::class);
+    $batch = $action->create(Product::factory()->create(['is_active' => true]), 8, null, $cutting);
+    $batch = $action->advance($batch, ProductionStage::Cutting, ProductionStage::Sewing, $batch->version, $cutting);
+
+    expect($batch->received_at)->toBeNull();
+    $this->actingAs($sewing)->get(route('production.index'))->assertInertia(fn ($page) => $page
+        ->where('batches.0.awaiting_receipt', true)
+        ->where('stages.0.awaiting_batches', 1));
+    expect(fn () => $action->advance($batch, ProductionStage::Sewing, ProductionStage::Washing, $batch->version, $sewing))->toThrow(ValidationException::class);
+    $this->actingAs($cutting)->post(route('production.receive', $batch), ['version' => $batch->version])->assertForbidden();
+    $this->actingAs($sewing)->post(route('production.receive', $batch), ['version' => $batch->version])->assertRedirect();
+
+    $received = $batch->fresh();
+    expect($received->received_at)->not->toBeNull()
+        ->and($received->received_by)->toBe($sewing->id)
+        ->and($received->version)->toBe(3)
+        ->and($received->events()->count())->toBe(3);
+    $this->post(route('production.receive', $batch), ['version' => 2])->assertInvalid('version');
+    $next = $action->advance($received, ProductionStage::Sewing, ProductionStage::Washing, $received->version, $sewing);
+    expect($next->stage)->toBe(ProductionStage::Washing)->and($next->received_at)->toBeNull();
+    $undone = $action->undo($next, 'Envio incorreto', $next->version, $admin);
+    expect($undone->stage)->toBe(ProductionStage::Sewing)->and($undone->received_at)->not->toBeNull();
+});
+
+it('can undo an advance after its receipt without erasing either event', function (): void {
+    $admin = User::factory()->admin()->create();
+    $action = app(ManageProductionBatch::class);
+    $batch = $action->create(Product::factory()->create(['is_active' => true]), 4, null, $admin);
+    $batch = $action->advance($batch, ProductionStage::Cutting, ProductionStage::Sewing, $batch->version, $admin);
+    $batch = $action->receive($batch, $batch->version, $admin);
+    $this->actingAs($admin)->get(route('production.index'))->assertInertia(fn ($page) => $page->where('batches.0.can_undo', true));
+
+    $batch = $action->undo($batch, 'Correção', $batch->version, $admin);
+
+    expect($batch->stage)->toBe(ProductionStage::Cutting)
+        ->and($batch->received_at)->not->toBeNull()
+        ->and($batch->received_by)->toBeNull()
+        ->and($batch->events()->count())->toBe(4);
+    expect(fn () => $action->undo($batch, 'Outra correção', $batch->version, $admin))->toThrow(ValidationException::class);
 });

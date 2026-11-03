@@ -33,6 +33,7 @@ class ManageProductionBatch
                 'quantity' => $quantity,
                 'stage' => ProductionStage::Cutting,
                 'stage_entered_at' => now(),
+                'received_at' => now(),
                 'notes' => $notes,
                 'created_by' => $actor->id,
                 'version' => 1,
@@ -58,6 +59,9 @@ class ManageProductionBatch
                 throw ValidationException::withMessages(['version' => 'Este lote já foi movido para '.$batch->stage->label().' por '.$name.'.']);
             }
             Gate::forUser($actor)->authorize('advance', $batch);
+            if ($batch->received_at === null) {
+                throw ValidationException::withMessages(['batch' => 'Confirme o recebimento antes de enviar este lote.']);
+            }
             if (! $batch->stage->canMoveTo($target)) {
                 throw ValidationException::withMessages(['stage' => 'O lote só pode seguir para a próxima etapa.']);
             }
@@ -67,9 +71,28 @@ class ManageProductionBatch
                 'stage' => $target,
                 'stage_entered_at' => now(),
                 'completed_at' => $target === ProductionStage::Completed ? now() : null,
+                'received_at' => $target === ProductionStage::Completed ? now() : null,
+                'received_by' => null,
                 'version' => $batch->version + 1,
             ]);
             $this->record($batch, $from, $target, $actor, null);
+
+            return $batch;
+        }, 5);
+    }
+
+    public function receive(ProductionBatch $batch, int $version, User $actor): ProductionBatch
+    {
+        return DB::transaction(function () use ($batch, $version, $actor): ProductionBatch {
+            $actor = User::query()->whereKey($actor->id)->lockForUpdate()->firstOrFail();
+            $batch = ProductionBatch::query()->whereKey($batch->id)->lockForUpdate()->firstOrFail();
+            Gate::forUser($actor)->authorize('advance', $batch);
+            $this->assertVersion($batch, $version);
+            if ($batch->received_at !== null) {
+                throw ValidationException::withMessages(['batch' => 'Este lote já foi recebido.']);
+            }
+            $batch->update(['received_at' => now(), 'received_by' => $actor->id, 'version' => $batch->version + 1]);
+            $this->record($batch, $batch->stage, $batch->stage, $actor, null);
 
             return $batch;
         }, 5);
@@ -86,13 +109,13 @@ class ManageProductionBatch
             if ($reason === '') {
                 throw ValidationException::withMessages(['reason' => 'Informe o motivo para desfazer o avanço.']);
             }
-            $last = $batch->events()->reorder('id', 'desc')->first();
+            $last = $batch->events()->whereColumn('from_stage', '!=', 'to_stage')->reorder('id', 'desc')->first();
             if ($last?->from_stage === null || ! $last->from_stage->canMoveTo($last->to_stage)) {
                 throw ValidationException::withMessages(['batch' => 'Não há avanço para desfazer.']);
             }
             $from = $batch->stage;
             $target = $last->from_stage;
-            $batch->update(['stage' => $target, 'stage_entered_at' => now(), 'completed_at' => null, 'version' => $batch->version + 1]);
+            $batch->update(['stage' => $target, 'stage_entered_at' => now(), 'completed_at' => null, 'received_at' => now(), 'received_by' => null, 'version' => $batch->version + 1]);
             $this->record($batch, $from, $target, $actor, $reason);
 
             return $batch;

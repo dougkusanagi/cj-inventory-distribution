@@ -197,10 +197,11 @@ quantas peças e quais lotes existem, e a ação de ensacar continua manual.
 Branch sugerida: `feat/painel-producao-oficinas`. Cada item pode ser uma
 entrega separada.
 
-- [ ] **Confirmação de recebimento:** o lote enviado aparece como "A
+- [x] **Confirmação de recebimento:** o lote enviado aparece como "A
       receber" no setor seguinte até o responsável tocar em "Recebi". O
       painel mostra separados "a receber" e "no setor". Opcional: informar
-      quantidade recebida diferente da enviada, com motivo.
+      quantidade recebida diferente da enviada, com motivo (não implementada;
+      depende de regra própria para divergências).
 - [ ] **Oficinas e terceiros:** cadastro simples (`workshops`: nome, tipo
       costura/lavanderia/tinturaria, ativo). Ao avançar para uma etapa
       externa, escolher a oficina. Mesmo padrão de cadastro rápido do
@@ -350,7 +351,7 @@ padrão, apontamentos, custo realizado, RFID e integração com Bling.
 
 ## Próximo passo
 
-A Fase 1 passou em `composer ci:verify` no PostgreSQL: 398 testes funcionais e
-unitários e 117 testes de navegador, além de formatadores, análises e build.
-Revisar e integrar a branch `feat/painel-producao` antes da Fase 2. O SQLite
+A Fase 1 foi integrada ao master. A confirmação de recebimento da Fase 2
+passou em `composer ci:verify`: 400 testes principais e 117 de navegador.
+Integrar essa entrega e seguir com oficinas e divisão de lotes. O SQLite
 anterior permanece no disco, sem importação.

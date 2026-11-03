@@ -44,6 +44,7 @@ Route::middleware(['auth', 'verified', 'panel'])->prefix('painel/producao')->nam
     Route::get('/', [ProductionBatchController::class, 'index'])->name('index');
     Route::post('/', [ProductionBatchController::class, 'store'])->name('store');
     Route::post('{batch}/avancar', [ProductionBatchController::class, 'advance'])->name('advance');
+    Route::post('{batch}/receber', [ProductionBatchController::class, 'receive'])->name('receive');
     Route::post('{batch}/desfazer', [ProductionBatchController::class, 'undo'])->name('undo');
     Route::delete('{batch}', [ProductionBatchController::class, 'destroy'])->name('destroy');
 });

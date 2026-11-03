@@ -4,11 +4,12 @@ import {
     DotsThreeIcon,
     PlusCircleIcon,
 } from '@phosphor-icons/react';
-import { useState, type FormEvent } from 'react';
+import { Fragment, useState, type FormEvent } from 'react';
 import {
     advance,
     destroy,
     index,
+    receive,
     store,
     undo,
 } from '@/actions/App/Http/Controllers/ProductionBatchController';
@@ -42,7 +43,14 @@ import {
 } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-type Stage = { value: string; label: string; batches: number; pieces: number };
+type Stage = {
+    value: string;
+    label: string;
+    batches: number;
+    pieces: number;
+    awaiting_batches: number;
+    awaiting_pieces: number;
+};
 type Event = {
     id: number;
     from: string | null;
@@ -60,6 +68,7 @@ type Batch = {
     stage: string;
     version: number;
     stage_entered_at: string;
+    awaiting_receipt: boolean;
     notes: string | null;
     can_delete: boolean;
     can_undo: boolean;
@@ -235,9 +244,11 @@ function DetailsDrawer({
                     {batch.events.map((event) => (
                         <div key={event.id} className="border-b pb-3 text-sm">
                             <p className="font-medium">
-                                {event.from
-                                    ? `${event.from} → ${event.to}`
-                                    : `Criado em ${event.to}`}
+                                {event.from === event.to
+                                    ? `Recebido em ${event.to}`
+                                    : event.from
+                                      ? `${event.from} → ${event.to}`
+                                      : `Criado em ${event.to}`}
                             </p>
                             <p className="text-muted-foreground">
                                 {event.actor} ·{' '}
@@ -351,6 +362,17 @@ export default function ProductionIndex({
             },
         );
     }
+    function receiveBatch(batch: Batch) {
+        setBusy(batch.id);
+        router.post(
+            receive.url(batch.id),
+            { version: batch.version },
+            {
+                preserveScroll: true,
+                onFinish: () => setBusy(null),
+            },
+        );
+    }
     return (
         <>
             <Head title="Produção" />
@@ -393,6 +415,18 @@ export default function ProductionIndex({
                                 {stage.batches}{' '}
                                 {stage.batches === 1 ? 'lote' : 'lotes'}
                             </p>
+                            {stage.value !== 'completed' && (
+                                <p className="text-sm text-muted-foreground">
+                                    A receber: {stage.awaiting_batches} lotes ·{' '}
+                                    {stage.awaiting_pieces} peças
+                                    <br />
+                                    No setor:{' '}
+                                    {stage.batches -
+                                        stage.awaiting_batches}{' '}
+                                    lotes ·{' '}
+                                    {stage.pieces - stage.awaiting_pieces} peças
+                                </p>
+                            )}
                         </Card>
                     ))}
                 </div>
@@ -492,163 +526,211 @@ export default function ProductionIndex({
                                                 (batch) =>
                                                     batch.stage === stage.value,
                                             )
-                                            .map((batch) => {
-                                                const next =
-                                                    sequence[
-                                                        sequence.indexOf(
-                                                            batch.stage,
-                                                        ) + 1
-                                                    ];
-                                                const days = Math.max(
-                                                    0,
-                                                    Math.floor(
-                                                        (Date.now() -
-                                                            new Date(
-                                                                batch.stage_entered_at,
-                                                            ).getTime()) /
-                                                            86400000,
-                                                    ),
-                                                );
-                                                return (
-                                                    <Card
-                                                        key={batch.id}
-                                                        data-testid="production-batch"
-                                                        className="min-w-0 gap-3 p-4"
-                                                    >
-                                                        <div className="flex items-start justify-between gap-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    setDetails(
-                                                                        batch,
-                                                                    )
-                                                                }
-                                                                className="min-w-0 text-left font-semibold break-words underline-offset-4 hover:underline"
+                                            .sort(
+                                                (a, b) =>
+                                                    Number(b.awaiting_receipt) -
+                                                    Number(a.awaiting_receipt),
+                                            )
+                                            .map(
+                                                (
+                                                    batch,
+                                                    index,
+                                                    stageBatches,
+                                                ) => {
+                                                    const next =
+                                                        sequence[
+                                                            sequence.indexOf(
+                                                                batch.stage,
+                                                            ) + 1
+                                                        ];
+                                                    const days = Math.max(
+                                                        0,
+                                                        Math.floor(
+                                                            (Date.now() -
+                                                                new Date(
+                                                                    batch.stage_entered_at,
+                                                                ).getTime()) /
+                                                                86400000,
+                                                        ),
+                                                    );
+                                                    return (
+                                                        <Fragment
+                                                            key={batch.id}
+                                                        >
+                                                            {stage.value !==
+                                                                'completed' &&
+                                                                (index === 0 ||
+                                                                    stageBatches[
+                                                                        index -
+                                                                            1
+                                                                    ]
+                                                                        .awaiting_receipt !==
+                                                                        batch.awaiting_receipt) && (
+                                                                    <h3 className="text-sm font-medium">
+                                                                        {batch.awaiting_receipt
+                                                                            ? 'A receber'
+                                                                            : 'No setor'}
+                                                                    </h3>
+                                                                )}
+                                                            <Card
+                                                                data-testid="production-batch"
+                                                                className="min-w-0 gap-3 p-4"
                                                             >
-                                                                {batch.code} ·{' '}
-                                                                {
-                                                                    batch.product_name
-                                                                }
-                                                            </button>
-                                                            {next && (
-                                                                <Button
-                                                                    className="hidden h-11 shrink-0 md:inline-flex"
-                                                                    disabled={
-                                                                        busy !==
-                                                                        null
-                                                                    }
-                                                                    onClick={() =>
-                                                                        next ===
-                                                                        'completed'
-                                                                            ? setConfirm(
-                                                                                  {
-                                                                                      batch,
-                                                                                      kind: 'finish',
-                                                                                  },
-                                                                              )
-                                                                            : send(
-                                                                                  batch,
-                                                                              )
-                                                                    }
-                                                                >
-                                                                    <ArrowRightIcon weight="bold" />
-                                                                    {busy ===
-                                                                    batch.id
-                                                                        ? 'Enviando...'
-                                                                        : `Avançar para ${labels[next]}`}
-                                                                </Button>
-                                                            )}
-                                                            {isAdmin &&
-                                                                (batch.can_undo ||
-                                                                    batch.can_delete) && (
-                                                                    <DropdownMenu>
-                                                                        <DropdownMenuTrigger
-                                                                            asChild
-                                                                        >
-                                                                            <Button
-                                                                                size="icon"
-                                                                                variant="ghost"
-                                                                                aria-label={`Mais ações de ${batch.code}`}
-                                                                            >
-                                                                                <DotsThreeIcon weight="bold" />
-                                                                            </Button>
-                                                                        </DropdownMenuTrigger>
-                                                                        <DropdownMenuContent align="end">
-                                                                            {batch.can_undo && (
-                                                                                <DropdownMenuItem
-                                                                                    onSelect={() =>
-                                                                                        setUndoBatch(
-                                                                                            batch,
-                                                                                        )
-                                                                                    }
-                                                                                >
-                                                                                    Desfazer
-                                                                                    último
-                                                                                    avanço
-                                                                                </DropdownMenuItem>
-                                                                            )}
-                                                                            {batch.can_delete && (
-                                                                                <DropdownMenuItem
-                                                                                    onSelect={() =>
-                                                                                        setConfirm(
+                                                                <div className="flex items-start justify-between gap-2">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            setDetails(
+                                                                                batch,
+                                                                            )
+                                                                        }
+                                                                        className="min-w-0 text-left font-semibold break-words underline-offset-4 hover:underline"
+                                                                    >
+                                                                        {
+                                                                            batch.code
+                                                                        }{' '}
+                                                                        ·{' '}
+                                                                        {
+                                                                            batch.product_name
+                                                                        }
+                                                                    </button>
+                                                                    {next && (
+                                                                        <Button
+                                                                            className="hidden h-11 shrink-0 md:inline-flex"
+                                                                            disabled={
+                                                                                busy !==
+                                                                                null
+                                                                            }
+                                                                            onClick={() =>
+                                                                                batch.awaiting_receipt
+                                                                                    ? receiveBatch(
+                                                                                          batch,
+                                                                                      )
+                                                                                    : next ===
+                                                                                        'completed'
+                                                                                      ? setConfirm(
                                                                                             {
                                                                                                 batch,
-                                                                                                kind: 'delete',
+                                                                                                kind: 'finish',
                                                                                             },
                                                                                         )
-                                                                                    }
+                                                                                      : send(
+                                                                                            batch,
+                                                                                        )
+                                                                            }
+                                                                        >
+                                                                            <ArrowRightIcon weight="bold" />
+                                                                            {busy ===
+                                                                            batch.id
+                                                                                ? 'Aguarde...'
+                                                                                : batch.awaiting_receipt
+                                                                                  ? 'Recebi'
+                                                                                  : `Avançar para ${labels[next]}`}
+                                                                        </Button>
+                                                                    )}
+                                                                    {isAdmin &&
+                                                                        (batch.can_undo ||
+                                                                            batch.can_delete) && (
+                                                                            <DropdownMenu>
+                                                                                <DropdownMenuTrigger
+                                                                                    asChild
                                                                                 >
-                                                                                    Excluir
-                                                                                    lote
-                                                                                </DropdownMenuItem>
-                                                                            )}
-                                                                        </DropdownMenuContent>
-                                                                    </DropdownMenu>
+                                                                                    <Button
+                                                                                        size="icon"
+                                                                                        variant="ghost"
+                                                                                        aria-label={`Mais ações de ${batch.code}`}
+                                                                                    >
+                                                                                        <DotsThreeIcon weight="bold" />
+                                                                                    </Button>
+                                                                                </DropdownMenuTrigger>
+                                                                                <DropdownMenuContent align="end">
+                                                                                    {batch.can_undo && (
+                                                                                        <DropdownMenuItem
+                                                                                            onSelect={() =>
+                                                                                                setUndoBatch(
+                                                                                                    batch,
+                                                                                                )
+                                                                                            }
+                                                                                        >
+                                                                                            Desfazer
+                                                                                            último
+                                                                                            avanço
+                                                                                        </DropdownMenuItem>
+                                                                                    )}
+                                                                                    {batch.can_delete && (
+                                                                                        <DropdownMenuItem
+                                                                                            onSelect={() =>
+                                                                                                setConfirm(
+                                                                                                    {
+                                                                                                        batch,
+                                                                                                        kind: 'delete',
+                                                                                                    },
+                                                                                                )
+                                                                                            }
+                                                                                        >
+                                                                                            Excluir
+                                                                                            lote
+                                                                                        </DropdownMenuItem>
+                                                                                    )}
+                                                                                </DropdownMenuContent>
+                                                                            </DropdownMenu>
+                                                                        )}
+                                                                </div>
+                                                                {next && (
+                                                                    <Button
+                                                                        className="h-11 w-full md:hidden"
+                                                                        disabled={
+                                                                            busy !==
+                                                                            null
+                                                                        }
+                                                                        onClick={() =>
+                                                                            batch.awaiting_receipt
+                                                                                ? receiveBatch(
+                                                                                      batch,
+                                                                                  )
+                                                                                : next ===
+                                                                                    'completed'
+                                                                                  ? setConfirm(
+                                                                                        {
+                                                                                            batch,
+                                                                                            kind: 'finish',
+                                                                                        },
+                                                                                    )
+                                                                                  : send(
+                                                                                        batch,
+                                                                                    )
+                                                                        }
+                                                                    >
+                                                                        <ArrowRightIcon weight="bold" />
+                                                                        {busy ===
+                                                                        batch.id
+                                                                            ? 'Aguarde...'
+                                                                            : batch.awaiting_receipt
+                                                                              ? 'Recebi'
+                                                                              : `Avançar para ${labels[next]}`}
+                                                                    </Button>
                                                                 )}
-                                                        </div>
-                                                        {next && (
-                                                            <Button
-                                                                className="h-11 w-full md:hidden"
-                                                                disabled={
-                                                                    busy !==
-                                                                    null
-                                                                }
-                                                                onClick={() =>
-                                                                    next ===
-                                                                    'completed'
-                                                                        ? setConfirm(
-                                                                              {
-                                                                                  batch,
-                                                                                  kind: 'finish',
-                                                                              },
-                                                                          )
-                                                                        : send(
-                                                                              batch,
-                                                                          )
-                                                                }
-                                                            >
-                                                                <ArrowRightIcon weight="bold" />
-                                                                {busy ===
-                                                                batch.id
-                                                                    ? 'Enviando...'
-                                                                    : `Avançar para ${labels[next]}`}
-                                                            </Button>
-                                                        )}
-                                                        <p className="text-sm text-muted-foreground">
-                                                            {batch.quantity}{' '}
-                                                            {batch.quantity ===
-                                                            1
-                                                                ? 'peça'
-                                                                : 'peças'}{' '}
-                                                            ·{' '}
-                                                            {days === 1
-                                                                ? '1 dia'
-                                                                : `${days} dias`}{' '}
-                                                            nesta etapa
-                                                        </p>
-                                                    </Card>
-                                                );
-                                            })}
+                                                                <p className="text-sm text-muted-foreground">
+                                                                    {batch.awaiting_receipt &&
+                                                                        'A receber · '}
+                                                                    {
+                                                                        batch.quantity
+                                                                    }{' '}
+                                                                    {batch.quantity ===
+                                                                    1
+                                                                        ? 'peça'
+                                                                        : 'peças'}{' '}
+                                                                    ·{' '}
+                                                                    {days === 1
+                                                                        ? '1 dia'
+                                                                        : `${days} dias`}{' '}
+                                                                    nesta etapa
+                                                                </p>
+                                                            </Card>
+                                                        </Fragment>
+                                                    );
+                                                },
+                                            )}
                                         {!batches.some(
                                             (batch) =>
                                                 batch.stage === stage.value,

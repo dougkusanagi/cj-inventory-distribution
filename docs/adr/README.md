@@ -54,3 +54,5 @@ ADRs iniciais:
 - [0024 — Tipo de grade no produto e fim da oferta de estoque](0024-tipo-de-grade-no-produto.md)
 
 - [0025 — Painel de produção por lotes](0025-painel-de-producao-por-lotes.md)
+
+- [0029 — Confirmação de recebimento de lotes](0029-recebimento-de-lotes.md)

@@ -35,7 +35,13 @@ class ProductionDemoSeeder extends Seeder
                 0 => 1, 6 => 1000000, default => ($index + 1) * 24
             }, $marker, $actor);
             for ($i = 1; $i <= $index; $i++) {
+                if ($batch->received_at === null) {
+                    $batch = $action->receive($batch, $batch->version, $actor);
+                }
                 $batch = $action->advance($batch, $batch->stage, $stages[$i], $batch->version, $actor);
+            }
+            if (in_array($stage, [ProductionStage::Washing, ProductionStage::Finishing], true)) {
+                $action->receive($batch, $batch->version, $actor);
             }
         }
     }

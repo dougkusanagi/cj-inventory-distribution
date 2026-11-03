@@ -20,11 +20,13 @@ use Illuminate\Support\Carbon;
  * @property ProductionStage $stage
  * @property Carbon $stage_entered_at
  * @property Carbon|null $completed_at
+ * @property Carbon|null $received_at
+ * @property int|null $received_by
  * @property string|null $notes
  * @property int $version
  * @property int $created_by
  */
-#[Fillable(['code', 'product_id', 'quantity', 'stage', 'stage_entered_at', 'completed_at', 'notes', 'version', 'created_by'])]
+#[Fillable(['code', 'product_id', 'quantity', 'stage', 'stage_entered_at', 'completed_at', 'received_at', 'received_by', 'notes', 'version', 'created_by'])]
 class ProductionBatch extends Model
 {
     public const MAX_QUANTITY = 1000000;
@@ -53,6 +55,7 @@ class ProductionBatch extends Model
             'stage' => ProductionStage::class,
             'stage_entered_at' => 'datetime',
             'completed_at' => 'datetime',
+            'received_at' => 'datetime',
             'quantity' => 'integer',
             'version' => 'integer',
         ];

@@ -120,7 +120,8 @@ link para abertura da mensagem no WhatsApp.
 
 O painel de produção acompanha lotes de produtos ativos por Corte, Costura,
 Lavagem, Tinturaria, Acabamento, Ensacamento e Concluído. Cada responsável
-acessa os setores atribuídos e envia lotes apenas à próxima etapa; o
+acessa os setores atribuídos e envia lotes apenas à próxima etapa. O setor
+de destino confirma o recebimento antes de avançar novamente; o
 administrador pode desfazer o último envio com motivo. O histórico registra
 cada mudança e evita sobrescritas por alterações simultâneas. Concluir um lote
 não cadastra sacos de estoque, que continuam sendo registrados manualmente.

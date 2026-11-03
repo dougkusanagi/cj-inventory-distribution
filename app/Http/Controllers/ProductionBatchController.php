@@ -29,6 +29,7 @@ class ProductionBatchController extends Controller
         $query = ProductionBatch::query()->whereIn('stage', $allowedStages)
             ->with(['product:id,name,code,model,deleted_at', 'events.actor:id,name,deleted_at']);
         $summary = (clone $query)->selectRaw('stage, count(*) as batches, sum(quantity) as pieces')->groupBy('stage')->toBase()->get()->keyBy('stage');
+        $awaiting = (clone $query)->whereNull('received_at')->selectRaw('stage, count(*) as batches, sum(quantity) as pieces')->groupBy('stage')->toBase()->get()->keyBy('stage');
         $visibleProductIds = (clone $query)->select('product_id')->distinct()->pluck('product_id');
         $filterProducts = Product::withTrashed()->whereIn('id', $visibleProductIds)->orderBy('name')->get(['id', 'name']);
         $batches = $query->when($filters['product'] ?? null, fn ($query, $product) => $query->where('product_id', $product))
@@ -42,6 +43,8 @@ class ProductionBatchController extends Controller
                     'label' => $stage->label(),
                     'batches' => (int) ($summary->get($stage->value)->batches ?? 0),
                     'pieces' => (int) ($summary->get($stage->value)->pieces ?? 0),
+                    'awaiting_batches' => (int) ($awaiting->get($stage->value)->batches ?? 0),
+                    'awaiting_pieces' => (int) ($awaiting->get($stage->value)->pieces ?? 0),
                 ])->values(),
             'batches' => $batches->map(fn (ProductionBatch $batch): array => [
                 'id' => $batch->id,
@@ -52,9 +55,10 @@ class ProductionBatchController extends Controller
                 'stage' => $batch->stage->value,
                 'version' => $batch->version,
                 'stage_entered_at' => $batch->stage_entered_at->toISOString(),
+                'awaiting_receipt' => $batch->received_at === null,
                 'notes' => $batch->notes,
                 'can_delete' => $batch->events->every(fn ($event): bool => $event->from_stage === null),
-                'can_undo' => ($last = $batch->events->last()) && $last->from_stage !== null && $last->from_stage->canMoveTo($last->to_stage),
+                'can_undo' => ($last = $batch->events->last(fn ($event): bool => $event->from_stage !== $event->to_stage)) && $last->from_stage !== null && $last->from_stage->canMoveTo($last->to_stage),
                 'events' => $batch->events->map(fn ($event): array => [
                     'id' => $event->id,
                     'from' => $event->from_stage?->label(),
@@ -109,6 +113,16 @@ class ProductionBatchController extends Controller
         $data = $request->validate(['reason' => ['required', 'string', 'max:2000'], 'version' => ['required', 'integer', 'min:1']], [], ['reason' => 'motivo', 'version' => 'lote']);
         $action->undo($batch, $data['reason'], (int) $data['version'], $request->user());
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Último avanço desfeito.']);
+
+        return back();
+    }
+
+    public function receive(Request $request, ProductionBatch $batch, ManageProductionBatch $action): RedirectResponse
+    {
+        Gate::authorize('viewAny', ProductionBatch::class);
+        $data = $request->validate(['version' => ['required', 'integer', 'min:1']], [], ['version' => 'lote']);
+        $action->receive($batch, (int) $data['version'], $request->user());
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Recebimento do lote confirmado.']);
 
         return back();
     }

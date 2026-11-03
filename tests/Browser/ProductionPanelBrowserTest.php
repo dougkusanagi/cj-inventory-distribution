@@ -31,11 +31,15 @@ it('creates and advances a production batch in the panel', function (int $width)
         ->assertScript("!document.querySelector('[data-testid=production-batch]').closest('details').open")
         ->click('summary:has-text("Corte")')
         ->click('button:visible:has-text("Avançar para Costura")')
-        ->assertSee('Costura')
+        ->assertVisible('button:visible:has-text("Recebi")')
+        ->screenshot(filename: "recebimento-{$width}")
+        ->click('button:visible:has-text("Recebi")')
+        ->assertSee('Avançar para Lavagem')
         ->assertNoJavaScriptErrors();
 
     $batch = ProductionBatch::query()->sole();
     expect($batch->stage->value)->toBe('sewing')
+        ->and($batch->received_by)->toBe($user->id)
         ->and($batch->quantity)->toBe(12);
     $page->assertScript('document.documentElement.scrollWidth <= window.innerWidth');
 })->with([320, 390, 768, 1366]);
