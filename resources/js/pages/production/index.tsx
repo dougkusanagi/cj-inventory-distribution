@@ -15,6 +15,14 @@ import {
 } from '@/actions/App/Http/Controllers/ProductionBatchController';
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import {
+    SizeGridEditor,
+    type BatchSize,
+    type SizeInput,
+} from '@/components/production/size-grid-editor';
+import { SizeGridDrawer } from '@/components/production/size-grid-drawer';
+import { keepFocusedInputVisible } from '@/components/production/scroll-focused-input';
+import { StockSizeBreakdown } from '@/components/stock-size-breakdown';
+import {
     AdvanceWorkshopDrawer,
     ManageWorkshopsDrawer,
     type Workshop,
@@ -65,6 +73,8 @@ type Event = {
     workshop: string | null;
     kind: string | null;
     occurred_at: string;
+    sizes_before: BatchSize[] | null;
+    sizes_after: BatchSize[] | null;
 };
 type Batch = {
     id: number;
@@ -72,6 +82,7 @@ type Batch = {
     product_id: number;
     product_name: string;
     quantity: number;
+    sizes: BatchSize[];
     stage: string;
     version: number;
     stage_entered_at: string;
@@ -125,7 +136,13 @@ function BatchDrawer({
     onClose: () => void;
 }) {
     const mobile = useIsMobile();
-    const form = useForm({ product_id: '', quantity: '', notes: '' });
+    const { errors } = usePage().props;
+    const form = useForm({
+        product_id: '',
+        quantity: '',
+        notes: '',
+        sizes: [] as SizeInput[],
+    });
     function submit(event: FormEvent) {
         event.preventDefault();
         form.post(store.url(), { preserveScroll: true, onSuccess: onClose });
@@ -149,7 +166,10 @@ function BatchDrawer({
                     onSubmit={submit}
                     className="flex min-h-0 flex-1 flex-col"
                 >
-                    <div className="grid gap-4 overflow-y-auto px-6 pb-6">
+                    <div
+                        className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto px-6 pb-6"
+                        onFocusCapture={keepFocusedInputVisible}
+                    >
                         <div className="grid gap-2">
                             <Label htmlFor="batch-product">Produto</Label>
                             <SearchableSelect
@@ -183,6 +203,13 @@ function BatchDrawer({
                             />
                             <InputError message={form.errors.quantity} />
                         </div>
+                        <SizeGridEditor
+                            value={form.data.sizes}
+                            onChange={(sizes) => form.setData('sizes', sizes)}
+                            errors={errors}
+                            disabled={form.processing}
+                            maxQuantity={maxQuantity}
+                        />
                         <div className="grid gap-2">
                             <Label htmlFor="batch-notes">Observações</Label>
                             <Input
@@ -196,7 +223,7 @@ function BatchDrawer({
                             <InputError message={form.errors.notes} />
                         </div>
                     </div>
-                    <DrawerFooter>
+                    <DrawerFooter className="shrink-0 border-t bg-background pt-4">
                         <Button
                             type="submit"
                             className="h-11"
@@ -273,20 +300,40 @@ function EventHistory({ events }: { events: Event[] }) {
             {events.map((event) => (
                 <div key={event.id} className="border-b pb-3 text-sm">
                     <p className="font-medium">
-                        {event.kind === 'split'
-                            ? 'Lote dividido entre oficinas'
-                            : event.kind === 'split_child'
-                              ? `Enviado para ${event.to}`
-                              : event.from === event.to
-                                ? `Recebido em ${event.to}`
-                                : event.from
-                                  ? `${event.from} → ${event.to}`
-                                  : `Criado em ${event.to}`}
+                        {event.kind === 'sizes_updated'
+                            ? 'Grade atualizada'
+                            : event.kind === 'split'
+                              ? 'Lote dividido entre oficinas'
+                              : event.kind === 'split_child'
+                                ? `Enviado para ${event.to}`
+                                : event.from === event.to
+                                  ? `Recebido em ${event.to}`
+                                  : event.from
+                                    ? `${event.from} → ${event.to}`
+                                    : `Criado em ${event.to}`}
                     </p>
                     <p className="text-muted-foreground">
                         {event.actor} ·{' '}
                         {new Date(event.occurred_at).toLocaleString('pt-BR')}
                     </p>
+                    {event.kind === 'sizes_updated' && (
+                        <div className="grid gap-2 py-2">
+                            <div>
+                                <p>Antes</p>
+                                <StockSizeBreakdown
+                                    sizes={event.sizes_before ?? []}
+                                    compact
+                                />
+                            </div>
+                            <div>
+                                <p>Depois</p>
+                                <StockSizeBreakdown
+                                    sizes={event.sizes_after ?? []}
+                                    compact
+                                />
+                            </div>
+                        </div>
+                    )}
                     {event.workshop && <p>Oficina: {event.workshop}</p>}
                     {event.notes && (
                         <p className="break-words">{event.notes}</p>
@@ -372,6 +419,7 @@ export default function ProductionIndex({
     const [creating, setCreating] = useState(false);
     const [details, setDetails] = useState<Batch | null>(null);
     const [undoBatch, setUndoBatch] = useState<Batch | null>(null);
+    const [editingSizes, setEditingSizes] = useState<Batch | null>(null);
     const [confirm, setConfirm] = useState<{
         batch: Batch;
         kind: 'finish' | 'delete';
@@ -676,23 +724,41 @@ export default function ProductionIndex({
                                                                                   : `Avançar para ${labels[next]}`}
                                                                         </Button>
                                                                     )}
-                                                                    {isAdmin &&
-                                                                        (batch.can_undo ||
-                                                                            batch.can_delete) && (
-                                                                            <DropdownMenu>
-                                                                                <DropdownMenuTrigger
-                                                                                    asChild
+                                                                    {((!batch.awaiting_receipt &&
+                                                                        batch.stage !==
+                                                                            'completed') ||
+                                                                        (isAdmin &&
+                                                                            (batch.can_undo ||
+                                                                                batch.can_delete))) && (
+                                                                        <DropdownMenu>
+                                                                            <DropdownMenuTrigger
+                                                                                asChild
+                                                                            >
+                                                                                <Button
+                                                                                    size="icon"
+                                                                                    variant="ghost"
+                                                                                    aria-label={`Mais ações de ${batch.code}`}
                                                                                 >
-                                                                                    <Button
-                                                                                        size="icon"
-                                                                                        variant="ghost"
-                                                                                        aria-label={`Mais ações de ${batch.code}`}
-                                                                                    >
-                                                                                        <DotsThreeIcon weight="bold" />
-                                                                                    </Button>
-                                                                                </DropdownMenuTrigger>
-                                                                                <DropdownMenuContent align="end">
-                                                                                    {batch.can_undo && (
+                                                                                    <DotsThreeIcon weight="bold" />
+                                                                                </Button>
+                                                                            </DropdownMenuTrigger>
+                                                                            <DropdownMenuContent align="end">
+                                                                                {!batch.awaiting_receipt &&
+                                                                                    batch.stage !==
+                                                                                        'completed' && (
+                                                                                        <DropdownMenuItem
+                                                                                            onSelect={() =>
+                                                                                                setEditingSizes(
+                                                                                                    batch,
+                                                                                                )
+                                                                                            }
+                                                                                        >
+                                                                                            Editar
+                                                                                            grade
+                                                                                        </DropdownMenuItem>
+                                                                                    )}
+                                                                                {isAdmin &&
+                                                                                    batch.can_undo && (
                                                                                         <DropdownMenuItem
                                                                                             onSelect={() =>
                                                                                                 setUndoBatch(
@@ -705,7 +771,8 @@ export default function ProductionIndex({
                                                                                             avanço
                                                                                         </DropdownMenuItem>
                                                                                     )}
-                                                                                    {batch.can_delete && (
+                                                                                {isAdmin &&
+                                                                                    batch.can_delete && (
                                                                                         <DropdownMenuItem
                                                                                             onSelect={() =>
                                                                                                 setConfirm(
@@ -720,9 +787,9 @@ export default function ProductionIndex({
                                                                                             lote
                                                                                         </DropdownMenuItem>
                                                                                     )}
-                                                                                </DropdownMenuContent>
-                                                                            </DropdownMenu>
-                                                                        )}
+                                                                            </DropdownMenuContent>
+                                                                        </DropdownMenu>
+                                                                    )}
                                                                 </div>
                                                                 {next && (
                                                                     <Button
@@ -757,6 +824,16 @@ export default function ProductionIndex({
                                                                               ? 'Recebi'
                                                                               : `Avançar para ${labels[next]}`}
                                                                     </Button>
+                                                                )}
+                                                                {batch.sizes
+                                                                    .length >
+                                                                    0 && (
+                                                                    <StockSizeBreakdown
+                                                                        sizes={
+                                                                            batch.sizes
+                                                                        }
+                                                                        compact
+                                                                    />
                                                                 )}
                                                                 <p className="text-sm text-muted-foreground">
                                                                     {batch.awaiting_receipt &&
@@ -806,6 +883,13 @@ export default function ProductionIndex({
                 <DetailsDrawer
                     batch={details}
                     onClose={() => setDetails(null)}
+                />
+            )}
+            {editingSizes && (
+                <SizeGridDrawer
+                    batch={editingSizes}
+                    maxQuantity={maxQuantity}
+                    onClose={() => setEditingSizes(null)}
                 />
             )}
             {undoBatch && (

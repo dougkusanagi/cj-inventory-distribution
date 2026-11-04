@@ -59,6 +59,12 @@ class ProductionBatch extends Model
         return $this->belongsTo(self::class, 'parent_id')->withTrashed();
     }
 
+    /** @return HasMany<ProductionBatchItem, $this> */
+    public function items(): HasMany
+    {
+        return $this->hasMany(ProductionBatchItem::class)->orderBy('sort_order')->orderBy('id');
+    }
+
     /** @return HasMany<ProductionBatchEvent, $this> */
     public function events(): HasMany
     {

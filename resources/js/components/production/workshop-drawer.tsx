@@ -10,6 +10,8 @@ import {
     update,
 } from '@/actions/App/Http/Controllers/WorkshopController';
 import InputError from '@/components/input-error';
+import type { BatchSize } from '@/components/production/size-grid-editor';
+import { keepFocusedInputVisible } from '@/components/production/scroll-focused-input';
 import { Button } from '@/components/ui/button';
 import {
     Drawer,
@@ -37,6 +39,7 @@ type Batch = {
     stage: string;
     version: number;
     quantity: number;
+    sizes: BatchSize[];
 };
 
 export function AdvanceWorkshopDrawer({
@@ -69,14 +72,16 @@ export function AdvanceWorkshopDrawer({
         name: '',
         type: target,
     });
+    const emptyAllocation = () => ({
+        workshop_id: '',
+        quantity: '',
+        sizes: batch.sizes.map((item) => ({ size: item.size, quantity: '' })),
+    });
     const splitForm = useForm({
         stage: batch.stage,
         target,
         version: batch.version,
-        allocations: [
-            { workshop_id: '', quantity: '' },
-            { workshop_id: '', quantity: '' },
-        ],
+        allocations: [emptyAllocation(), emptyAllocation()],
     });
     const workshopOptions = options
         .filter((item) => item.is_active && item.type === target)
@@ -115,6 +120,34 @@ export function AdvanceWorkshopDrawer({
             onSuccess: onClose,
         });
     }
+    function setSizeQuantity(
+        rowIndex: number,
+        sizeIndex: number,
+        quantity: string,
+    ) {
+        splitForm.setData(
+            'allocations',
+            splitForm.data.allocations.map((row, position) => {
+                if (position !== rowIndex) return row;
+                const sizes = row.sizes.map((item, index) =>
+                    index === sizeIndex ? { ...item, quantity } : item,
+                );
+                const complete = sizes.every((item) => item.quantity !== '');
+                return {
+                    ...row,
+                    sizes,
+                    quantity: complete
+                        ? String(
+                              sizes.reduce(
+                                  (sum, item) => sum + Number(item.quantity),
+                                  0,
+                              ),
+                          )
+                        : '',
+                };
+            }),
+        );
+    }
     function submitSplit(event: FormEvent) {
         event.preventDefault();
         splitForm.post(split.url(batch.id), {
@@ -151,7 +184,10 @@ export function AdvanceWorkshopDrawer({
                         onSubmit={submitSplit}
                         className="flex min-h-0 flex-1 flex-col"
                     >
-                        <div className="grid gap-4 overflow-y-auto px-6 pb-6">
+                        <div
+                            className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto px-6 pb-6"
+                            onFocusCapture={keepFocusedInputVisible}
+                        >
                             <p className="text-sm">
                                 Distribua as {batch.quantity} peças entre
                                 oficinas diferentes. O lote original ficará no
@@ -208,6 +244,65 @@ export function AdvanceWorkshopDrawer({
                                             ]
                                         }
                                     />
+                                    {row.sizes.length > 0 && (
+                                        <div className="grid gap-3">
+                                            <p className="text-sm text-muted-foreground">
+                                                Informe as peças de cada
+                                                tamanho, inclusive zero quando
+                                                necessário.
+                                            </p>
+                                            {row.sizes.map(
+                                                (item, sizeIndex) => (
+                                                    <div
+                                                        key={item.size}
+                                                        className="grid gap-1"
+                                                    >
+                                                        <Label
+                                                            htmlFor={`split-size-${index}-${sizeIndex}`}
+                                                        >
+                                                            Tamanho {item.size}{' '}
+                                                            (total{' '}
+                                                            {
+                                                                batch.sizes[
+                                                                    sizeIndex
+                                                                ].quantity
+                                                            }
+                                                            )
+                                                        </Label>
+                                                        <Input
+                                                            id={`split-size-${index}-${sizeIndex}`}
+                                                            type="number"
+                                                            min="0"
+                                                            max={
+                                                                batch.sizes[
+                                                                    sizeIndex
+                                                                ].quantity
+                                                            }
+                                                            required
+                                                            value={
+                                                                item.quantity
+                                                            }
+                                                            onChange={(event) =>
+                                                                setSizeQuantity(
+                                                                    index,
+                                                                    sizeIndex,
+                                                                    event.target
+                                                                        .value,
+                                                                )
+                                                            }
+                                                        />
+                                                        <InputError
+                                                            message={
+                                                                errors[
+                                                                    `allocations.${index}.sizes.${sizeIndex}.quantity`
+                                                                ]
+                                                            }
+                                                        />
+                                                    </div>
+                                                ),
+                                            )}
+                                        </div>
+                                    )}
                                     <Label htmlFor={`split-quantity-${index}`}>
                                         Quantidade de peças
                                     </Label>
@@ -217,6 +312,7 @@ export function AdvanceWorkshopDrawer({
                                         min="1"
                                         max={batch.quantity}
                                         required
+                                        readOnly={row.sizes.length > 0}
                                         value={row.quantity}
                                         onChange={(event) =>
                                             splitForm.setData(
@@ -243,6 +339,12 @@ export function AdvanceWorkshopDrawer({
                                             ]
                                         }
                                     />
+                                    {row.sizes.length > 0 && (
+                                        <p className="text-xs text-muted-foreground">
+                                            Calculada pela soma dos tamanhos
+                                            desta oficina.
+                                        </p>
+                                    )}
                                     {splitForm.data.allocations.length > 2 && (
                                         <Button
                                             type="button"
@@ -271,9 +373,36 @@ export function AdvanceWorkshopDrawer({
                                 )}{' '}
                                 de {batch.quantity} peças.
                             </p>
+                            {batch.sizes.length > 0 && (
+                                <div
+                                    className="grid gap-1 text-sm text-muted-foreground"
+                                    aria-label="Distribuição por tamanho"
+                                >
+                                    {batch.sizes.map((size, sizeIndex) => (
+                                        <p key={size.size}>
+                                            {size.size}:{' '}
+                                            {splitForm.data.allocations.reduce(
+                                                (sum, row) =>
+                                                    sum +
+                                                    (Number(
+                                                        row.sizes[sizeIndex]
+                                                            .quantity,
+                                                    ) || 0),
+                                                0,
+                                            )}{' '}
+                                            de {size.quantity}{' '}
+                                            {size.quantity === 1
+                                                ? 'peça informada'
+                                                : 'peças informadas'}
+                                            .
+                                        </p>
+                                    ))}
+                                </div>
+                            )}
                             <InputError
                                 message={
                                     errors.allocations ||
+                                    errors.sizes ||
                                     errors.version ||
                                     errors.batch ||
                                     errors.stage
@@ -285,14 +414,14 @@ export function AdvanceWorkshopDrawer({
                                 onClick={() =>
                                     splitForm.setData('allocations', [
                                         ...splitForm.data.allocations,
-                                        { workshop_id: '', quantity: '' },
+                                        emptyAllocation(),
                                     ])
                                 }
                             >
                                 <PlusCircleIcon /> Adicionar oficina
                             </Button>
                         </div>
-                        <DrawerFooter>
+                        <DrawerFooter className="shrink-0 border-t bg-background pt-4">
                             <Button
                                 type="submit"
                                 className="h-11"

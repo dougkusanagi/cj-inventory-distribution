@@ -131,3 +131,45 @@ it('explains why a batch with one piece cannot be divided', function (): void {
         ->assertSee('A divisão exige pelo menos duas peças.')
         ->assertNoJavaScriptErrors();
 });
+
+it('creates, edits and divides a size grid without losing quantities', function (int $width): void {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    Product::factory()->create(['name' => 'Peça com grade', 'is_active' => true]);
+    Workshop::factory()->create(['name' => 'Costura A', 'type' => WorkshopType::Sewing]);
+    Workshop::factory()->create(['name' => 'Costura B', 'type' => WorkshopType::Sewing]);
+
+    $page = visit(route('production.index', [], false))->resize($width, 844)
+        ->click('Novo lote')->click('#batch-product')->click('[role="option"]:has-text("Peça com grade")')
+        ->fill('#batch-quantity', '5')->click('Adicionar tamanho')
+        ->fill('#sizes-name-0', '36')->fill('#sizes-quantity-0', '2')
+        ->click('Adicionar tamanho')->fill('#sizes-name-1', 'G')->fill('#sizes-quantity-1', '3')
+        ->assertScript("document.querySelector('#sizes-quantity-1').getBoundingClientRect().bottom <= document.querySelector('[data-slot=drawer-footer]').getBoundingClientRect().top")
+        ->wait(1)->screenshot(filename: "grade-criacao-{$width}")
+        ->click('Criar lote')->assertSee('Peça com grade')
+        ->assertPresent('[aria-label="Tamanho 36, 2 peças"]');
+    $batch = ProductionBatch::query()->sole();
+    $page->click('button[aria-label="Mais ações de '.$batch->code.'"]')
+        ->click('[role="menuitem"]:has-text("Editar grade")')
+        ->fill('#sizes-quantity-0', '1')->fill('#sizes-quantity-1', '4')
+        ->assertScript("document.querySelector('#sizes-quantity-1').getBoundingClientRect().bottom <= document.querySelector('[data-slot=drawer-footer]').getBoundingClientRect().top")
+        ->wait(1)->screenshot(filename: "grade-edicao-{$width}")
+        ->click('Salvar grade')->assertPresent('[aria-label="Tamanho 36, 1 peça"]')
+        ->click('button:has-text("Peça com grade")')->assertSee('Grade atualizada')
+        ->keys('[role=dialog]', 'Escape')->assertMissing('[role=dialog]')
+        ->click('button:visible:has-text("Avançar para Costura")')
+        ->click('Dividir entre oficinas')
+        ->click('#split-workshop-0')->click('[role="option"]:has-text("Costura A")')
+        ->fill('#split-size-0-0', '1')->fill('#split-size-0-1', '1')
+        ->click('#split-workshop-1')->click('[role="option"]:has-text("Costura B")')
+        ->fill('#split-size-1-0', '0')->fill('#split-size-1-1', '3')
+        ->assertScript("document.querySelector('#split-size-1-1').getBoundingClientRect().bottom <= document.querySelector('[data-slot=drawer-footer]').getBoundingClientRect().top")
+        ->assertValue('#split-quantity-0', '2')->assertValue('#split-quantity-1', '3')
+        ->assertSee('36: 1 de 1 peça informada.')
+        ->assertSee('G: 4 de 4 peças informadas.')
+        ->wait(1)->screenshot(filename: "grade-divisao-{$width}")
+        ->click('Dividir e enviar')
+        ->assertSee('Oficina: Costura A')->assertSee('Oficina: Costura B')
+        ->assertNoJavaScriptErrors();
+    expect(ProductionBatch::query()->where('parent_id', $batch->id)->count())->toBe(2);
+})->with([390, 1366]);

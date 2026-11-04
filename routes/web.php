@@ -46,6 +46,7 @@ Route::middleware(['auth', 'verified', 'panel'])->prefix('painel/producao')->nam
     Route::post('/', [ProductionBatchController::class, 'store'])->name('store');
     Route::post('{batch}/avancar', [ProductionBatchController::class, 'advance'])->name('advance');
     Route::post('{batch}/dividir', [ProductionBatchController::class, 'split'])->name('split');
+    Route::put('{batch}/grade', [ProductionBatchController::class, 'updateSizes'])->name('sizes.update');
     Route::post('{batch}/receber', [ProductionBatchController::class, 'receive'])->name('receive');
     Route::post('{batch}/desfazer', [ProductionBatchController::class, 'undo'])->name('undo');
     Route::delete('{batch}', [ProductionBatchController::class, 'destroy'])->name('destroy');

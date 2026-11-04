@@ -209,7 +209,7 @@ entrega separada.
 - [x] **Divisão de lote:** dividir um lote entre oficinas. Os lotes filhos
       guardam `parent_id`; a soma das quantidades é igual ao total do lote
       original, validada no servidor dentro de transação.
-- [ ] **Grade opcional por tamanho:** `production_batch_items` (tamanho,
+- [x] **Grade opcional por tamanho:** `production_batch_items` (tamanho,
       quantidade). Quando informada, a soma é igual à quantidade do lote.
       Exibir com o componente de mini cards compartilhado
       (`stock-size-breakdown`).
@@ -351,8 +351,8 @@ padrão, apontamentos, custo realizado, RFID e integração com Bling.
 
 ## Próximo passo
 
-A Fase 1, o recebimento e as oficinas estão no master. A divisão de lotes
-foi implementada na branch `feat/divisao-lotes-producao` e passou na
-conferência completa (410 testes principais e 123 de navegador); integrar
-antes de implementar grade por tamanho.
+A divisão de lotes está integrada no PR #71. A grade opcional está
+implementada na branch `feat/grade-producao`, incluindo sua distribuição entre
+os filhos. A conferência completa passou com 423 testes da aplicação e 125
+testes de navegador; integrar a grade antes do alerta de lote parado.
 O SQLite anterior permanece no disco.
