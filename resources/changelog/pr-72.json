@@ -1,0 +1,49 @@
+{
+  "title": "Grade de tamanhos na produção",
+  "changes": [
+    {
+      "category": "added",
+      "text": "Cadastro opcional de quantidades por tamanho nos lotes, com tamanhos numéricos ou em letras e exibição no painel de produção."
+    },
+    {
+      "category": "added",
+      "text": "Edição e limpeza da grade por pessoas autorizadas em lotes recebidos, ainda não concluídos nem divididos, com histórico dos valores anteriores e posteriores."
+    },
+    {
+      "category": "improved",
+      "text": "Divisão entre oficinas com distribuição de cada tamanho, cálculo automático do total por oficina e conferência das quantidades do lote original."
+    },
+    {
+      "category": "improved",
+      "text": "Validação das grades para impedir tamanhos repetidos, quantidades inválidas e somas diferentes do total do lote, com conferência de alterações simultâneas."
+    },
+    {
+      "category": "improved",
+      "text": "Formulários de criação, edição e divisão com rolagem que mantém o campo selecionado visível e os botões separados da área de preenchimento."
+    },
+    {
+      "category": "improved",
+      "text": "Estrutura de armazenamento ampliada para guardar tamanhos em ordem, impedir duplicidades e preservar registros anteriores na lixeira e na auditoria. A reversão dessa estrutura é bloqueada quando há tamanhos registrados."
+    },
+    {
+      "category": "improved",
+      "text": "Reutilização dos controles de preenchimento e da apresentação dos tamanhos nos formulários, no painel e no histórico."
+    },
+    {
+      "category": "improved",
+      "text": "Dados de demonstração e testes ampliados para cobrir grades, permissões, histórico, validações e divisão entre oficinas, incluindo uso em celular e computador."
+    },
+    {
+      "category": "improved",
+      "text": "Conferência local aprovada com 423 testes da aplicação e 125 testes de navegador, além de verificações de formatação, análise do código e geração da aplicação."
+    },
+    {
+      "category": "improved",
+      "text": "Documentação de uso, arquitetura, decisões técnicas e planejamento atualizada para explicar a grade opcional e sua distribuição entre oficinas, mantendo o cadastro dos sacos de estoque separado."
+    }
+  ],
+  "pr_number": 72,
+  "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/72",
+  "merged_at": "2026-11-04T10:43:28Z",
+  "commit": "8be13af41212a6e21e2bf573b76b9773a0b4a823"
+}
