@@ -60,3 +60,5 @@ ADRs iniciais:
 - [0030 — Oficinas nas etapas de produção](0030-oficinas-de-producao.md)
 
 - [0031 — Divisão de lotes entre oficinas](0031-divisao-de-lotes.md)
+
+- [0032 — Grade opcional em lotes de produção](0032-grade-de-producao.md)

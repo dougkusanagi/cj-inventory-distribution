@@ -30,6 +30,7 @@ erDiagram
     Workshop ||--o{ ProductionBatch : recebe
     Product ||--o{ ProductionBatch : possui
     ProductionBatch o|--o{ ProductionBatch : divide
+    ProductionBatch ||--o{ ProductionBatchItem : possui
     ProductionBatch ||--o{ ProductionBatchEvent : registra
     User ||--o{ ProductionBatchEvent : realiza
     User ||--o{ ProductionStageAssignment : responde
@@ -54,6 +55,12 @@ etapa. A operação bloqueia o lote e as oficinas, exige que a soma dos filhos
 corresponda ao total original e registra a divisão na mesma transação. O lote
 original sai dos totais ativos e permanece no histórico; os filhos aguardam
 recebimento e mantêm vínculo com ele. A divisão não altera estoque (ADR 0031).
+
+A grade opcional de `ProductionBatchItem` guarda tamanhos textuais e quantidades
+inteiras, cuja soma corresponde ao lote. Um usuário autorizado pode alterar ou
+limpar a grade de um lote recebido e não concluído; o evento guarda os valores
+anteriores e posteriores. A divisão exige distribuir cada tamanho conhecido
+entre os filhos, sem alterar sacos de estoque (ADR 0032).
 
 ## Product
 

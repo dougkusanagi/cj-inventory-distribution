@@ -16,9 +16,10 @@ use Illuminate\Validation\ValidationException;
 
 class ManageProductionBatch
 {
-    public function create(Product $product, int $quantity, ?string $notes, User $actor): ProductionBatch
+    /** @param array<int, array{size: mixed, quantity: mixed}> $sizes */
+    public function create(Product $product, int $quantity, ?string $notes, User $actor, array $sizes = []): ProductionBatch
     {
-        return DB::transaction(function () use ($product, $quantity, $notes, $actor): ProductionBatch {
+        return DB::transaction(function () use ($product, $quantity, $notes, $actor, $sizes): ProductionBatch {
             $actor = User::query()->whereKey($actor->id)->lockForUpdate()->firstOrFail();
             Gate::forUser($actor)->authorize('create', ProductionBatch::class);
             $product = Product::query()->whereKey($product->id)->lockForUpdate()->firstOrFail();
@@ -29,6 +30,7 @@ class ManageProductionBatch
                 throw ValidationException::withMessages(['quantity' => 'Informe uma quantidade entre 1 e 1.000.000 de peças.']);
             }
 
+            $sizes = $this->normalizeSizes($sizes, $quantity);
             $batch = ProductionBatch::query()->create([
                 'code' => 'TEMP-'.Str::uuid(),
                 'product_id' => $product->id,
@@ -41,6 +43,7 @@ class ManageProductionBatch
                 'version' => 1,
             ]);
             $batch->update(['code' => 'L-'.str_pad((string) $batch->id, 6, '0', STR_PAD_LEFT)]);
+            $this->writeSizes($batch, $sizes);
             $this->record($batch, null, ProductionStage::Cutting, $actor, null);
 
             return $batch;
@@ -92,7 +95,7 @@ class ManageProductionBatch
     }
 
     /**
-     * @param  array<int, array{workshop_id: int, quantity: int}>  $allocations
+     * @param  array<int, array{workshop_id: int, quantity: int, sizes?: array<int, array{size: mixed, quantity: mixed}>}>  $allocations
      * @return Collection<int, ProductionBatch>
      */
     public function split(ProductionBatch $batch, ProductionStage $expected, ProductionStage $target, int $version, User $actor, array $allocations): Collection
@@ -114,6 +117,38 @@ class ManageProductionBatch
             if (count($ids) < 2 || count($ids) !== count(array_unique($ids)) || count($ids) !== count($quantities) || collect($quantities)->contains(fn ($quantity): bool => ! $this->isValidSplitQuantity($quantity)) || array_sum($quantities) !== $batch->quantity) {
                 throw ValidationException::withMessages(['allocations' => 'Informe oficinas diferentes e quantidades positivas cuja soma seja igual ao total do lote.']);
             }
+            $originalSizes = $this->snapshotSizes($batch);
+            $allocatedBySize = [];
+            foreach ($allocations as $index => $allocation) {
+                $sizes = $allocation['sizes'] ?? [];
+                if ($originalSizes === [] && $sizes !== []) {
+                    throw ValidationException::withMessages(['allocations' => 'Informe primeiro a grade do lote original.']);
+                }
+                if ($originalSizes !== []) {
+                    $sizes = $this->normalizeSizes($sizes, $allocation['quantity']);
+                    $originalBySize = [];
+                    foreach ($originalSizes as $item) {
+                        $originalBySize[mb_strtolower($item['size'])] = $item;
+                    }
+                    $childBySize = [];
+                    foreach ($sizes as $item) {
+                        $key = mb_strtolower($item['size']);
+                        $childBySize[$key] = $item;
+                        $allocatedBySize[$key] = ($allocatedBySize[$key] ?? 0) + $item['quantity'];
+                    }
+                    if (array_diff_key($originalBySize, $childBySize) !== [] || array_diff_key($childBySize, $originalBySize) !== []) {
+                        throw ValidationException::withMessages(['allocations' => 'Informe todos os tamanhos do lote em cada oficina.']);
+                    }
+                    $allocations[$index]['sizes'] = array_map(fn (array $item): array => [
+                        'size' => $item['size'], 'quantity' => $childBySize[mb_strtolower($item['size'])]['quantity'],
+                    ], $originalSizes);
+                }
+            }
+            foreach ($originalSizes as $item) {
+                if (($allocatedBySize[mb_strtolower($item['size'])] ?? 0) !== $item['quantity']) {
+                    throw ValidationException::withMessages(['allocations' => 'A distribuição de cada tamanho deve corresponder ao lote original.']);
+                }
+            }
             $workshops = Workshop::query()->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
             if ($workshops->count() !== count($ids) || $workshops->contains(fn (Workshop $workshop): bool => ! $workshop->is_active || $workshop->type->value !== $target->value)) {
                 throw ValidationException::withMessages(['allocations' => 'Selecione oficinas ativas para a etapa de destino.']);
@@ -130,6 +165,7 @@ class ManageProductionBatch
                     'notes' => $batch->notes, 'created_by' => $actor->id, 'version' => 1,
                 ]);
                 $child->update(['code' => 'L-'.str_pad((string) $child->id, 6, '0', STR_PAD_LEFT)]);
+                $this->writeSizes($child, $allocation['sizes'] ?? []);
                 $this->record($child, null, $target, $actor, 'Dividido do lote '.$batch->code.'.', null, $workshop, 'split_child');
                 $children->push($child);
             }
@@ -198,6 +234,74 @@ class ManageProductionBatch
         }, 5);
     }
 
+    /** @param array<int, array{size: mixed, quantity: mixed}> $sizes */
+    public function updateSizes(ProductionBatch $batch, array $sizes, int $version, User $actor): ProductionBatch
+    {
+        return DB::transaction(function () use ($batch, $sizes, $version, $actor): ProductionBatch {
+            $actor = User::query()->whereKey($actor->id)->lockForUpdate()->firstOrFail();
+            $batch = ProductionBatch::query()->whereKey($batch->id)->lockForUpdate()->firstOrFail();
+            Gate::forUser($actor)->authorize('advance', $batch);
+            $this->assertNotSplit($batch);
+            $this->assertVersion($batch, $version);
+            if ($batch->received_at === null || $batch->stage === ProductionStage::Completed) {
+                throw ValidationException::withMessages(['batch' => 'A grade só pode ser alterada em um lote recebido e ainda não concluído.']);
+            }
+            $normalized = $this->normalizeSizes($sizes, $batch->quantity);
+            $before = $this->snapshotSizes($batch);
+            if ($before === $normalized) {
+                return $batch;
+            }
+            $batch->items()->get()->each->delete();
+            $this->writeSizes($batch, $normalized);
+            $batch->update(['version' => $batch->version + 1]);
+            $this->record($batch, $batch->stage, $batch->stage, $actor, null, $batch->workshop, $batch->workshop, 'sizes_updated', $before, $normalized);
+
+            return $batch;
+        }, 5);
+    }
+
+    /**
+     * @param  array<int, array{size: mixed, quantity: mixed}>  $sizes
+     * @return array<int, array{size: string, quantity: int}>
+     */
+    private function normalizeSizes(array $sizes, int $total): array
+    {
+        if ($sizes === []) {
+            return [];
+        }
+        $result = [];
+        $seen = [];
+        foreach ($sizes as $row) {
+            $name = is_string($row['size'] ?? null) ? trim($row['size']) : '';
+            $quantity = $row['quantity'] ?? null;
+            $key = mb_strtolower($name);
+            if ($name === '' || mb_strlen($name) > 30 || isset($seen[$key]) || ! is_int($quantity) || $quantity < 0 || $quantity > ProductionBatch::MAX_QUANTITY) {
+                throw ValidationException::withMessages(['sizes' => 'Informe tamanhos diferentes e quantidades inteiras não negativas.']);
+            }
+            $seen[$key] = true;
+            $result[] = ['size' => $name, 'quantity' => $quantity];
+        }
+        if (array_sum(array_column($result, 'quantity')) !== $total) {
+            throw ValidationException::withMessages(['sizes' => 'A soma dos tamanhos deve ser igual à quantidade do lote.']);
+        }
+
+        return $result;
+    }
+
+    /** @return array<int, array{size: string, quantity: int}> */
+    private function snapshotSizes(ProductionBatch $batch): array
+    {
+        return $batch->items()->get()->map(fn ($item): array => ['size' => $item->size, 'quantity' => $item->quantity])->all();
+    }
+
+    /** @param array<int, array{size: string, quantity: int}> $sizes */
+    private function writeSizes(ProductionBatch $batch, array $sizes): void
+    {
+        foreach ($sizes as $index => $item) {
+            $batch->items()->create(['size' => $item['size'], 'quantity' => $item['quantity'], 'sort_order' => $index]);
+        }
+    }
+
     private function assertVersion(ProductionBatch $batch, int $version): void
     {
         if ($batch->version !== $version) {
@@ -217,7 +321,11 @@ class ManageProductionBatch
         }
     }
 
-    private function record(ProductionBatch $batch, ?ProductionStage $from, ProductionStage $to, User $actor, ?string $notes, ?Workshop $fromWorkshop = null, ?Workshop $toWorkshop = null, ?string $kind = null): void
+    /**
+     * @param  array<int, array{size: string, quantity: int}>|null  $sizesBefore
+     * @param  array<int, array{size: string, quantity: int}>|null  $sizesAfter
+     */
+    private function record(ProductionBatch $batch, ?ProductionStage $from, ProductionStage $to, User $actor, ?string $notes, ?Workshop $fromWorkshop = null, ?Workshop $toWorkshop = null, ?string $kind = null, ?array $sizesBefore = null, ?array $sizesAfter = null): void
     {
         $batch->events()->create([
             'from_stage' => $from,
@@ -231,6 +339,8 @@ class ManageProductionBatch
             'from_workshop_name' => $fromWorkshop?->name,
             'to_workshop_name' => $toWorkshop?->name,
             'kind' => $kind,
+            'sizes_before' => $sizesBefore,
+            'sizes_after' => $sizesAfter,
         ]);
     }
 }

@@ -6,6 +6,7 @@ use App\Models\CatalogSetting;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductionBatch;
+use App\Models\ProductionBatchItem;
 use App\Models\ProductionStageAssignment;
 use App\Models\StockOfferVolume;
 use App\Models\StockOfferVolumeItem;
@@ -48,6 +49,7 @@ class AppServiceProvider extends ServiceProvider
         foreach ([
             Product::class,
             ProductionBatch::class,
+            ProductionBatchItem::class,
             ProductionStageAssignment::class,
             Category::class,
             WashType::class,

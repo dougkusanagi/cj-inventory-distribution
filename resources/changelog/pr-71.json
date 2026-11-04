@@ -1,17 +1,17 @@
 {
-  "title": "Divisão de lotes entre oficinas",
-  "changes": [
-    {
-      "category": "added",
-      "text": "Divida um lote de produção entre oficinas da próxima etapa e acompanhe cada parte separadamente."
-    },
-    {
-      "category": "improved",
-      "text": "O histórico mantém a origem dos lotes e o painel evita contar as mesmas peças duas vezes."
-    }
-  ],
-  "pr_number": 71,
-  "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/71",
-  "merged_at": "2026-11-04T10:14:19Z",
-  "commit": "d60e8d12eb2aac8c46f114e34cd0b024c15253cd"
+    "title": "Divisão de lotes entre oficinas",
+    "changes": [
+        {
+            "category": "added",
+            "text": "Divida um lote de produção entre oficinas da próxima etapa e acompanhe cada parte separadamente."
+        },
+        {
+            "category": "improved",
+            "text": "O histórico mantém a origem dos lotes e o painel evita contar as mesmas peças duas vezes."
+        }
+    ],
+    "pr_number": 71,
+    "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/71",
+    "merged_at": "2026-11-04T10:14:19Z",
+    "commit": "d60e8d12eb2aac8c46f114e34cd0b024c15253cd"
 }

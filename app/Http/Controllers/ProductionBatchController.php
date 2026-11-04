@@ -30,7 +30,7 @@ class ProductionBatchController extends Controller
             'stage' => ['nullable', Rule::enum(ProductionStage::class)],
         ]);
         $query = ProductionBatch::query()->whereNull('split_at')->whereIn('stage', $allowedStages)
-            ->with(['product:id,name,code,model,deleted_at', 'workshop:id,name,deleted_at', 'events.actor:id,name,deleted_at', 'parent.events.actor:id,name,deleted_at']);
+            ->with(['product:id,name,code,model,deleted_at', 'workshop:id,name,deleted_at', 'items', 'events.actor:id,name,deleted_at', 'parent.events.actor:id,name,deleted_at']);
         $summary = (clone $query)->selectRaw('stage, count(*) as batches, sum(quantity) as pieces')->groupBy('stage')->toBase()->get()->keyBy('stage');
         $awaiting = (clone $query)->whereNull('received_at')->selectRaw('stage, count(*) as batches, sum(quantity) as pieces')->groupBy('stage')->toBase()->get()->keyBy('stage');
         $visibleProductIds = (clone $query)->select('product_id')->distinct()->pluck('product_id');
@@ -63,6 +63,7 @@ class ProductionBatchController extends Controller
                 'parent_code' => $batch->parent?->code,
                 'parent_events' => $batch->parent?->events->toBase()->map(fn (ProductionBatchEvent $event): array => $this->eventProps($event)) ?? [],
                 'notes' => $batch->notes,
+                'sizes' => $batch->items->toBase()->map(fn ($item): array => ['size' => $item->size, 'quantity' => $item->quantity]),
                 'can_delete' => $batch->parent_id === null && $batch->events->every(fn ($event): bool => $event->from_stage === null),
                 'can_undo' => ($last = $batch->events->last(fn ($event): bool => $event->from_stage !== $event->to_stage)) && $last->from_stage !== null && $last->from_stage->canMoveTo($last->to_stage),
                 'events' => $batch->events->toBase()->map(fn (ProductionBatchEvent $event): array => $this->eventProps($event)),
@@ -86,6 +87,7 @@ class ProductionBatchController extends Controller
             'id' => $event->id, 'from' => $event->from_stage?->label(), 'to' => $event->to_stage->label(),
             'actor' => $event->actor->name, 'notes' => $event->notes, 'workshop' => $event->to_workshop_name,
             'kind' => $event->kind, 'occurred_at' => $event->occurred_at->toISOString(),
+            'sizes_before' => $event->sizes_before, 'sizes_after' => $event->sizes_after,
         ];
     }
 
@@ -96,8 +98,9 @@ class ProductionBatchController extends Controller
             'product_id' => ['required', 'integer', Rule::exists('products', 'id')->whereNull('deleted_at')],
             'quantity' => ['required', 'integer', 'min:1', 'max:'.ProductionBatch::MAX_QUANTITY],
             'notes' => ['nullable', 'string', 'max:2000'],
+            ...$this->sizeRules('sizes'),
         ], [], ['product_id' => 'produto', 'quantity' => 'quantidade de peças', 'notes' => 'observações']);
-        $action->create(Product::query()->whereKey($data['product_id'])->firstOrFail(), (int) $data['quantity'], $data['notes'] ?? null, $request->user());
+        $action->create(Product::query()->whereKey($data['product_id'])->firstOrFail(), (int) $data['quantity'], $data['notes'] ?? null, $request->user(), $this->sizeData($request->input('sizes', [])));
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Lote criado no Corte.']);
 
         return back();
@@ -128,18 +131,61 @@ class ProductionBatchController extends Controller
             'allocations' => ['required', 'array', 'min:2'],
             'allocations.*.workshop_id' => ['required', 'integer', 'distinct'],
             'allocations.*.quantity' => ['required', 'integer', 'min:1', 'max:'.ProductionBatch::MAX_QUANTITY],
+            ...$this->sizeRules('allocations.*.sizes'),
         ], [], ['allocations' => 'distribuição', 'allocations.*.workshop_id' => 'oficina', 'allocations.*.quantity' => 'quantidade']);
         $allocations = [];
         foreach ($request->array('allocations') as $row) {
             if (! is_array($row)) {
                 throw ValidationException::withMessages(['allocations' => 'Informe uma distribuição válida.']);
             }
-            $allocations[] = ['workshop_id' => (int) $row['workshop_id'], 'quantity' => (int) $row['quantity']];
+            $allocations[] = ['workshop_id' => (int) $row['workshop_id'], 'quantity' => (int) $row['quantity'], 'sizes' => $this->sizeData($row['sizes'] ?? [])];
         }
         $action->split($batch, ProductionStage::from($data['stage']), ProductionStage::from($data['target']), (int) $data['version'], $request->user(), $allocations);
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Lote dividido e enviado às oficinas.']);
 
         return back();
+    }
+
+    public function updateSizes(Request $request, ProductionBatch $batch, ManageProductionBatch $action): RedirectResponse
+    {
+        Gate::authorize('advance', $batch);
+        $data = $request->validate([
+            'version' => ['required', 'integer', 'min:1'],
+            ...$this->sizeRules('sizes'),
+            'sizes' => ['present', 'array'],
+        ], [], ['sizes' => 'grade', 'sizes.*.size' => 'tamanho', 'sizes.*.quantity' => 'quantidade']);
+        $action->updateSizes($batch, $this->sizeData($request->input('sizes', [])), (int) $data['version'], $request->user());
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Grade do lote atualizada.']);
+
+        return back();
+    }
+
+    /** @return array<string, array<int, string>> */
+    private function sizeRules(string $prefix): array
+    {
+        return [
+            $prefix => ['sometimes', 'array'],
+            $prefix.'.*' => ['required', 'array'],
+            $prefix.'.*.size' => ['required', 'string', 'max:30'],
+            $prefix.'.*.quantity' => ['required', 'integer', 'min:0', 'max:'.ProductionBatch::MAX_QUANTITY],
+        ];
+    }
+
+    /** @return array<int, array{size: string, quantity: int}> */
+    private function sizeData(mixed $rows): array
+    {
+        if (! is_array($rows)) {
+            throw ValidationException::withMessages(['sizes' => 'Informe uma grade válida.']);
+        }
+        $sizes = [];
+        foreach ($rows as $row) {
+            if (! is_array($row) || ! isset($row['size'], $row['quantity'])) {
+                throw ValidationException::withMessages(['sizes' => 'Informe uma grade válida.']);
+            }
+            $sizes[] = ['size' => (string) $row['size'], 'quantity' => (int) $row['quantity']];
+        }
+
+        return $sizes;
     }
 
     public function undo(Request $request, ProductionBatch $batch, ManageProductionBatch $action): RedirectResponse
