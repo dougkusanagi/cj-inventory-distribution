@@ -23,12 +23,15 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $received_at
  * @property int|null $received_by
  * @property int|null $workshop_id
+ * @property int|null $parent_id
+ * @property Carbon|null $split_at
  * @property-read Workshop|null $workshop
+ * @property-read ProductionBatch|null $parent
  * @property string|null $notes
  * @property int $version
  * @property int $created_by
  */
-#[Fillable(['code', 'product_id', 'quantity', 'stage', 'stage_entered_at', 'completed_at', 'received_at', 'received_by', 'workshop_id', 'notes', 'version', 'created_by'])]
+#[Fillable(['code', 'product_id', 'quantity', 'stage', 'stage_entered_at', 'completed_at', 'received_at', 'received_by', 'workshop_id', 'parent_id', 'split_at', 'notes', 'version', 'created_by'])]
 class ProductionBatch extends Model
 {
     public const MAX_QUANTITY = 1000000;
@@ -50,6 +53,12 @@ class ProductionBatch extends Model
         return $this->belongsTo(Workshop::class)->withTrashed();
     }
 
+    /** @return BelongsTo<ProductionBatch, $this> */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id')->withTrashed();
+    }
+
     /** @return HasMany<ProductionBatchEvent, $this> */
     public function events(): HasMany
     {
@@ -64,6 +73,7 @@ class ProductionBatch extends Model
             'stage_entered_at' => 'datetime',
             'completed_at' => 'datetime',
             'received_at' => 'datetime',
+            'split_at' => 'datetime',
             'quantity' => 'integer',
             'version' => 'integer',
         ];

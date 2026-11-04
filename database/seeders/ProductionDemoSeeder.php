@@ -57,5 +57,20 @@ class ProductionDemoSeeder extends Seeder
                 $action->receive($batch, $batch->version, $actor);
             }
         }
+
+        $marker = 'Demonstração de produção: divisão entre oficinas';
+        $firstWorkshop = $workshops->get(WorkshopType::Sewing->value);
+        $secondWorkshop = Workshop::query()->firstOrCreate(
+            ['slug' => Str::slug('Oficina Demonstração Costura Complementar'), 'type' => WorkshopType::Sewing],
+            ['name' => 'Oficina Demonstração Costura Complementar', 'is_active' => true],
+        );
+        if ($firstWorkshop !== null && $firstWorkshop->is_active && $secondWorkshop->is_active
+            && ! ProductionBatch::withTrashed()->where('notes', $marker)->exists()) {
+            $batch = $action->create($longNameProduct, 1000, $marker, $actor);
+            $action->split($batch, ProductionStage::Cutting, ProductionStage::Sewing, $batch->version, $actor, [
+                ['workshop_id' => $firstWorkshop->id, 'quantity' => 1],
+                ['workshop_id' => $secondWorkshop->id, 'quantity' => 999],
+            ]);
+        }
     }
 }

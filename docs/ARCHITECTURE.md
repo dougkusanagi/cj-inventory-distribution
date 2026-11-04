@@ -29,6 +29,7 @@ erDiagram
     StockMovementItem }o--o| StockOfferVolume : referencia
     Workshop ||--o{ ProductionBatch : recebe
     Product ||--o{ ProductionBatch : possui
+    ProductionBatch o|--o{ ProductionBatch : divide
     ProductionBatch ||--o{ ProductionBatchEvent : registra
     User ||--o{ ProductionBatchEvent : realiza
     User ||--o{ ProductionStageAssignment : responde
@@ -47,6 +48,12 @@ tinturaria podem ser atribuídas a oficinas ativas, com nomes preservados nos
 eventos (ADR 0030). O administrador pode desfazer
 o último avanço com motivo e excluir um lote apenas antes do primeiro avanço.
 Concluir um lote não altera sacos ou movimentações de estoque (ADR 0025).
+
+Um lote recebido pode ser dividido ao enviar para oficinas diferentes da próxima
+etapa. A operação bloqueia o lote e as oficinas, exige que a soma dos filhos
+corresponda ao total original e registra a divisão na mesma transação. O lote
+original sai dos totais ativos e permanece no histórico; os filhos aguardam
+recebimento e mantêm vínculo com ele. A divisão não altera estoque (ADR 0031).
 
 ## Product
 

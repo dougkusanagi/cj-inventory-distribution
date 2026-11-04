@@ -123,7 +123,10 @@ Lavagem, Tinturaria, Acabamento, Ensacamento e Concluído. Cada responsável
 acessa os setores atribuídos e envia lotes apenas à próxima etapa. O setor
 de destino confirma o recebimento antes de avançar novamente. Costura, lavagem
 e tinturaria podem ser internas ou atribuídas a uma oficina cadastrada; o
-administrador pode desfazer o último envio com motivo. O histórico registra
+administrador pode desfazer o último envio com motivo. Um lote pode ser dividido
+entre oficinas da próxima etapa; as quantidades devem somar o total original.
+O lote original fica no histórico e a divisão não pode ser desfeita pelo painel.
+O histórico registra
 cada mudança e evita sobrescritas por alterações simultâneas. Concluir um lote
 não cadastra sacos de estoque, que continuam sendo registrados manualmente.
 

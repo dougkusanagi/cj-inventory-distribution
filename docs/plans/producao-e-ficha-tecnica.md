@@ -206,7 +206,7 @@ entrega separada.
       costura/lavanderia/tinturaria, ativo). Ao avançar para uma etapa
       externa, escolher a oficina. Mesmo padrão de cadastro rápido do
       `WashType`.
-- [ ] **Divisão de lote:** dividir um lote entre oficinas. Os lotes filhos
+- [x] **Divisão de lote:** dividir um lote entre oficinas. Os lotes filhos
       guardam `parent_id`; a soma das quantidades é igual ao total do lote
       original, validada no servidor dentro de transação.
 - [ ] **Grade opcional por tamanho:** `production_batch_items` (tamanho,
@@ -351,7 +351,8 @@ padrão, apontamentos, custo realizado, RFID e integração com Bling.
 
 ## Próximo passo
 
-A Fase 1 e a confirmação de recebimento foram integradas ao master. Na branch
-`feat/oficinas-producao`, o cadastro e envio para oficinas passaram em
-`composer ci:verify`: 404 testes principais e 119 de navegador. Integrar essa
-entrega e seguir com divisão de lotes. O SQLite anterior permanece no disco.
+A Fase 1, o recebimento e as oficinas estão no master. A divisão de lotes
+foi implementada na branch `feat/divisao-lotes-producao` e passou na
+conferência completa (410 testes principais e 123 de navegador); integrar
+antes de implementar grade por tamanho.
+O SQLite anterior permanece no disco.

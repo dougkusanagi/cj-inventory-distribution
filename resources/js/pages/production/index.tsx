@@ -63,6 +63,7 @@ type Event = {
     actor: string;
     notes: string | null;
     workshop: string | null;
+    kind: string | null;
     occurred_at: string;
 };
 type Batch = {
@@ -75,6 +76,8 @@ type Batch = {
     version: number;
     stage_entered_at: string;
     workshop: string | null;
+    parent_code: string | null;
+    parent_events: Event[];
     awaiting_receipt: boolean;
     notes: string | null;
     can_delete: boolean;
@@ -248,31 +251,49 @@ function DetailsDrawer({
                     {batch.notes && (
                         <p className="text-sm break-words">{batch.notes}</p>
                     )}
-                    <h3 className="font-semibold">Histórico</h3>
-                    {batch.events.map((event) => (
-                        <div key={event.id} className="border-b pb-3 text-sm">
-                            <p className="font-medium">
-                                {event.from === event.to
-                                    ? `Recebido em ${event.to}`
-                                    : event.from
-                                      ? `${event.from} → ${event.to}`
-                                      : `Criado em ${event.to}`}
-                            </p>
-                            <p className="text-muted-foreground">
-                                {event.actor} ·{' '}
-                                {new Date(event.occurred_at).toLocaleString(
-                                    'pt-BR',
-                                )}
-                            </p>
-                            {event.workshop && <p>Oficina: {event.workshop}</p>}
-                            {event.notes && (
-                                <p className="break-words">{event.notes}</p>
-                            )}
-                        </div>
-                    ))}
+                    {batch.parent_code && (
+                        <>
+                            <h3 className="font-semibold">
+                                Lote de origem: {batch.parent_code}
+                            </h3>
+                            <EventHistory events={batch.parent_events} />
+                        </>
+                    )}
+                    <h3 className="font-semibold">Histórico deste lote</h3>
+                    <EventHistory events={batch.events} />
                 </div>
             </DrawerContent>
         </Drawer>
+    );
+}
+
+function EventHistory({ events }: { events: Event[] }) {
+    return (
+        <>
+            {events.map((event) => (
+                <div key={event.id} className="border-b pb-3 text-sm">
+                    <p className="font-medium">
+                        {event.kind === 'split'
+                            ? 'Lote dividido entre oficinas'
+                            : event.kind === 'split_child'
+                              ? `Enviado para ${event.to}`
+                              : event.from === event.to
+                                ? `Recebido em ${event.to}`
+                                : event.from
+                                  ? `${event.from} → ${event.to}`
+                                  : `Criado em ${event.to}`}
+                    </p>
+                    <p className="text-muted-foreground">
+                        {event.actor} ·{' '}
+                        {new Date(event.occurred_at).toLocaleString('pt-BR')}
+                    </p>
+                    {event.workshop && <p>Oficina: {event.workshop}</p>}
+                    {event.notes && (
+                        <p className="break-words">{event.notes}</p>
+                    )}
+                </div>
+            ))}
+        </>
     );
 }
 
