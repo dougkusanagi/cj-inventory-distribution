@@ -176,8 +176,9 @@ it('seeds identifiable production batches in every stage without duplicating the
     $this->seed(ProductionDemoSeeder::class);
     $this->seed(ProductionDemoSeeder::class);
 
-    expect(ProductionBatch::query()->count())->toBe(7)
-        ->and(ProductionBatch::query()->where('stage', 'cutting')->sole()->quantity)->toBe(1)
+    expect(ProductionBatch::query()->count())->toBe(10)
+        ->and(ProductionBatch::query()->where('stage', 'cutting')->whereNull('split_at')->sole()->quantity)->toBe(1)
+        ->and(ProductionBatch::query()->whereNotNull('parent_id')->sum('quantity'))->toBe(1000)
         ->and(ProductionBatch::query()->where('stage', 'completed')->sole()->quantity)->toBe(1000000);
 });
 

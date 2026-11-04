@@ -6,11 +6,13 @@ use App\Actions\Production\ManageProductionBatch;
 use App\Enums\ProductionStage;
 use App\Models\Product;
 use App\Models\ProductionBatch;
+use App\Models\ProductionBatchEvent;
 use App\Models\Workshop;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,8 +29,8 @@ class ProductionBatchController extends Controller
             'product' => ['nullable', 'integer'],
             'stage' => ['nullable', Rule::enum(ProductionStage::class)],
         ]);
-        $query = ProductionBatch::query()->whereIn('stage', $allowedStages)
-            ->with(['product:id,name,code,model,deleted_at', 'workshop:id,name,deleted_at', 'events.actor:id,name,deleted_at']);
+        $query = ProductionBatch::query()->whereNull('split_at')->whereIn('stage', $allowedStages)
+            ->with(['product:id,name,code,model,deleted_at', 'workshop:id,name,deleted_at', 'events.actor:id,name,deleted_at', 'parent.events.actor:id,name,deleted_at']);
         $summary = (clone $query)->selectRaw('stage, count(*) as batches, sum(quantity) as pieces')->groupBy('stage')->toBase()->get()->keyBy('stage');
         $awaiting = (clone $query)->whereNull('received_at')->selectRaw('stage, count(*) as batches, sum(quantity) as pieces')->groupBy('stage')->toBase()->get()->keyBy('stage');
         $visibleProductIds = (clone $query)->select('product_id')->distinct()->pluck('product_id');
@@ -58,18 +60,12 @@ class ProductionBatchController extends Controller
                 'stage_entered_at' => $batch->stage_entered_at->toISOString(),
                 'awaiting_receipt' => $batch->received_at === null,
                 'workshop' => $batch->workshop?->name,
+                'parent_code' => $batch->parent?->code,
+                'parent_events' => $batch->parent?->events->toBase()->map(fn (ProductionBatchEvent $event): array => $this->eventProps($event)) ?? [],
                 'notes' => $batch->notes,
-                'can_delete' => $batch->events->every(fn ($event): bool => $event->from_stage === null),
+                'can_delete' => $batch->parent_id === null && $batch->events->every(fn ($event): bool => $event->from_stage === null),
                 'can_undo' => ($last = $batch->events->last(fn ($event): bool => $event->from_stage !== $event->to_stage)) && $last->from_stage !== null && $last->from_stage->canMoveTo($last->to_stage),
-                'events' => $batch->events->toBase()->map(fn ($event): array => [
-                    'id' => $event->id,
-                    'from' => $event->from_stage?->label(),
-                    'to' => $event->to_stage->label(),
-                    'actor' => $event->actor->name,
-                    'notes' => $event->notes,
-                    'workshop' => $event->to_workshop_name,
-                    'occurred_at' => $event->occurred_at->toISOString(),
-                ]),
+                'events' => $batch->events->toBase()->map(fn (ProductionBatchEvent $event): array => $this->eventProps($event)),
             ]),
             'filterProducts' => $filterProducts,
             'products' => Gate::allows('create', ProductionBatch::class)
@@ -81,6 +77,16 @@ class ProductionBatchController extends Controller
             'isAdmin' => $user->isAdmin(),
             'workshops' => Workshop::query()->orderBy('name')->get(['id', 'name', 'type', 'is_active']),
         ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function eventProps(ProductionBatchEvent $event): array
+    {
+        return [
+            'id' => $event->id, 'from' => $event->from_stage?->label(), 'to' => $event->to_stage->label(),
+            'actor' => $event->actor->name, 'notes' => $event->notes, 'workshop' => $event->to_workshop_name,
+            'kind' => $event->kind, 'occurred_at' => $event->occurred_at->toISOString(),
+        ];
     }
 
     public function store(Request $request, ManageProductionBatch $action): RedirectResponse
@@ -108,6 +114,30 @@ class ProductionBatchController extends Controller
         ], [], ['stage' => 'etapa atual', 'target' => 'próxima etapa', 'version' => 'lote']);
         $action->advance($batch, ProductionStage::from($data['stage']), ProductionStage::from($data['target']), (int) $data['version'], $request->user(), isset($data['workshop_id']) ? (int) $data['workshop_id'] : null);
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Lote enviado para a próxima etapa.']);
+
+        return back();
+    }
+
+    public function split(Request $request, ProductionBatch $batch, ManageProductionBatch $action): RedirectResponse
+    {
+        Gate::authorize('viewAny', ProductionBatch::class);
+        $data = $request->validate([
+            'stage' => ['required', Rule::enum(ProductionStage::class)],
+            'target' => ['required', Rule::enum(ProductionStage::class)],
+            'version' => ['required', 'integer', 'min:1'],
+            'allocations' => ['required', 'array', 'min:2'],
+            'allocations.*.workshop_id' => ['required', 'integer', 'distinct'],
+            'allocations.*.quantity' => ['required', 'integer', 'min:1', 'max:'.ProductionBatch::MAX_QUANTITY],
+        ], [], ['allocations' => 'distribuição', 'allocations.*.workshop_id' => 'oficina', 'allocations.*.quantity' => 'quantidade']);
+        $allocations = [];
+        foreach ($request->array('allocations') as $row) {
+            if (! is_array($row)) {
+                throw ValidationException::withMessages(['allocations' => 'Informe uma distribuição válida.']);
+            }
+            $allocations[] = ['workshop_id' => (int) $row['workshop_id'], 'quantity' => (int) $row['quantity']];
+        }
+        $action->split($batch, ProductionStage::from($data['stage']), ProductionStage::from($data['target']), (int) $data['version'], $request->user(), $allocations);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Lote dividido e enviado às oficinas.']);
 
         return back();
     }

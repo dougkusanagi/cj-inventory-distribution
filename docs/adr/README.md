@@ -58,3 +58,5 @@ ADRs iniciais:
 - [0029 — Confirmação de recebimento de lotes](0029-recebimento-de-lotes.md)
 
 - [0030 — Oficinas nas etapas de produção](0030-oficinas-de-producao.md)
+
+- [0031 — Divisão de lotes entre oficinas](0031-divisao-de-lotes.md)

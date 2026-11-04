@@ -8,6 +8,7 @@ use App\Models\ProductionBatch;
 use App\Models\User;
 use App\Models\Workshop;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -60,6 +61,7 @@ class ManageProductionBatch
                 throw ValidationException::withMessages(['version' => 'Este lote já foi movido para '.$batch->stage->label().' por '.$name.'.']);
             }
             Gate::forUser($actor)->authorize('advance', $batch);
+            $this->assertNotSplit($batch);
             if ($batch->received_at === null) {
                 throw ValidationException::withMessages(['batch' => 'Confirme o recebimento antes de enviar este lote.']);
             }
@@ -89,12 +91,60 @@ class ManageProductionBatch
         }, 5);
     }
 
+    /**
+     * @param  array<int, array{workshop_id: int, quantity: int}>  $allocations
+     * @return Collection<int, ProductionBatch>
+     */
+    public function split(ProductionBatch $batch, ProductionStage $expected, ProductionStage $target, int $version, User $actor, array $allocations): Collection
+    {
+        return DB::transaction(function () use ($batch, $expected, $target, $version, $actor, $allocations): Collection {
+            $actor = User::query()->whereKey($actor->id)->lockForUpdate()->firstOrFail();
+            if (! $actor->canManageProductionStage($expected)) {
+                throw new AuthorizationException;
+            }
+            $batch = ProductionBatch::query()->whereKey($batch->id)->lockForUpdate()->firstOrFail();
+            Gate::forUser($actor)->authorize('advance', $batch);
+            $this->assertVersion($batch, $version);
+            $this->assertNotSplit($batch);
+            if ($batch->stage !== $expected || $batch->received_at === null || ! $expected->canMoveTo($target)) {
+                throw ValidationException::withMessages(['batch' => 'O lote deve estar recebido e seguir para a próxima etapa.']);
+            }
+            $ids = array_column($allocations, 'workshop_id');
+            $quantities = array_column($allocations, 'quantity');
+            if (count($ids) < 2 || count($ids) !== count(array_unique($ids)) || count($ids) !== count($quantities) || collect($quantities)->contains(fn ($quantity): bool => ! $this->isValidSplitQuantity($quantity)) || array_sum($quantities) !== $batch->quantity) {
+                throw ValidationException::withMessages(['allocations' => 'Informe oficinas diferentes e quantidades positivas cuja soma seja igual ao total do lote.']);
+            }
+            $workshops = Workshop::query()->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+            if ($workshops->count() !== count($ids) || $workshops->contains(fn (Workshop $workshop): bool => ! $workshop->is_active || $workshop->type->value !== $target->value)) {
+                throw ValidationException::withMessages(['allocations' => 'Selecione oficinas ativas para a etapa de destino.']);
+            }
+            $batch->update(['split_at' => now(), 'version' => $batch->version + 1]);
+            $this->record($batch, $batch->stage, $batch->stage, $actor, 'Lote dividido entre oficinas.', $batch->workshop, $batch->workshop, 'split');
+            $children = collect();
+            foreach ($allocations as $allocation) {
+                $workshop = $workshops->get($allocation['workshop_id']);
+                $child = ProductionBatch::query()->create([
+                    'code' => 'TEMP-'.Str::uuid(), 'product_id' => $batch->product_id,
+                    'parent_id' => $batch->id, 'quantity' => $allocation['quantity'],
+                    'stage' => $target, 'stage_entered_at' => now(), 'workshop_id' => $workshop->id,
+                    'notes' => $batch->notes, 'created_by' => $actor->id, 'version' => 1,
+                ]);
+                $child->update(['code' => 'L-'.str_pad((string) $child->id, 6, '0', STR_PAD_LEFT)]);
+                $this->record($child, null, $target, $actor, 'Dividido do lote '.$batch->code.'.', null, $workshop, 'split_child');
+                $children->push($child);
+            }
+
+            return $children;
+        }, 5);
+    }
+
     public function receive(ProductionBatch $batch, int $version, User $actor): ProductionBatch
     {
         return DB::transaction(function () use ($batch, $version, $actor): ProductionBatch {
             $actor = User::query()->whereKey($actor->id)->lockForUpdate()->firstOrFail();
             $batch = ProductionBatch::query()->whereKey($batch->id)->lockForUpdate()->firstOrFail();
             Gate::forUser($actor)->authorize('advance', $batch);
+            $this->assertNotSplit($batch);
             $this->assertVersion($batch, $version);
             if ($batch->received_at !== null) {
                 throw ValidationException::withMessages(['batch' => 'Este lote já foi recebido.']);
@@ -112,6 +162,7 @@ class ManageProductionBatch
             $actor = User::query()->whereKey($actor->id)->lockForUpdate()->firstOrFail();
             $batch = ProductionBatch::query()->whereKey($batch->id)->lockForUpdate()->firstOrFail();
             Gate::forUser($actor)->authorize('undo', $batch);
+            $this->assertNotSplit($batch);
             $this->assertVersion($batch, $version);
             $reason = trim($reason);
             if ($reason === '') {
@@ -138,8 +189,9 @@ class ManageProductionBatch
             $actor = User::query()->whereKey($actor->id)->lockForUpdate()->firstOrFail();
             $batch = ProductionBatch::query()->whereKey($batch->id)->lockForUpdate()->firstOrFail();
             Gate::forUser($actor)->authorize('delete', $batch);
+            $this->assertNotSplit($batch);
             $this->assertVersion($batch, $version);
-            if ($batch->events()->whereNotNull('from_stage')->exists()) {
+            if ($batch->parent_id !== null || $batch->events()->whereNotNull('from_stage')->exists()) {
                 throw ValidationException::withMessages(['batch' => 'Um lote que já avançou não pode ser excluído.']);
             }
             $batch->delete();
@@ -153,7 +205,19 @@ class ManageProductionBatch
         }
     }
 
-    private function record(ProductionBatch $batch, ?ProductionStage $from, ProductionStage $to, User $actor, ?string $notes, ?Workshop $fromWorkshop = null, ?Workshop $toWorkshop = null): void
+    private function isValidSplitQuantity(mixed $quantity): bool
+    {
+        return is_int($quantity) && $quantity > 0;
+    }
+
+    private function assertNotSplit(ProductionBatch $batch): void
+    {
+        if ($batch->split_at !== null) {
+            throw ValidationException::withMessages(['batch' => 'Este lote foi dividido e não pode ser alterado.']);
+        }
+    }
+
+    private function record(ProductionBatch $batch, ?ProductionStage $from, ProductionStage $to, User $actor, ?string $notes, ?Workshop $fromWorkshop = null, ?Workshop $toWorkshop = null, ?string $kind = null): void
     {
         $batch->events()->create([
             'from_stage' => $from,
@@ -166,6 +230,7 @@ class ManageProductionBatch
             'to_workshop_id' => $toWorkshop?->id,
             'from_workshop_name' => $fromWorkshop?->name,
             'to_workshop_name' => $toWorkshop?->name,
+            'kind' => $kind,
         ]);
     }
 }

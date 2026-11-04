@@ -22,8 +22,9 @@ use LogicException;
  * @property int|null $to_workshop_id
  * @property string|null $from_workshop_name
  * @property string|null $to_workshop_name
+ * @property string|null $kind
  */
-#[Fillable(['production_batch_id', 'from_stage', 'to_stage', 'quantity', 'actor_id', 'notes', 'occurred_at', 'from_workshop_id', 'to_workshop_id', 'from_workshop_name', 'to_workshop_name'])]
+#[Fillable(['production_batch_id', 'from_stage', 'to_stage', 'quantity', 'actor_id', 'notes', 'occurred_at', 'from_workshop_id', 'to_workshop_id', 'from_workshop_name', 'to_workshop_name', 'kind'])]
 class ProductionBatchEvent extends Model
 {
     public $timestamps = false;
