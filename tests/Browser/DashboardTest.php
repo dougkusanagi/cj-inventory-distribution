@@ -15,7 +15,8 @@ it('keeps the dashboard as the first main navigation item', function () {
     $this->actingAs(User::factory()->create());
 
     visit(route('dashboard', [], false))
-        ->assertScript("document.querySelector('[data-sidebar=\"content\"] [data-sidebar=\"menu-button\"] span')?.textContent === 'Painel'")
+        ->resize(1366, 900)
+        ->assertScript("document.querySelector('header nav a')?.textContent?.trim() === 'Painel'")
         ->assertNoJavaScriptErrors();
 });
 
@@ -23,23 +24,11 @@ it('marks only the current top-level page as active', function () {
     $this->actingAs(User::factory()->create());
 
     visit(route('dashboard', [], false))
-        ->assertAttribute(
-            '[data-sidebar="menu-button"]:has-text("Painel")',
-            'data-active',
-            'true',
-        )
-        ->click('[data-sidebar="menu-button"][aria-label="Produtos"]')
+        ->resize(1366, 900)
+        ->assertScript("Array.from(document.querySelectorAll('header nav [aria-current=page]')).map((item) => item.textContent?.trim()).join('|') === 'Painel'")
+        ->click('header nav a[href="/painel/produtos"]')
         ->assertRoute('products.index')
-        ->assertAttribute(
-            '[data-sidebar="menu-button"]:has-text("Painel")',
-            'data-active',
-            'false',
-        )
-        ->assertAttribute(
-            '[data-sidebar="menu-button"][aria-label="Produtos"]',
-            'data-active',
-            'true',
-        )
+        ->assertScript("Array.from(document.querySelectorAll('header nav [aria-current=page]')).map((item) => item.textContent?.trim()).join('|') === 'Produtos'")
         ->assertNoJavaScriptErrors();
 });
 
@@ -47,37 +36,25 @@ it('groups stock operations under the stock navigation', function () {
     $this->actingAs(User::factory()->create());
 
     visit(route('dashboard', [], false))
-        ->assertScript("Array.from(document.querySelectorAll('[data-sidebar=\"content\"] [data-sidebar=\"menu-button\"] span')).map((item) => item.textContent?.trim()).join('|') === 'Painel|Produtos|Categorias|Tipos de lavagem|Pedidos|Estoque|Produção|Fotos dos produtos|Usuários|Novidades'")
-        ->click('[data-sidebar="menu-button"]:has-text("Estoque")')
-        ->assertScript("Array.from(document.querySelectorAll('[data-sidebar=\"content\"] [data-sidebar=\"menu-sub-button\"] span')).map((item) => item.textContent?.trim()).join('|') === 'Balanço de estoque|Histórico de estoque'")
+        ->resize(1366, 900)
+        ->assertScript("Array.from(document.querySelectorAll('header nav a, header nav button')).map((item) => item.textContent?.trim()).join('|') === 'Painel|Produtos|Categorias|Tipos de lavagem|Pedidos|Estoque|Produção|Fotos dos produtos|Usuários'")
+        ->assertPresent('header a[aria-label="Novidades"]')
+        ->click('header nav button:has-text("Estoque")')
+        ->assertScript("Array.from(document.querySelectorAll('[data-slot=\"dropdown-menu-item\"]')).map((item) => item.textContent?.trim()).join('|') === 'Balanço de estoque|Histórico de estoque'")
+        ->click('[data-slot="dropdown-menu-item"]:has-text("Balanço de estoque")')
+        ->assertRoute('inventory.index')
+        ->assertMissing('[data-slot="dropdown-menu-item"]')
         ->assertNoJavaScriptErrors();
 });
 
-it('opens stock submenus from the compact sidebar', function () {
+it('keeps the main navigation on one line on common desktop widths', function (int $width) {
     $this->actingAs(User::factory()->create());
 
-    $page = visit(route('dashboard', [], false));
-    $page->script("document.cookie = 'sidebar_state=true; path=/';");
-    $page->refresh();
-
-    $page
-        ->click('[data-slot="sidebar-trigger"]')
-        ->assertAttribute('[data-slot="sidebar"]', 'data-state', 'collapsed')
-        ->click('[data-sidebar="menu-button"][aria-label="Estoque"]')
-        ->assertAttribute('[data-slot="sidebar"]', 'data-state', 'collapsed')
-        ->assertVisible(
-            '[data-testid="compact-navigation"][data-state="open"]',
-        )
-        ->assertSee('Balanço de estoque')
-        ->assertSee('Histórico de estoque')
-        ->click(
-            '[data-testid="compact-navigation"] [data-slot="dropdown-menu-item"]:has-text("Balanço de estoque")',
-        )
-        ->assertRoute('inventory.index')
-        ->assertAttribute('[data-slot="sidebar"]', 'data-state', 'collapsed')
-        ->assertMissing('[data-testid="compact-navigation"]')
+    visit(route('dashboard', [], false))
+        ->resize($width, 900)
+        ->assertScript("(() => { const nav = document.querySelector('header nav'); return getComputedStyle(nav).display !== 'none' && nav.scrollWidth <= nav.clientWidth + 1 && document.documentElement.scrollWidth <= window.innerWidth; })()")
         ->assertNoJavaScriptErrors();
-});
+})->with([1280, 1366, 1920]);
 
 it('shows the stock summary and opens the product catalog', function () {
     $user = User::factory()->create();
@@ -114,7 +91,7 @@ it('shows the stock summary and opens the product catalog', function () {
         ->assertNoJavaScriptErrors();
 });
 
-it('opens the order area from the sidebar', function () {
+it('opens the order area from the main navigation', function () {
     Order::factory()->create([
         'store_name' => 'Loja da timeline',
         'requester_name' => 'Ana',
@@ -122,7 +99,8 @@ it('opens the order area from the sidebar', function () {
     $this->actingAs(User::factory()->create());
 
     visit(route('dashboard', [], false))
-        ->click('[data-sidebar="menu-button"]:has-text("Pedidos")')
+        ->resize(1366, 900)
+        ->click('header nav a:has-text("Pedidos")')
         ->assertRoute('orders.index')
         ->assertSee('Acompanhe os pedidos e atualize cada solicitação.')
         ->assertSee('Loja da timeline')
@@ -142,17 +120,18 @@ it('opens the order area from the sidebar', function () {
         ->assertNoJavaScriptErrors();
 });
 
-it('closes the mobile sidebar after navigating from it', function () {
+it('closes the mobile menu after navigating from it', function () {
     $this->actingAs(User::factory()->create());
 
-    $page = visit(route('dashboard', [], false))
-        ->resize(390, 844);
-
-    $page
-        ->click('[data-slot="sidebar-trigger"]')
-        ->assertVisible('[data-slot="sidebar"][data-mobile="true"]')
-        ->click('[data-sidebar="menu-button"][aria-label="Produtos"]')
+    visit(route('dashboard', [], false))
+        ->resize(390, 844)
+        ->assertMissing('header nav')
+        ->click('@mobile-menu-button')
+        ->assertVisible('[data-slot="drawer-content"]')
+        ->assertSee('Balanço de estoque')
+        ->assertSee('Novidades')
+        ->click('[data-slot="drawer-content"] a[href="/painel/produtos"]')
         ->assertRoute('products.index')
-        ->assertMissing('[data-slot="sidebar"][data-mobile="true"]')
+        ->assertMissing('[data-slot="drawer-content"]')
         ->assertNoJavaScriptErrors();
 });

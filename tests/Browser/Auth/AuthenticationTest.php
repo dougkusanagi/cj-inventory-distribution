@@ -33,11 +33,11 @@ it('logs in and logs out through the authenticated navigation', function () {
         ->submit()
         ->assertRoute('dashboard')
         ->assertSee('O que está acontecendo no estoque?')
-        ->assertPresent('@sidebar-menu-button')
+        ->assertPresent('@user-menu-button')
         ->assertNoJavaScriptErrors();
 
     $page
-        ->click('@sidebar-menu-button')
+        ->click('@user-menu-button')
         ->assertPresent('@logout-button')
         ->click('@logout-button')
         ->assertRoute('home')
