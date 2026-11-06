@@ -1,21 +1,19 @@
-# Plano: painel de produção e ficha técnica
+# Plano: ficha técnica e perfil Modelagem
 
 Tipo: tarefa
 
+Situação: **adiado**. Começa só depois que o painel de produção estiver em
+uso (ver `docs/plans/painel-de-producao.md`, prioridades de 06/11/2026).
+
 ## Objetivo
 
-Preparar o inventário para evoluir para um PCP em entregas pequenas e úteis:
+A modelagem define insumos e consumo de cada peça sem ver preços; o
+administrador completa custos, preço de venda e aprova. As fases abaixo
+mantêm a numeração original (3 a 6); as fases 0 a 2, do painel de produção,
+estão concluídas e saíram deste plano.
 
-1. **Painel de produção:** o gerente vê quantas e quais peças estão em cada
-   etapa da fábrica (corte, costura, lavagem, tinturaria, acabamento,
-   ensacamento).
-2. **Ficha técnica (escopo B):** a modelagem define insumos e consumo de cada
-   peça sem ver preços; o administrador completa custos, preço de venda e
-   aprova.
-
-O plano termina quando as fases 1 a 6 estiverem integradas no `master`. O PCP
-completo (ordens de produção, consumo real, roteiro, tempos e custo realizado)
-fica para um plano próprio.
+O PCP completo (ordens de produção, consumo real, roteiro, tempos e custo
+realizado) fica para um plano próprio.
 
 ## Decisões já tomadas (30/10/2026)
 
@@ -95,131 +93,6 @@ fica para um plano próprio.
   1 e máximas permitidas.
 
 ## Passos
-
-### Fase 0 — Confirmações e ADR do painel
-
-- [x] Confirmar a lista final de etapas.
-- [x] Confirmar quem avança lotes (responsável de cada setor).
-- [x] Confirmar se uma peça pode pular etapas: não pode; a sequência é
-      sempre a mesma.
-- [x] Trocar o banco local e o dos testes para PostgreSQL no Podman (serviço
-      do lerd), igual à produção. Ajustar `.env`, `.env.example`,
-      `phpunit.xml` (hoje SQLite em memória), `composer ci:verify` e o
-      README. Rodar a suíte completa e corrigir o que depender de SQLite.
-      Commit próprio, antes da Fase 1. Motivo: o SQLite ignora
-      `lockForUpdate`, então os testes de concorrência só valem em
-      PostgreSQL.
-- [x] Escrever `docs/adr/0025-painel-de-producao-por-lotes.md`: lote como
-      unidade do painel, etapas fixas em enum, painel não cria estoque.
-
-### Fase 1 — Painel de produção ("A mínima")
-
-Branch sugerida: `feat/painel-producao`.
-
-**Dados**
-
-- Enum `App\Enums\ProductionStage` (string): `cutting` (Corte), `sewing`
-  (Costura), `washing` (Lavagem), `dyeing` (Tinturaria), `finishing`
-  (Acabamento), `bagging` (Ensacamento), `completed` (Concluído). Métodos
-  `label()`, `position()` e `canMoveTo(self $target)`.
-- Tabela `production_batches`:
-  - `code` único, gerado pelo sistema (ex.: `L-000123`);
-  - `product_id` com FK explícita, `restrictOnDelete`;
-  - `quantity` inteiro positivo, obrigatório;
-  - `stage` string (enum), `stage_entered_at`, `completed_at` nulo;
-  - `notes` opcional, `version` inteiro, `created_by`, timestamps, soft
-    deletes.
-- Tabela `production_batch_events` (imutável, no padrão de `order_events`):
-  `production_batch_id`, `from_stage` nulo na criação, `to_stage`, `quantity`,
-  `actor_id`, `notes`, `occurred_at`. Sem update nem delete.
-
-**Perfil Produção e setores**
-
-- `UserRole::Production` ("Produção"), mais a tabela
-  `production_stage_user` (`user_id`, `stage`, único pelo par). Um usuário
-  pode responder por mais de um setor, e um setor pode ter mais de um
-  responsável.
-- O responsável vê o painel filtrado pelos seus setores e só avança lotes que
-  estão neles. O Administrador vê e move tudo. Atribuir setores fica na
-  gestão de usuários (só admin).
-- Quem cria lotes: Administrador e os responsáveis pelo Corte.
-- O perfil Produção não acessa estoque, pedidos, catálogo nem custos.
-
-**Regras**
-
-- Criar lote: produto existente e ativo, quantidade > 0. O lote nasce no
-  Corte e gera o primeiro evento.
-- Avançar: o request envia a etapa de origem e a `version` esperadas. Se não
-  conferirem (toque duplo, outra pessoa já moveu), nada muda e a tela avisa
-  "Este lote já foi movido para X por Y".
-- Só se move para a etapa seguinte, sem pular etapas.
-- Na Fase 1, enviar basta: o lote aparece no setor seguinte assim que é
-  enviado. A confirmação de recebimento entra na Fase 2. Para isso, o evento
-  de envio já guarda quem enviou e quando, e o lote ganha depois
-  `received_at`/`received_by`, sem mudar os dados existentes.
-- Corrigir engano: "Desfazer último avanço", só para Administrador, com
-  motivo obrigatório. Gera um evento novo; não apaga o anterior.
-- `Ensacamento → Concluído` pede confirmação e **não** cria nem altera sacos,
-  movimentações ou pedidos.
-- Excluir lote: só Administrador, só antes de qualquer avanço, exclusão
-  lógica.
-
-**Interface** (`/painel/producao`)
-
-- Resumo no topo: peças e lotes por etapa, com "Aguardando ensacamento" em
-  destaque.
-- Celular: etapas em lista expansível ou abas, com cartões de lote (código,
-  produto, quantidade, há quantos dias está na etapa). Desktop: colunas por
-  etapa.
-- Cartão de lote com ação principal "Avançar para <próxima etapa>" e menu `⋯`
-  para ações raras (desfazer, excluir), conforme o padrão de cartões do
-  AGENTS.md.
-- Detalhes do lote num `Drawer` (`bottom` no celular, `right` no desktop),
-  com os eventos em ordem.
-- Novo lote num `Drawer`, com busca de produto (combobox) e quantidade.
-- Filtro por produto e por etapa, preservado ao voltar.
-- Estados vazio, carregando e erro com textos claros.
-
-**Testes**
-
-- Feature: criar, avançar, conflito de versão, avanço para trás rejeitado,
-  concluir sem criar saco (contagem de sacos e movimentações inalterada),
-  desfazer com motivo, permissões de cada perfil, produto inativo rejeitado.
-- Unit: `ProductionStage::canMoveTo`.
-- Browser: criar lote e avançar no celular e no desktop.
-- Seeder de demonstração com lotes em todas as etapas.
-
-**Critério de aceite:** o gerente abre o painel no celular e vê, por etapa,
-quantas peças e quais lotes existem, e a ação de ensacar continua manual.
-
-### Fase 2 — Evolução do painel
-
-Branch sugerida: `feat/painel-producao-oficinas`. Cada item pode ser uma
-entrega separada.
-
-- [x] **Confirmação de recebimento:** o lote enviado aparece como "A
-      receber" no setor seguinte até o responsável tocar em "Recebi". O
-      painel mostra separados "a receber" e "no setor". Opcional: informar
-      quantidade recebida diferente da enviada, com motivo (não implementada;
-      depende de regra própria para divergências).
-- [x] **Oficinas e terceiros:** cadastro simples (`workshops`: nome, tipo
-      costura/lavanderia/tinturaria, ativo). Ao avançar para uma etapa
-      externa, escolher a oficina. Mesmo padrão de cadastro rápido do
-      `WashType`.
-- [x] **Divisão de lote:** dividir um lote entre oficinas. Os lotes filhos
-      guardam `parent_id`; a soma das quantidades é igual ao total do lote
-      original, validada no servidor dentro de transação.
-- [x] **Grade opcional por tamanho:** `production_batch_items` (tamanho,
-      quantidade). Quando informada, a soma é igual à quantidade do lote.
-      Exibir com o componente de mini cards compartilhado
-      (`stock-size-breakdown`).
-- [x] **Alerta de lote parado:** destacar lotes há mais de N dias na mesma
-      etapa (N fixo, sem tela de ajuste). N = 5 dias, definido em
-      `ProductionBatch::STALLED_AFTER_DAYS` (valor assumido; confirmar com o
-      gerente). O aviso aparece no resumo da etapa e no cartão do lote; a
-      etapa Concluído nunca é marcada.
-- [ ] **Perdas e retrabalho (avaliar):** registrar peças perdidas num avanço,
-      com motivo. Só se o gerente pedir.
 
 ### Fase 3 — Perfil Modelagem e catálogos
 
@@ -344,7 +217,7 @@ padrão, apontamentos, custo realizado, RFID e integração com Bling.
 
 ## Tentativas que falharam
 
-- A primeira suíte PostgreSQL revelou expectativas de IDs sequenciais, transações abortadas após violações de unicidade e ausência de Bash no contêiner. Os testes afetados foram corrigidos e passam no host; a primeira execução de navegador também revelou expectativas de IDs, corrigidas e verificadas. A conferência completa foi reiniciada no host.
+- Nenhuma ainda.
 
 ## Dúvidas abertas
 
@@ -354,18 +227,6 @@ padrão, apontamentos, custo realizado, RFID e integração com Bling.
 
 ## Próximo passo
 
-A grade opcional está integrada (PR #72). O alerta de lote parado está
-implementado na branch `feat/alerta-lote-parado`, aguardando integração.
-"Perdas e retrabalho" fica de fora até o gerente pedir.
-
-Depois da integração, começar a Fase 3 numa branch nova
-(`feat/catalogo-insumos`): primeiro o ADR 0026 (perfil Modelagem e
-confidencialidade de custos), depois `UserRole::Modeling`, o catálogo de
-insumos e a biblioteca de máscara (`bun add react-number-format`).
-
-Nota de ambiente: o `composer` do lerd roda dentro do contêiner PHP, que não
-tem `bash` e limita a memória a 128 MB. Para a conferência completa, rodar
-`bash scripts/ci-verify.sh` no host e, onde faltar memória, chamar
-`php -d memory_limit=1G vendor/bin/pest` e `php vendor/bin/phpstan analyse
---memory-limit=1G`. Dois testes de `DeployScriptTest` falham no contêiner por
-falta de `bash`.
+Esperar o painel de produção entrar em uso. Depois, abrir a branch
+`feat/catalogo-insumos` e começar pelo ADR 0026 (perfil Modelagem e
+confidencialidade de custos).
