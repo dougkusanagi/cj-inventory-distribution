@@ -56,8 +56,9 @@ para depois, em `docs/plans/ficha-tecnica.md`.
 
 ### 1. Integrar o que está pronto
 
-- [ ] Integrar `feat/alerta-lote-parado` no `master` (precisa de autorização
-      para push e merge).
+- [ ] Integrar `feat/alerta-lote-parado`, `feat/menu-superior` e
+      `feat/quadro-producao` no `master` (precisa de autorização para push e
+      merge). `feat/quadro-producao` já contém os outros dois.
 
 ### 2. Fim do fluxo: "Enviar para o estoque" e "No estoque"
 
@@ -75,21 +76,22 @@ Branch sugerida: `feat/producao-no-estoque`.
 
 ### 3. Quadro horizontal do admin no desktop
 
-Branch sugerida: `feat/quadro-producao`.
+Branch: `feat/quadro-producao` (inclui `feat/menu-superior` e
+`feat/alerta-lote-parado`).
 
-- [ ] No desktop (`md` ou mais), cada setor é uma coluna lado a lado, na
+- [x] No desktop (`md` ou mais), cada setor é uma coluna lado a lado, na
       ordem do fluxo, com rolagem horizontal só no quadro. O topo da coluna
-      mostra o nome do setor, peças, lotes, "a receber" e lotes parados.
-- [ ] Dentro de cada coluna, os cartões dos lotes com produto, quantidade,
-      oficina, há quanto tempo estão ali e a ação principal ("Recebi" ou
-      "Enviar para…").
-- [ ] Os cartões de resumo atuais saem do topo para não repetir a mesma
-      informação; o resumo fica no topo de cada coluna.
-- [ ] No celular, os setores continuam um abaixo do outro.
-- [ ] O responsável de setor vê o mesmo layout, só com os seus setores; com
-      um setor só, a coluna ocupa a largura disponível.
-- [ ] Capturas em 390, 768, 1366 e 1920 px, com nomes longos e setores
-      vazios; teste de navegador sem rolagem horizontal da página.
+      mostra peças, lotes, "a receber", "no setor" e lotes parados.
+- [x] Cada coluna tem altura limitada à tela e rola por dentro, para a barra
+      de rolagem horizontal ficar sempre ao alcance.
+- [x] Os cartões de resumo do topo da página saíram; o resumo fica no topo
+      de cada coluna (no celular, no topo de cada setor).
+- [x] O cartão do lote usa container queries: em coluna estreita, a ação
+      fica abaixo do título; em cartão largo, ao lado do título.
+- [x] Com um ou dois setores visíveis, as colunas ocupam a largura
+      disponível. O filtro "Etapa" some para quem tem um setor só.
+- [x] Testes de navegador do quadro (admin no desktop e no celular,
+      responsável de um setor) e capturas em 390, 1366 e 1920 px.
 
 ### 4. Implantar e colocar em uso
 

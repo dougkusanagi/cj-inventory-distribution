@@ -194,3 +194,31 @@ it('warns about batches stalled in the same stage without overflowing the cards'
         ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
         ->assertScript("document.querySelectorAll('[data-testid=production-batch]').length === 2");
 })->with([390, 1366]);
+
+it('shows every sector side by side for the admin on desktop and stacked on mobile', function (): void {
+    $this->actingAs(User::factory()->admin()->create());
+    ProductionBatch::factory()->inStage(ProductionStage::Sewing)->create();
+
+    visit(route('production.index', [], false))
+        ->resize(1366, 900)
+        ->assertScript("Array.from(document.querySelectorAll('[data-testid=production-stage]')).map((column) => Math.round(column.getBoundingClientRect().top)).every((top, index, tops) => top === tops[0])")
+        ->assertScript("(() => { const board = document.querySelector('[data-testid=production-board]'); return board.scrollWidth > board.clientWidth && document.documentElement.scrollWidth <= window.innerWidth; })()")
+        ->screenshot(filename: 'producao-quadro-1366')
+        ->resize(390, 844)
+        ->assertScript("(() => { const columns = Array.from(document.querySelectorAll('[data-testid=production-stage]')); return columns.length === 7 && columns.every((column, index) => index === 0 || column.getBoundingClientRect().top > columns[index - 1].getBoundingClientRect().top); })()")
+        ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
+        ->assertNoJavaScriptErrors();
+});
+
+it('gives a single-sector worker the full width without the stage filter', function (): void {
+    $worker = User::factory()->production(ProductionStage::Sewing)->create();
+    ProductionBatch::factory()->inStage(ProductionStage::Sewing)->create();
+    $this->actingAs($worker);
+
+    visit(route('production.index', [], false))
+        ->resize(1366, 900)
+        ->assertMissing('#stage-filter')
+        ->assertScript("document.querySelectorAll('[data-testid=production-stage]').length === 1")
+        ->assertScript("(() => { const column = document.querySelector('[data-testid=production-stage]').getBoundingClientRect(); const board = document.querySelector('[data-testid=production-board]').getBoundingClientRect(); return column.width >= board.width - 1; })()")
+        ->assertNoJavaScriptErrors();
+});

@@ -130,6 +130,43 @@ const labels: Record<string, string> = {
     completed: 'Concluído',
 };
 
+function StageSummary({
+    stage,
+    stalledAfterDays,
+}: {
+    stage: Stage;
+    stalledAfterDays: number;
+}) {
+    return (
+        <div className="mt-2 grid gap-1 text-sm font-normal">
+            <p>
+                <span className="text-2xl font-semibold">{stage.pieces}</span>{' '}
+                {stage.pieces === 1 ? 'peça' : 'peças'}
+                {stage.value === 'bagging' && ' aguardando ensacamento'} ·{' '}
+                {stage.batches} {stage.batches === 1 ? 'lote' : 'lotes'}
+            </p>
+            {stage.stalled_batches > 0 && (
+                <p className="flex items-center gap-1.5 font-medium text-highlight">
+                    <WarningIcon className="size-4 shrink-0" />
+                    {stage.stalled_batches === 1
+                        ? '1 lote parado'
+                        : `${stage.stalled_batches} lotes parados`}{' '}
+                    há mais de {stalledAfterDays} dias
+                </p>
+            )}
+            {stage.value !== 'completed' && (
+                <p className="text-muted-foreground">
+                    A receber: {stage.awaiting_batches} lotes ·{' '}
+                    {stage.awaiting_pieces} peças
+                    <br />
+                    No setor: {stage.batches - stage.awaiting_batches} lotes ·{' '}
+                    {stage.pieces - stage.awaiting_pieces} peças
+                </p>
+            )}
+        </div>
+    );
+}
+
 function BatchDrawer({
     products,
     maxQuantity,
@@ -468,7 +505,7 @@ export default function ProductionIndex({
     return (
         <>
             <Head title="Produção" />
-            <div className="grid gap-6 p-4 md:p-6">
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-6 p-4 md:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-semibold">Produção</h1>
@@ -500,80 +537,42 @@ export default function ProductionIndex({
                         {errors.version ?? errors.batch}
                     </p>
                 )}
-                <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-                    {stages.map((stage) => (
-                        <Card key={stage.value} className="gap-1 p-4">
-                            <p className="font-medium">
-                                {stage.value === 'bagging'
-                                    ? 'Aguardando ensacamento'
-                                    : stage.label}
-                            </p>
-                            <p className="text-2xl font-semibold">
-                                {stage.pieces}{' '}
-                                {stage.pieces === 1 ? 'peça' : 'peças'}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                                {stage.batches}{' '}
-                                {stage.batches === 1 ? 'lote' : 'lotes'}
-                            </p>
-                            {stage.stalled_batches > 0 && (
-                                <p className="flex items-center gap-1.5 text-sm font-medium text-highlight">
-                                    <WarningIcon className="size-4 shrink-0" />
-                                    {stage.stalled_batches === 1
-                                        ? '1 lote parado'
-                                        : `${stage.stalled_batches} lotes parados`}{' '}
-                                    há mais de {stalledAfterDays} dias
-                                </p>
-                            )}
-                            {stage.value !== 'completed' && (
-                                <p className="text-sm text-muted-foreground">
-                                    A receber: {stage.awaiting_batches} lotes ·{' '}
-                                    {stage.awaiting_pieces} peças
-                                    <br />
-                                    No setor:{' '}
-                                    {stage.batches -
-                                        stage.awaiting_batches}{' '}
-                                    lotes ·{' '}
-                                    {stage.pieces - stage.awaiting_pieces} peças
-                                </p>
-                            )}
-                        </Card>
-                    ))}
-                </div>
                 <div className="flex flex-wrap gap-3">
-                    <div className="min-w-48">
-                        <Label htmlFor="stage-filter">Etapa</Label>
-                        <Select
-                            value={filters.stage ?? 'all'}
-                            onValueChange={(value) =>
-                                router.get(
-                                    index.url(),
-                                    {
-                                        ...filters,
-                                        stage: value === 'all' ? '' : value,
-                                    },
-                                    { preserveState: true },
-                                )
-                            }
-                        >
-                            <SelectTrigger id="stage-filter">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">
-                                    Todas as etapas
-                                </SelectItem>
-                                {stages.map((stage) => (
-                                    <SelectItem
-                                        key={stage.value}
-                                        value={stage.value}
-                                    >
-                                        {stage.label}
+                    {stages.length > 1 && (
+                        <div className="min-w-48">
+                            <Label htmlFor="stage-filter">Etapa</Label>
+                            <Select
+                                value={filters.stage ?? 'all'}
+                                onValueChange={(value) =>
+                                    router.get(
+                                        index.url(),
+                                        {
+                                            ...filters,
+                                            stage: value === 'all' ? '' : value,
+                                        },
+                                        { preserveState: true },
+                                    )
+                                }
+                            >
+                                <SelectTrigger id="stage-filter">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">
+                                        Todas as etapas
                                     </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                                    {stages.map((stage) => (
+                                        <SelectItem
+                                            key={stage.value}
+                                            value={stage.value}
+                                        >
+                                            {stage.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                     <div className="min-w-48">
                         <Label htmlFor="product-filter">Produto</Label>
                         <SearchableSelect
@@ -618,17 +617,28 @@ export default function ProductionIndex({
                         </Button>
                     </div>
                 )}
-                <div className="grid items-start gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+                <div
+                    data-testid="production-board"
+                    className="flex flex-col gap-6 md:flex-row md:items-start md:gap-4 md:overflow-x-auto md:pb-4"
+                >
                     {stages
                         .filter(
                             (stage) =>
                                 !filters.stage || filters.stage === stage.value,
                         )
                         .map((stage) => (
-                            <section key={stage.value} className="min-w-0">
+                            <section
+                                key={stage.value}
+                                data-testid="production-stage"
+                                className="min-w-0 md:max-h-[calc(100dvh-7rem)] md:min-w-80 md:flex-1 md:overflow-y-auto md:overscroll-contain md:rounded-2xl md:border md:border-border/70 md:bg-muted/40 md:p-3"
+                            >
                                 <details open>
                                     <summary className="cursor-pointer font-semibold">
                                         {stage.label}
+                                        <StageSummary
+                                            stage={stage}
+                                            stalledAfterDays={stalledAfterDays}
+                                        />
                                     </summary>
                                     <div className="mt-3 grid gap-3">
                                         {batches
@@ -684,7 +694,7 @@ export default function ProductionIndex({
                                                                 )}
                                                             <Card
                                                                 data-testid="production-batch"
-                                                                className="min-w-0 gap-3 p-4"
+                                                                className="@container min-w-0 gap-3 p-4"
                                                             >
                                                                 <div className="flex items-start justify-between gap-2">
                                                                     <button
@@ -706,7 +716,7 @@ export default function ProductionIndex({
                                                                     </button>
                                                                     {next && (
                                                                         <Button
-                                                                            className="hidden h-11 shrink-0 md:inline-flex"
+                                                                            className="hidden h-11 shrink-0 @md:inline-flex"
                                                                             disabled={
                                                                                 busy !==
                                                                                 null
@@ -807,7 +817,7 @@ export default function ProductionIndex({
                                                                 </div>
                                                                 {next && (
                                                                     <Button
-                                                                        className="h-11 w-full md:hidden"
+                                                                        className="h-11 w-full @md:hidden"
                                                                         disabled={
                                                                             busy !==
                                                                             null
