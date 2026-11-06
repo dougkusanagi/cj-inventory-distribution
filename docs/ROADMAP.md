@@ -6,9 +6,9 @@ O roadmap descreve direção, não compromisso de implementação imediata.
 
 O painel de lotes acompanha as etapas fixas da fábrica e confirma o
 recebimento em cada setor, permite atribuir oficinas, dividir lotes e informar grade por tamanho;
-a evolução para ficha
-técnica está no
-[plano de produção e ficha técnica](plans/producao-e-ficha-tecnica.md).
+o foco atual está no
+[plano do painel de produção](plans/painel-de-producao.md), e a ficha técnica,
+adiada, está no [plano da ficha técnica](plans/ficha-tecnica.md).
 A produção não cria sacos automaticamente.
 
 ## Catálogo e pedidos para lojistas — plano vigente
