@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ProductionStage;
 use Database\Factories\ProductionBatchFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -36,10 +37,32 @@ class ProductionBatch extends Model
 {
     public const MAX_QUANTITY = 1000000;
 
+    /**
+     * A batch is stalled when it stays in the same stage for more than this many days.
+     */
+    public const STALLED_AFTER_DAYS = 5;
+
     /** @use HasFactory<ProductionBatchFactory> */
     use HasFactory;
 
     use SoftDeletes;
+
+    /**
+     * Batches that have been in an unfinished stage for more than the stalled limit.
+     *
+     * @param  Builder<ProductionBatch>  $query
+     */
+    public function scopeStalled(Builder $query): void
+    {
+        $query->where('stage', '!=', ProductionStage::Completed->value)
+            ->where('stage_entered_at', '<', now()->subDays(self::STALLED_AFTER_DAYS));
+    }
+
+    public function isStalled(): bool
+    {
+        return $this->stage !== ProductionStage::Completed
+            && $this->stage_entered_at->lt(now()->subDays(self::STALLED_AFTER_DAYS));
+    }
 
     /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo

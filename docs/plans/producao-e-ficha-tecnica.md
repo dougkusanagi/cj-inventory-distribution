@@ -213,8 +213,11 @@ entrega separada.
       quantidade). Quando informada, a soma é igual à quantidade do lote.
       Exibir com o componente de mini cards compartilhado
       (`stock-size-breakdown`).
-- [ ] **Alerta de lote parado:** destacar lotes há mais de N dias na mesma
-      etapa (N fixo em configuração, sem tela de ajuste).
+- [x] **Alerta de lote parado:** destacar lotes há mais de N dias na mesma
+      etapa (N fixo, sem tela de ajuste). N = 5 dias, definido em
+      `ProductionBatch::STALLED_AFTER_DAYS` (valor assumido; confirmar com o
+      gerente). O aviso aparece no resumo da etapa e no cartão do lote; a
+      etapa Concluído nunca é marcada.
 - [ ] **Perdas e retrabalho (avaliar):** registrar peças perdidas num avanço,
       com motivo. Só se o gerente pedir.
 
@@ -351,8 +354,18 @@ padrão, apontamentos, custo realizado, RFID e integração com Bling.
 
 ## Próximo passo
 
-A divisão de lotes está integrada no PR #71. A grade opcional está
-implementada na branch `feat/grade-producao`, incluindo sua distribuição entre
-os filhos. A conferência completa passou com 423 testes da aplicação e 125
-testes de navegador; integrar a grade antes do alerta de lote parado.
-O SQLite anterior permanece no disco.
+A grade opcional está integrada (PR #72). O alerta de lote parado está
+implementado na branch `feat/alerta-lote-parado`, aguardando integração.
+"Perdas e retrabalho" fica de fora até o gerente pedir.
+
+Depois da integração, começar a Fase 3 numa branch nova
+(`feat/catalogo-insumos`): primeiro o ADR 0026 (perfil Modelagem e
+confidencialidade de custos), depois `UserRole::Modeling`, o catálogo de
+insumos e a biblioteca de máscara (`bun add react-number-format`).
+
+Nota de ambiente: o `composer` do lerd roda dentro do contêiner PHP, que não
+tem `bash` e limita a memória a 128 MB. Para a conferência completa, rodar
+`bash scripts/ci-verify.sh` no host e, onde faltar memória, chamar
+`php -d memory_limit=1G vendor/bin/pest` e `php vendor/bin/phpstan analyse
+--memory-limit=1G`. Dois testes de `DeployScriptTest` falham no contêiner por
+falta de `bash`.

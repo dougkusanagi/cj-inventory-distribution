@@ -60,6 +60,9 @@ class ProductionDemoSeeder extends Seeder
             if (in_array($stage, [ProductionStage::Washing, ProductionStage::Finishing], true)) {
                 $action->receive($batch, $batch->version, $actor);
             }
+            if ($stage === ProductionStage::Sewing) {
+                $batch->update(['stage_entered_at' => now()->subDays(ProductionBatch::STALLED_AFTER_DAYS + 4)]);
+            }
         }
 
         $marker = 'Demonstração de produção: divisão entre oficinas';
