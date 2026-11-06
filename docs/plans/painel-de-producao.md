@@ -104,6 +104,40 @@ Branch sugerida: `feat/quadro-producao`.
 
 - [ ] Itens a definir com o retorno do passo 4.
 
+## Ideias para avaliar
+
+### Quadro como fluxograma em canvas infinito (06/11/2026)
+
+Ideia do usuário para a visão do admin: mostrar a produção como um
+fluxograma num canvas infinito, em estilo moderno.
+
+- Cada setor é um nó (Corte → Costura → Lavagem → Tinturaria → Acabamento →
+  Ensacamento → No estoque), com nome, peças, lotes, "a receber" e lotes
+  parados.
+- Os nós ficam ligados por linhas animadas que mostram o sentido do fluxo. A
+  animação pode indicar onde há lotes "a receber" (enviados e ainda não
+  confirmados).
+- O canvas permite arrastar e dar zoom. Ao tocar num setor, os lotes dele
+  abrem num `Drawer`, com as mesmas ações de hoje ("Recebi", "Enviar
+  para…").
+- Biblioteca candidata: `@xyflow/react` (React Flow), madura e própria para
+  isso. Adicionar a dependência precisa de aprovação.
+
+Pontos a resolver antes de implementar:
+
+- **Relação com o passo 3:** substitui o quadro horizontal ou vira uma
+  segunda visão ("Quadro" e "Fluxo")? Recomendação: entregar primeiro o
+  quadro horizontal, mais simples e útil no dia a dia, e avaliar o fluxograma
+  depois do uso real.
+- **Celular:** arrastar e dar zoom num canvas é ruim com o polegar e conflita
+  com a rolagem. No celular, manter a lista vertical; o canvas fica para o
+  desktop.
+- **Acessibilidade:** o canvas precisa de navegação por teclado e de uma
+  alternativa em lista com os mesmos dados.
+- **Movimento:** respeitar `prefers-reduced-motion`, parando as animações.
+- **Desempenho:** com muitos lotes, mostrar nos nós só os totais e carregar
+  os lotes ao abrir o setor.
+
 ## Fora deste plano
 
 - Ficha técnica, perfil Modelagem, insumos, preços e custos:
