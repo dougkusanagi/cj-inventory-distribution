@@ -33,6 +33,7 @@ class ProductionBatchController extends Controller
             ->with(['product:id,name,code,model,deleted_at', 'workshop:id,name,deleted_at', 'items', 'events.actor:id,name,deleted_at', 'parent.events.actor:id,name,deleted_at']);
         $summary = (clone $query)->selectRaw('stage, count(*) as batches, sum(quantity) as pieces')->groupBy('stage')->toBase()->get()->keyBy('stage');
         $awaiting = (clone $query)->whereNull('received_at')->selectRaw('stage, count(*) as batches, sum(quantity) as pieces')->groupBy('stage')->toBase()->get()->keyBy('stage');
+        $stalled = (clone $query)->stalled()->selectRaw('stage, count(*) as batches')->groupBy('stage')->toBase()->get()->keyBy('stage');
         $visibleProductIds = (clone $query)->select('product_id')->distinct()->pluck('product_id');
         $filterProducts = Product::withTrashed()->whereIn('id', $visibleProductIds)->orderBy('name')->get(['id', 'name']);
         $batches = $query->when($filters['product'] ?? null, fn ($query, $product) => $query->where('product_id', $product))
@@ -48,6 +49,7 @@ class ProductionBatchController extends Controller
                     'pieces' => (int) ($summary->get($stage->value)->pieces ?? 0),
                     'awaiting_batches' => (int) ($awaiting->get($stage->value)->batches ?? 0),
                     'awaiting_pieces' => (int) ($awaiting->get($stage->value)->pieces ?? 0),
+                    'stalled_batches' => (int) ($stalled->get($stage->value)->batches ?? 0),
                 ])->values(),
             'batches' => $batches->map(fn (ProductionBatch $batch): array => [
                 'id' => $batch->id,
@@ -58,6 +60,7 @@ class ProductionBatchController extends Controller
                 'stage' => $batch->stage->value,
                 'version' => $batch->version,
                 'stage_entered_at' => $batch->stage_entered_at->toISOString(),
+                'stalled' => $batch->isStalled(),
                 'awaiting_receipt' => $batch->received_at === null,
                 'workshop' => $batch->workshop?->name,
                 'parent_code' => $batch->parent?->code,
@@ -74,6 +77,7 @@ class ProductionBatchController extends Controller
                 : [],
             'filters' => ['product' => $filters['product'] ?? null, 'stage' => $filters['stage'] ?? null],
             'maxQuantity' => ProductionBatch::MAX_QUANTITY,
+            'stalledAfterDays' => ProductionBatch::STALLED_AFTER_DAYS,
             'canCreate' => Gate::allows('create', ProductionBatch::class),
             'isAdmin' => $user->isAdmin(),
             'workshops' => Workshop::query()->orderBy('name')->get(['id', 'name', 'type', 'is_active']),

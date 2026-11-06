@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Production\ManageProductionBatch;
+use App\Enums\ProductionStage;
 use App\Enums\WorkshopType;
 use App\Models\Product;
 use App\Models\ProductionBatch;
@@ -172,4 +173,24 @@ it('creates, edits and divides a size grid without losing quantities', function 
         ->assertSee('Oficina: Costura A')->assertSee('Oficina: Costura B')
         ->assertNoJavaScriptErrors();
     expect(ProductionBatch::query()->where('parent_id', $batch->id)->count())->toBe(2);
+})->with([390, 1366]);
+
+it('warns about batches stalled in the same stage without overflowing the cards', function (int $width): void {
+    $this->actingAs(User::factory()->admin()->create());
+    $product = Product::factory()->create(['name' => 'Calça parada '.str_repeat('SUPERCALCA', 6), 'is_active' => true]);
+    ProductionBatch::factory()->create([
+        'product_id' => $product->id,
+        'stage' => ProductionStage::Washing,
+        'received_at' => now(),
+        'stage_entered_at' => now()->subDays(ProductionBatch::STALLED_AFTER_DAYS + 4),
+    ]);
+    ProductionBatch::factory()->create(['product_id' => $product->id, 'stage' => ProductionStage::Washing, 'received_at' => now()]);
+
+    visit(route('production.index', [], false))
+        ->resize($width, 844)
+        ->assertSee('1 lote parado há mais de '.ProductionBatch::STALLED_AFTER_DAYS.' dias')
+        ->assertSee('Parado há 9 dias na mesma etapa')
+        ->screenshot(filename: "producao-parado-{$width}")
+        ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
+        ->assertScript("document.querySelectorAll('[data-testid=production-batch]').length === 2");
 })->with([390, 1366]);

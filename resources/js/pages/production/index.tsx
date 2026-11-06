@@ -3,6 +3,7 @@ import {
     ArrowRightIcon,
     DotsThreeIcon,
     PlusCircleIcon,
+    WarningIcon,
 } from '@phosphor-icons/react';
 import { Fragment, useState, type FormEvent } from 'react';
 import {
@@ -63,6 +64,7 @@ type Stage = {
     pieces: number;
     awaiting_batches: number;
     awaiting_pieces: number;
+    stalled_batches: number;
 };
 type Event = {
     id: number;
@@ -86,6 +88,7 @@ type Batch = {
     stage: string;
     version: number;
     stage_entered_at: string;
+    stalled: boolean;
     workshop: string | null;
     parent_code: string | null;
     parent_events: Event[];
@@ -104,6 +107,7 @@ type Props = {
     filters: { product: number | null; stage: string | null };
     canCreate: boolean;
     maxQuantity: number;
+    stalledAfterDays: number;
     isAdmin: boolean;
     workshops: Workshop[];
 };
@@ -413,6 +417,7 @@ export default function ProductionIndex({
     filters,
     canCreate,
     maxQuantity,
+    stalledAfterDays,
     isAdmin,
     workshops,
 }: Props) {
@@ -511,6 +516,15 @@ export default function ProductionIndex({
                                 {stage.batches}{' '}
                                 {stage.batches === 1 ? 'lote' : 'lotes'}
                             </p>
+                            {stage.stalled_batches > 0 && (
+                                <p className="flex items-center gap-1.5 text-sm font-medium text-highlight">
+                                    <WarningIcon className="size-4 shrink-0" />
+                                    {stage.stalled_batches === 1
+                                        ? '1 lote parado'
+                                        : `${stage.stalled_batches} lotes parados`}{' '}
+                                    há mais de {stalledAfterDays} dias
+                                </p>
+                            )}
                             {stage.value !== 'completed' && (
                                 <p className="text-sm text-muted-foreground">
                                     A receber: {stage.awaiting_batches} lotes ·{' '}
@@ -834,6 +848,17 @@ export default function ProductionIndex({
                                                                         }
                                                                         compact
                                                                     />
+                                                                )}
+                                                                {batch.stalled && (
+                                                                    <p className="flex items-center gap-1.5 text-sm font-medium text-highlight">
+                                                                        <WarningIcon className="size-4 shrink-0" />
+                                                                        Parado
+                                                                        há{' '}
+                                                                        {days}{' '}
+                                                                        dias na
+                                                                        mesma
+                                                                        etapa
+                                                                    </p>
                                                                 )}
                                                                 <p className="text-sm text-muted-foreground">
                                                                     {batch.awaiting_receipt &&
