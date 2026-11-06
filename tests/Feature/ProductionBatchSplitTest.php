@@ -2,7 +2,6 @@
 
 use App\Actions\Production\ManageProductionBatch;
 use App\Enums\ProductionStage;
-use App\Enums\UserRole;
 use App\Enums\WorkshopType;
 use App\Models\Product;
 use App\Models\ProductionBatch;
@@ -10,7 +9,6 @@ use App\Models\StockMovement;
 use App\Models\StockOfferVolume;
 use App\Models\User;
 use App\Models\Workshop;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 it('splits a batch between workshops without counting its parent twice', function (): void {
@@ -87,8 +85,7 @@ it('does not reveal the state of a batch belonging to another sector', function 
     $action = app(ManageProductionBatch::class);
     $batch = $action->create(Product::factory()->create(['is_active' => true]), 10, null, $admin);
     $action->advance($batch, ProductionStage::Cutting, ProductionStage::Sewing, 1, $admin);
-    $worker = User::factory()->create(['role' => UserRole::Production]);
-    DB::table('production_stage_user')->insert(['user_id' => $worker->id, 'stage' => 'cutting']);
+    $worker = User::factory()->production(ProductionStage::Cutting)->create();
     $first = Workshop::factory()->create(['type' => WorkshopType::Sewing]);
     $second = Workshop::factory()->create(['type' => WorkshopType::Sewing]);
 

@@ -1,10 +1,8 @@
 <?php
 
 use App\Enums\ProductionStage;
-use App\Enums\UserRole;
 use App\Models\ProductionBatch;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 
 it('marks only unfinished batches past the stalled limit', function (): void {
     $limit = ProductionBatch::STALLED_AFTER_DAYS;
@@ -40,8 +38,7 @@ it('counts stalled batches only in the stages a worker may see', function (): vo
     $limit = ProductionBatch::STALLED_AFTER_DAYS;
     ProductionBatch::factory()->create(['stage' => ProductionStage::Cutting, 'stage_entered_at' => now()->subDays($limit + 2)]);
     ProductionBatch::factory()->create(['stage' => ProductionStage::Sewing, 'stage_entered_at' => now()->subDays($limit + 2)]);
-    $worker = User::factory()->create(['role' => UserRole::Production]);
-    DB::table('production_stage_user')->insert(['user_id' => $worker->id, 'stage' => ProductionStage::Sewing->value]);
+    $worker = User::factory()->production(ProductionStage::Sewing)->create();
 
     $this->actingAs($worker)->get(route('production.index'))
         ->assertInertia(fn ($page) => $page
