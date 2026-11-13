@@ -21,7 +21,7 @@ enum ProductionStage: string
             self::Dyeing => 'Tinturaria',
             self::Finishing => 'Acabamento',
             self::Bagging => 'Ensacamento',
-            self::Completed => 'Concluído',
+            self::Completed => 'No estoque',
         };
     }
 

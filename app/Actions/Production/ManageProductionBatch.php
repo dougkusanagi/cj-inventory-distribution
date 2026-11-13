@@ -244,7 +244,7 @@ class ManageProductionBatch
             $this->assertNotSplit($batch);
             $this->assertVersion($batch, $version);
             if ($batch->received_at === null || $batch->stage === ProductionStage::Completed) {
-                throw ValidationException::withMessages(['batch' => 'A grade só pode ser alterada em um lote recebido e ainda não concluído.']);
+                throw ValidationException::withMessages(['batch' => 'A grade só pode ser alterada em um lote recebido que ainda não foi enviado para o estoque.']);
             }
             $normalized = $this->normalizeSizes($sizes, $batch->quantity);
             $before = $this->snapshotSizes($batch);

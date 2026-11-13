@@ -252,6 +252,45 @@
     .ds-press:active:not(:disabled) {
         transform: scale(0.975);
     }
+
+    /* Barra horizontal larga e sempre visível no quadro de produção, usada
+       com frequência para clicar e arrastar entre os setores. */
+    .production-board-scrollbar::-webkit-scrollbar {
+        height: 16px;
+    }
+
+    .production-board-scrollbar::-webkit-scrollbar-track {
+        border-radius: 9999px;
+        background: var(--muted);
+    }
+
+    .production-board-scrollbar::-webkit-scrollbar-thumb {
+        border: 3px solid transparent;
+        border-radius: 9999px;
+        background: color-mix(
+                in oklab,
+                var(--muted-foreground) 75%,
+                transparent
+            )
+            padding-box;
+        cursor: grab;
+    }
+
+    .production-board-scrollbar::-webkit-scrollbar-thumb:hover {
+        background-color: var(--foreground);
+    }
+
+    .production-board-scrollbar::-webkit-scrollbar-thumb:active {
+        background-color: var(--action);
+        cursor: grabbing;
+    }
+
+    @supports not selector(::-webkit-scrollbar) {
+        .production-board-scrollbar {
+            scrollbar-color: var(--muted-foreground) var(--muted);
+            scrollbar-width: auto;
+        }
+    }
 }
 
 @keyframes ds-reveal {

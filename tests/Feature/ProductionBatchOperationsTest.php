@@ -13,16 +13,12 @@ use App\Models\StockOfferVolume;
 use App\Models\User;
 use Database\Seeders\ProductionDemoSeeder;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 
 function productionWorker(ProductionStage $stage): User
 {
-    $user = User::factory()->create(['role' => UserRole::Production]);
-    DB::table('production_stage_user')->insert(['user_id' => $user->id, 'stage' => $stage->value]);
-
-    return $user;
+    return User::factory()->production($stage)->create();
 }
 
 it('creates an identified cutting batch and its first event', function (): void {
@@ -176,11 +172,30 @@ it('seeds identifiable production batches in every stage without duplicating the
     $this->seed(ProductionDemoSeeder::class);
     $this->seed(ProductionDemoSeeder::class);
 
-    expect(ProductionBatch::query()->count())->toBe(10)
-        ->and(ProductionBatch::query()->where('stage', 'cutting')->whereNull('split_at')->sole()->quantity)->toBe(1)
+    $board = ProductionBatch::query()->where('notes', 'like', 'Demonstração de produção: quadro %');
+
+    expect(ProductionBatch::query()->count())->toBe(23)
+        ->and(ProductionBatch::query()->where('notes', 'Demonstração de produção: cutting')->sole()->quantity)->toBe(1)
         ->and(ProductionBatch::query()->whereNotNull('parent_id')->sum('quantity'))->toBe(1000)
         ->and(ProductionBatch::query()->whereNotNull('parent_id')->with('items')->get()->sum(fn (ProductionBatch $batch) => $batch->items->sum('quantity')))->toBe(1000)
-        ->and(ProductionBatch::query()->where('stage', 'completed')->sole()->quantity)->toBe(1000000);
+        ->and(ProductionBatch::query()->where('notes', 'Demonstração de produção: completed')->sole()->quantity)->toBe(1000000)
+        ->and((clone $board)->count())->toBe(13)
+        ->and((clone $board)->whereNull('received_at')->count())->toBe(3)
+        ->and((clone $board)->stalled()->count())->toBe(3)
+        ->and((clone $board)->distinct()->pluck('stage')->count())->toBe(count(ProductionStage::cases()));
+});
+
+it('seeds one login per production sector without duplicating them', function (): void {
+    $this->seed(ProductionDemoSeeder::class);
+    $this->seed(ProductionDemoSeeder::class);
+
+    $sectors = fn (string $email): array => User::query()->where('email', $email)->sole()
+        ->productionStages()->pluck('stage')->sort()->values()->all();
+
+    expect(User::query()->where('role', UserRole::Production)->count())->toBe(7)
+        ->and($sectors('corte@example.com'))->toBe(['cutting'])
+        ->and($sectors('ensacamento@example.com'))->toBe(['bagging'])
+        ->and($sectors('multissetor@example.com'))->toBe(['dyeing', 'washing']);
 });
 
 it('denies production endpoints to other roles before validating input', function (): void {
@@ -278,4 +293,28 @@ it('can undo an advance after its receipt without erasing either event', functio
         ->and($batch->received_by)->toBeNull()
         ->and($batch->events()->count())->toBe(4);
     expect(fn () => $action->undo($batch, 'Outra correção', $batch->version, $admin))->toThrow(ValidationException::class);
+});
+
+it('searches batches by batch code or product name without changing the sector totals', function (): void {
+    $admin = User::factory()->admin()->create();
+    $skirt = ProductionBatch::factory()->inStage(ProductionStage::Sewing)->create([
+        'product_id' => Product::factory()->create(['name' => 'Saia Midi'])->id,
+    ]);
+    $pants = ProductionBatch::factory()->inStage(ProductionStage::Sewing)->create([
+        'product_id' => Product::factory()->create(['name' => 'Calça 100% algodão'])->id,
+    ]);
+
+    $this->actingAs($admin)->get(route('production.index', ['search' => $skirt->code]))
+        ->assertInertia(fn ($page) => $page->where('batches.0.id', $skirt->id)->count('batches', 1)
+            ->where('filters.search', $skirt->code)
+            ->where('stages.1.batches', 2));
+
+    $this->get(route('production.index', ['search' => 'midi']))
+        ->assertInertia(fn ($page) => $page->count('batches', 1)->where('batches.0.id', $skirt->id));
+
+    $this->get(route('production.index', ['search' => '100%']))
+        ->assertInertia(fn ($page) => $page->count('batches', 1)->where('batches.0.id', $pants->id));
+
+    $this->get(route('production.index', ['search' => '   ']))
+        ->assertInertia(fn ($page) => $page->count('batches', 2)->where('filters.search', ''));
 });

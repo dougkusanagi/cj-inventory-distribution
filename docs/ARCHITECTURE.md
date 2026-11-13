@@ -48,7 +48,7 @@ o recebimento registra autor e horário (ADR 0029). Costura, lavagem e
 tinturaria podem ser atribuídas a oficinas ativas, com nomes preservados nos
 eventos (ADR 0030). O administrador pode desfazer
 o último avanço com motivo e excluir um lote apenas antes do primeiro avanço.
-Concluir um lote não altera sacos ou movimentações de estoque (ADR 0025).
+Enviar um lote para o estoque (etapa "No estoque", valor `completed`) não altera sacos ou movimentações de estoque (ADR 0025).
 
 Um lote recebido pode ser dividido ao enviar para oficinas diferentes da próxima
 etapa. A operação bloqueia o lote e as oficinas, exige que a soma dos filhos
@@ -58,7 +58,7 @@ recebimento e mantêm vínculo com ele. A divisão não altera estoque (ADR 0031
 
 A grade opcional de `ProductionBatchItem` guarda tamanhos textuais e quantidades
 inteiras, cuja soma corresponde ao lote. Um usuário autorizado pode alterar ou
-limpar a grade de um lote recebido e não concluído; o evento guarda os valores
+limpar a grade de um lote recebido que ainda não foi para o estoque; o evento guarda os valores
 anteriores e posteriores. A divisão exige distribuir cada tamanho conhecido
 entre os filhos, sem alterar sacos de estoque (ADR 0032).
 

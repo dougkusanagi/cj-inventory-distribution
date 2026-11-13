@@ -2,7 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Enums\ProductionStage;
 use App\Enums\UserRole;
+use App\Models\ProductionStageAssignment;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -86,6 +88,20 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes): array => [
             'role' => UserRole::Marketing,
         ]);
+    }
+
+    /**
+     * Indicate that the user is responsible for the given production sectors.
+     */
+    public function production(ProductionStage ...$stages): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'role' => UserRole::Production,
+        ])->afterCreating(function (User $user) use ($stages): void {
+            foreach ($stages as $stage) {
+                ProductionStageAssignment::query()->create(['user_id' => $user->id, 'stage' => $stage->value]);
+            }
+        });
     }
 
     public function inactive(): static

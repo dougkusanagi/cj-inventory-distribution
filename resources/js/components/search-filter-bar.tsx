@@ -73,14 +73,19 @@ function isFieldActive(field: FilterField): boolean {
     return field.value !== (field.defaultValue ?? 'all');
 }
 
-function SearchField({
+export function SearchField({
     className,
     value,
     onClear,
+    label = 'Buscar produtos',
+    placeholder = searchPlaceholder,
     ...props
-}: Omit<ComponentProps<typeof Input>, 'type' | 'value'> & {
+}: Omit<ComponentProps<typeof Input>, 'type' | 'value' | 'placeholder'> & {
     value: string;
     onClear: () => void;
+    /** Texto curto exibido acima do valor e usado como nome acessível. */
+    label?: string;
+    placeholder?: string;
 }) {
     return (
         <div className="group/search relative min-w-0">
@@ -91,13 +96,13 @@ function SearchField({
                 aria-hidden="true"
                 className="pointer-events-none absolute top-2.5 left-14 text-xs leading-4 text-muted-foreground"
             >
-                Buscar produtos
+                {label}
             </span>
             <Input
                 type="search"
                 value={value}
-                placeholder={searchPlaceholder}
-                aria-label="Buscar produtos"
+                placeholder={placeholder}
+                aria-label={label}
                 className={cn(
                     'h-14 pt-6 pb-2 pl-14 text-base md:text-sm [&::-webkit-search-cancel-button]:appearance-none',
                     value !== '' && 'pr-14',
