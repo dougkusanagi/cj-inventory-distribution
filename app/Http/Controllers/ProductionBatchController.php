@@ -28,7 +28,9 @@ class ProductionBatchController extends Controller
         $filters = $request->validate([
             'product' => ['nullable', 'integer'],
             'stage' => ['nullable', Rule::enum(ProductionStage::class)],
+            'search' => ['nullable', 'string', 'max:100'],
         ]);
+        $search = trim((string) ($filters['search'] ?? ''));
         $query = ProductionBatch::query()->whereNull('split_at')->whereIn('stage', $allowedStages)
             ->with(['product:id,name,code,model,deleted_at', 'workshop:id,name,deleted_at', 'items', 'events.actor:id,name,deleted_at', 'parent.events.actor:id,name,deleted_at']);
         $summary = (clone $query)->selectRaw('stage, count(*) as batches, sum(quantity) as pieces')->groupBy('stage')->toBase()->get()->keyBy('stage');
@@ -38,6 +40,9 @@ class ProductionBatchController extends Controller
         $filterProducts = Product::withTrashed()->whereIn('id', $visibleProductIds)->orderBy('name')->get(['id', 'name']);
         $batches = $query->when($filters['product'] ?? null, fn ($query, $product) => $query->where('product_id', $product))
             ->when($filters['stage'] ?? null, fn ($query, $stage) => $query->where('stage', $stage))
+            ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
+                ->whereLike('code', '%'.addcslashes($search, '%_\\').'%')
+                ->orWhereHas('product', fn ($query) => $query->withTrashed()->whereLike('name', '%'.addcslashes($search, '%_\\').'%'))))
             ->orderBy('stage_entered_at')->orderBy('id')->get();
 
         return Inertia::render('production/index', [
@@ -75,7 +80,7 @@ class ProductionBatchController extends Controller
             'products' => Gate::allows('create', ProductionBatch::class)
                 ? Product::query()->where('is_active', true)->orderBy('name')->get(['id', 'name', 'code', 'model'])
                 : [],
-            'filters' => ['product' => $filters['product'] ?? null, 'stage' => $filters['stage'] ?? null],
+            'filters' => ['product' => $filters['product'] ?? null, 'stage' => $filters['stage'] ?? null, 'search' => $search],
             'maxQuantity' => ProductionBatch::MAX_QUANTITY,
             'stalledAfterDays' => ProductionBatch::STALLED_AFTER_DAYS,
             'canCreate' => Gate::allows('create', ProductionBatch::class),

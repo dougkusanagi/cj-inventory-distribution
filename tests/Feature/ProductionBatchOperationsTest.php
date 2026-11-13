@@ -294,3 +294,27 @@ it('can undo an advance after its receipt without erasing either event', functio
         ->and($batch->events()->count())->toBe(4);
     expect(fn () => $action->undo($batch, 'Outra correção', $batch->version, $admin))->toThrow(ValidationException::class);
 });
+
+it('searches batches by batch code or product name without changing the sector totals', function (): void {
+    $admin = User::factory()->admin()->create();
+    $skirt = ProductionBatch::factory()->inStage(ProductionStage::Sewing)->create([
+        'product_id' => Product::factory()->create(['name' => 'Saia Midi'])->id,
+    ]);
+    $pants = ProductionBatch::factory()->inStage(ProductionStage::Sewing)->create([
+        'product_id' => Product::factory()->create(['name' => 'Calça 100% algodão'])->id,
+    ]);
+
+    $this->actingAs($admin)->get(route('production.index', ['search' => $skirt->code]))
+        ->assertInertia(fn ($page) => $page->where('batches.0.id', $skirt->id)->count('batches', 1)
+            ->where('filters.search', $skirt->code)
+            ->where('stages.1.batches', 2));
+
+    $this->get(route('production.index', ['search' => 'midi']))
+        ->assertInertia(fn ($page) => $page->count('batches', 1)->where('batches.0.id', $skirt->id));
+
+    $this->get(route('production.index', ['search' => '100%']))
+        ->assertInertia(fn ($page) => $page->count('batches', 1)->where('batches.0.id', $pants->id));
+
+    $this->get(route('production.index', ['search' => '   ']))
+        ->assertInertia(fn ($page) => $page->count('batches', 2)->where('filters.search', ''));
+});

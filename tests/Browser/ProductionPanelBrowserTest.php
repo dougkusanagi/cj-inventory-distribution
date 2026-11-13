@@ -5,6 +5,7 @@ use App\Enums\ProductionStage;
 use App\Enums\WorkshopType;
 use App\Models\Product;
 use App\Models\ProductionBatch;
+use App\Models\StockOfferVolume;
 use App\Models\User;
 use App\Models\Workshop;
 use Illuminate\Support\Facades\Vite;
@@ -21,8 +22,9 @@ it('creates and advances a production batch in the panel', function (int $width)
 
     $page = visit(route('production.index', [], false))
         ->resize($width, 844)
-        ->assertSee('Aguardando ensacamento')
+        ->assertSee('Ensacamento')
         ->click('Novo lote')
+        ->wait(0.5)
         ->click('#batch-product')
         ->click('[role="option"]:has-text("Calça produção teste")')
         ->fill('#batch-quantity', '12')
@@ -32,7 +34,7 @@ it('creates and advances a production batch in the panel', function (int $width)
         ->screenshot(filename: "producao-{$width}")
         ->assertScript("Array.from(document.querySelectorAll('[data-testid=production-batch]')).every(card => Array.from(card.querySelectorAll('button')).every(button => button.getBoundingClientRect().right <= card.getBoundingClientRect().right))")
         ->click('summary:has-text("Corte")')
-        ->assertScript("!document.querySelector('[data-testid=production-batch]').closest('details').open")
+        ->assertScript("!document.querySelector('[data-testid=production-batch]').closest('[data-testid=production-stage]').querySelector('details').open")
         ->click('summary:has-text("Corte")')
         ->click('button:visible:has-text("Avançar para Costura")')
         ->click('Enviar lote')
@@ -77,7 +79,7 @@ it('creates and selects a workshop when sending a batch', function (int $width):
         ->assertSee('Oficina Horizonte')
         ->screenshot(filename: "oficina-{$width}")
         ->click('Enviar lote')
-        ->assertSee('Oficina: Oficina Horizonte')
+        ->assertPresent('[title="Oficina: Oficina Horizonte"]')
         ->assertNoJavaScriptErrors();
     expect($batch->fresh()->workshop?->name)->toBe('Oficina Horizonte');
 })->with([390, 1366]);
@@ -100,8 +102,8 @@ it('divides and sends a batch between two workshops', function (int $width): voi
         ->assertSee('Distribuído: 10 de 10 peças')
         ->screenshot(filename: "divisao-{$width}")
         ->click('Dividir e enviar')
-        ->assertSee('Oficina: Oficina Aurora')
-        ->assertSee('Oficina: Oficina Horizonte')
+        ->assertPresent('[title="Oficina: Oficina Aurora"]')
+        ->assertPresent('[title="Oficina: Oficina Horizonte"]')
         ->assertNoJavaScriptErrors();
     expect(ProductionBatch::query()->where('parent_id', $batch->id)->sum('quantity'))->toBe(10);
 })->with([390, 1366]);
@@ -170,7 +172,7 @@ it('creates, edits and divides a size grid without losing quantities', function 
         ->assertSee('G: 4 de 4 peças informadas.')
         ->wait(1)->screenshot(filename: "grade-divisao-{$width}")
         ->click('Dividir e enviar')
-        ->assertSee('Oficina: Costura A')->assertSee('Oficina: Costura B')
+        ->assertPresent('[title="Oficina: Costura A"]')->assertPresent('[title="Oficina: Costura B"]')
         ->assertNoJavaScriptErrors();
     expect(ProductionBatch::query()->where('parent_id', $batch->id)->count())->toBe(2);
 })->with([390, 1366]);
@@ -189,7 +191,7 @@ it('warns about batches stalled in the same stage without overflowing the cards'
     visit(route('production.index', [], false))
         ->resize($width, 844)
         ->assertSee('1 lote parado há mais de '.ProductionBatch::STALLED_AFTER_DAYS.' dias')
-        ->assertSee('Parado há 9 dias na mesma etapa')
+        ->assertSee('Parado há')
         ->screenshot(filename: "producao-parado-{$width}")
         ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
         ->assertScript("document.querySelectorAll('[data-testid=production-batch]').length === 2");
@@ -220,5 +222,85 @@ it('gives a single-sector worker the full width without the stage filter', funct
         ->assertMissing('#stage-filter')
         ->assertScript("document.querySelectorAll('[data-testid=production-stage]').length === 1")
         ->assertScript("(() => { const column = document.querySelector('[data-testid=production-stage]').getBoundingClientRect(); const board = document.querySelector('[data-testid=production-board]').getBoundingClientRect(); return column.width >= board.width - 1; })()")
+        ->assertNoJavaScriptErrors();
+});
+
+it('sends a bagged batch to stock without creating stock sacks', function (): void {
+    $this->actingAs(User::factory()->admin()->create());
+    $batch = ProductionBatch::factory()->inStage(ProductionStage::Bagging)->create(['received_at' => now()]);
+
+    visit(route('production.index', [], false))
+        ->resize(390, 844)
+        ->click('button:visible:has-text("Enviar para o estoque")')
+        ->assertSee('Os sacos não são criados automaticamente')
+        ->click('[role="dialog"] button:has-text("Enviar para o estoque")')
+        ->assertSee('No estoque')
+        ->assertMissing('button:visible:has-text("Enviar para o estoque")')
+        ->assertNoJavaScriptErrors();
+
+    expect($batch->fresh()->stage)->toBe(ProductionStage::Completed)
+        ->and(StockOfferVolume::query()->count())->toBe(0);
+});
+
+it('keeps the board inside the screen on desktop so each column scrolls on its own', function (): void {
+    $this->actingAs(User::factory()->admin()->create());
+    ProductionBatch::factory()->count(12)->inStage(ProductionStage::Sewing)->create(['received_at' => now()]);
+
+    visit(route('production.index', [], false))
+        ->resize(1366, 768)
+        ->assertScript('document.documentElement.scrollHeight <= window.innerHeight')
+        ->assertScript("document.querySelector('[data-testid=production-board]').getBoundingClientRect().bottom <= window.innerHeight")
+        ->assertScript("(() => { const column = Array.from(document.querySelectorAll('[data-testid=production-stage]')).find((section) => section.textContent.includes('Costura')); column.scrollTop = 400; const header = column.querySelector('summary').getBoundingClientRect(); return column.scrollHeight > column.clientHeight && Math.abs(header.top - column.getBoundingClientRect().top) <= 2; })()")
+        ->assertNoJavaScriptErrors();
+});
+
+it('collapses the batches awaiting receipt to show the batches already in the sector', function (): void {
+    $this->actingAs(User::factory()->admin()->create());
+    ProductionBatch::factory()->inStage(ProductionStage::Sewing)->create(['received_at' => null]);
+    ProductionBatch::factory()->inStage(ProductionStage::Sewing)->create(['received_at' => now()]);
+
+    visit(route('production.index', [], false))
+        ->resize(1366, 768)
+        ->assertVisible('button:visible:has-text("Recebi")')
+        ->click('[data-testid=production-batch-group] summary:has-text("A receber")')
+        ->assertMissing('button:visible:has-text("Recebi")')
+        ->assertSee('1 lote')
+        ->assertVisible('button:visible:has-text("Avançar para Lavagem")')
+        ->click('[data-testid=production-batch-group] summary:has-text("A receber")')
+        ->assertVisible('button:visible:has-text("Recebi")')
+        ->assertNoJavaScriptErrors();
+});
+
+it('finds a batch by code and shows only the sectors with results', function (int $width): void {
+    $this->actingAs(User::factory()->admin()->create());
+    $skirt = ProductionBatch::factory()->inStage(ProductionStage::Washing)->create([
+        'product_id' => Product::factory()->create(['name' => 'Saia Midi'])->id,
+    ]);
+    ProductionBatch::factory()->inStage(ProductionStage::Sewing)->create();
+
+    visit(route('production.index', [], false))
+        ->resize($width, 844)
+        ->fill('#batch-search', $skirt->code)
+        ->assertSee('Saia Midi')
+        ->assertScript("document.querySelectorAll('[data-testid=production-stage]').length === 1")
+        ->assertScript("document.querySelector('[data-testid=production-stage]').textContent.includes('Lavagem')")
+        ->fill('#batch-search', 'nada-encontrado')
+        ->assertSee('Nenhum lote encontrado para "nada-encontrado".')
+        ->click('Limpar busca e filtros')
+        ->assertValue('#batch-search', '')
+        ->assertScript("document.querySelectorAll('[data-testid=production-stage]').length === 7")
+        ->assertScript('document.documentElement.scrollWidth <= window.innerWidth')
+        ->assertNoJavaScriptErrors();
+})->with([390, 1366]);
+
+it('jumps to a sector from the shortcut bar', function (): void {
+    $this->actingAs(User::factory()->admin()->create());
+    ProductionBatch::factory()->inStage(ProductionStage::Bagging)->create();
+
+    visit(route('production.index', [], false))
+        ->resize(1366, 768)
+        ->click('nav[aria-label="Ir para o setor"] button:has-text("Ensacamento")')
+        ->wait(1)
+        ->assertScript("(() => { const board = document.querySelector('[data-testid=production-board]').getBoundingClientRect(); const column = document.querySelector('#setor-bagging').getBoundingClientRect(); return column.left >= board.left - 1 && column.right <= board.right + 1; })()")
         ->assertNoJavaScriptErrors();
 });

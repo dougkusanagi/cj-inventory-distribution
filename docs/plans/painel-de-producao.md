@@ -64,14 +64,15 @@ para depois, em `docs/plans/ficha-tecnica.md`.
 
 Branch sugerida: `feat/producao-no-estoque`.
 
-- [ ] Trocar o rótulo de `ProductionStage::Completed` para "No estoque" no
+- [x] Trocar o rótulo de `ProductionStage::Completed` para "No estoque" no
       enum e no mapa de rótulos da tela.
-- [ ] No Ensacamento, o botão passa a ser "Enviar para o estoque", e a
+- [x] No Ensacamento, o botão passa a ser "Enviar para o estoque", e a
       confirmação explica que os sacos continuam sendo cadastrados à mão.
-- [ ] Revisar os textos que citam "Concluído" (tela, toasts, seeders, README,
+- [x] Revisar os textos que citam "Concluído" (tela, toasts, seeders, README,
       `docs/ARCHITECTURE.md`, ADR 0025 se necessário) e os testes que dependem
-      deles.
-- [ ] Teste: enviar para o estoque não altera sacos, movimentações nem
+      deles. O ADR 0025 (aceito) não foi editado: o valor gravado continua
+      `completed` e só o texto exibido mudou.
+- [x] Teste: enviar para o estoque não altera sacos, movimentações nem
       pedidos (já existe para "Concluído"; ajustar o texto).
 
 ### 3. Quadro horizontal do admin no desktop

@@ -119,7 +119,7 @@ link para abertura da mensagem no WhatsApp.
 ### Produção
 
 O painel de produção acompanha lotes de produtos ativos por Corte, Costura,
-Lavagem, Tinturaria, Acabamento, Ensacamento e Concluído. Cada responsável
+Lavagem, Tinturaria, Acabamento, Ensacamento e No estoque. Cada responsável
 acessa os setores atribuídos e envia lotes apenas à próxima etapa. O setor
 de destino confirma o recebimento antes de avançar novamente. Costura, lavagem
 e tinturaria podem ser internas ou atribuídas a uma oficina cadastrada; o
@@ -129,8 +129,12 @@ O lote original fica no histórico e a divisão não pode ser desfeita pelo pain
 A grade por tamanho é opcional e sua soma deve corresponder ao lote. Ao dividir
 uma grade conhecida, informe a quantidade de cada tamanho em cada oficina.
 O histórico registra
-cada mudança e evita sobrescritas por alterações simultâneas. Concluir um lote
-não cadastra sacos de estoque, que continuam sendo registrados manualmente.
+cada mudança e evita sobrescritas por alterações simultâneas. No Ensacamento, a
+ação "Enviar para o estoque" leva o lote para "No estoque". Ela não cadastra
+sacos de estoque, que continuam sendo registrados manualmente.
+O painel busca lotes por código ou produto, oferece atalhos para cada setor e
+se atualiza sozinho a cada 30 segundos, exceto com uma gaveta ou confirmação
+aberta.
 
 ### Pedido
 
