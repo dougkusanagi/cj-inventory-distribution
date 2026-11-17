@@ -84,7 +84,12 @@ export function AdvanceWorkshopDrawer({
         allocations: [emptyAllocation(), emptyAllocation()],
     });
     const workshopOptions = options
-        .filter((item) => item.is_active && item.type === target)
+        .filter(
+            (item) =>
+                item.is_active &&
+                (item.type === target ||
+                    (target === 'washing' && item.type === 'dyeing')),
+        )
         .map((item) => ({ value: String(item.id), label: item.name }));
     async function createWorkshop(event: FormEvent) {
         event.preventDefault();

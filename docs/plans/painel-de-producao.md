@@ -109,37 +109,18 @@ Branch: `feat/quadro-producao` (inclui `feat/menu-superior` e
 
 ## Ideias para avaliar
 
-### Quadro como fluxograma em canvas infinito (06/11/2026)
+### Fluxo em canvas: feito em 16/11/2026
 
-Ideia do usuário para a visão do admin: mostrar a produção como um
-fluxograma num canvas infinito, em estilo moderno.
+A visão Fluxo (`/painel/producao/fluxo`) foi feita ao lado do Quadro (ADR
+0033). Melhorias que ficaram para depois do uso real:
 
-- Cada setor é um nó (Corte → Costura → Lavagem → Tinturaria → Acabamento →
-  Ensacamento → No estoque), com nome, peças, lotes, "a receber" e lotes
-  parados.
-- Os nós ficam ligados por linhas animadas que mostram o sentido do fluxo. A
-  animação pode indicar onde há lotes "a receber" (enviados e ainda não
-  confirmados).
-- O canvas permite arrastar e dar zoom. Ao tocar num setor, os lotes dele
-  abrem num `Drawer`, com as mesmas ações de hoje ("Recebi", "Enviar
-  para…").
-- Biblioteca candidata: `@xyflow/react` (React Flow), madura e própria para
-  isso. Adicionar a dependência precisa de aprovação.
-
-Pontos a resolver antes de implementar:
-
-- **Relação com o passo 3:** substitui o quadro horizontal ou vira uma
-  segunda visão ("Quadro" e "Fluxo")? Recomendação: entregar primeiro o
-  quadro horizontal, mais simples e útil no dia a dia, e avaliar o fluxograma
-  depois do uso real.
-- **Celular:** arrastar e dar zoom num canvas é ruim com o polegar e conflita
-  com a rolagem. No celular, manter a lista vertical; o canvas fica para o
-  desktop.
-- **Acessibilidade:** o canvas precisa de navegação por teclado e de uma
-  alternativa em lista com os mesmos dados.
-- **Movimento:** respeitar `prefers-reduced-motion`, parando as animações.
-- **Desempenho:** com muitos lotes, mostrar nos nós só os totais e carregar
-  os lotes ao abrir o setor.
+- Abrir direto na visão em lista para quem tem um setor só.
+- Carregar o histórico do lote só ao abrir a gaveta, para as páginas abrirem
+  mais rápido.
+- Borda do lote que esquenta aos poucos até o limite de lote parado.
+- Subgrupos por oficina em Costura, Lavagem e Tinturaria.
+- Lote que desliza até o setor seguinte depois de avançar.
+- Modo TV (tela cheia, sem menu) para um monitor na fábrica.
 
 ## Fora deste plano
 
@@ -172,3 +153,20 @@ Nota de ambiente: o `composer` do lerd roda no contêiner PHP, que não tem
 `php -d memory_limit=1G vendor/bin/pest` e
 `php vendor/bin/phpstan analyse --memory-limit=1G`. Dois testes de
 `DeployScriptTest` falham no contêiner por falta de `bash`.
+
+## Escolha final — 16/11/2026
+
+O usuário escolheu apenas o canvas. A rota principal abre o fluxo, o quadro foi removido e os testes foram adaptados (ADR 0035). Novidades agora usam índice geral e detalhes Markdown (ADR 0034).
+
+Conferência completa local aprovada: `composer ci:verify`, com 437 testes funcionais e 145 de navegador, formatação, lint, TypeScript, PHPStan e build. Capturas de Novidades e produção conferidas em mobile e desktop. Alterações mantidas sem commit, push ou integração.
+
+
+## Seleção visual de produto — 16/11/2026
+
+Concluída: botão em Novo lote abre painel com fotos navegáveis, busca e modos lista, cards compactos e cards grandes. A escolha preserva o formulário, e o modo de visualização fica salvo no dispositivo. A serialização de fotos foi compartilhada com o catálogo, sem novas dependências.
+
+Conferência completa local aprovada: `composer ci:verify`, com 438 testes funcionais e 148 de navegador. Capturas verificadas em 390, 768 e 1366 px, incluindo nomes longos e produto sem foto. Sem commit ou push.
+
+## Etapas e elementos do canvas — 16/11/2026
+
+Transição autorizada: Planejamento → Corte → Costura → Lavanderia → Acabamento → Estoque. Migração local aplicada, com eventos preservados e permissões reunidas. Lavanderia aceita oficinas de lavagem e tintura. Menu permite alternar os controles do canvas. Decisão registrada no ADR 0036. Conferência completa aprovada: composer ci:verify, com 440 testes funcionais e 151 testes de navegador. Capturas inspecionadas em 390, 768 e 1366 px. Sem commit ou push.

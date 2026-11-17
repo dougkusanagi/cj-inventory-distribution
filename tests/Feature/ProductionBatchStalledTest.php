@@ -31,7 +31,7 @@ it('shows stalled batches and a count per stage in the panel', function (): void
                 && $stages->firstWhere('value', 'completed')['stalled_batches'] === 0
                 && $stages->firstWhere('value', 'sewing')['stalled_batches'] === 0)
             ->where('batches', fn ($batches) => $batches->where('stalled', true)->count() === 2
-                && $batches->where('stalled', false)->count() === 2));
+                && $batches->where('stalled', false)->count() === 1));
 });
 
 it('counts stalled batches only in the stages a worker may see', function (): void {

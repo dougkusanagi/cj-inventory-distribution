@@ -76,16 +76,7 @@ class ProductResource extends JsonResource
             'images' => $this->whenLoaded('media', fn () => $this->media
                 ->where('collection_name', Product::MEDIA_COLLECTION)
                 ->sortBy('order_column')
-                ->map(function (Media $media): array {
-                    return [
-                        'id' => $media->id,
-                        'url' => $this->mediaUrl($media),
-                        'thumb_url' => $media->hasGeneratedConversion('thumb')
-                            ? $this->mediaUrl($media, 'thumb')
-                            : null,
-                        'name' => $media->name,
-                    ];
-                })
+                ->map(fn (Media $media): array => (new ProductImageResource($media))->resolve($request))
                 ->values()
                 ->all()),
             'notes' => $this->notes,
@@ -161,26 +152,5 @@ class ProductResource extends JsonResource
         }
 
         return 'Disponível para distribuição';
-    }
-
-    /**
-     * Return a media URL relative to the current application origin.
-     *
-     * The public disk may be configured with a development host that differs
-     * from the host used to open the application (for example, a LAN IP and
-     * localhost). A relative URL keeps the browser on the same origin.
-     */
-    private function mediaUrl(Media $media, ?string $conversion = null): string
-    {
-        $url = $conversion === null
-            ? $media->getUrl()
-            : $media->getUrl($conversion);
-        $parts = parse_url($url);
-
-        if ($parts === false || ! isset($parts['path'])) {
-            return $url;
-        }
-
-        return $parts['path'].(isset($parts['query']) ? '?'.$parts['query'] : '');
     }
 }

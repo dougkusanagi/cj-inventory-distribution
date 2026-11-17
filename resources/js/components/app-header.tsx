@@ -213,6 +213,11 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                         <DropdownMenuTrigger asChild>
                                             <button
                                                 type="button"
+                                                aria-current={
+                                                    isItemActive(item)
+                                                        ? 'page'
+                                                        : undefined
+                                                }
                                                 className={cn(
                                                     desktopItemStyles,
                                                     isItemActive(item) &&

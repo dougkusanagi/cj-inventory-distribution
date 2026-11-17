@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\Product;
+use App\Models\ProductionBatch;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -47,4 +50,21 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/** @param array<int, array{size: string, quantity: int}> $sizes */
+function receivedCuttingBatch(Product $product, int $quantity, ?string $notes, User $actor, array $sizes = []): ProductionBatch
+{
+    $batch = ProductionBatch::factory()->create([
+        'product_id' => $product->id, 'quantity' => $quantity, 'notes' => $notes, 'created_by' => $actor->id,
+    ]);
+    $batch->events()->create([
+        'from_stage' => null, 'to_stage' => 'cutting', 'quantity' => $quantity,
+        'actor_id' => $actor->id, 'occurred_at' => now(),
+    ]);
+    foreach ($sizes as $index => $item) {
+        $batch->items()->create([...$item, 'sort_order' => $index]);
+    }
+
+    return $batch;
 }

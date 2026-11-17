@@ -62,3 +62,11 @@ ADRs iniciais:
 - [0031 — Divisão de lotes entre oficinas](0031-divisao-de-lotes.md)
 
 - [0032 — Grade opcional em lotes de produção](0032-grade-de-producao.md)
+
+- [0033 — Fluxo de produção em canvas](0033-fluxo-de-producao-em-canvas.md)
+
+- [0034 — Novidades por entrega](0034-novidades-por-entrega.md)
+
+- [0035 — Produção somente em canvas](0035-producao-somente-canvas.md)
+
+- [0036 — Etapas de produção unificadas](0036-etapas-de-producao-unificadas.md)

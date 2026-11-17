@@ -1,0 +1,440 @@
+[
+    {
+        "title": "Histórico de novidades e manutenção",
+        "changes": [
+            {
+                "category": "added",
+                "text": "Adicionada a página pública “O que há de novo”, acessível pelo catálogo e pelo painel, com novidades, melhorias, correções e manutenção técnica explicadas em linguagem simples."
+            },
+            {
+                "category": "added",
+                "text": "O histórico apresenta as atualizações mais recentes primeiro, com datas, categorias, navegação entre páginas e escolha de aparência clara ou escura. Exibe somente as notas incluídas na versão instalada do sistema."
+            },
+            {
+                "category": "added",
+                "text": "Adicionada a geração automática de resumos das alterações com Codex CLI e login ChatGPT, sem chave de API. Os textos ficam disponíveis para revisão, e a versão revisada na descrição da alteração tem prioridade."
+            },
+            {
+                "category": "improved",
+                "text": "A publicação do histórico registra uma nota por alteração incorporada, sem duplicar ou substituir notas já publicadas ao repetir a execução. Resumos automáticos desatualizados são gerados novamente, e falhas podem ser recuperadas manualmente sem publicar textos inventados."
+            },
+            {
+                "category": "improved",
+                "text": "A automação utiliza rotinas da versão principal e geração em ambiente restrito à leitura, sem repassar credenciais de publicação ao gerador. Alterações de repositórios externos exigem revisão e acionamento manual."
+            },
+            {
+                "category": "improved",
+                "text": "Configurado e validado um serviço dedicado à geração do histórico, com início automático e funcionamento após o encerramento da sessão do usuário."
+            },
+            {
+                "category": "improved",
+                "text": "Adicionados testes para acesso público, ordenação, navegação entre páginas, revisão dos textos, publicação sem duplicações e tratamento de falhas. Os testes da automação passaram a integrar a verificação local; também foram aprovadas as verificações funcionais, de navegador, de qualidade do código, de compilação e das rotinas de implantação."
+            },
+            {
+                "category": "improved",
+                "text": "Documentados o funcionamento do histórico, as decisões técnicas, a configuração do serviço e os procedimentos de revisão, recuperação e publicação. A interface foi conferida em computador e celular, os dados de demonstração foram removidos e os arquivos temporários das ferramentas passaram a ser ignorados no controle de versões."
+            },
+            {
+                "category": "improved",
+                "text": "Documentada a falha do Bun 1.3.14 ao converter o registro de versões das dependências e a conversão bem-sucedida com Bun 1.4.2, com orientação para preservar esse registro na manutenção da ferramenta de produção. Nenhuma implantação real foi executada."
+            }
+        ],
+        "pr_number": 57,
+        "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/57",
+        "merged_at": "2026-10-01T19:41:14Z",
+        "commit": "0043fe01fab41c41fa2c8d7df8e33c54a56ac0a9",
+        "id": "pr-57",
+        "details_file": "pr-57.md"
+    },
+    {
+        "title": "Padronização das ferramentas e ajustes visuais",
+        "changes": [
+            {
+                "category": "improved",
+                "text": "Padronizado o uso do Bun 1.4.2 na configuração do projeto e na preparação dos testes automatizados, substituindo o registro de versões de dependências do npm pelo do Bun."
+            },
+            {
+                "category": "improved",
+                "text": "Atualizada a preparação do sistema e do deploy para instalar as versões registradas das dependências, sem recalculá-las, e gerar a interface com Bun. A instalação passa a falhar quando a lista de dependências diverge das versões registradas."
+            },
+            {
+                "category": "improved",
+                "text": "Realizada manutenção nas ferramentas e na configuração de dependências da interface para uso com Vite Plus."
+            },
+            {
+                "category": "improved",
+                "text": "Atualizada a documentação de desenvolvimento e produção com orientações sobre a versão do Bun, instalação, geração da interface e inclusão de dependências."
+            },
+            {
+                "category": "improved",
+                "text": "Ajustado o teste de deploy para conferir a instalação com versões fixadas das dependências. Os testes não foram executados neste PR."
+            },
+            {
+                "category": "improved",
+                "text": "Ajustados os filtros para unir visualmente o campo de seleção ao botão de adicionar, com mudanças nas bordas e no destaque de foco."
+            },
+            {
+                "category": "improved",
+                "text": "Reorganizada a janela de cadastro de tipos de lavagem em celulares e computadores, com ícone no título, novos espaçamentos e áreas separadas para formulário e ações."
+            }
+        ],
+        "pr_number": 59,
+        "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/59",
+        "merged_at": "2026-10-02T11:21:21Z",
+        "commit": "fae6a421850fc270e1dd75661e52b97cac0a9b21",
+        "id": "pr-59",
+        "details_file": "pr-59.md"
+    },
+    {
+        "title": "Formulários, filtros e produtos",
+        "changes": [
+            {
+                "category": "improved",
+                "text": "Padronizados a aparência, os tamanhos e os destaques de seleção, erro e indisponibilidade dos campos nos temas claro e escuro. O formulário de produtos e o botão de cadastro de lavagem acompanham esse padrão."
+            },
+            {
+                "category": "improved",
+                "text": "Busca e filtros receberam rótulos visíveis, destaque para filtros ativos, botão maior para limpar a busca e ajustes de espaçamento no celular. Campos com botão de cadastro anexo passaram a compartilhar o destaque de foco."
+            },
+            {
+                "category": "improved",
+                "text": "Listas de seleção receberam opções maiores, destaque da escolha atual e indicação visual de abertura. Também foram ajustados o posicionamento para evitar as bordas da tela e o respeito à preferência por menos animações."
+            },
+            {
+                "category": "improved",
+                "text": "Reorganizada a tabela de produtos em computador e celular, com ajustes nas fotos, na identificação, nos atributos, nos tamanhos e nas ações. Fotos de produtos inativos aparecem em tons de cinza."
+            },
+            {
+                "category": "added",
+                "text": "A tabela de produtos passou a oferecer acesso às observações e ao painel com detalhes do estoque por saco. Também recebeu uma barra que representa as proporções de peças disponíveis e reservadas, acompanhada das quantidades físicas, reservadas e baixadas."
+            },
+            {
+                "category": "improved",
+                "text": "Unificada a apresentação da disponibilidade entre cartões e tabela, incluindo peças e sacos disponíveis, uso interno e ausência de oferta. Os detalhes de quantidades tiveram o alinhamento ajustado, e os painéis laterais receberam um indicador visual na borda."
+            },
+            {
+                "category": "improved",
+                "text": "O catálogo passou a usar o logotipo colorido também no tema escuro."
+            },
+            {
+                "category": "improved",
+                "text": "Reorganizadas as partes internas que exibem campos, observações, disponibilidade e detalhes dos produtos, permitindo reutilizá-las nas diferentes visualizações. Também foi padronizada a formatação de uma nota existente do histórico, sem alterar seu conteúdo."
+            },
+            {
+                "category": "improved",
+                "text": "Atualizados os testes de navegador de cadastro e edição de produtos para acompanhar a tabela e os novos textos de estoque. A execução dos testes e das verificações de qualidade, formatação, geração do sistema e navegador não foi realizada neste PR."
+            }
+        ],
+        "pr_number": 60,
+        "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/60",
+        "merged_at": "2026-10-02T16:13:38Z",
+        "commit": "4d2d0f5d5bf399bef048965e535bb7a412ad8172",
+        "id": "pr-60",
+        "details_file": "pr-60.md"
+    },
+    {
+        "title": "Melhorias no estoque e nos produtos",
+        "changes": [
+            {
+                "category": "added",
+                "text": "Adicionado um painel para retirar do estoque sacos cadastrados por engano, com seleção de até 50 sacos, motivo, resumo das peças e confirmação. A retirada fica registrada no histórico; sacos reservados, já baixados ou sem peças não aparecem para seleção."
+            },
+            {
+                "category": "improved",
+                "text": "Reorganizadas as ações de estoque: Entrada e Saída ficam em destaque, enquanto Corrigir contagem e Excluir sacos ficam no menu de outras ações, com disposição adaptada ao celular."
+            },
+            {
+                "category": "improved",
+                "text": "Padronizada a seleção de sacos nas saídas e remoções, com destaque dos selecionados, identificação, quantidade e tamanhos. A seleção fica bloqueada durante o envio, e a remoção inclui controle para identificar solicitações repetidas."
+            },
+            {
+                "category": "improved",
+                "text": "Ajustada a apresentação dos produtos, com capa integrada às abas, código interno em destaque, textos mais curtos no celular e indicação de alterações não salvas no botão de salvar. Os sacos disponíveis também recebem destaque visual."
+            },
+            {
+                "category": "improved",
+                "text": "Reorganizada a galeria em cartões adaptados ao tamanho da tela, com acesso às ações de ordenar, definir capa, ajustar e remover fotos."
+            },
+            {
+                "category": "improved",
+                "text": "Atualizadas as abas para manter todos os nomes visíveis no celular e acompanhar a posição do cabeçalho durante a rolagem. A troca de aba ganhou destaque animado, respeitando a preferência por movimento reduzido."
+            },
+            {
+                "category": "improved",
+                "text": "As listas de opções passam a abrir em um painel no rodapé do celular. Também foram ajustados os limites de largura, a quebra de textos longos e a associação entre o rótulo e o campo de seleção na correção de contagem."
+            },
+            {
+                "category": "improved",
+                "text": "Alterada a configuração dos arquivos públicos para usar endereços relativos ao site, sem depender do endereço completo configurado para a aplicação."
+            },
+            {
+                "category": "improved",
+                "text": "Centralizada a apresentação da seleção de sacos para reutilização entre telas e padronizada a formatação de partes do código. A documentação de desenvolvimento ganhou orientações para manter botões, ícones, espaçamentos e ações consistentes."
+            },
+            {
+                "category": "improved",
+                "text": "Atualizados os testes de navegador para os novos textos e ações, os endereços das imagens e seu carregamento. Adicionado um teste de remoção em computador e celular para verificar a retirada apenas dos sacos selecionados e a preservação dos demais. Os testes não foram executados neste PR."
+            }
+        ],
+        "pr_number": 61,
+        "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/61",
+        "merged_at": "2026-10-09T12:37:40Z",
+        "commit": "bbebc8016c25ef04e12da2f81cf2bb5b3653d3c8",
+        "id": "pr-61",
+        "details_file": "pr-61.md"
+    },
+    {
+        "title": "Monitoramento de erros com Bugsink",
+        "changes": [
+            {
+                "category": "added",
+                "text": "Adicionado envio de erros do servidor e de falhas não tratadas no navegador ao Bugsink, para centralizar o acompanhamento de problemas."
+            },
+            {
+                "category": "added",
+                "text": "Adicionadas configurações para definir o destino dos relatos, o ambiente e a versão do sistema. Sem destino configurado, o envio fica desativado."
+            },
+            {
+                "category": "improved",
+                "text": "Configurado o monitoramento com coleta automática de dados pessoais e conteúdo de requisições desativada, além de restrições à coleta de informações do navegador. O envio de registros independentes, métricas e dados de desempenho também fica desativado."
+            },
+            {
+                "category": "improved",
+                "text": "Incluídas ferramentas e dependências de apoio ao monitoramento no servidor e no navegador, com atualização do registro das versões utilizadas. Uma ferramenta de identificação de versões passou a integrar também as dependências de produção."
+            },
+            {
+                "category": "added",
+                "text": "Adicionados testes para verificar o encaminhamento de erros do servidor e a exclusão de erros esperados de validação. O envio real ao Bugsink foi desativado nos testes automatizados; os testes não foram executados neste PR."
+            },
+            {
+                "category": "improved",
+                "text": "Documentadas a decisão de usar Bugsink, a configuração, a verificação do envio e as limitações da coleta. Incluídas orientações para reaplicar configurações na publicação e sobre a dependência do serviço de email para alertas."
+            },
+            {
+                "category": "improved",
+                "text": "Padronizada a formatação interna do cabeçalho, dos formulários e das telas de produtos e do gerenciador de fotos, para manter a consistência do código."
+            }
+        ],
+        "pr_number": 62,
+        "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/62",
+        "merged_at": "2026-10-09T12:38:26Z",
+        "commit": "7dbe003509eaacd441577f795151585642e8111b",
+        "id": "pr-62",
+        "details_file": "pr-62.md"
+    },
+    {
+        "title": "Estoque em destaque e publicação incremental",
+        "changes": [
+            {
+                "category": "improved",
+                "text": "Destacadas as quantidades disponíveis de peças e sacos nos produtos, com números maiores, ícones e ajuste do texto para uma peça."
+            },
+            {
+                "category": "improved",
+                "text": "Atualizada a ferramenta de publicação do sistema para a versão 0.5.0, incluindo a definição de um comando de testes de integração no pacote."
+            },
+            {
+                "category": "added",
+                "text": "Ativada a publicação incremental, que seleciona as etapas necessárias conforme as mudanças desde a última publicação bem-sucedida. A primeira publicação, a execução forçada e a recuperação de falhas realizam o processo completo."
+            },
+            {
+                "category": "improved",
+                "text": "Atualizadas as orientações de publicação para explicar a atualização do código, o bloqueio padrão quando há alterações locais em arquivos controlados e a renovação dos caches. As instruções de preparação da interface agora indicam o uso do Bun."
+            },
+            {
+                "category": "improved",
+                "text": "Adaptados os testes de produtos à nova apresentação do estoque e os testes de publicação à atualização direta do código, à conclusão sem etapas quando nada mudou e à execução forçada. Os testes não foram executados nesta alteração."
+            }
+        ],
+        "pr_number": 63,
+        "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/63",
+        "merged_at": "2026-10-09T16:03:28Z",
+        "commit": "81b2c52621557f4f10885de12858c3313c8de5b1",
+        "id": "pr-63",
+        "details_file": "pr-63.md"
+    },
+    {
+        "title": "Mais opções na gestão de produtos",
+        "changes": [
+            {
+                "category": "added",
+                "text": "Adicionado filtro por estoque físico: todos, com estoque ou sem estoque. Considera sacos com quantidade positiva ainda não consumidos, incluindo os reservados, com cartões de escolha no celular e seleção no computador."
+            },
+            {
+                "category": "added",
+                "text": "Adicionada escolha de 12, 24, 48 ou 100 produtos por página e indicação da quantidade exibida sobre o total. A navegação preserva os filtros, e limpar os filtros mantém a quantidade escolhida."
+            },
+            {
+                "category": "improved",
+                "text": "O sistema limita a quantidade por página entre 1 e 100, trata opções inválidas de estoque como “Todos” e acrescenta um critério de desempate à ordenação dos produtos."
+            },
+            {
+                "category": "added",
+                "text": "Adicionada exclusão no menu de ações junto ao título dos cartões normais e compactos, com confirmação e manutenção dos bloqueios por estoque físico, reservas e vínculos com pedidos."
+            },
+            {
+                "category": "improved",
+                "text": "O aviso “Disponível” passa a ter destaque verde, e as quantidades ficam em duas colunas, com quebra de conteúdo nos cartões estreitos."
+            },
+            {
+                "category": "improved",
+                "text": "Ampliados os testes automáticos para filtros de estoque, reservas, limites de paginação, preservação das escolhas e exclusão com confirmação no computador e no celular. A validação também incluiu formatação, verificações de código e tipos, geração da aplicação e testes do sistema e de navegador."
+            },
+            {
+                "category": "improved",
+                "text": "Atualizada a documentação com as regras do estoque físico, as opções de quantidade por página e os bloqueios de exclusão."
+            }
+        ],
+        "pr_number": 65,
+        "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/65",
+        "merged_at": "2026-10-15T12:16:43Z",
+        "commit": "771ff3af31de492fb8446d9757957ffe7994e12c",
+        "id": "pr-65",
+        "details_file": "pr-65.md"
+    },
+    {
+        "title": "Exclusão de produtos e identificação de inativos",
+        "changes": [
+            {
+                "category": "added",
+                "text": "Adicionada a opção de excluir produtos no formulário de edição, com confirmação e botão acessível também no celular. Cancelar a exclusão preserva as alterações não salvas."
+            },
+            {
+                "category": "improved",
+                "text": "Cartões normais e compactos passaram a exibir o selo “Inativo”, além da foto em preto e branco, para identificar a situação do produto."
+            },
+            {
+                "category": "fixed",
+                "text": "Padronizado o ícone de lixeira na opção de excluir dos cartões."
+            },
+            {
+                "category": "improved",
+                "text": "Centralizado o funcionamento da exclusão na listagem e na edição, compartilhando confirmação, envio e mensagens de erro. Durante o envio, a confirmação fica bloqueada. Foram mantidas as restrições existentes para estoque, reservas e histórico de pedidos."
+            },
+            {
+                "category": "improved",
+                "text": "Adicionados testes de navegador para exclusão e cancelamento na edição com alterações não salvas, bloqueio de exclusão com estoque e identificação de inativos nos dois layouts. Executada a verificação completa de qualidade do projeto."
+            },
+            {
+                "category": "improved",
+                "text": "Padronizada a formatação de cinco notas existentes do histórico de atualizações, sem alterar seu conteúdo."
+            }
+        ],
+        "pr_number": 66,
+        "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/66",
+        "merged_at": "2026-10-15T12:57:09Z",
+        "commit": "84c165f896208ad115ec7e52276fcf704e473c62",
+        "id": "pr-66",
+        "details_file": "pr-66.md"
+    },
+    {
+        "title": "Filtros e cadastro de lavagens aprimorados",
+        "changes": [
+            {
+                "category": "fixed",
+                "text": "Ajustados os rótulos dos filtros no celular para permanecerem em uma linha, inclusive em telas de 360 px, mantendo as três opções lado a lado com ícones e indicadores."
+            },
+            {
+                "category": "improved",
+                "text": "O cadastro rápido de lavagem passou do botão externo para a última opção da lista pesquisável, nos filtros e no formulário. A ação aparece após digitar um nome e fica oculta quando ele já existe, desconsiderando diferenças de maiúsculas e acentos."
+            },
+            {
+                "category": "improved",
+                "text": "O cadastro de lavagem abre com o nome pesquisado preenchido e preserva os dados do produto. A busca é limpa ao selecionar uma opção ou fechar a lista."
+            },
+            {
+                "category": "improved",
+                "text": "Centralizado o suporte ao cadastro pela busca no controle de seleção compartilhado, removendo os botões externos e os ajustes visuais associados."
+            },
+            {
+                "category": "improved",
+                "text": "Atualizados os testes de navegador no computador e no celular para verificar busca, posição da ação de cadastro, nomes já existentes, preenchimento do nome e preservação do formulário. Adicionado teste dos rótulos em 360 px e executada a verificação completa do projeto."
+            },
+            {
+                "category": "improved",
+                "text": "Atualizada a documentação para explicar o cadastro de lavagens pela busca e padronizada a formatação de uma nota anterior do histórico."
+            }
+        ],
+        "pr_number": 67,
+        "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/67",
+        "merged_at": "2026-10-15T13:55:27Z",
+        "commit": "40d1873cfe5ddd72bcf6dc0ae855279bd0b503af",
+        "id": "pr-67",
+        "details_file": "pr-67.md"
+    },
+    {
+        "title": "Correção da galeria de fotos",
+        "changes": [
+            {
+                "category": "fixed",
+                "text": "Corrigida a galeria de fotos dos produtos para ajustar as colunas à largura do painel e manter imagens e botões dentro de suas áreas, preservando o recorte das fotos em 4:5."
+            },
+            {
+                "category": "improved",
+                "text": "Adicionado botão de fechamento ao painel e melhorados a quebra de textos longos, a rolagem, o tamanho dos botões e o espaço na parte inferior do celular."
+            },
+            {
+                "category": "improved",
+                "text": "Ampliados os testes de navegador para verificar os limites das imagens e dos botões e registrar capturas em telas de 320, 390 e 1280 pixels. As verificações do projeto foram executadas localmente."
+            },
+            {
+                "category": "improved",
+                "text": "Registrada a correção no histórico de mudanças do projeto."
+            }
+        ],
+        "pr_number": 69,
+        "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/69",
+        "merged_at": "2026-10-23T19:13:36Z",
+        "commit": "9e994fdf40be976907b973e3809623273a63130b",
+        "id": "pr-69",
+        "details_file": "pr-69.md"
+    },
+    {
+        "title": "Divisão de lotes entre oficinas",
+        "changes": [
+            {
+                "category": "added",
+                "text": "Divida um lote de produção entre oficinas da próxima etapa e acompanhe cada parte separadamente."
+            },
+            {
+                "category": "improved",
+                "text": "O histórico mantém a origem dos lotes e o painel evita contar as mesmas peças duas vezes."
+            }
+        ],
+        "pr_number": 71,
+        "pr_url": "https://github.com/dougkusanagi/cj-inventory-distribution/pull/71",
+        "merged_at": "2026-11-04T10:14:19Z",
+        "commit": "d60e8d12eb2aac8c46f114e34cd0b024c15253cd",
+        "id": "pr-71",
+        "details_file": "pr-71.md"
+    },
+    {
+        "id": "2026-11-16-producao-canvas",
+        "title": "Produção em fluxo e acompanhamento dos lotes",
+        "merged_at": "2026-11-16T12:00:00-03:00",
+        "pr_number": 0,
+        "details_file": "2026-11-16-producao-canvas.md",
+        "changes": [
+            {
+                "category": "added",
+                "text": "Acompanhe a produção em um fluxo visual com setores conectados, zoom e movimentação pelo painel."
+            },
+            {
+                "category": "added",
+                "text": "Consulte a grade por tamanho e identifique lotes parados ou aguardando recebimento."
+            },
+            {
+                "category": "improved",
+                "text": "Encontre lotes pela busca, abra um lote por link e use o menu superior para acessar as operações."
+            },
+            {
+                "category": "improved",
+                "text": "Consulte o resumo e os detalhes de cada atualização nas Novidades."
+            },
+            {
+                "category": "added",
+                "text": "Escolha o produto do novo lote pelas fotos, com busca e visualização em lista ou cards."
+            }
+        ]
+    }
+]

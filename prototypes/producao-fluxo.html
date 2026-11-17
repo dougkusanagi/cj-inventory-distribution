@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="pt-BR">
+    <meta charset="utf-8" /><meta
+        name="viewport"
+        content="width=device-width,initial-scale=1"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        :root {
+            --foreground: oklch(0.22 0.035 38);
+            --card: #fff;
+            --border: oklch(0.89 0.018 78);
+            --muted: oklch(0.52 0.035 45);
+            --primary: oklch(0.74 0.16 78);
+            --radius: 14px;
+            font-family: 'Instrument Sans', system-ui, sans-serif;
+            color: var(--foreground);
+        }
+        body {
+            margin: 0;
+        }
+        button {
+            cursor: pointer;
+        }
+        button:focus-visible,
+        summary:focus-visible {
+            outline: 3px solid var(--primary);
+            outline-offset: 3px;
+        }
+        .surface {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+        .muted {
+            color: var(--muted);
+        }
+        .step {
+            position: relative;
+            text-align: left;
+            padding: 16px 12px;
+            border-bottom: 3px solid var(--border);
+            min-width: 110px;
+            flex: 1;
+        }
+        .step[aria-selected='true'] {
+            border-color: var(--primary);
+            background: color-mix(in oklab, var(--primary) 14%, transparent);
+        }
+        .step:not(:last-child):after {
+            content: '→';
+            position: absolute;
+            right: -5px;
+            top: 18px;
+            color: var(--muted);
+            z-index: 1;
+        }
+        .action {
+            background: var(--primary);
+            color: #302015;
+            border-radius: 10px;
+            padding: 11px 16px;
+            font-weight: 600;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --foreground: oklch(0.96 0.012 85);
+                --card: oklch(0.155 0.008 285);
+                --border: oklch(0.29 0.01 285);
+                --muted: oklch(0.72 0.015 80);
+                --primary: oklch(0.78 0.15 80);
+            }
+        }
+    </style>
+    <main class="mx-auto max-w-6xl space-y-7 py-6">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+            <div>
+                <p class="muted mb-2 text-sm">Produção · visão do fluxo</p>
+                <h1 class="text-3xl font-semibold tracking-tight">
+                    Da primeira peça ao estoque
+                </h1>
+                <p class="muted mt-3">
+                    Acompanhe a passagem dos lotes e abra a etapa que precisa de
+                    atenção.
+                </p>
+            </div>
+            <span class="muted text-xs">Protótipo · dados ilustrativos</span>
+        </div>
+        <div class="flex flex-wrap gap-x-8 gap-y-2 text-sm">
+            <p><strong class="text-xl">12</strong> lotes em produção</p>
+            <p><strong class="text-xl">2.480</strong> peças no fluxo</p>
+            <p class="muted">2 lotes há mais de 7 dias na etapa</p>
+        </div>
+        <nav class="surface overflow-x-auto" aria-label="Etapas da produção">
+            <div id="steps" class="flex min-w-max" role="tablist"></div>
+        </nav>
+        <section class="space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <p id="position" class="muted mb-2 text-xs"></p>
+                    <h2 id="title" class="text-2xl font-semibold"></h2>
+                    <p id="description" class="muted mt-2 text-sm"></p>
+                </div>
+                <label class="text-sm"
+                    >Buscar lote
+                    <input
+                        id="search"
+                        type="search"
+                        placeholder="Produto ou número"
+                        class="surface mt-1 block bg-transparent p-3"
+                /></label>
+            </div>
+            <div
+                id="lots"
+                class="surface divide-y divide-[var(--border)]"
+            ></div>
+            <p class="muted text-xs">
+                Abra um lote para consultar quantidades e a próxima ação.
+            </p>
+        </section>
+        <div id="notice" role="status" class="muted text-sm"></div>
+    </main>
+    <script>
+        const stages = [
+            'Corte',
+            'Costura',
+            'Lavagem',
+            'Tinturaria',
+            'Acabamento',
+            'Ensacamento',
+            'No estoque',
+        ];
+        const counts = [2, 3, 2, 1, 2, 2, 4];
+        let selected = 1;
+        const lots = [
+            [
+                'LT-024',
+                'Calça Wide Leg',
+                'Oficina Maria',
+                '8 dias nesta etapa',
+                240,
+            ],
+            [
+                'LT-027',
+                'Short Mom',
+                'Oficina São José',
+                '3 dias nesta etapa',
+                180,
+            ],
+            [
+                'LT-031',
+                'Jaqueta Oversized',
+                'Oficina Maria',
+                '1 dia nesta etapa',
+                120,
+            ],
+        ];
+        function render() {
+            document.getElementById('steps').innerHTML = stages
+                .map(
+                    (s, i) =>
+                        `<button role="tab" aria-selected="${i === selected}" class="step" onclick="select(${i})"><span class="muted text-xs block mb-3">${String(i + 1).padStart(2, '0')}</span><strong class="block text-sm">${s}</strong><span class="muted text-xs block mt-2">${counts[i]} lotes</span></button>`,
+                )
+                .join('');
+            document.getElementById('position').textContent =
+                `ETAPA ${selected + 1} DE 7`;
+            document.getElementById('title').textContent = stages[selected];
+            document.getElementById('description').textContent =
+                selected === 6
+                    ? 'Lotes que chegaram ao estoque.'
+                    : `Confira os lotes antes de encaminhar para ${stages[selected + 1]}.`;
+            filter();
+        }
+        function select(i) {
+            selected = i;
+            render();
+        }
+        function filter() {
+            const q = document.getElementById('search').value.toLowerCase();
+            const rows = lots
+                .slice(0, Math.min(counts[selected], 3))
+                .filter((l) => l.join(' ').toLowerCase().includes(q));
+            document.getElementById('lots').innerHTML = rows.length
+                ? rows
+                      .map(
+                          (l, i) =>
+                              `<details class="p-5"><summary class="cursor-pointer list-none flex flex-wrap items-center justify-between gap-4"><div><span class="muted text-xs">${l[0]}</span><h3 class="font-semibold mt-1">${l[1]}</h3><p class="muted text-sm mt-1">${l[2]}</p></div><div class="text-right"><strong>${l[4]} peças</strong><p class="text-xs mt-1 ${i === 0 ? '' : 'muted'}">${l[3]} · Ver detalhes ⌄</p></div></summary><div class="border-t border-[var(--border)] mt-5 pt-5 flex flex-wrap justify-between gap-4"><p class="muted text-sm max-w-sm">Grade 36 a 44 · Quantidades por tamanho ainda não informadas.<br>Última movimentação registrada no histórico do lote.</p>${selected < 6 ? `<button class="action" onclick="document.getElementById('notice').textContent='Simulação: ${l[0]} seria encaminhado para ${stages[selected + 1]}. Nenhum dado foi alterado.'">Encaminhar para ${stages[selected + 1]} →</button>` : ''}</div></details>`,
+                      )
+                      .join('')
+                : '<p class="p-6 muted">Nenhum lote encontrado. Tente outro produto ou número.</p>';
+        }
+        document.getElementById('search').addEventListener('input', filter);
+        render();
+    </script>
+</html>

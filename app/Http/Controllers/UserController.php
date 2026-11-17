@@ -39,7 +39,7 @@ class UserController extends Controller
         return Inertia::render('users/index', [
             'users' => $users,
             'filters' => ['search' => $search, 'role' => $role, 'status' => $status],
-            'productionStages' => array_map(fn (ProductionStage $stage): array => ['value' => $stage->value, 'label' => $stage->label()], ProductionStage::cases()),
+            'productionStages' => array_map(fn (ProductionStage $stage): array => ['value' => $stage->value, 'label' => $stage->label()], ProductionStage::active()),
             'roles' => array_map(fn (UserRole $role): array => ['value' => $role->value, 'label' => $role->label()], UserRole::cases()),
         ]);
     }

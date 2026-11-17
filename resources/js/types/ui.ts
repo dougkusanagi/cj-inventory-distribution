@@ -11,6 +11,12 @@ export type AppVariant = 'header' | 'sidebar';
 export type FlashToast = {
     type: 'success' | 'info' | 'warning' | 'error';
     message: string;
+    /** Ação do aviso, enviada por POST, como "Desfazer". */
+    action?: {
+        label: string;
+        url: string;
+        data: Record<string, string | number>;
+    } | null;
 };
 
 export type AuthLayoutProps = {
