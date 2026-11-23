@@ -11,6 +11,10 @@ o foco atual está no
 adiada, está no [plano da ficha técnica](plans/ficha-tecnica.md).
 A produção não cria sacos automaticamente.
 
+Lojas, acesso das vendedoras, vários estoques, conferência com as lojas e
+RFID estão no [plano de lojas, estoques e RFID](plans/lojas-estoques-rfid.md),
+ainda com decisões em aberto.
+
 ## Catálogo e pedidos para lojistas — plano vigente
 
 O [plano de catálogo e pedidos](CATALOGO-E-PEDIDOS.md) detalha a sequência atual,

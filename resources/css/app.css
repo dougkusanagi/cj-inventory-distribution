@@ -255,6 +255,23 @@
 
     /* Barra horizontal larga e sempre visível no quadro de produção, usada
        com frequência para clicar e arrastar entre os setores. */
+    /* Traço animado das linhas do fluxo de produção, no sentido do fluxo. */
+    .production-flow-edge-animated {
+        animation: production-flow-dash 0.9s linear infinite;
+    }
+
+    @keyframes production-flow-dash {
+        to {
+            stroke-dashoffset: -18;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .production-flow-edge-animated {
+            animation: none;
+        }
+    }
+
     .production-board-scrollbar::-webkit-scrollbar {
         height: 16px;
     }

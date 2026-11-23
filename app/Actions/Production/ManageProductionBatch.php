@@ -35,7 +35,7 @@ class ManageProductionBatch
                 'code' => 'TEMP-'.Str::uuid(),
                 'product_id' => $product->id,
                 'quantity' => $quantity,
-                'stage' => ProductionStage::Cutting,
+                'stage' => ProductionStage::Planning,
                 'stage_entered_at' => now(),
                 'received_at' => now(),
                 'notes' => $notes,
@@ -44,7 +44,7 @@ class ManageProductionBatch
             ]);
             $batch->update(['code' => 'L-'.str_pad((string) $batch->id, 6, '0', STR_PAD_LEFT)]);
             $this->writeSizes($batch, $sizes);
-            $this->record($batch, null, ProductionStage::Cutting, $actor, null);
+            $this->record($batch, null, ProductionStage::Planning, $actor, null);
 
             return $batch;
         }, 5);
@@ -73,7 +73,7 @@ class ManageProductionBatch
             }
 
             $workshop = $workshopId === null ? null : Workshop::query()->whereKey($workshopId)->lockForUpdate()->first();
-            if ($workshopId !== null && ($workshop === null || ! $workshop->is_active || $workshop->type->value !== $target->value)) {
+            if ($workshopId !== null && ($workshop === null || ! $workshop->is_active || ! $workshop->type->supportsStage($target))) {
                 throw ValidationException::withMessages(['workshop_id' => 'Selecione uma oficina ativa para a etapa de destino.']);
             }
 
@@ -150,7 +150,7 @@ class ManageProductionBatch
                 }
             }
             $workshops = Workshop::query()->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
-            if ($workshops->count() !== count($ids) || $workshops->contains(fn (Workshop $workshop): bool => ! $workshop->is_active || $workshop->type->value !== $target->value)) {
+            if ($workshops->count() !== count($ids) || $workshops->contains(fn (Workshop $workshop): bool => ! $workshop->is_active || ! $workshop->type->supportsStage($target))) {
                 throw ValidationException::withMessages(['allocations' => 'Selecione oficinas ativas para a etapa de destino.']);
             }
             $batch->update(['split_at' => now(), 'version' => $batch->version + 1]);

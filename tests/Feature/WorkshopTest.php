@@ -32,7 +32,7 @@ it('restricts workshop maintenance to administrators and validates its type', fu
 it('assigns an active matching workshop during advancement and restores the previous one when undoing', function (): void {
     $admin = User::factory()->admin()->create();
     $action = app(ManageProductionBatch::class);
-    $batch = $action->create(Product::factory()->create(['is_active' => true]), 8, null, $admin);
+    $batch = receivedCuttingBatch(Product::factory()->create(['is_active' => true]), 8, null, $admin);
     $sewing = Workshop::factory()->create(['type' => WorkshopType::Sewing]);
     $washing = Workshop::factory()->create(['type' => WorkshopType::Washing]);
     $inactive = Workshop::factory()->create(['type' => WorkshopType::Sewing, 'is_active' => false]);
@@ -49,7 +49,7 @@ it('assigns an active matching workshop during advancement and restores the prev
 
 it('validates workshop assignments at the endpoint and keeps historical names after a rename', function (): void {
     $admin = User::factory()->admin()->create();
-    $batch = app(ManageProductionBatch::class)->create(Product::factory()->create(['is_active' => true]), 6, null, $admin);
+    $batch = receivedCuttingBatch(Product::factory()->create(['is_active' => true]), 6, null, $admin);
     $wrong = Workshop::factory()->create(['type' => WorkshopType::Washing]);
     $correct = Workshop::factory()->create(['type' => WorkshopType::Sewing, 'name' => 'Oficina Original']);
     $payload = ['stage' => 'cutting', 'target' => 'sewing', 'version' => 1, 'workshop_id' => $wrong->id];

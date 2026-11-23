@@ -13,7 +13,21 @@ export function useFlashToast(): void {
                 return;
             }
 
-            toast[data.type](data.message);
+            const action = data.action;
+            toast[data.type](data.message, {
+                // Com ação, o aviso fica mais tempo para dar tempo de usá-la.
+                duration: action ? 10000 : undefined,
+                action: action
+                    ? {
+                          label: action.label,
+                          onClick: () =>
+                              router.post(action.url, action.data, {
+                                  preserveScroll: true,
+                                  preserveState: true,
+                              }),
+                      }
+                    : undefined,
+            });
         });
     }, []);
 }

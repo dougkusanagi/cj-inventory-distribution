@@ -45,6 +45,8 @@ class HandleInertiaRequests extends Middleware
                     'manageUsers' => $request->user()?->isAdmin() ?? false,
                     'manageOperations' => $request->user()?->isStaff() ?? false,
                     'manageProduction' => $request->user()?->can('viewAny', ProductionBatch::class) ?? false,
+                    'createProductionBatch' => $request->user()?->can('create', ProductionBatch::class) ?? false,
+                    'manageWorkshops' => $request->user()?->isAdmin() ?? false,
                     'managePhotos' => $request->user()?->canManagePhotos() ?? false,
                 ],
             ],

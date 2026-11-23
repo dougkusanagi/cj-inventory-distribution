@@ -40,15 +40,14 @@ erDiagram
 ## Painel de produção
 
 `ProductionBatch` representa uma quantidade de um produto em uma etapa fixa.
-A criação começa no Corte; cada avanço ou correção registra um evento imutável
+A criação começa no Planejamento; cada avanço ou correção registra um evento imutável
 com autor e horário. A versão impede que operações simultâneas sobrescrevam
 mudanças. O administrador vê todos os lotes; usuários de Produção veem e
 movem apenas os lotes em seus setores atribuídos. Cada envio aguarda confirmação no setor de destino antes de outro avanço;
-o recebimento registra autor e horário (ADR 0029). Costura, lavagem e
-tinturaria podem ser atribuídas a oficinas ativas, com nomes preservados nos
+o recebimento registra autor e horário (ADR 0029). Costura e Lavanderia (lavagem e tintura) podem ser atribuídas a oficinas ativas, com nomes preservados nos
 eventos (ADR 0030). O administrador pode desfazer
 o último avanço com motivo e excluir um lote apenas antes do primeiro avanço.
-Enviar um lote para o estoque (etapa "No estoque", valor `completed`) não altera sacos ou movimentações de estoque (ADR 0025).
+Enviar um lote para o estoque (etapa "Estoque", valor `completed`) não altera sacos ou movimentações de estoque (ADR 0025).
 
 Um lote recebido pode ser dividido ao enviar para oficinas diferentes da próxima
 etapa. A operação bloqueia o lote e as oficinas, exige que a soma dos filhos
@@ -61,6 +60,11 @@ inteiras, cuja soma corresponde ao lote. Um usuário autorizado pode alterar ou
 limpar a grade de um lote recebido que ainda não foi para o estoque; o evento guarda os valores
 anteriores e posteriores. A divisão exige distribuir cada tamanho conhecido
 entre os filhos, sem alterar sacos de estoque (ADR 0032).
+
+O painel usa somente o fluxo em canvas (`production/flow`, com `@xyflow/react`),
+tanto na rota principal quanto no endereço compatível `/painel/producao/fluxo`.
+As ações e gavetas ficam em `useProductionActions`. O fluxo limita os lotes de
+"No estoque" aos últimos 7 dias, sem alterar os totais (ADRs 0033 e 0035).
 
 ## Product
 
@@ -493,10 +497,9 @@ Integrações com Bling e funcionalidades de PCP devem ser tratadas como módulo
 
 ## Histórico de novidades
 
-As notas de atualização são arquivos JSON versionados por PR em
-`resources/changelog`, lidos pela página pública `/novidades`. A automação
-usa a CLI do Codex autenticada em um runner dedicado, gera uma nota revisável
-no PR e registra a versão final após merge na `master`. Mudanças técnicas e
-correções fazem parte do histórico, explicadas em português leigo. A página
-mostra apenas notas presentes no código implantado, sem tabela, webhook ou
-consulta ao GitHub em tempo de execução.
+As notas de atualização são resumos no documento geral
+`resources/changelog/index.json`, lido pela página pública `/novidades`.
+Cada entrada aponta para um Markdown próprio com os detalhes, renderizado com
+HTML embutido e links inseguros desativados. O índice e os detalhes são preparados
+antes do push, inclusive sem PR, e acompanham o código implantado. O histórico
+antigo por PR foi preservado. Veja o ADR 0034.

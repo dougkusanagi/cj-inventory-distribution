@@ -21,7 +21,7 @@ class ProductionBatchPolicy
 
     public function create(User $user): bool
     {
-        return $user->canManageProductionStage(ProductionStage::Cutting);
+        return $user->canManageProductionStage(ProductionStage::Planning);
     }
 
     public function advance(User $user, ProductionBatch $batch): bool

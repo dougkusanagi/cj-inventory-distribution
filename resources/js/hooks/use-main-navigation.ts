@@ -4,8 +4,10 @@ import {
     ClipboardTextIcon,
     DropIcon,
     FactoryIcon,
+    FlowArrowIcon,
     ImagesIcon,
     NewspaperIcon,
+    PlusCircleIcon,
     ShoppingCartIcon,
     SquaresFourIcon,
     TShirtIcon,
@@ -34,9 +36,6 @@ const changelogItem: NavItem = {
 
 const operationNavItems: NavItem[] = [
     { title: 'Painel', href: dashboard(), icon: SquaresFourIcon, exact: true },
-    { title: 'Produtos', href: productsIndex(), icon: TShirtIcon },
-    { title: 'Categorias', href: categoriesIndex(), icon: TagIcon },
-    { title: 'Tipos de lavagem', href: washTypesIndex(), icon: DropIcon },
     { title: 'Pedidos', href: ordersIndex(), icon: ShoppingCartIcon },
     {
         title: 'Estoque',
@@ -67,24 +66,94 @@ export function useMainNavigation(): {
 } {
     const { can } = usePage().props.auth;
     const { isCurrentUrl, isCurrentOrParentUrl } = useCurrentUrl();
+    const productionPage = productionIndex;
 
     const items: NavItem[] = [
-        ...(can.manageOperations ? operationNavItems : []),
+        ...(can.manageOperations ? operationNavItems.slice(0, 1) : []),
+        ...(can.manageOperations || can.managePhotos
+            ? [
+                  {
+                      title: 'Produtos',
+                      href: can.manageOperations
+                          ? productsIndex()
+                          : productPhotosIndex(),
+                      icon: TShirtIcon,
+                      items: [
+                          ...(can.manageOperations
+                              ? [
+                                    {
+                                        title: 'Listar',
+                                        href: productsIndex(),
+                                        icon: TShirtIcon,
+                                    },
+                                    {
+                                        title: 'Categorias',
+                                        href: categoriesIndex(),
+                                        icon: TagIcon,
+                                    },
+                                ]
+                              : []),
+                          ...(can.managePhotos
+                              ? [
+                                    {
+                                        title: 'Fotos',
+                                        href: productPhotosIndex(),
+                                        icon: ImagesIcon,
+                                    },
+                                ]
+                              : []),
+                          ...(can.manageOperations
+                              ? [
+                                    {
+                                        title: 'Tipos de lavagem',
+                                        href: washTypesIndex(),
+                                        icon: DropIcon,
+                                    },
+                                ]
+                              : []),
+                      ],
+                  },
+              ]
+            : []),
+        ...(can.manageOperations ? operationNavItems.slice(1) : []),
         ...(can.manageProduction
             ? [
                   {
                       title: 'Produção',
                       href: productionIndex(),
                       icon: FactoryIcon,
-                  },
-              ]
-            : []),
-        ...(can.managePhotos
-            ? [
-                  {
-                      title: 'Fotos dos produtos',
-                      href: productPhotosIndex(),
-                      icon: ImagesIcon,
+                      items: [
+                          {
+                              title: 'Fluxo',
+                              href: productionIndex(),
+                              icon: FlowArrowIcon,
+                              exact: true,
+                          },
+                          ...(can.createProductionBatch
+                              ? [
+                                    {
+                                        title: 'Novo lote',
+                                        href: productionPage({
+                                            query: { abrir: 'novo-lote' },
+                                        }),
+                                        icon: PlusCircleIcon,
+                                        exact: true,
+                                    },
+                                ]
+                              : []),
+                          ...(can.manageWorkshops
+                              ? [
+                                    {
+                                        title: 'Oficinas',
+                                        href: productionPage({
+                                            query: { abrir: 'oficinas' },
+                                        }),
+                                        icon: FactoryIcon,
+                                        exact: true,
+                                    },
+                                ]
+                              : []),
+                      ],
                   },
               ]
             : []),

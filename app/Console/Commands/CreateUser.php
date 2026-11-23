@@ -69,7 +69,7 @@ class CreateUser extends Command
         $stages = $role === UserRole::Production->value
             ? multiselect(
                 label: 'Setores responsáveis',
-                options: collect(ProductionStage::cases())
+                options: collect(ProductionStage::active())
                     ->mapWithKeys(fn (ProductionStage $stage): array => [$stage->value => $stage->label()])
                     ->all(),
                 required: 'Selecione ao menos um setor.',

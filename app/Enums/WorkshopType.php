@@ -8,6 +8,11 @@ enum WorkshopType: string
     case Washing = 'washing';
     case Dyeing = 'dyeing';
 
+    public function supportsStage(ProductionStage $stage): bool
+    {
+        return $this->value === $stage->value || ($this === self::Dyeing && $stage === ProductionStage::Washing);
+    }
+
     public function label(): string
     {
         return match ($this) {

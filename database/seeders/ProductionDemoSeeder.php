@@ -38,14 +38,14 @@ class ProductionDemoSeeder extends Seeder
                 ['name' => 'Oficina Demonstração '.$type->label(), 'is_active' => true],
             ),
         ]);
-        $stages = ProductionStage::cases();
+        $stages = ProductionStage::active();
         foreach ($stages as $index => $stage) {
             $marker = 'Demonstração de produção: '.$stage->value;
             if (ProductionBatch::withTrashed()->where('notes', $marker)->exists()) {
                 continue;
             }
             $batch = $action->create($index === 1 ? $longNameProduct : $product, match ($index) {
-                0 => 1, 6 => 1000000, default => ($index + 1) * 24
+                0 => 1, 5 => 1000000, default => ($index + 1) * 24
             }, $marker, $actor, match ($index) {
                 0 => [['size' => '36', 'quantity' => 1]],
                 1 => [['size' => 'P', 'quantity' => 24], ['size' => 'GG', 'quantity' => 24]],
@@ -78,6 +78,8 @@ class ProductionDemoSeeder extends Seeder
         if ($firstWorkshop !== null && $firstWorkshop->is_active && $secondWorkshop->is_active
             && ! ProductionBatch::withTrashed()->where('notes', $marker)->exists()) {
             $batch = $action->create($longNameProduct, 1000, $marker, $actor, [['size' => '36', 'quantity' => 1], ['size' => 'GG', 'quantity' => 999]]);
+            $batch = $action->advance($batch, ProductionStage::Planning, ProductionStage::Cutting, $batch->version, $actor);
+            $batch = $action->receive($batch, $batch->version, $actor);
             $action->split($batch, ProductionStage::Cutting, ProductionStage::Sewing, $batch->version, $actor, [
                 ['workshop_id' => $firstWorkshop->id, 'quantity' => 1, 'sizes' => [['size' => '36', 'quantity' => 1], ['size' => 'GG', 'quantity' => 0]]],
                 ['workshop_id' => $secondWorkshop->id, 'quantity' => 999, 'sizes' => [['size' => '36', 'quantity' => 0], ['size' => 'GG', 'quantity' => 999]]],
@@ -95,13 +97,14 @@ class ProductionDemoSeeder extends Seeder
     {
         $sync = app(SyncProductionStages::class);
         foreach ([
+            'planejamento@example.com' => ['Responsável do Planejamento', [ProductionStage::Planning]],
             'corte@example.com' => ['Responsável do Corte', [ProductionStage::Cutting]],
             'costura@example.com' => ['Responsável da Costura', [ProductionStage::Sewing]],
             'lavagem@example.com' => ['Responsável da Lavagem', [ProductionStage::Washing]],
-            'tinturaria@example.com' => ['Responsável da Tinturaria', [ProductionStage::Dyeing]],
+            'tinturaria@example.com' => ['Responsável da Tinturaria', [ProductionStage::Washing]],
             'acabamento@example.com' => ['Responsável do Acabamento', [ProductionStage::Finishing]],
-            'ensacamento@example.com' => ['Responsável do Ensacamento', [ProductionStage::Bagging]],
-            'multissetor@example.com' => ['Responsável da Lavagem e da Tinturaria', [ProductionStage::Washing, ProductionStage::Dyeing]],
+            'ensacamento@example.com' => ['Responsável do Ensacamento', [ProductionStage::Completed]],
+            'multissetor@example.com' => ['Responsável da Lavagem e da Tinturaria', [ProductionStage::Washing]],
         ] as $email => [$name, $stages]) {
             $user = User::query()->firstOrNew(['email' => $email]);
             if ($user->exists) {
@@ -123,7 +126,7 @@ class ProductionDemoSeeder extends Seeder
     private function seedBoardBatches(ManageProductionBatch $action, User $actor, Collection $workshops): void
     {
         $products = Product::query()->where('is_active', true)->orderBy('id')->limit(8)->get();
-        $stages = ProductionStage::cases();
+        $stages = ProductionStage::active();
         // [stage position, pieces, days in the stage, already received by the sector]
         $scenarios = [
             [0, 150, 0, true], [0, 25, 2, true],
@@ -132,7 +135,7 @@ class ProductionDemoSeeder extends Seeder
             [3, 30, 9, true],
             [4, 200, 3, true], [4, 15, 0, false],
             [5, 90, 1, true], [5, 40, 6, true],
-            [6, 75, 4, true],
+            [5, 75, 4, true],
         ];
         foreach ($scenarios as $index => [$position, $quantity, $days, $received]) {
             $marker = 'Demonstração de produção: quadro '.($index + 1);
