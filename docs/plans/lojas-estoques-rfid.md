@@ -21,7 +21,7 @@ da implementação.
 
 | # | Problema | Onde | Gravidade |
 |---|---|---|---|
-| 1 | Trabalho fora do `master`: 9 commits e 77 arquivos sem commit, com uma migration nova e os ADRs 0033–0036. O `master` não muda desde 04/11 e o painel de produção ainda não está em produção. | `feat/quadro-producao` | Alta |
+| 1 | O painel de produção, a migração de etapas e os ADRs 0033–0036 estão em commits locais e passaram na validação completa. Faltam a integração e a implantação. | `feat/quadro-producao` | Alta |
 | 2 | O catálogo público (`/`) aceita pedidos de qualquer pessoa com o link e reserva sacos. Só há limite por IP e sessão. | `routes/web.php`, `CatalogOrderController` | Alta |
 | 3 | O login usa só e-mail (`fortify.username = email`) e o link de acesso só sai por e-mail. Vendedoras de loja provavelmente não usam e-mail. | `config/fortify.php`, `SendUserAccessLink` | Alta (bloqueia o acesso das lojas) |
 | 4 | A loja do pedido é texto livre (`orders.store_name`). Nomes com grafias diferentes viram lojas diferentes e os relatórios por loja ficam errados. | `StoreOrderRequest`, `catalog.tsx` | Média |
@@ -163,14 +163,23 @@ quando outra etapa precisar alterá-la.
 - A execução completa foi interrompida durante os testes de navegador
   (código 143). O teste do painel em 1366 px também atingiu o tempo limite
   no recebimento de um lote. O cenário passou a esperar pelo lote na etapa
-  de Corte antes de confirmar o recebimento. A troca de gavetas passou a
-  montar somente a gaveta ativa. O cenário de grade passou em 390 e 1366 px.
+  de Corte antes de confirmar o recebimento.
 - Os testes de navegador agora usam o build local mesmo com o Vite em
   execução. Os seis testes de fotos passaram com essa configuração.
+- Na rodada seguinte, o seletor de produtos ainda falhou em desktop e um
+  rebuild simultâneo invalidou parte da execução. O seletor e o formulário
+  agora compartilham a mesma gaveta. Os cinco testes focados de seleção e
+  grade passaram em 390, 768 e 1366 px, conforme o cenário.
+- A primeira rodada completa passou em 150 de 151 testes de navegador.
+  O teste de cadastro de produto consultava o banco antes da confirmação
+  do envio. Agora aguarda a confirmação na interface e passou isoladamente.
 
 ## Próximo passo
 
-Concluir a etapa 0 em `feat/quadro-producao`. Os testes focados do canvas
-e das Novidades passaram após alinhar a asserção do indicador de recebimento
-e migrar a nota histórica do PR 72. Use a suíte local completa como critério
-para integrar no `master`. Push, integração e deploy aguardam autorização.
+A validação local da etapa 0 em `feat/quadro-producao` foi concluída com
+`composer ci:verify` em PHP 8.5 e PostgreSQL descartável. Passaram 440 testes
+funcionais e unitários, 151 testes de navegador, a análise estática e o build.
+A pedido do usuário, a entrega desta etapa fica local. A integração em
+`master` e a implantação seguem pendentes. As etapas dependentes aguardam
+esse marco. A etapa 4 aguarda a definição de como vincular a aparência do
+inventário à do catálogo.
