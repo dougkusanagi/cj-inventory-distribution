@@ -13,6 +13,8 @@ type Change = {
 };
 
 type Note = {
+    id: string;
+    details: string;
     title: string;
     changes: Change[];
     pr_number: number;
@@ -80,9 +82,9 @@ export default function Changelog({
                         <div className="grid">
                             {notes.data.map((note) => (
                                 <article
-                                    key={note.pr_number}
+                                    key={note.id}
                                     className="grid gap-5 border-t border-border py-8"
-                                    aria-labelledby={`note-${note.pr_number}`}
+                                    aria-labelledby={`note-${note.id}`}
                                 >
                                     <div className="grid gap-2">
                                         <time
@@ -94,7 +96,7 @@ export default function Changelog({
                                             )}
                                         </time>
                                         <h2
-                                            id={`note-${note.pr_number}`}
+                                            id={`note-${note.id}`}
                                             className="text-2xl leading-tight font-semibold text-balance"
                                         >
                                             {note.title}
@@ -136,6 +138,17 @@ export default function Changelog({
                                             );
                                         },
                                     )}
+                                    <details>
+                                        <summary className="cursor-pointer text-sm font-medium">
+                                            Ver detalhes da atualização
+                                        </summary>
+                                        <div
+                                            className="mt-4 space-y-4 text-sm leading-7 break-words [&_a]:underline [&_h1]:text-xl [&_h1]:font-semibold [&_h2]:text-lg [&_h2]:font-semibold [&_li]:mt-2 [&_ul]:list-disc [&_ul]:pl-5"
+                                            dangerouslySetInnerHTML={{
+                                                __html: note.details,
+                                            }}
+                                        />
+                                    </details>
                                 </article>
                             ))}
                         </div>
