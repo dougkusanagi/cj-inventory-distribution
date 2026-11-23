@@ -385,16 +385,17 @@ it('creates a product without a stock offer from the form', function () {
         ->type('#product-model', 'MOD-E2E-001')
         ->type('#product-notes', 'Produto criado pelo fluxo principal.');
 
-    $page->submit();
+    $page
+        ->submit()
+        ->assertRoute('products.index')
+        ->assertSee('Produto cadastrado.')
+        ->assertSee('Blusa básica E2E');
 
     $product = Product::query()->with('stockVolumes')->sole();
 
     $page
-        ->assertRoute('products.index')
-        ->assertSee('Blusa básica E2E')
         ->assertSee($product->code)
         ->assertSee('Sem estoque')
-        ->assertSee('Produto cadastrado.')
         ->assertNoJavaScriptErrors();
 
     $this->assertModelExists($product);
