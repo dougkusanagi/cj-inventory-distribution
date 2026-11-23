@@ -1,6 +1,12 @@
 import { useForm, usePage } from '@inertiajs/react';
 import { ImagesIcon, XIcon } from '@phosphor-icons/react';
-import { useState, type FormEvent, type ReactNode } from 'react';
+import {
+    useEffect,
+    useRef,
+    useState,
+    type FormEvent,
+    type ReactNode,
+} from 'react';
 import {
     store,
     undo,
@@ -223,6 +229,7 @@ export function BatchDrawer({
 }) {
     const mobile = useIsMobile();
     const [choosingProduct, setChoosingProduct] = useState(false);
+    const drawerContent = useRef<HTMLDivElement>(null);
     const { errors } = usePage().props;
     const form = useForm({
         product_id: '',
@@ -230,123 +237,162 @@ export function BatchDrawer({
         notes: '',
         sizes: [] as SizeInput[],
     });
+    useEffect(() => {
+        drawerContent.current
+            ?.querySelector<HTMLElement>(
+                choosingProduct ? '[data-slot=drawer-title]' : '#batch-product',
+            )
+            ?.focus();
+    }, [choosingProduct]);
     function submit(event: FormEvent) {
         event.preventDefault();
         form.post(store.url(), { preserveScroll: true, onSuccess: onClose });
     }
-    return choosingProduct ? (
-        <ProductPicker
-            open={choosingProduct}
-            products={products}
-            selectedId={form.data.product_id}
-            onClose={() => setChoosingProduct(false)}
-            onSelect={(product) => {
-                form.setData('product_id', String(product.id));
-                setChoosingProduct(false);
-            }}
-        />
-    ) : (
+    return (
         <Drawer
             open
+            dismissible={!choosingProduct && !form.processing}
             direction={mobile ? 'bottom' : 'right'}
             onOpenChange={(open) => {
-                if (!open && !form.processing) onClose();
+                if (!open) onClose();
             }}
         >
-            <DrawerContent side={mobile ? 'bottom' : 'right'}>
-                <DrawerHeader>
-                    <DrawerTitle>Novo lote</DrawerTitle>
-                    <DrawerDescription>
-                        O lote começa na etapa de Planejamento.
-                    </DrawerDescription>
-                </DrawerHeader>
-                <form
-                    onSubmit={submit}
-                    className="flex min-h-0 flex-1 flex-col"
-                >
-                    <div
-                        className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto px-6 pb-6"
-                        onFocusCapture={keepFocusedInputVisible}
-                    >
-                        <div className="grid gap-2">
-                            <Label htmlFor="batch-product">Produto</Label>
-                            <Button
-                                id="batch-product"
-                                aria-haspopup="dialog"
-                                aria-invalid={Boolean(form.errors.product_id)}
-                                type="button"
-                                variant="outline"
-                                className="h-auto min-h-11 justify-start text-left whitespace-normal"
-                                disabled={form.processing}
-                                onClick={() => setChoosingProduct(true)}
+            <DrawerContent
+                ref={drawerContent}
+                side={mobile ? 'bottom' : 'right'}
+                className={choosingProduct ? 'sm:max-w-4xl' : undefined}
+                onEscapeKeyDown={(event) => {
+                    if (!choosingProduct) return;
+                    event.preventDefault();
+                    setChoosingProduct(false);
+                }}
+            >
+                {choosingProduct ? (
+                    <ProductPicker
+                        products={products}
+                        selectedId={form.data.product_id}
+                        onClose={() => setChoosingProduct(false)}
+                        onSelect={(product) => {
+                            form.setData('product_id', String(product.id));
+                            setChoosingProduct(false);
+                        }}
+                    />
+                ) : (
+                    <>
+                        <DrawerHeader>
+                            <DrawerTitle>Novo lote</DrawerTitle>
+                            <DrawerDescription>
+                                O lote começa na etapa de Planejamento.
+                            </DrawerDescription>
+                        </DrawerHeader>
+                        <form
+                            onSubmit={submit}
+                            className="flex min-h-0 flex-1 flex-col"
+                        >
+                            <div
+                                className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto px-6 pb-6"
+                                onFocusCapture={keepFocusedInputVisible}
                             >
-                                <ImagesIcon />
-                                <span className="min-w-0 [overflow-wrap:anywhere]">
-                                    {products.find(
-                                        (product) =>
-                                            String(product.id) ===
-                                            form.data.product_id,
-                                    )?.name ?? 'Escolher produto'}
-                                </span>
-                            </Button>
-                            <InputError message={form.errors.product_id} />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="batch-quantity">
-                                Quantidade de peças
-                            </Label>
-                            <Input
-                                id="batch-quantity"
-                                type="number"
-                                min="1"
-                                max={maxQuantity}
-                                required
-                                value={form.data.quantity}
-                                onChange={(event) =>
-                                    form.setData('quantity', event.target.value)
-                                }
-                            />
-                            <InputError message={form.errors.quantity} />
-                        </div>
-                        <SizeGridEditor
-                            value={form.data.sizes}
-                            onChange={(sizes) => form.setData('sizes', sizes)}
-                            errors={errors}
-                            disabled={form.processing}
-                            maxQuantity={maxQuantity}
-                        />
-                        <div className="grid gap-2">
-                            <Label htmlFor="batch-notes">Observações</Label>
-                            <Input
-                                id="batch-notes"
-                                maxLength={2000}
-                                value={form.data.notes}
-                                onChange={(event) =>
-                                    form.setData('notes', event.target.value)
-                                }
-                            />
-                            <InputError message={form.errors.notes} />
-                        </div>
-                    </div>
-                    <DrawerFooter className="shrink-0 border-t bg-background pt-4">
-                        <Button
-                            type="submit"
-                            className="h-11"
-                            disabled={form.processing}
-                        >
-                            {form.processing ? 'Criando lote...' : 'Criar lote'}
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            className="h-11"
-                            onClick={onClose}
-                            disabled={form.processing}
-                        >
-                            Cancelar
-                        </Button>
-                    </DrawerFooter>
-                </form>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="batch-product">
+                                        Produto
+                                    </Label>
+                                    <Button
+                                        id="batch-product"
+                                        aria-invalid={Boolean(
+                                            form.errors.product_id,
+                                        )}
+                                        type="button"
+                                        variant="outline"
+                                        className="h-auto min-h-11 justify-start text-left whitespace-normal"
+                                        disabled={form.processing}
+                                        onClick={() => setChoosingProduct(true)}
+                                    >
+                                        <ImagesIcon />
+                                        <span className="min-w-0 [overflow-wrap:anywhere]">
+                                            {products.find(
+                                                (product) =>
+                                                    String(product.id) ===
+                                                    form.data.product_id,
+                                            )?.name ?? 'Escolher produto'}
+                                        </span>
+                                    </Button>
+                                    <InputError
+                                        message={form.errors.product_id}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="batch-quantity">
+                                        Quantidade de peças
+                                    </Label>
+                                    <Input
+                                        id="batch-quantity"
+                                        type="number"
+                                        min="1"
+                                        max={maxQuantity}
+                                        required
+                                        value={form.data.quantity}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'quantity',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                    <InputError
+                                        message={form.errors.quantity}
+                                    />
+                                </div>
+                                <SizeGridEditor
+                                    value={form.data.sizes}
+                                    onChange={(sizes) =>
+                                        form.setData('sizes', sizes)
+                                    }
+                                    errors={errors}
+                                    disabled={form.processing}
+                                    maxQuantity={maxQuantity}
+                                />
+                                <div className="grid gap-2">
+                                    <Label htmlFor="batch-notes">
+                                        Observações
+                                    </Label>
+                                    <Input
+                                        id="batch-notes"
+                                        maxLength={2000}
+                                        value={form.data.notes}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'notes',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                    <InputError message={form.errors.notes} />
+                                </div>
+                            </div>
+                            <DrawerFooter className="shrink-0 border-t bg-background pt-4">
+                                <Button
+                                    type="submit"
+                                    className="h-11"
+                                    disabled={form.processing}
+                                >
+                                    {form.processing
+                                        ? 'Criando lote...'
+                                        : 'Criar lote'}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-11"
+                                    onClick={onClose}
+                                    disabled={form.processing}
+                                >
+                                    Cancelar
+                                </Button>
+                            </DrawerFooter>
+                        </form>
+                    </>
+                )}
             </DrawerContent>
         </Drawer>
     );
