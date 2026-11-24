@@ -49,7 +49,7 @@ it('rejects duplicate sizes, invalid totals and stale updates without changing t
 it('preserves every size when splitting a batch between workshops', function (): void {
     $admin = User::factory()->admin()->create();
     $action = app(ManageProductionBatch::class);
-    $batch = $action->create(Product::factory()->create(['is_active' => true]), 10, null, $admin, [
+    $batch = receivedCuttingBatch(Product::factory()->create(['is_active' => true]), 10, null, $admin, [
         ['size' => '36', 'quantity' => 4], ['size' => 'G', 'quantity' => 6],
     ]);
     $first = Workshop::factory()->create(['type' => WorkshopType::Sewing]);
@@ -71,7 +71,7 @@ it('preserves every size when splitting a batch between workshops', function ():
 it('rejects a split when child totals match but the amounts for a size do not', function (): void {
     $admin = User::factory()->admin()->create();
     $action = app(ManageProductionBatch::class);
-    $batch = $action->create(Product::factory()->create(['is_active' => true]), 10, null, $admin, [
+    $batch = receivedCuttingBatch(Product::factory()->create(['is_active' => true]), 10, null, $admin, [
         ['size' => '36', 'quantity' => 4], ['size' => 'G', 'quantity' => 6],
     ]);
     $first = Workshop::factory()->create(['type' => WorkshopType::Sewing]);
@@ -88,7 +88,7 @@ it('rejects a split when child totals match but the amounts for a size do not', 
 it('does not change the size grid when the batch is awaiting receipt or was split', function (): void {
     $admin = User::factory()->admin()->create();
     $action = app(ManageProductionBatch::class);
-    $batch = $action->create(Product::factory()->create(['is_active' => true]), 5, null, $admin);
+    $batch = receivedCuttingBatch(Product::factory()->create(['is_active' => true]), 5, null, $admin);
     $batch = $action->advance($batch, ProductionStage::Cutting, ProductionStage::Sewing, 1, $admin);
     expect(fn () => $action->updateSizes($batch, [['size' => 'M', 'quantity' => 5]], $batch->version, $admin))->toThrow(ValidationException::class)
         ->and($batch->items()->count())->toBe(0);
@@ -111,7 +111,7 @@ it('validates the grid through the endpoints and requires an explicit empty arra
 it('does not allow other profiles or sectors to modify a size grid', function (): void {
     $admin = User::factory()->admin()->create();
     $action = app(ManageProductionBatch::class);
-    $batch = $action->create(Product::factory()->create(['is_active' => true]), 5, null, $admin);
+    $batch = receivedCuttingBatch(Product::factory()->create(['is_active' => true]), 5, null, $admin);
     $this->actingAs(User::factory()->marketing()->create())->put(route('production.sizes.update', $batch), [
         'version' => 1, 'sizes' => [['size' => 'M', 'quantity' => 5]],
     ])->assertForbidden();
@@ -121,10 +121,10 @@ it('does not allow other profiles or sectors to modify a size grid', function ()
 it('displays sizes and their history on the production panel', function (): void {
     $admin = User::factory()->admin()->create();
     $action = app(ManageProductionBatch::class);
-    $batch = $action->create(Product::factory()->create(['is_active' => true]), 5, null, $admin, [['size' => '36', 'quantity' => 5]]);
+    $batch = receivedCuttingBatch(Product::factory()->create(['is_active' => true]), 5, null, $admin, [['size' => '36', 'quantity' => 5]]);
     $action->updateSizes($batch, [['size' => 'M', 'quantity' => 5]], 1, $admin);
     $this->actingAs($admin)->get(route('production.index'))->assertOk()
-        ->assertInertia(fn ($page) => $page->component('production/index')
+        ->assertInertia(fn ($page) => $page->component('production/flow')
             ->where('batches.0.sizes.0.size', 'M')
             ->where('batches.0.sizes.0.quantity', 5)
             ->where('batches.0.events.1.kind', 'sizes_updated')
@@ -135,7 +135,7 @@ it('displays sizes and their history on the production panel', function (): void
 it('validates and persists the size distribution in the split endpoint', function (): void {
     $admin = User::factory()->admin()->create();
     $action = app(ManageProductionBatch::class);
-    $batch = $action->create(Product::factory()->create(['is_active' => true]), 4, null, $admin, [['size' => 'P', 'quantity' => 2], ['size' => 'M', 'quantity' => 2]]);
+    $batch = receivedCuttingBatch(Product::factory()->create(['is_active' => true]), 4, null, $admin, [['size' => 'P', 'quantity' => 2], ['size' => 'M', 'quantity' => 2]]);
     $one = Workshop::factory()->create(['type' => WorkshopType::Sewing]);
     $two = Workshop::factory()->create(['type' => WorkshopType::Sewing]);
     $data = ['stage' => 'cutting', 'target' => 'sewing', 'version' => 1, 'allocations' => [
@@ -152,7 +152,7 @@ it('validates and persists the size distribution in the split endpoint', functio
 
 it('enforces case insensitive uniqueness for active sizes at the database boundary', function (): void {
     $admin = User::factory()->admin()->create();
-    $batch = app(ManageProductionBatch::class)->create(Product::factory()->create(['is_active' => true]), 1, null, $admin, [['size' => 'GG', 'quantity' => 1]]);
+    $batch = receivedCuttingBatch(Product::factory()->create(['is_active' => true]), 1, null, $admin, [['size' => 'GG', 'quantity' => 1]]);
     expect(fn () => DB::transaction(fn () => $batch->items()->create(['size' => 'gg', 'quantity' => 0, 'sort_order' => 1])))
         ->toThrow(QueryException::class)
         ->and($batch->items()->count())->toBe(1);
@@ -162,7 +162,7 @@ it('audits size changes and keeps previous items available in the trash', functi
     $admin = User::factory()->admin()->create();
     $this->actingAs($admin);
     $action = app(ManageProductionBatch::class);
-    $batch = $action->create(Product::factory()->create(['is_active' => true]), 2, null, $admin, [['size' => 'M', 'quantity' => 2]]);
+    $batch = receivedCuttingBatch(Product::factory()->create(['is_active' => true]), 2, null, $admin, [['size' => 'M', 'quantity' => 2]]);
     $action->updateSizes($batch, [['size' => 'M', 'quantity' => 1], ['size' => 'G', 'quantity' => 1]], 1, $admin);
 
     expect(ProductionBatchItem::withTrashed()->where('production_batch_id', $batch->id)->count())->toBe(3)
@@ -183,15 +183,15 @@ it('rejects an invalid grid at creation without creating a batch', function (): 
 it('rejects modifications to an archived or completed batch', function (): void {
     $admin = User::factory()->admin()->create();
     $action = app(ManageProductionBatch::class);
-    $batch = $action->create(Product::factory()->create(['is_active' => true]), 2, null, $admin);
+    $batch = receivedCuttingBatch(Product::factory()->create(['is_active' => true]), 2, null, $admin);
     $one = Workshop::factory()->create(['type' => WorkshopType::Sewing]);
     $two = Workshop::factory()->create(['type' => WorkshopType::Sewing]);
     $action->split($batch, ProductionStage::Cutting, ProductionStage::Sewing, 1, $admin, [
         ['workshop_id' => $one->id, 'quantity' => 1], ['workshop_id' => $two->id, 'quantity' => 1],
     ]);
     expect(fn () => $action->updateSizes($batch, [['size' => 'P', 'quantity' => 2]], 2, $admin))->toThrow(ValidationException::class);
-    $completed = $action->create(Product::factory()->create(['is_active' => true]), 1, null, $admin);
-    foreach ([ProductionStage::Sewing, ProductionStage::Washing, ProductionStage::Dyeing, ProductionStage::Finishing, ProductionStage::Bagging, ProductionStage::Completed] as $target) {
+    $completed = receivedCuttingBatch(Product::factory()->create(['is_active' => true]), 1, null, $admin);
+    foreach ([ProductionStage::Sewing, ProductionStage::Washing, ProductionStage::Finishing, ProductionStage::Completed] as $target) {
         if ($completed->received_at === null) {
             $completed = $action->receive($completed, $completed->version, $admin);
         }

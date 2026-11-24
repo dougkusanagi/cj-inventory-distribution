@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -12,8 +13,15 @@ class ChangelogController extends Controller
 {
     public function __invoke(Request $request): Response
     {
-        $entries = collect(File::glob(resource_path('changelog/pr-*.json')))
-            ->map(fn (string $path): array => File::json($path))
+        $entries = collect(File::json(resource_path('changelog/index.json')))
+            ->map(function (array $entry): array {
+                $entry['details'] = Str::markdown(File::get(resource_path('changelog/'.basename($entry['details_file']))), [
+                    'html_input' => 'strip',
+                    'allow_unsafe_links' => false,
+                ]);
+
+                return $entry;
+            })
             ->sortByDesc('pr_number')
             ->sortByDesc('merged_at')
             ->values();

@@ -21,6 +21,8 @@ export type Auth = {
         manageOperations: boolean;
         managePhotos: boolean;
         manageProduction: boolean;
+        createProductionBatch: boolean;
+        manageWorkshops: boolean;
     };
 };
 

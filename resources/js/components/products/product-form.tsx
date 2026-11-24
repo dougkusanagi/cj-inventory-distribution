@@ -64,7 +64,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { useSidebar } from '@/components/ui/sidebar';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -231,7 +230,6 @@ export function ProductForm({
         });
     const formRef = useRef<HTMLFormElement>(null);
     const submittingRef = useRef(false);
-    const { isMobile, state: sidebarState } = useSidebar();
 
     const form = useForm<ProductFormData>({
         name: product?.name ?? '',
@@ -1188,15 +1186,7 @@ export function ProductForm({
             </section>
 
             {/* 5. Ações inferiores (Mobile-First) */}
-            <div
-                className={cn(
-                    'fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-card px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-4 sm:pb-[calc(1rem+env(safe-area-inset-bottom))] lg:px-8',
-                    !isMobile &&
-                        (sidebarState === 'collapsed'
-                            ? 'md:left-[calc(var(--sidebar-width-icon)+1rem)]'
-                            : 'md:left-(--sidebar-width)'),
-                )}
-            >
+            <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/70 bg-card px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-4 sm:pb-[calc(1rem+env(safe-area-inset-bottom))] lg:px-8">
                 <div className="mx-auto flex w-full max-w-7xl items-center justify-center gap-2 sm:justify-end">
                     {product && (
                         <Button

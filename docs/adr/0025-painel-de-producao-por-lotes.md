@@ -2,6 +2,8 @@
 
 ## Status
 
+Sequência de etapas substituída pelo ADR 0036.
+
 Aceito — 03/11/2026.
 
 ## Contexto

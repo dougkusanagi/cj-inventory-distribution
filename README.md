@@ -118,19 +118,40 @@ link para abertura da mensagem no WhatsApp.
 
 ### Produção
 
-O painel de produção acompanha lotes de produtos ativos por Corte, Costura,
-Lavagem, Tinturaria, Acabamento, Ensacamento e Concluído. Cada responsável
+O painel de produção acompanha lotes de produtos ativos por Planejamento, Corte, Costura,
+Lavanderia (lavagem e tintura), Acabamento e Estoque. Cada responsável
 acessa os setores atribuídos e envia lotes apenas à próxima etapa. O setor
-de destino confirma o recebimento antes de avançar novamente. Costura, lavagem
-e tinturaria podem ser internas ou atribuídas a uma oficina cadastrada; o
-administrador pode desfazer o último envio com motivo. Um lote pode ser dividido
+de destino confirma o recebimento antes de avançar novamente. Costura e Lavanderia (lavagem e tintura) podem ser internas ou atribuídas a uma oficina cadastrada; o
+administrador pode desfazer o último envio com motivo, também pelo botão "Desfazer" do aviso de envio, que registra um motivo automático. Um lote pode ser dividido
 entre oficinas da próxima etapa; as quantidades devem somar o total original.
 O lote original fica no histórico e a divisão não pode ser desfeita pelo painel.
 A grade por tamanho é opcional e sua soma deve corresponder ao lote. Ao dividir
 uma grade conhecida, informe a quantidade de cada tamanho em cada oficina.
 O histórico registra
-cada mudança e evita sobrescritas por alterações simultâneas. Concluir um lote
-não cadastra sacos de estoque, que continuam sendo registrados manualmente.
+cada mudança e evita sobrescritas por alterações simultâneas. No Acabamento, a
+ação "Enviar para o estoque" leva o lote para "Estoque". Ela não cadastra
+sacos de estoque, que continuam sendo registrados manualmente.
+O painel busca lotes por código ou produto, oferece atalhos para cada setor e
+se atualiza sozinho a cada 30 segundos, exceto com uma gaveta ou confirmação
+aberta.
+
+O menu Produção abre somente o canvas em `/painel/producao`. O endereço
+`/painel/producao/fluxo` permanece compatível e mostra a mesma página.
+A busca destaca lotes, o modo Atenção destaca lotes parados e a receber, e
+"Estoque" mostra os últimos 7 dias, preservando os totais completos.
+"Novo lote" e "Oficinas" abrem pelo menu Produção. Na criação de lote,
+o botão "Escolher produto" abre um painel com fotos, busca e três visualizações:
+lista, cards compactos (duas colunas no celular) e cards grandes (uma coluna no
+celular). A grade se adapta ao desktop e a escolha mantém os dados do lote.
+
+### Novidades
+
+Antes de cada entrega enviada ao GitHub, atualize `resources/changelog/index.json`
+com identificador único, data, título e resumo das mudanças desde a última nota.
+Indique em `details_file` um Markdown próprio em `resources/changelog/` com os
+detalhes. A página pública lê esse índice e permite expandir os detalhes; as
+notas acompanham o código implantado. Não é necessário abrir PR para registrar
+uma entrega e repetir um push não deve duplicar a nota.
 
 ### Pedido
 
@@ -172,3 +193,5 @@ Não implementar agora:
 - permissões avançadas
 
 Esses itens podem ser incorporados futuramente sem transformar o MVP em um sistema maior do que o necessário.
+
+No canvas, o menu de elementos (botão ou clique direito no fundo) permite ocultar ou exibir filtros, etapas, minimapa e zoom, individualmente ou todos juntos. Lotes novos começam em Planejamento. A migração unifica os lotes de Lavagem/Tinturaria em Lavanderia e Ensacamento/No estoque em Estoque, preservando os eventos anteriores. Oficinas de lavagem e tintura atendem à Lavanderia.

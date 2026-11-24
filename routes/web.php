@@ -43,6 +43,7 @@ Route::middleware(['auth', 'verified', 'panel'])->prefix('painel')->group(functi
 
 Route::middleware(['auth', 'verified', 'panel'])->prefix('painel/producao')->name('production.')->group(function () {
     Route::get('/', [ProductionBatchController::class, 'index'])->name('index');
+    Route::get('fluxo', [ProductionBatchController::class, 'flow'])->name('flow');
     Route::post('/', [ProductionBatchController::class, 'store'])->name('store');
     Route::post('{batch}/avancar', [ProductionBatchController::class, 'advance'])->name('advance');
     Route::post('{batch}/dividir', [ProductionBatchController::class, 'split'])->name('split');

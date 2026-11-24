@@ -24,7 +24,7 @@ class StoreUserRequest extends FormRequest
             'email' => ['required', 'email', 'max:255', Rule::unique(User::class)],
             'role' => ['required', Rule::enum(UserRole::class)],
             'production_stages' => ['exclude_unless:role,production', 'required', 'array', 'min:1'],
-            'production_stages.*' => ['required', 'distinct', Rule::enum(ProductionStage::class)],
+            'production_stages.*' => ['required', 'distinct', Rule::enum(ProductionStage::class)->only(ProductionStage::active())],
         ];
     }
 

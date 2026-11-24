@@ -4,6 +4,7 @@ namespace App\Enums;
 
 enum ProductionStage: string
 {
+    case Planning = 'planning';
     case Cutting = 'cutting';
     case Sewing = 'sewing';
     case Washing = 'washing';
@@ -15,31 +16,32 @@ enum ProductionStage: string
     public function label(): string
     {
         return match ($this) {
+            self::Planning => 'Planejamento',
             self::Cutting => 'Corte',
             self::Sewing => 'Costura',
-            self::Washing => 'Lavagem',
+            self::Washing => 'Lavanderia',
             self::Dyeing => 'Tinturaria',
             self::Finishing => 'Acabamento',
             self::Bagging => 'Ensacamento',
-            self::Completed => 'Concluído',
+            self::Completed => 'Estoque',
         };
     }
 
     public function position(): int
     {
-        return match ($this) {
-            self::Cutting => 0,
-            self::Sewing => 1,
-            self::Washing => 2,
-            self::Dyeing => 3,
-            self::Finishing => 4,
-            self::Bagging => 5,
-            self::Completed => 6,
-        };
+        $position = array_search($this, self::active(), true);
+
+        return $position === false ? -1 : $position;
+    }
+
+    /** @return list<self> */
+    public static function active(): array
+    {
+        return [self::Planning, self::Cutting, self::Sewing, self::Washing, self::Finishing, self::Completed];
     }
 
     public function canMoveTo(self $target): bool
     {
-        return $target->position() === $this->position() + 1;
+        return in_array($this, self::active(), true) && in_array($target, self::active(), true) && $target->position() === $this->position() + 1;
     }
 }

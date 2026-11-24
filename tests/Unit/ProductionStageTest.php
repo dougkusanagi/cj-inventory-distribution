@@ -3,7 +3,7 @@
 use App\Enums\ProductionStage;
 
 it('only permits moving to the next production stage', function (): void {
-    $stages = ProductionStage::cases();
+    $stages = ProductionStage::active();
 
     foreach ($stages as $index => $stage) {
         foreach ($stages as $targetIndex => $target) {

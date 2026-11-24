@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — 01/10/2026.
+Substituído por 0034 — 16/11/2026.
 
 ## Contexto
 
