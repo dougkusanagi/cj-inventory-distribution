@@ -63,7 +63,7 @@ it('lets an administrator record a sale price and approve the revision', functio
         ->resize($width, 900)
         ->click('Editar custos')
         ->type('#sheet-sale-0', '4000')
-        ->screenshot(filename: "ficha-custos-{$width}")
+        ->screenshot(fullPage: false, filename: "ficha-custos-{$width}")
         ->click('Salvar custos')
         ->assertMissing('[data-slot="drawer-content"]')
         ->assertSee('Custo total')
