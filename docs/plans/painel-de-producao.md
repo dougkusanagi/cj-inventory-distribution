@@ -18,8 +18,9 @@ O plano termina quando o painel estiver implantado em produção, com os
 responsáveis de cada setor usando o próprio login, e as correções do primeiro
 uso real estiverem integradas.
 
-A ficha técnica, o perfil Modelagem e os catálogos de insumos e custos seguem
-no [plano da ficha técnica](ficha-tecnica.md).
+O [ADR 0027](../adr/0027-ficha-tecnica-versionada.md) descreve a ficha técnica
+versionada e o [ADR 0039](../adr/0039-rastreabilidade-do-lote-ao-saco.md)
+registra o vínculo da revisão ao lote.
 
 ## Prioridades atuais
 
@@ -126,8 +127,6 @@ A visão Fluxo (`/painel/producao/fluxo`) foi feita ao lado do Quadro (ADR
 
 ## Fora deste plano
 
-- Ficha técnica, perfil Modelagem, insumos, preços e custos:
-  `docs/plans/ficha-tecnica.md`.
 - Perdas e retrabalho: só se o gerente pedir.
 - PCP completo (ordens de produção, consumo real, roteiro, tempos, custo
   realizado, RFID, Bling).
@@ -146,8 +145,7 @@ A visão Fluxo (`/painel/producao/fluxo`) foi feita ao lado do Quadro (ADR
 
 ## Próximo passo
 
-Iniciar a fase 3 do [plano da ficha técnica](ficha-tecnica.md), com o
-perfil Modelagem e os catálogos de insumos e custos.
+Implantar as fichas técnicas para iniciar o uso dos lotes na fábrica.
 
 Nota de ambiente: o `composer` do lerd roda no contêiner PHP, que não tem
 `bash` e limita a memória a 128 MB. Para a conferência completa, rodar

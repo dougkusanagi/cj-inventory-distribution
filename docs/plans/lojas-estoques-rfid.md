@@ -15,7 +15,7 @@ da implementação.
   com SKU pai/filha no padrão `SKI01BRA34` (modelo + categoria + aparência +
   tamanho).
 - `cj-spec-sheet`: ficha técnica antiga, usada só como referência. A ficha
-  entra aqui como módulo novo (ver `docs/plans/ficha-tecnica.md`).
+  foi implementada como módulo próprio (ver [ADR 0027](../adr/0027-ficha-tecnica-versionada.md)).
 
 ## Problemas atuais
 
@@ -128,7 +128,7 @@ no Laravel. RFID só interno não exige GS1; etiquetar com GTIN exige.
 | 2 | Acesso das lojas: perfil Loja, login pelo WhatsApp, link de acesso, passkey, catálogo atrás do login (problemas 2, 3 e 5) | 1 |
 | 3 | Limpeza: remover as rotas e a tela de experimento dos cards (problema 6) | 0 |
 | 4 | ADR de identidade: SKU pai/aparência/tamanho (problema 8) | — |
-| 5 | Ficha técnica (fases 3 a 6 de `docs/plans/ficha-tecnica.md`) | 0 |
+| 5 | Ficha técnica (implementada) | 0 |
 | 6 | Variantes com SKU no produto (problema 8) | 4 |
 | 7 | Locais de estoque, remessas, recebimento e contagem pela loja (problema 9) | 2, 6 |
 | 8 | Vendas por loja (Bling ou caixa) e conferência completa | 7 |
