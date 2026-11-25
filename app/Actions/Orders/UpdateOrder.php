@@ -5,6 +5,7 @@ namespace App\Actions\Orders;
 use App\Enums\OrderEventType;
 use App\Enums\OrderStatus;
 use App\Models\Order;
+use App\Models\Store;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -28,13 +29,19 @@ class UpdateOrder
             }
 
             $before = [
+                'store_id' => $lockedOrder->store_id,
                 'store_name' => $lockedOrder->store_name,
                 'requester_name' => $lockedOrder->requester_name,
                 'whatsapp' => $lockedOrder->whatsapp,
                 'notes' => $lockedOrder->notes,
             ];
 
+            $sameStoreName = Store::nameKey($data['store_name']) === Store::nameKey($lockedOrder->store_name);
+
             $lockedOrder->update([
+                'store_id' => $lockedOrder->store_id !== null && $sameStoreName
+                    ? $lockedOrder->store_id
+                    : Store::activeIdForName($data['store_name']),
                 'store_name' => $data['store_name'],
                 'requester_name' => $data['requester_name'],
                 'whatsapp' => $data['whatsapp'] ?? null,

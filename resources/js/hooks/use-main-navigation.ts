@@ -10,6 +10,7 @@ import {
     PlusCircleIcon,
     ScissorsIcon,
     ShoppingCartIcon,
+    StorefrontIcon,
     SquaresFourIcon,
     TShirtIcon,
     TagIcon,
@@ -26,6 +27,7 @@ import { index as productPhotosIndex } from '@/routes/product-photos';
 import { index as productionIndex } from '@/routes/production';
 import { index as productsIndex } from '@/routes/products';
 import { index as stockMovementsIndex } from '@/routes/stock-movements';
+import { index as storesIndex } from '@/routes/stores';
 import { index as technicalSheetsIndex } from '@/routes/technical-sheets';
 import { index as usersIndex } from '@/routes/users';
 import { index as washTypesIndex } from '@/routes/wash-types';
@@ -40,6 +42,7 @@ const changelogItem: NavItem = {
 const operationNavItems: NavItem[] = [
     { title: 'Painel', href: dashboard(), icon: SquaresFourIcon, exact: true },
     { title: 'Pedidos', href: ordersIndex(), icon: ShoppingCartIcon },
+    { title: 'Lojas', href: storesIndex(), icon: StorefrontIcon },
     {
         title: 'Estoque',
         href: inventoryIndex(),

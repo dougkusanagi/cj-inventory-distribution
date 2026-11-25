@@ -15,6 +15,7 @@ export function useFlashToast(): void {
 
             const action = data.action;
             toast[data.type](data.message, {
+                position: data.position,
                 // Com ação, o aviso fica mais tempo para dar tempo de usá-la.
                 duration: action ? 10000 : undefined,
                 action: action

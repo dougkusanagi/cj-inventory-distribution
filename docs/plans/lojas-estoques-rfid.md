@@ -179,7 +179,11 @@ quando outra etapa precisar alterá-la.
 A validação local da etapa 0 em `feat/quadro-producao` foi concluída com
 `composer ci:verify` em PHP 8.5 e PostgreSQL descartável. Passaram 440 testes
 funcionais e unitários, 151 testes de navegador, a análise estática e o build.
-A pedido do usuário, a entrega desta etapa fica local. A integração em
-`master` e a implantação seguem pendentes. As etapas dependentes aguardam
-esse marco. A etapa 4 aguarda a definição de como vincular a aparência do
+O painel foi integrado e implantado. O início do uso na fábrica depende
+da implantação das fichas técnicas. A etapa 4 aguarda a definição de como vincular a aparência do
 inventário à do catálogo.
+
+A etapa 1 foi implementada na branch `feat/cadastro-lojas`. A associação dos
+pedidos e a apuração por destino seguem o [ADR 0038](../adr/0038-identidade-da-loja-nos-pedidos.md).
+O `composer ci:verify` passou com 478 testes de aplicação e 172 de navegador.
+A migration de lojas foi aplicada, revertida e reaplicada em SQLite.

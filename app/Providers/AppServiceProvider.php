@@ -13,6 +13,7 @@ use App\Models\ProductionBatchItem;
 use App\Models\ProductionStageAssignment;
 use App\Models\StockOfferVolume;
 use App\Models\StockOfferVolumeItem;
+use App\Models\Store;
 use App\Models\TechnicalSheet;
 use App\Models\TechnicalSheetCost;
 use App\Models\TechnicalSheetMaterial;
@@ -69,6 +70,7 @@ class AppServiceProvider extends ServiceProvider
             Category::class,
             WashType::class,
             Workshop::class,
+            Store::class,
             StockOfferVolume::class,
             StockOfferVolumeItem::class,
             CatalogSetting::class,

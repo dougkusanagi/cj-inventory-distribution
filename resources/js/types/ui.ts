@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { ExternalToast } from 'sonner';
 import type { BreadcrumbItem } from '@/types/navigation';
 
 export type AppLayoutProps = {
@@ -11,6 +12,7 @@ export type AppVariant = 'header' | 'sidebar';
 export type FlashToast = {
     type: 'success' | 'info' | 'warning' | 'error';
     message: string;
+    position?: ExternalToast['position'];
     /** Ação do aviso, enviada por POST, como "Desfazer". */
     action?: {
         label: string;

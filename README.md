@@ -187,6 +187,16 @@ Status iniciais:
 - `Finalizado`
 - `Cancelado`
 
+### Lojas
+
+Em **Lojas**, Administrador e Estoque podem cadastrar, renomear e desativar
+lojas e consultar quantas peças constam em pedidos finalizados por destino.
+Ao registrar um pedido, o sistema vincula a loja ativa com o mesmo nome,
+ignorando maiúsculas e espaços repetidos, e preserva o nome informado.
+Para corrigir um vínculo pendente, edite o pedido e informe o nome cadastrado.
+Pedidos sem correspondência continuam disponíveis pelo nome informado. As
+peças de pedidos finalizados sem vínculo aparecem em um total separado.
+
 ## Desenvolvimento e testes
 
 O ambiente local usa PostgreSQL. Configure a conexão no `.env` e crie os

@@ -14,9 +14,10 @@ sacos. A adoção pela fábrica depende da implantação dessas mudanças.
 Em uma etapa futura, avaliar a duplicação de um produto com a ficha
 aprovada como rascunho para testar variantes com estoque e vendas próprios.
 
-Lojas, acesso das vendedoras, vários estoques, conferência com as lojas e
-RFID estão no [plano de lojas, estoques e RFID](plans/lojas-estoques-rfid.md),
-ainda com decisões em aberto.
+O cadastro de lojas vincula pedidos pelo nome e totaliza peças de pedidos
+finalizados por destino. Acesso das vendedoras, vários estoques, conferência
+com as lojas e RFID estão no
+[plano de lojas, estoques e RFID](plans/lojas-estoques-rfid.md).
 
 ## Catálogo e pedidos para lojistas — plano vigente
 

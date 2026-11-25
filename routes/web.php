@@ -18,6 +18,7 @@ use App\Http\Controllers\StockEntryController;
 use App\Http\Controllers\StockExitController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\StockMovementReversalController;
+use App\Http\Controllers\StoreController;
 use App\Http\Controllers\TechnicalSheetController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPasswordLinkController;
@@ -128,6 +129,10 @@ Route::middleware(['auth', 'verified', 'staff'])->prefix('painel')->group(functi
         ->names('orders')
         ->parameters(['pedidos' => 'order'])
         ->except('destroy');
+    Route::resource('lojas', StoreController::class)
+        ->names('stores')
+        ->parameters(['lojas' => 'store'])
+        ->only(['index', 'store', 'update']);
     Route::post('pedidos/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
     Route::post('pedidos/{order}/complete', [OrderController::class, 'complete'])->name('orders.complete');
     Route::post('pedidos/{order}/itens/{item}/separate', [OrderController::class, 'separate'])

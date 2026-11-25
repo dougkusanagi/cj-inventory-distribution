@@ -74,4 +74,6 @@ ADRs iniciais:
 
 - [0036 — Etapas de produção unificadas](0036-etapas-de-producao-unificadas.md)
 
+- [0038 — Identidade da loja nos pedidos](0038-identidade-da-loja-nos-pedidos.md)
+
 - [0039 — Rastreabilidade do lote ao saco](0039-rastreabilidade-do-lote-ao-saco.md)

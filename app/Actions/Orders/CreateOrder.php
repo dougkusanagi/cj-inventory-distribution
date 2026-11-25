@@ -8,6 +8,7 @@ use App\Enums\OrderStatus;
 use App\Enums\StockOfferType;
 use App\Models\Order;
 use App\Models\StockOfferVolume;
+use App\Models\Store;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
@@ -75,6 +76,7 @@ class CreateOrder
 
                 $order = Order::create([
                     'code' => 'P-'.Str::random(18),
+                    'store_id' => Store::activeIdForName($data['store_name']),
                     'store_name' => $data['store_name'],
                     'requester_name' => $data['requester_name'],
                     'whatsapp' => $data['whatsapp'] ?? null,

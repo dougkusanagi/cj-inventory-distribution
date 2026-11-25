@@ -49,6 +49,7 @@ erDiagram
     Product ||--o{ StockOfferVolume : possui
     StockOfferVolume ||--o{ StockOfferVolumeItem : contem
     Order ||--o{ OrderItem : contem
+    Store o|--o{ Order : recebe
     OrderItem }o--|| StockOfferVolume : reserva
     Order ||--o{ OrderEvent : registra
     User ||--o{ OrderEvent : realiza
@@ -343,6 +344,13 @@ pending
 completed
 canceled
 ```
+
+O cadastro operacional de lojas é privado. `orders.store_id` é opcional para
+preservar pedidos antigos e nomes ainda sem correspondência. As actions de
+pedido associam uma loja ativa pelo nome normalizado e mantêm
+`orders.store_name` como registro do texto informado. A consulta de destino
+agrega quantidades dos itens de pedidos finalizados, inclusive de lojas
+inativas. Veja o ADR 0038.
 
 ## OrderItem
 
