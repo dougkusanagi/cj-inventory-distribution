@@ -15,18 +15,27 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { update } from '@/routes/technical-sheets';
-import type { MaterialLine, MaterialOption, MaterialRole, Sheet } from './data';
+import type {
+    MaterialLine,
+    MaterialOption,
+    MaterialRole,
+    Sheet,
+    SheetProduct,
+} from './data';
 import { materialRoleLabels } from './data';
+import { PrintSheet } from './print-sheet';
 import { RevisionDrawer } from './revision-drawer';
 
 type FormLine = { material_id: string; role: MaterialRole; quantity: string };
 
 export function TechnicalEditor({
+    product,
     sheet,
     materials,
     options,
     onClose,
 }: {
+    product: SheetProduct;
     sheet: Sheet;
     materials: MaterialLine[];
     options: MaterialOption[];
@@ -55,6 +64,28 @@ export function TechnicalEditor({
         <RevisionDrawer
             title="Editar dados técnicos"
             description="Informe os insumos, o consumo por peça e as instruções."
+            extraAction={
+                <PrintSheet
+                    product={product}
+                    sheet={{ ...sheet, instructions: form.data.instructions }}
+                    dirty={form.isDirty}
+                    materials={form.data.materials.map((line) => {
+                        const id = Number(line.material_id);
+                        const original = materials.find(
+                            (item) =>
+                                item.material_id === id &&
+                                item.role === line.role,
+                        );
+                        const option = options.find((item) => item.id === id);
+                        return {
+                            ...line,
+                            material_name:
+                                original?.material_name ?? option?.name ?? '—',
+                            unit: original?.unit ?? option?.unit ?? '—',
+                        };
+                    })}
+                />
+            }
             onClose={onClose}
             onSubmit={(event) => {
                 event.preventDefault();

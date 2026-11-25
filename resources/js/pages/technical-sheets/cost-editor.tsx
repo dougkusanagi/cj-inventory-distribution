@@ -14,15 +14,24 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { update } from '@/routes/technical-sheets/costs';
-import type { CostLine, Costs, MaterialLine, Sheet } from './data';
+import type {
+    CostLine,
+    Costs,
+    MaterialLine,
+    Sheet,
+    SheetProduct,
+} from './data';
+import { PrintSheet } from './print-sheet';
 import { RevisionDrawer } from './revision-drawer';
 
 export function CostEditor({
+    product,
     sheet,
     costs,
     materials,
     onClose,
 }: {
+    product: SheetProduct;
     sheet: Sheet;
     costs: Costs;
     materials: MaterialLine[];
@@ -58,6 +67,22 @@ export function CostEditor({
         <RevisionDrawer
             title="Editar custos"
             description="Os totais são calculados com os valores salvos."
+            extraAction={
+                <PrintSheet
+                    product={product}
+                    sheet={sheet}
+                    materials={materials}
+                    dirty={form.isDirty}
+                    costs={{
+                        items: form.data.costs,
+                        summary: form.isDirty ? undefined : costs.summary,
+                        sales: options.map((option, index) => ({
+                            name: option.material_name,
+                            price: form.data.sale_prices[index].sale_price,
+                        })),
+                    }}
+                />
+            }
             onClose={onClose}
             onSubmit={(event) => {
                 event.preventDefault();

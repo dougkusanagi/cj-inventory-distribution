@@ -20,6 +20,7 @@ export function RevisionDrawer({
     processing,
     error,
     children,
+    extraAction,
 }: {
     title: string;
     description: string;
@@ -29,6 +30,7 @@ export function RevisionDrawer({
     processing?: boolean;
     error?: string;
     children: ReactNode;
+    extraAction?: ReactNode;
 }) {
     const side = useIsMobile() ? 'bottom' : 'right';
 
@@ -55,6 +57,7 @@ export function RevisionDrawer({
                             {children}
                         </div>
                         <DrawerFooter>
+                            {extraAction}
                             <Button
                                 type="submit"
                                 className="h-11"

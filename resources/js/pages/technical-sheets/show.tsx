@@ -23,6 +23,7 @@ import type {
     Status,
 } from './data';
 import { materialRoleLabels, statusLabels } from './data';
+import { PrintSheet } from './print-sheet';
 import { RevisionDrawer } from './revision-drawer';
 import { TechnicalEditor } from './technical-editor';
 
@@ -177,6 +178,31 @@ export default function ShowTechnicalSheet({
                         </Link>
                     </Button>
                 </header>
+                <div className="flex flex-wrap gap-2">
+                    <PrintSheet
+                        product={product}
+                        sheet={sheet}
+                        materials={materials}
+                    />
+                    {costs && (
+                        <PrintSheet
+                            product={product}
+                            sheet={sheet}
+                            materials={materials}
+                            costs={{
+                                items: costs.items,
+                                summary: costs.summary,
+                                sales: [],
+                            }}
+                        />
+                    )}
+                    <PrintSheet
+                        product={product}
+                        sheet={sheet}
+                        materials={[]}
+                        blank
+                    />
+                </div>
                 {sheet.review_note && (
                     <Card className="gap-2 p-4">
                         <h2 className="font-semibold">Última devolução</h2>
@@ -366,6 +392,7 @@ export default function ShowTechnicalSheet({
             </div>
             {editor === 'technical' && materialOptions && (
                 <TechnicalEditor
+                    product={product}
                     sheet={sheet}
                     materials={materials}
                     options={materialOptions}
@@ -374,6 +401,7 @@ export default function ShowTechnicalSheet({
             )}
             {editor === 'costs' && costs && (
                 <CostEditor
+                    product={product}
                     sheet={sheet}
                     materials={materials}
                     costs={costs}

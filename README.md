@@ -65,6 +65,9 @@ novas atribuições. Tipos vinculados a produtos, inclusive excluídos
 logicamente, devem ser desativados em vez de excluídos.
 
 A ficha técnica usa a lavagem cadastrada no produto, preservando os IDs.
+Na página da revisão, é possível imprimir a ficha técnica ou um modelo em
+branco em A4. Administradores também podem imprimir custos. Ao imprimir pelo
+editor, a ficha inclui os valores em edição e indica alterações não salvas.
 
 ### Tamanho
 

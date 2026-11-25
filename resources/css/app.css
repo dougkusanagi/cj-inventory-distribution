@@ -334,3 +334,67 @@
         transform: none;
     }
 }
+
+.technical-sheet-print {
+    display: none;
+}
+
+@page technical-sheet {
+    size: A4;
+    margin: 14mm;
+}
+
+@media print {
+    body:has(> .technical-sheet-print) {
+        background: white;
+        color: black;
+        overflow: visible !important;
+    }
+
+    body:has(> .technical-sheet-print) > :not(.technical-sheet-print) {
+        display: none !important;
+    }
+
+    .technical-sheet-print {
+        page: technical-sheet;
+        display: block;
+        font-size: 11pt;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+
+        h1 {
+            font-size: 19pt;
+            font-weight: 700;
+        }
+
+        h2 {
+            margin-block: 12pt 4pt;
+            font-size: 13pt;
+            font-weight: 700;
+            break-after: avoid;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: start;
+        }
+
+        tr {
+            break-inside: avoid;
+        }
+
+        th,
+        td {
+            height: 22pt;
+            padding: 4pt;
+            border: 1px solid;
+            text-align: start;
+        }
+    }
+
+    .technical-sheet-writing-line {
+        min-height: 24pt;
+        border-bottom: 1px solid;
+    }
+}

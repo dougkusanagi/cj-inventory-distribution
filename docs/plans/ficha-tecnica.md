@@ -176,13 +176,13 @@ Branch sugerida: `feat/ficha-tecnica`.
 
 Branch sugerida: `feat/ficha-tecnica-impressao`.
 
-- [ ] Impressão técnica (sem preços), para todos com acesso à ficha.
-- [ ] Impressão de custo (só Administrador).
-- [ ] Ficha em branco para preenchimento à mão.
-- [ ] CSS de impressão A4, alto contraste, sem botões nem campos. A
+- [x] Impressão técnica (sem preços), para todos com acesso à ficha.
+- [x] Impressão de custo (só Administrador).
+- [x] Ficha em branco para preenchimento à mão.
+- [x] CSS de impressão A4, alto contraste, sem botões nem campos. A
       impressão usa o estado atual da tela e mostra "Alterações não salvas"
       quando for o caso.
-- [ ] Teste de navegador para os três modos e para a ausência de preços na
+- [x] Teste de navegador para os três modos e para a ausência de preços na
       impressão técnica.
 
 ### Fase 6 — Integrações leves
@@ -233,6 +233,16 @@ padrão, apontamentos, custo realizado, RFID e integração com Bling.
 A fase 4 está implementada localmente em `feat/ficha-tecnica`, baseada em
 `feat/catalogo-insumos` enquanto a fase 3 aguarda integração.
 O `composer ci:verify` passou com 469 testes de aplicação e 165 de
-navegador. A migration também passou em SQLite. O próximo
-passo é a fase 5, com impressão técnica, impressão de custos e ficha em
-branco. Depois, ligar a revisão aprovada ao lote na fase 6.
+navegador. A migration também passou em SQLite.
+
+A fase 5 está implementada em `feat/ficha-tecnica-impressao`. As três
+impressões usam o diálogo do navegador em A4. Alterações pendentes
+aparecem na impressão iniciada no editor. Os totais da ficha de custos
+voltam a aparecer após salvar, usando o cálculo do servidor. Os dois
+cenários de impressão passaram no navegador em 390 e 1366 px. A
+conferência completa passou nos 469 testes da aplicação e registrou um
+timeout no cenário de divisão de lotes em 1366 px. Os testes de impressão
+passaram após corrigir o nome do insumo no dado de teste.
+
+A próxima fase vincula a revisão aprovada ao lote e permite informar o
+lote de origem no cadastro manual de um saco.
