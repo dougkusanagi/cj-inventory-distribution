@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -53,7 +54,14 @@ class MaterialController extends Controller
 
     public function update(SaveMaterialRequest $request, Material $material): RedirectResponse
     {
-        DB::transaction(fn () => $material->update($request->validated()));
+        DB::transaction(function () use ($request, $material): void {
+            $locked = Material::query()->whereKey($material->id)->lockForUpdate()->firstOrFail();
+            $data = $request->validated();
+            if ($locked->unit->value !== $data['unit'] && ($locked->prices()->exists() || $locked->sheetLines()->exists())) {
+                throw ValidationException::withMessages(['unit' => 'Este insumo já tem preço ou uso em ficha. Cadastre outro insumo para usar uma unidade diferente.']);
+            }
+            $locked->update($data);
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Insumo atualizado.']);
 

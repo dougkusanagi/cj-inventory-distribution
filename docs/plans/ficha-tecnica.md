@@ -127,28 +127,28 @@ Branch sugerida: `feat/catalogo-insumos`.
 
 Branch sugerida: `feat/ficha-tecnica`.
 
-- [ ] Registrar o ADR `0027-ficha-tecnica-versionada.md`. Reusar as regras
+- [x] Registrar o ADR `0027-ficha-tecnica-versionada.md`. Reusar as regras
       do ADR `0028-preco-de-insumo-com-vigencia.md`, registrado na fase 3.
-- [ ] `technical_sheets`: `product_id` (FK), `revision`, `status`
+- [x] `technical_sheets`: `product_id` (FK), `revision`, `status`
       (`draft`, `in_review`, `approved`, `obsolete`), `version`,
       `instructions` (texto), `approved_by/at`, `obsoleted_by/at`,
       `created_by`, timestamps. Único por (`product_id`, `revision`).
-- [ ] `technical_sheet_materials`: `technical_sheet_id`, `material_id`
+- [x] `technical_sheet_materials`: `technical_sheet_id`, `material_id`
       (`restrictOnDelete`), `role` (componente da peça / opção de tecido),
       `quantity` decimal(12,3) > 0, cópia de `unit` e `material_name`,
       `sort_order`; e, só preenchidos pelo admin, `unit_price_snapshot` e
       `sale_price` (por opção de tecido).
-- [ ] `technical_sheet_costs`: `technical_sheet_id`, `cost_item_id`, `amount`,
+- [x] `technical_sheet_costs`: `technical_sheet_id`, `cost_item_id`, `amount`,
       `surcharge_type` e `surcharge_value` (copiados do catálogo e editáveis
       na ficha). O valor final da linha é calculado no servidor.
-- [ ] Garantir no banco uma única revisão aprovada por produto: índice único
+- [x] Garantir no banco uma única revisão aprovada por produto: índice único
       parcial em (`product_id`) onde `status = 'approved'` (PostgreSQL e
       SQLite aceitam), além da regra na action.
-- [ ] A lavagem vem do `wash_type_id` do produto. A ficha mostra a lavagem,
+- [x] A lavagem vem do `wash_type_id` do produto. A ficha mostra a lavagem,
       mas não duplica o campo.
-- [ ] A foto vem da galeria do produto (media library). A ficha não tem foto
+- [x] A foto vem da galeria do produto (media library). A ficha não tem foto
       própria.
-- [ ] Fluxo de status num único lugar:
+- [x] Fluxo de status num único lugar:
   - Rascunho → Em revisão (Modelagem ou Admin).
   - Em revisão → Rascunho (Admin devolve, com motivo).
   - Em revisão → Aprovada (Admin, com custos preenchidos). Na mesma
@@ -159,16 +159,15 @@ Branch sugerida: `feat/ficha-tecnica`.
     próxima revisão em rascunho, copiando insumos, instruções e custos. A
     aprovada continua valendo até a nova ser aprovada. Só pode existir uma
     revisão em rascunho ou em revisão por produto. Obsoleta é estado final.
-- [ ] `CalculateTechnicalSheetCost` com `brick/math`: arredondamento
-      `HalfUp` a 2 casas por operação monetária, como no `cj-spec-sheet`. O
-      frontend só mostra uma prévia; o servidor recalcula ao salvar e ao
-      exibir.
-- [ ] Props separadas: dados técnicos para todos com acesso e um bloco
+- [x] `CalculateTechnicalSheetCost` com `brick/math`: arredondamento
+      `HalfUp` a 2 casas por operação monetária. O servidor calcula os totais
+      com os valores salvos e o frontend apresenta o resultado.
+- [x] Props separadas: dados técnicos para todos com acesso e um bloco
       `costs` incluído só para Administrador.
-- [ ] Telas: lista de fichas por produto, formulário dividido em seções
+- [x] Telas: lista de fichas por produto, formulário dividido em seções
       (identificação, insumos, instruções, custos só admin), histórico de
       revisões num `Drawer`.
-- [ ] Testes: transições válidas e inválidas, uma única aprovada por
+- [x] Testes: transições válidas e inválidas, uma única aprovada por
       produto, snapshot de preço, confidencialidade nas props e nas rotas,
       conflito de versão, insumo inativo, unidade divergente, campos
       derivados proibidos, envio vazio e edição de registro existente.
@@ -220,6 +219,8 @@ padrão, apontamentos, custo realizado, RFID e integração com Bling.
 - Na validação da fase 3, a inclusão de Insumos exigiu atualizar o teste
   do menu. Um teste de envio de lote passou a aguardar o fechamento da
   gaveta após o envio. A nova execução completa passou.
+- Na fase 4, a inspeção em desktop mostrou que o texto ficava estreito
+  em fichas sem foto. A coluna da foto agora só existe quando há imagem.
 
 ## Dúvidas abertas
 
@@ -229,7 +230,9 @@ padrão, apontamentos, custo realizado, RFID e integração com Bling.
 
 ## Próximo passo
 
-A fase 3 está implementada na branch `feat/catalogo-insumos`. O
-`composer ci:verify` passou com 461 testes de aplicação e 160 de navegador.
-As migrations foram verificadas também em SQLite. Depois da integração, iniciar a fase 4 em `feat/ficha-tecnica` a partir de `master`.
-A adoção do painel depende da ficha aprovada disponível para vincular ao lote.
+A fase 4 está implementada localmente em `feat/ficha-tecnica`, baseada em
+`feat/catalogo-insumos` enquanto a fase 3 aguarda integração.
+O `composer ci:verify` passou com 469 testes de aplicação e 165 de
+navegador. A migration também passou em SQLite. O próximo
+passo é a fase 5, com impressão técnica, impressão de custos e ficha em
+branco. Depois, ligar a revisão aprovada ao lote na fase 6.

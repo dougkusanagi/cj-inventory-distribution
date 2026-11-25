@@ -4,11 +4,10 @@ O roadmap descreve direção, não compromisso de implementação imediata.
 
 ## Produção e ficha técnica
 
-O [painel de produção](plans/painel-de-producao.md) já está implantado. O
-perfil Modelagem, o catálogo de insumos e a gestão administrativa de preços
-e custos-base foram implementados na primeira fase da
-[ficha técnica](plans/ficha-tecnica.md). Antes de iniciar o uso na fábrica,
-faltam as fichas versionadas e o vínculo com os lotes.
+O [painel de produção](plans/painel-de-producao.md) já está implantado.
+As [fichas técnicas](plans/ficha-tecnica.md) têm catálogo de insumos,
+histórico de preços, custos-base e revisões por produto. Antes de iniciar
+o uso na fábrica, faltam a impressão e o vínculo da ficha com os lotes.
 A produção não cria sacos automaticamente.
 
 Lojas, acesso das vendedoras, vários estoques, conferência com as lojas e

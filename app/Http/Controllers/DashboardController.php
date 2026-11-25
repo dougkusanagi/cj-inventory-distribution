@@ -26,7 +26,7 @@ class DashboardController extends Controller
         }
 
         if ($request->user()?->role === UserRole::Modeling) {
-            return to_route('materials.index');
+            return to_route('technical-sheets.index');
         }
 
         if (! $request->user()?->isStaff()) {

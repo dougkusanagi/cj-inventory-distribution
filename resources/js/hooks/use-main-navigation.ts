@@ -26,6 +26,7 @@ import { index as productPhotosIndex } from '@/routes/product-photos';
 import { index as productionIndex } from '@/routes/production';
 import { index as productsIndex } from '@/routes/products';
 import { index as stockMovementsIndex } from '@/routes/stock-movements';
+import { index as technicalSheetsIndex } from '@/routes/technical-sheets';
 import { index as usersIndex } from '@/routes/users';
 import { index as washTypesIndex } from '@/routes/wash-types';
 import type { NavItem } from '@/types';
@@ -72,6 +73,15 @@ export function useMainNavigation(): {
 
     const items: NavItem[] = [
         ...(can.manageOperations ? operationNavItems.slice(0, 1) : []),
+        ...(can.viewTechnicalSheets
+            ? [
+                  {
+                      title: 'Fichas técnicas',
+                      href: technicalSheetsIndex(),
+                      icon: ClipboardTextIcon,
+                  },
+              ]
+            : []),
         ...(can.viewMaterials
             ? [{ title: 'Insumos', href: materialsIndex(), icon: ScissorsIcon }]
             : []),

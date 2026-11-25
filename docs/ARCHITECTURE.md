@@ -23,10 +23,20 @@ Preços vigentes e históricos são reservados ao Administrador, assim como os
 custos-base. O [ADR 0028](adr/0028-preco-de-insumo-com-vigencia.md) define a
 seleção do preço e o vínculo com a revisão da ficha.
 
+A ficha técnica versionada preserva as revisões por produto. A aprovação
+congela preços e substitui a revisão aprovada anterior em transação. A
+Modelagem consulta apenas dados técnicos. Veja o
+[ADR 0027](adr/0027-ficha-tecnica-versionada.md).
+
 ## Modelo de domínio
 
 ```mermaid
 erDiagram
+    Product ||--o{ TechnicalSheet : possui
+    TechnicalSheet ||--o{ TechnicalSheetMaterial : usa
+    TechnicalSheet ||--o{ TechnicalSheetCost : registra
+    Material ||--o{ TechnicalSheetMaterial : referencia
+    CostItem ||--o{ TechnicalSheetCost : referencia
     Material ||--o{ MaterialPrice : possui
     User ||--o{ MaterialPrice : registra
     Product ||--o{ StockOfferVolume : possui

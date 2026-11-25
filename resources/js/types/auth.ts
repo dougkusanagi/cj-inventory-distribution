@@ -22,6 +22,7 @@ export type User = {
 export type Auth = {
     user: User;
     can: {
+        viewTechnicalSheets: boolean;
         viewMaterials: boolean;
         manageUsers: boolean;
         manageOperations: boolean;

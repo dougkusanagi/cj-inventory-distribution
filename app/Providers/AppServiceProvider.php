@@ -13,6 +13,9 @@ use App\Models\ProductionBatchItem;
 use App\Models\ProductionStageAssignment;
 use App\Models\StockOfferVolume;
 use App\Models\StockOfferVolumeItem;
+use App\Models\TechnicalSheet;
+use App\Models\TechnicalSheetCost;
+use App\Models\TechnicalSheetMaterial;
 use App\Models\User;
 use App\Models\WashType;
 use App\Models\Workshop;
@@ -53,6 +56,9 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         foreach ([
+            TechnicalSheet::class,
+            TechnicalSheetCost::class,
+            TechnicalSheetMaterial::class,
             Material::class,
             MaterialPrice::class,
             CostItem::class,

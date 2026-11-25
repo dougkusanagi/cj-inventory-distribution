@@ -77,7 +77,7 @@ const roleDescriptions = {
     marketing:
         'Gerencia somente as fotos dos produtos e as próprias configurações de conta.',
     production: 'Acompanha e envia lotes dos setores atribuídos.',
-    modeling: 'Consulta o catálogo de insumos.',
+    modeling: 'Prepara fichas técnicas e consulta insumos.',
 };
 
 function UserAccountDrawer({

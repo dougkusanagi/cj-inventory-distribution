@@ -18,11 +18,13 @@ use App\Http\Controllers\StockEntryController;
 use App\Http\Controllers\StockExitController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\StockMovementReversalController;
+use App\Http\Controllers\TechnicalSheetController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPasswordLinkController;
 use App\Http\Controllers\WashTypeController;
 use App\Http\Controllers\WorkshopController;
 use App\Models\Product;
+use App\Models\TechnicalSheet;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
@@ -47,6 +49,18 @@ Route::middleware(['auth', 'verified', 'panel'])->prefix('painel')->group(functi
         ->middleware('can:managePhotos,'.Product::class)
         ->name('product-photos.update');
 });
+
+Route::middleware(['auth', 'verified', 'panel', 'can:viewAny,'.TechnicalSheet::class])
+    ->prefix('painel/fichas-tecnicas')->name('technical-sheets.')->controller(TechnicalSheetController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('produto/{product}', 'product')->name('product');
+        Route::post('produto/{product}', 'store')->name('store');
+        Route::get('{technicalSheet}', 'show')->name('show');
+        Route::patch('{technicalSheet}', 'update')->name('update');
+        Route::patch('{technicalSheet}/custos', 'updateCosts')->middleware('can:manageTechnicalCosts')->name('costs.update');
+        Route::post('{technicalSheet}/situacao', 'transition')->name('transition');
+        Route::post('{technicalSheet}/revisoes', 'revise')->name('revise');
+    });
 
 Route::middleware(['auth', 'verified', 'panel', 'can:manageTechnicalCosts'])->prefix('painel')->group(function () {
     Route::get('insumos/{material}/precos', [MaterialPriceController::class, 'index'])->name('material-prices.index');

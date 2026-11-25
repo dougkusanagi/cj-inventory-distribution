@@ -64,9 +64,7 @@ Tipos inativos permanecem nos vínculos existentes, mas não podem receber
 novas atribuições. Tipos vinculados a produtos, inclusive excluídos
 logicamente, devem ser desativados em vez de excluídos.
 
-O cadastro de lavagens é independente do produto e poderá ser referenciado
-pela futura ficha técnica, preservando os IDs. A ficha técnica e a ordem de
-produção continuam fora do escopo atual.
+A ficha técnica usa a lavagem cadastrada no produto, preservando os IDs.
 
 ### Tamanho
 
@@ -123,6 +121,14 @@ e situação. O perfil Modelagem consulta o catálogo em modo de leitura.
 Insumos não representam saldo de estoque. O Administrador registra preços
 unitários com data de vigência, consulta o histórico e mantém custos-base
 com valor e acréscimo opcionais.
+
+### Fichas técnicas
+
+Modelagem e Administrador podem preparar uma ficha por produto com insumos,
+consumo e instruções, e enviá-la para revisão. O Administrador registra os
+custos e aprova. A ficha aprovada conserva os preços usados na aprovação.
+Uma nova revisão em rascunho mantém a aprovação anterior disponível até
+a substituição. As revisões obsoletas ficam no histórico.
 
 ### Produção
 

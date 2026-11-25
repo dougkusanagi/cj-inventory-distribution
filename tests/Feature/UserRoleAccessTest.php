@@ -63,10 +63,10 @@ test('users without a role cannot enter the panel', function () {
     $this->actingAs($user)->get(route('product-photos.index'))->assertForbidden();
 });
 
-test('modeling lands in materials and cannot access other panel operations', function (string $routeName) {
+test('modeling lands in technical sheets and cannot access other panel operations', function (string $routeName) {
     $user = User::factory()->create(['role' => UserRole::Modeling]);
 
-    $this->actingAs($user)->get(route('dashboard'))->assertRedirect(route('materials.index'));
+    $this->actingAs($user)->get(route('dashboard'))->assertRedirect(route('technical-sheets.index'));
     $this->get(route($routeName))->assertForbidden();
 })->with(['products.index', 'orders.index', 'inventory.index', 'users.index', 'product-photos.index', 'production.index', 'catalog']);
 

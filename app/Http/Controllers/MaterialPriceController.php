@@ -24,10 +24,13 @@ class MaterialPriceController extends Controller
 
     public function store(StoreMaterialPriceRequest $request, Material $material): RedirectResponse
     {
-        DB::transaction(fn () => $material->prices()->create([
-            ...$request->validated(),
-            'created_by' => $request->user()->id,
-        ]));
+        DB::transaction(function () use ($request, $material): void {
+            $locked = Material::query()->whereKey($material->id)->lockForUpdate()->firstOrFail();
+            $locked->prices()->create([
+                ...$request->validated(),
+                'created_by' => $request->user()->id,
+            ]);
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Preço registrado.']);
 

@@ -38,7 +38,7 @@ it('groups stock operations under the stock navigation', function () {
 
     visit(route('dashboard', [], false))
         ->resize(1366, 900)
-        ->assertScript("Array.from(document.querySelectorAll('header nav a, header nav button')).map((item) => item.textContent?.trim()).join('|') === 'Painel|Insumos|Produtos|Pedidos|Estoque|Produção|Usuários'")
+        ->assertScript("Array.from(document.querySelectorAll('header nav a, header nav button')).map((item) => item.textContent?.trim()).join('|') === 'Painel|Fichas técnicas|Insumos|Produtos|Pedidos|Estoque|Produção|Usuários'")
         ->assertPresent('header a[aria-label="Novidades"]')
         ->click('header nav button:has-text("Estoque")')
         ->assertScript("Array.from(document.querySelectorAll('[data-slot=\"dropdown-menu-item\"]')).map((item) => item.textContent?.trim()).join('|') === 'Balanço de estoque|Histórico de estoque'")
