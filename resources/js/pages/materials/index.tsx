@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { index as costsIndex } from '@/routes/cost-items';
+import { index as pricesIndex } from '@/routes/material-prices';
 import { index } from '@/routes/materials';
 import type { Paginated } from '@/types';
 import {
@@ -22,12 +24,14 @@ export default function MaterialsIndex({
     materials,
     search,
     canEdit,
+    canManageCosts,
     types,
     units,
 }: {
     materials: Pick<Paginated<Material>, 'data' | 'links'>;
     search: string;
     canEdit: boolean;
+    canManageCosts: boolean;
     types: MaterialOption[];
     units: MaterialOption[];
 }) {
@@ -57,17 +61,24 @@ export default function MaterialsIndex({
                     <h1 className="text-3xl font-semibold tracking-tight">
                         Insumos
                     </h1>
-                    {canEdit && (
-                        <Button
-                            className="h-11"
-                            onClick={(event) => {
-                                opener.current = event.currentTarget;
-                                setEditing(null);
-                            }}
-                        >
-                            <PlusCircleIcon /> Novo insumo
-                        </Button>
-                    )}
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                        {canManageCosts && (
+                            <Button asChild variant="outline" className="h-11">
+                                <Link href={costsIndex()}>Custos-base</Link>
+                            </Button>
+                        )}
+                        {canEdit && (
+                            <Button
+                                className="h-11"
+                                onClick={(event) => {
+                                    opener.current = event.currentTarget;
+                                    setEditing(null);
+                                }}
+                            >
+                                <PlusCircleIcon /> Novo insumo
+                            </Button>
+                        )}
+                    </div>
                 </header>
                 <form onSubmit={searchMaterials} className="flex gap-2">
                     <Input
@@ -117,19 +128,36 @@ export default function MaterialsIndex({
                                     }
                                 </p>
                             </div>
-                            {canEdit && (
-                                <Button
-                                    variant="outline"
-                                    className="h-11"
-                                    aria-label={`Editar ${material.name}`}
-                                    onClick={(event) => {
-                                        opener.current = event.currentTarget;
-                                        setEditing(material);
-                                    }}
-                                >
-                                    <PencilSimpleIcon /> Editar
-                                </Button>
-                            )}
+                            <div className="flex flex-wrap gap-2">
+                                {canManageCosts && (
+                                    <Button
+                                        asChild
+                                        variant="outline"
+                                        className="h-11"
+                                    >
+                                        <Link
+                                            href={pricesIndex(material.id)}
+                                            aria-label={`Preços de ${material.name}`}
+                                        >
+                                            Preços
+                                        </Link>
+                                    </Button>
+                                )}
+                                {canEdit && (
+                                    <Button
+                                        variant="outline"
+                                        className="h-11"
+                                        aria-label={`Editar ${material.name}`}
+                                        onClick={(event) => {
+                                            opener.current =
+                                                event.currentTarget;
+                                            setEditing(material);
+                                        }}
+                                    >
+                                        <PencilSimpleIcon /> Editar
+                                    </Button>
+                                )}
+                            </div>
                         </Card>
                     ))}
                     {materials.data.length === 0 && (

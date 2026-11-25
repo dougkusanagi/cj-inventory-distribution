@@ -4,9 +4,11 @@ use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CatalogOrderController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ChangelogController;
+use App\Http\Controllers\CostItemController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryCountController;
 use App\Http\Controllers\MaterialController;
+use App\Http\Controllers\MaterialPriceController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductionBatchController;
@@ -44,6 +46,15 @@ Route::middleware(['auth', 'verified', 'panel'])->prefix('painel')->group(functi
     Route::put('fotos/{product}', [ProductPhotoController::class, 'update'])
         ->middleware('can:managePhotos,'.Product::class)
         ->name('product-photos.update');
+});
+
+Route::middleware(['auth', 'verified', 'panel', 'can:manageTechnicalCosts'])->prefix('painel')->group(function () {
+    Route::get('insumos/{material}/precos', [MaterialPriceController::class, 'index'])->name('material-prices.index');
+    Route::post('insumos/{material}/precos', [MaterialPriceController::class, 'store'])->name('material-prices.store');
+    Route::resource('custos-base', CostItemController::class)
+        ->names('cost-items')
+        ->parameters(['custos-base' => 'costItem'])
+        ->only(['index', 'store', 'update']);
 });
 
 Route::middleware(['auth', 'verified', 'panel'])->prefix('painel/producao')->name('production.')->group(function () {

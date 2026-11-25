@@ -40,6 +40,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'locale' => str_replace('_', '-', app()->getLocale()),
             'auth' => [
                 'user' => $request->user(),
                 'can' => [

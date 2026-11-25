@@ -55,6 +55,7 @@ ADRs iniciais:
 
 - [0025 — Painel de produção por lotes](0025-painel-de-producao-por-lotes.md)
 - [0026 — Perfil Modelagem e confidencialidade de custos](0026-perfil-modelagem-e-confidencialidade-de-custos.md)
+- [0028 — Preço de insumo com vigência](0028-preco-de-insumo-com-vigencia.md)
 
 - [0029 — Confirmação de recebimento de lotes](0029-recebimento-de-lotes.md)
 

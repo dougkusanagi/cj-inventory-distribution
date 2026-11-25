@@ -19,10 +19,16 @@ O catálogo técnico de insumos usa cadastro próprio, com código estável, tip
 e unidade. Administradores mantêm os registros e o perfil Modelagem consulta
 os dados técnicos, conforme o [ADR 0026](adr/0026-perfil-modelagem-e-confidencialidade-de-custos.md).
 
+Preços vigentes e históricos são reservados ao Administrador, assim como os
+custos-base. O [ADR 0028](adr/0028-preco-de-insumo-com-vigencia.md) define a
+seleção do preço e o vínculo com a revisão da ficha.
+
 ## Modelo de domínio
 
 ```mermaid
 erDiagram
+    Material ||--o{ MaterialPrice : possui
+    User ||--o{ MaterialPrice : registra
     Product ||--o{ StockOfferVolume : possui
     StockOfferVolume ||--o{ StockOfferVolumeItem : contem
     Order ||--o{ OrderItem : contem

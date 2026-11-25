@@ -7,6 +7,7 @@ use App\Enums\MaterialUnit;
 use App\Models\Material;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Enum;
 
 class SaveMaterialRequest extends FormRequest
 {
@@ -19,6 +20,7 @@ class SaveMaterialRequest extends FormRequest
             : $this->user()?->can('create', Material::class)) ?? false;
     }
 
+    /** @return array<string, list<string|Enum>> */
     public function rules(): array
     {
         return [

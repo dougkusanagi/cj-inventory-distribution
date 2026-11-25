@@ -120,7 +120,9 @@ link para abertura da mensagem no WhatsApp.
 
 Administradores cadastram e editam insumos com código gerado, tipo, unidade
 e situação. O perfil Modelagem consulta o catálogo em modo de leitura.
-Insumos não representam saldo de estoque.
+Insumos não representam saldo de estoque. O Administrador registra preços
+unitários com data de vigência, consulta o histórico e mantém custos-base
+com valor e acréscimo opcionais.
 
 ### Produção
 

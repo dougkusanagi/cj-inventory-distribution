@@ -53,7 +53,7 @@ realizado) fica para um plano próprio.
   dinheiro e para todo campo estruturado sem controle nativo:
   `react-number-format` (`NumericFormat` para dinheiro e quantidades,
   `PatternFormat` para padrões fixos), instalada com `bun add`.
-- Produção usa PostgreSQL.
+- O desenvolvimento e os testes usam PostgreSQL. A implantação atual usa SQLite.
 
 ## Erros do `cj-spec-sheet` que este plano previne
 
@@ -108,15 +108,15 @@ Branch sugerida: `feat/catalogo-insumos`.
       (enum: m, cm, un, par, kg, g), ativo, soft deletes. Sem campos de saldo.
       Insumo inativo continua nas fichas existentes, mas não entra em fichas
       novas.
-- [ ] Preços do insumo (`material_prices`): `material_id`, `unit_price`
+- [x] Preços do insumo (`material_prices`): `material_id`, `unit_price`
       decimal(12,4), `effective_from`, `created_by`. Só Administrador vê e
       cadastra. O preço vigente é o mais recente com `effective_from <= hoje`.
-- [ ] Custos-base (`cost_items`): nome, valor padrão opcional (admin), ativo,
+- [x] Custos-base (`cost_items`): nome, valor padrão opcional (admin), ativo,
       e acréscimo padrão opcional: `surcharge_type` (`percent` ou `fixed`) e
       `surcharge_value`. Ex.: Mão de obra R$ 8,20 + 10% = R$ 9,02; ou
       R$ 8,20 + R$ 0,80 = R$ 9,00. Porcentagem não negativa, com limite
       definido na validação.
-- [ ] Instalar `react-number-format` com `bun add` e criar componentes
+- [x] Instalar `react-number-format` com `bun add` e criar componentes
       compartilhados em `resources/js/components/ui`: `MoneyInput` (BRL,
       `pt-BR`, entrada bancária pela menor unidade: `3950` → `39,50`),
       `QuantityInput` (até 3 casas, sem negativos) e `PercentInput`. Usar
@@ -127,8 +127,8 @@ Branch sugerida: `feat/catalogo-insumos`.
 
 Branch sugerida: `feat/ficha-tecnica`.
 
-- [ ] ADR `0027-ficha-tecnica-versionada.md` e ADR
-      `0028-preco-de-insumo-com-vigencia.md`.
+- [ ] Registrar o ADR `0027-ficha-tecnica-versionada.md`. Reusar as regras
+      do ADR `0028-preco-de-insumo-com-vigencia.md`, registrado na fase 3.
 - [ ] `technical_sheets`: `product_id` (FK), `revision`, `status`
       (`draft`, `in_review`, `approved`, `obsolete`), `version`,
       `instructions` (texto), `approved_by/at`, `obsoleted_by/at`,
@@ -217,7 +217,9 @@ padrão, apontamentos, custo realizado, RFID e integração com Bling.
 
 ## Tentativas que falharam
 
-- Nenhuma ainda.
+- Na validação da fase 3, a inclusão de Insumos exigiu atualizar o teste
+  do menu. Um teste de envio de lote passou a aguardar o fechamento da
+  gaveta após o envio. A nova execução completa passou.
 
 ## Dúvidas abertas
 
@@ -227,7 +229,7 @@ padrão, apontamentos, custo realizado, RFID e integração com Bling.
 
 ## Próximo passo
 
-Iniciar a fase 3 na branch `feat/catalogo-insumos`, a partir de `master`.
-Começar pelo ADR 0026 (perfil Modelagem e confidencialidade de custos) e
-pelos catálogos necessários à ficha. A adoção do painel depende da ficha
-aprovada disponível para vincular ao lote.
+A fase 3 está implementada na branch `feat/catalogo-insumos`. O
+`composer ci:verify` passou com 461 testes de aplicação e 160 de navegador.
+As migrations foram verificadas também em SQLite. Depois da integração, iniciar a fase 4 em `feat/ficha-tecnica` a partir de `master`.
+A adoção do painel depende da ficha aprovada disponível para vincular ao lote.

@@ -8,6 +8,7 @@ use Database\Factories\MaterialFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -25,6 +26,21 @@ class Material extends Model
     use HasFactory;
 
     use SoftDeletes;
+
+    /** @return HasMany<MaterialPrice, $this> */
+    public function prices(): HasMany
+    {
+        return $this->hasMany(MaterialPrice::class);
+    }
+
+    public function currentPrice(): ?MaterialPrice
+    {
+        return $this->prices()
+            ->where('effective_from', '<=', today()->toDateString())
+            ->orderByDesc('effective_from')
+            ->orderByDesc('id')
+            ->first();
+    }
 
     protected function casts(): array
     {

@@ -4,7 +4,9 @@ namespace App\Providers;
 
 use App\Models\CatalogSetting;
 use App\Models\Category;
+use App\Models\CostItem;
 use App\Models\Material;
+use App\Models\MaterialPrice;
 use App\Models\Product;
 use App\Models\ProductionBatch;
 use App\Models\ProductionBatchItem;
@@ -20,6 +22,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -41,6 +44,8 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
 
+        Gate::define('manageTechnicalCosts', fn (User $user): bool => $user->isAdmin());
+
         RateLimiter::for('catalog-orders', fn (Request $request): array => [
             Limit::perMinute(10)->by('catalog-minute:'.$request->ip()),
             Limit::perHour(30)->by('catalog-hour:'.$request->ip()),
@@ -49,6 +54,8 @@ class AppServiceProvider extends ServiceProvider
 
         foreach ([
             Material::class,
+            MaterialPrice::class,
+            CostItem::class,
             Product::class,
             ProductionBatch::class,
             ProductionBatchItem::class,

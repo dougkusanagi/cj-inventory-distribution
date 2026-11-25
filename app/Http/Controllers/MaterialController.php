@@ -33,6 +33,7 @@ class MaterialController extends Controller
             'materials' => $materials,
             'search' => $search,
             'canEdit' => Gate::allows('create', Material::class),
+            'canManageCosts' => Gate::allows('manageTechnicalCosts'),
             'types' => array_map(fn (MaterialType $type): array => ['value' => $type->value, 'label' => $type->label()], MaterialType::cases()),
             'units' => array_map(fn (MaterialUnit $unit): array => ['value' => $unit->value, 'label' => $unit->label()], MaterialUnit::cases()),
         ]);
@@ -52,7 +53,7 @@ class MaterialController extends Controller
 
     public function update(SaveMaterialRequest $request, Material $material): RedirectResponse
     {
-        $material->update($request->validated());
+        DB::transaction(fn () => $material->update($request->validated()));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Insumo atualizado.']);
 

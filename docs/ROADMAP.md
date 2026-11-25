@@ -4,11 +4,11 @@ O roadmap descreve direção, não compromisso de implementação imediata.
 
 ## Produção e ficha técnica
 
-O painel de lotes acompanha as etapas fixas da fábrica e confirma o
-recebimento em cada setor, permite atribuir oficinas, dividir lotes e informar grade por tamanho;
-o foco atual está no
-[plano do painel de produção](plans/painel-de-producao.md), e a ficha técnica,
-adiada, está no [plano da ficha técnica](plans/ficha-tecnica.md).
+O [painel de produção](plans/painel-de-producao.md) já está implantado. O
+perfil Modelagem, o catálogo de insumos e a gestão administrativa de preços
+e custos-base foram implementados na primeira fase da
+[ficha técnica](plans/ficha-tecnica.md). Antes de iniciar o uso na fábrica,
+faltam as fichas versionadas e o vínculo com os lotes.
 A produção não cria sacos automaticamente.
 
 Lojas, acesso das vendedoras, vários estoques, conferência com as lojas e
