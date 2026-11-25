@@ -491,5 +491,26 @@
                 "text": "Escolha o produto do novo lote pelas fotos, com busca e visualização em lista ou cards."
             }
         ]
+    },
+    {
+        "id": "2026-11-25-fichas-tecnicas",
+        "title": "Fichas técnicas e rastreabilidade da produção",
+        "merged_at": "2026-11-25T13:11:00-03:00",
+        "pr_number": 0,
+        "details_file": "2026-11-25-fichas-tecnicas.md",
+        "changes": [
+            {
+                "category": "added",
+                "text": "Cadastre insumos e monte fichas técnicas por produto com o perfil Modelagem. Preços e custos ficam disponíveis para administradores."
+            },
+            {
+                "category": "added",
+                "text": "Revise e aprove fichas técnicas, consulte revisões anteriores e imprima fichas em A4, inclusive modelos em branco."
+            },
+            {
+                "category": "added",
+                "text": "Consulte a revisão usada no lote e vincule o lote aos sacos na entrada de estoque para abater as peças que aguardam ensacamento."
+            }
+        ]
     }
 ]
