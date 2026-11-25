@@ -6,6 +6,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryCountController;
+use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductionBatchController;
@@ -32,6 +33,10 @@ Route::post('catalog/pedidos', CatalogOrderController::class)
 Route::inertia('design-system', 'design-system')->name('design-system');
 
 Route::middleware(['auth', 'verified', 'panel'])->prefix('painel')->group(function () {
+    Route::resource('insumos', MaterialController::class)
+        ->names('materials')
+        ->parameters(['insumos' => 'material'])
+        ->only(['index', 'store', 'update']);
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('fotos', [ProductPhotoController::class, 'index'])
         ->middleware('can:managePhotos,'.Product::class)

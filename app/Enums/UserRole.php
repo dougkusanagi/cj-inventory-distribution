@@ -8,6 +8,7 @@ enum UserRole: string
     case Stock = 'stock';
     case Marketing = 'marketing';
     case Production = 'production';
+    case Modeling = 'modeling';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum UserRole: string
             self::Stock => 'Estoque',
             self::Marketing => 'Marketing',
             self::Production => 'Produção',
+            self::Modeling => 'Modelagem',
         };
     }
 
@@ -25,6 +27,11 @@ enum UserRole: string
     public function managesOperations(): bool
     {
         return $this === self::Admin || $this === self::Stock;
+    }
+
+    public function canUsePublicCatalog(): bool
+    {
+        return $this !== self::Production && $this !== self::Modeling;
     }
 
     /**

@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UserRole;
 use App\Models\Product;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -60,4 +61,17 @@ test('users without a role cannot enter the panel', function () {
 
     $this->actingAs($user)->get(route('dashboard'))->assertForbidden();
     $this->actingAs($user)->get(route('product-photos.index'))->assertForbidden();
+});
+
+test('modeling lands in materials and cannot access other panel operations', function (string $routeName) {
+    $user = User::factory()->create(['role' => UserRole::Modeling]);
+
+    $this->actingAs($user)->get(route('dashboard'))->assertRedirect(route('materials.index'));
+    $this->get(route($routeName))->assertForbidden();
+})->with(['products.index', 'orders.index', 'inventory.index', 'users.index', 'product-photos.index', 'production.index', 'catalog']);
+
+test('modeling cannot place catalog orders', function () {
+    $this->actingAs(User::factory()->create(['role' => UserRole::Modeling]))
+        ->post(route('catalog-orders.store'))
+        ->assertForbidden();
 });

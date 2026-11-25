@@ -25,6 +25,10 @@ class DashboardController extends Controller
             return to_route('production.index');
         }
 
+        if ($request->user()?->role === UserRole::Modeling) {
+            return to_route('materials.index');
+        }
+
         if (! $request->user()?->isStaff()) {
             return to_route('product-photos.index');
         }

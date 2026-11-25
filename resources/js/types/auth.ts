@@ -1,4 +1,9 @@
-export type UserRole = 'admin' | 'stock' | 'marketing' | 'production';
+export type UserRole =
+    | 'admin'
+    | 'stock'
+    | 'marketing'
+    | 'production'
+    | 'modeling';
 
 export type User = {
     id: number;
@@ -17,6 +22,7 @@ export type User = {
 export type Auth = {
     user: User;
     can: {
+        viewMaterials: boolean;
         manageUsers: boolean;
         manageOperations: boolean;
         managePhotos: boolean;

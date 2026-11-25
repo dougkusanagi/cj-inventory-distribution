@@ -8,6 +8,7 @@ import {
     ImagesIcon,
     NewspaperIcon,
     PlusCircleIcon,
+    ScissorsIcon,
     ShoppingCartIcon,
     SquaresFourIcon,
     TShirtIcon,
@@ -19,6 +20,7 @@ import { useCurrentUrl } from '@/hooks/use-current-url';
 import { changelog, dashboard } from '@/routes';
 import { index as categoriesIndex } from '@/routes/categories';
 import { index as inventoryIndex } from '@/routes/inventory';
+import { index as materialsIndex } from '@/routes/materials';
 import { index as ordersIndex } from '@/routes/orders';
 import { index as productPhotosIndex } from '@/routes/product-photos';
 import { index as productionIndex } from '@/routes/production';
@@ -70,6 +72,9 @@ export function useMainNavigation(): {
 
     const items: NavItem[] = [
         ...(can.manageOperations ? operationNavItems.slice(0, 1) : []),
+        ...(can.viewMaterials
+            ? [{ title: 'Insumos', href: materialsIndex(), icon: ScissorsIcon }]
+            : []),
         ...(can.manageOperations || can.managePhotos
             ? [
                   {

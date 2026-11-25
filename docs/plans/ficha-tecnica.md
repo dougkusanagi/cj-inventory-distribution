@@ -2,8 +2,9 @@
 
 Tipo: tarefa
 
-Situação: **adiado**. Começa só depois que o painel de produção estiver em
-uso (ver `docs/plans/painel-de-producao.md`, prioridades de 06/11/2026).
+Situação: **prioridade atual**. O painel de produção já está implantado.
+A equipe começa a usá-lo depois que as fichas técnicas estiverem
+disponíveis e vinculadas aos lotes.
 
 ## Objetivo
 
@@ -98,12 +99,11 @@ realizado) fica para um plano próprio.
 
 Branch sugerida: `feat/catalogo-insumos`.
 
-- [ ] ADR `0026-perfil-modelagem-e-confidencialidade-de-custos.md`.
-- [ ] `UserRole::Modeling` ("Modelagem"): acessa fichas técnicas e o
-      catálogo de insumos sem preços; não acessa estoque, pedidos nem custos.
-      Atualizar `UserPolicy`, middlewares, navegação e
-      `tests/Feature/UserRoleAccessTest.php`.
-- [ ] Catálogo de insumos (`materials`): código gerado, nome, tipo (enum:
+- [x] ADR `0026-perfil-modelagem-e-confidencialidade-de-custos.md`.
+- [x] `UserRole::Modeling` ("Modelagem"): consulta o catálogo sem preços e
+      tem acesso isolado das operações. O acesso às fichas será ligado ao
+      perfil na fase 4.
+- [x] Catálogo de insumos (`materials`): código gerado, nome, tipo (enum:
       tecido, aviamento, linha, botão, zíper, etiqueta, embalagem), unidade
       (enum: m, cm, un, par, kg, g), ativo, soft deletes. Sem campos de saldo.
       Insumo inativo continua nas fichas existentes, mas não entra em fichas
@@ -227,6 +227,7 @@ padrão, apontamentos, custo realizado, RFID e integração com Bling.
 
 ## Próximo passo
 
-Esperar o painel de produção entrar em uso. Depois, abrir a branch
-`feat/catalogo-insumos` e começar pelo ADR 0026 (perfil Modelagem e
-confidencialidade de custos).
+Iniciar a fase 3 na branch `feat/catalogo-insumos`, a partir de `master`.
+Começar pelo ADR 0026 (perfil Modelagem e confidencialidade de custos) e
+pelos catálogos necessários à ficha. A adoção do painel depende da ficha
+aprovada disponível para vincular ao lote.

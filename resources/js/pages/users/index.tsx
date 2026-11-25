@@ -12,6 +12,7 @@ import {
     WarehouseIcon,
     ImagesIcon,
     FactoryIcon,
+    PencilRulerIcon,
 } from '@phosphor-icons/react';
 import { useState, type FormEvent } from 'react';
 import { store, update } from '@/actions/App/Http/Controllers/UserController';
@@ -68,6 +69,7 @@ const roleIcons = {
     stock: WarehouseIcon,
     marketing: ImagesIcon,
     production: FactoryIcon,
+    modeling: PencilRulerIcon,
 };
 const roleDescriptions = {
     admin: 'Gerencia usuários, produtos, estoque, pedidos e configurações.',
@@ -75,6 +77,7 @@ const roleDescriptions = {
     marketing:
         'Gerencia somente as fotos dos produtos e as próprias configurações de conta.',
     production: 'Acompanha e envia lotes dos setores atribuídos.',
+    modeling: 'Consulta o catálogo de insumos.',
 };
 
 function UserAccountDrawer({

@@ -116,6 +116,12 @@ categorias, Slim/Plus, pedidos, conferência e WhatsApp. A home lista o estoque
 persistido disponível, registra pedidos com reserva dos sacos e só então gera o
 link para abertura da mensagem no WhatsApp.
 
+### Insumos
+
+Administradores cadastram e editam insumos com código gerado, tipo, unidade
+e situação. O perfil Modelagem consulta o catálogo em modo de leitura.
+Insumos não representam saldo de estoque.
+
 ### Produção
 
 O painel de produção acompanha lotes de produtos ativos por Planejamento, Corte, Costura,

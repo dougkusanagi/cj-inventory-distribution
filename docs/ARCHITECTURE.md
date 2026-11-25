@@ -15,6 +15,10 @@ aceita no ADR 0012; a exclusão definitiva de Grade Nova está no ADR 0011.
 As movimentações imutáveis do estoque físico e a trilha transversal de
 auditoria foram adicionadas nos ADRs 0016 e 0017.
 
+O catálogo técnico de insumos usa cadastro próprio, com código estável, tipo
+e unidade. Administradores mantêm os registros e o perfil Modelagem consulta
+os dados técnicos, conforme o [ADR 0026](adr/0026-perfil-modelagem-e-confidencialidade-de-custos.md).
+
 ## Modelo de domínio
 
 ```mermaid

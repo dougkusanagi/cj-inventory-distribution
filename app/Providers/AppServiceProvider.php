@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\CatalogSetting;
 use App\Models\Category;
+use App\Models\Material;
 use App\Models\Product;
 use App\Models\ProductionBatch;
 use App\Models\ProductionBatchItem;
@@ -47,6 +48,7 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         foreach ([
+            Material::class,
             Product::class,
             ProductionBatch::class,
             ProductionBatchItem::class,

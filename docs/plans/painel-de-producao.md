@@ -18,15 +18,15 @@ O plano termina quando o painel estiver implantado em produção, com os
 responsáveis de cada setor usando o próprio login, e as correções do primeiro
 uso real estiverem integradas.
 
-A ficha técnica, o perfil Modelagem e os catálogos de insumos e custos ficam
-para depois, em `docs/plans/ficha-tecnica.md`.
+A ficha técnica, o perfil Modelagem e os catálogos de insumos e custos seguem
+no [plano da ficha técnica](ficha-tecnica.md).
 
-## Prioridades (06/11/2026)
+## Prioridades atuais
 
-1. Informação de produção para os gerentes vem antes de tudo.
-2. Implantar e colocar em uso vem antes de qualquer melhoria: o retorno de
-   quem usa mostra o que realmente falta.
-3. Ficha técnica, modelagem e custos só depois do painel em uso.
+1. Implantar o painel de produção. Concluído no commit `ac82880`.
+2. Entregar as fichas técnicas e o vínculo com os lotes.
+3. Colocar o painel em uso com os responsáveis de cada setor e recolher o
+   retorno da equipe.
 
 ## O que já existe (no `master`, PRs #71 e #72)
 
@@ -96,8 +96,10 @@ Branch: `feat/quadro-producao` (inclui `feat/menu-superior` e
 
 ### 4. Implantar e colocar em uso
 
-- [ ] Rodar a conferência completa e fazer o deploy com `./deploy.sh`
-      (precisa de autorização). Conferir as migrations da produção antes.
+- [x] Rodar a conferência completa, implantar com `./deploy.sh` e verificar
+      as migrations e a resposta HTTP em produção.
+- [ ] Entregar as fichas técnicas e o vínculo com os lotes antes de iniciar
+      o uso na fábrica.
 - [ ] Criar os logins dos responsáveis de cada setor (perfil Produção) e
       atribuir os setores. Precisa da lista de nomes e setores.
 - [ ] Acompanhar a primeira semana de uso e anotar neste plano o que os
@@ -144,8 +146,8 @@ A visão Fluxo (`/painel/producao/fluxo`) foi feita ao lado do Quadro (ADR
 
 ## Próximo passo
 
-Pedir autorização para integrar `feat/alerta-lote-parado` e começar o passo 2
-na branch `feat/producao-no-estoque`.
+Iniciar a fase 3 do [plano da ficha técnica](ficha-tecnica.md), com o
+perfil Modelagem e os catálogos de insumos e custos.
 
 Nota de ambiente: o `composer` do lerd roda no contêiner PHP, que não tem
 `bash` e limita a memória a 128 MB. Para a conferência completa, rodar

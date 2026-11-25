@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ProductLine;
-use App\Enums\UserRole;
 use App\Models\CatalogSetting;
 use App\Models\Category;
 use App\Models\Product;
@@ -27,7 +26,7 @@ class CatalogController extends Controller
      */
     public function __invoke(Request $request): Response
     {
-        abort_if($request->user()?->role === UserRole::Production, 403);
+        abort_unless($request->user()?->role?->canUsePublicCatalog() ?? true, 403);
 
         $search = trim($request->string('search')->toString());
         $categoryId = $request->integer('category');
