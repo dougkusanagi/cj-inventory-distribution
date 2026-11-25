@@ -512,5 +512,22 @@
                 "text": "Consulte a revisão usada no lote e vincule o lote aos sacos na entrada de estoque para abater as peças que aguardam ensacamento."
             }
         ]
+    },
+    {
+        "id": "2026-11-25-cadastro-de-lojas",
+        "title": "Cadastro de lojas e peças por destino",
+        "merged_at": "2026-11-25T13:52:29-03:00",
+        "pr_number": 0,
+        "details_file": "2026-11-25-cadastro-de-lojas.md",
+        "changes": [
+            {
+                "category": "added",
+                "text": "Administradores e a equipe de Estoque podem cadastrar, editar e desativar lojas."
+            },
+            {
+                "category": "added",
+                "text": "Consulte quantas peças constam em pedidos finalizados por loja e quantas ficaram sem destino vinculado."
+            }
+        ]
     }
 ]
