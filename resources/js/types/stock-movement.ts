@@ -41,6 +41,7 @@ export type StockMovementItem = {
     product_id: number | null;
     product_available: boolean;
     volume_code: string;
+    production_batch_code: string | null;
     product_code: string | null;
     product_name: string | null;
     product_model: string | null;

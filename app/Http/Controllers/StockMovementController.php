@@ -141,7 +141,7 @@ class StockMovementController extends Controller
             'reversals',
             'items',
             'items.product',
-            'items.volume',
+            'items.volume.productionBatch:id,code',
         ]);
 
         return Inertia::render('stock-movements/show', [
@@ -165,6 +165,7 @@ class StockMovementController extends Controller
                     'product_id' => $item->product_id,
                     'product_available' => $item->product !== null && ! $item->product->trashed(),
                     'volume_code' => $item->volume_code_snapshot,
+                    'production_batch_code' => $item->volume?->productionBatch?->code,
                     'product_code' => $item->product_code_snapshot,
                     'product_name' => $item->product_name_snapshot,
                     'product_model' => $item->product_model_snapshot,

@@ -1,9 +1,13 @@
 <?php
 
+use App\Enums\ProductionStage;
 use App\Enums\StockOfferType;
+use App\Enums\TechnicalSheetStatus;
 use App\Models\Product;
+use App\Models\ProductionBatch;
 use App\Models\StockMovement;
 use App\Models\StockOfferVolume;
+use App\Models\TechnicalSheet;
 use App\Models\User;
 use Illuminate\Support\Facades\Vite;
 
@@ -80,7 +84,7 @@ it('keeps existing sacks read only in the product form', function () {
     expect($product->stockVolumes()->count())->toBe(2);
 });
 
-it('opens product stock entry in a dialog or drawer with the product grade', function () {
+it('opens product stock entry in a responsive drawer with the product grade', function () {
     $user = User::factory()->create();
     $product = Product::factory()->create(['name' => 'Produto para entrada rápida']);
 
@@ -89,11 +93,11 @@ it('opens product stock entry in a dialog or drawer with the product grade', fun
     $page = visit(route('products.edit', [$product->id], false))
         ->click('#product-tab-stock')
         ->click('[data-testid="open-stock-entry"]')
-        ->assertPresent('[data-testid="stock-entry-dialog"]')
+        ->assertPresent('[data-testid="stock-entry-drawer"]')
         ->assertPresent('[data-testid="stock-entry-form"]')
         ->assertSeeIn('[data-testid="entry-stock-offer-type"]', 'Grade Nova')
         ->click('[data-testid="stock-entry-form"] button:has-text("Cancelar")')
-        ->assertMissing('[data-testid="stock-entry-dialog"]')
+        ->assertMissing('[data-testid="stock-entry-drawer"]')
         ->resize(390, 844)
         ->click('[data-testid="open-stock-entry"]')
         ->assertVisible('[data-slot="drawer-content"]')
@@ -102,7 +106,7 @@ it('opens product stock entry in a dialog or drawer with the product grade', fun
         ->assertNoJavaScriptErrors();
 });
 
-it('registers stock from the product dialog and returns to the product', function () {
+it('registers stock from the product drawer and returns to the product', function () {
     $user = User::factory()->create();
     $product = Product::factory()->replenishment()->create(['name' => 'Produto lançado pelo modal']);
 
@@ -350,3 +354,42 @@ it('changes the product grade from the product form and records it', function (i
     'mobile' => [390, 844],
     'desktop' => [1280, 900],
 ]);
+
+it('links the sacks entered for a product to a production batch', function (int $width) {
+    $user = User::factory()->admin()->create();
+    $product = Product::factory()->replenishment()->create(['name' => 'Calça reta com costura reforçada']);
+    $sheet = TechnicalSheet::factory()->for($product)->create(['status' => TechnicalSheetStatus::Approved]);
+    $batch = ProductionBatch::factory()->for($product)
+        ->inStage(ProductionStage::Completed)->create(['quantity' => 30, 'technical_sheet_id' => $sheet->id]);
+    $this->actingAs($user);
+
+    $page = visit(route('products.edit', $product, false))->resize($width, 900)
+        ->click('#product-tab-stock')
+        ->click('[data-testid="open-stock-entry"]')
+        ->click('#entry-production-batch')
+        ->click('[role="option"]:has-text("'.$batch->code.'")')
+        ->assertSeeIn('#entry-production-batch', $batch->code)
+        ->fill('#entry-stock-totals-bag-count', '2')
+        ->fill('#entry-stock-totals-piece-count', '15')
+        ->assertSee('15 peças em 2 sacos')
+        ->screenshot(fullPage: false, filename: "entrada-lote-{$width}")
+        ->click('[data-testid="stock-entry-form"] button[type="submit"]')
+        ->assertSee('Entrada de estoque registrada.')
+        ->assertNoJavaScriptErrors();
+
+    expect($batch->stockVolumes()->count())->toBe(2)
+        ->and($batch->stockVolumes()->sum('bagged_quantity'))->toEqual(15);
+
+    $page->navigate(route('production.index', ['lote' => $batch->code], false))
+        ->assertSeeIn('[data-slot="drawer-content"]', 'Aguardando ensacamento')
+        ->assertSeeIn('[data-slot="drawer-content"]', 'Revisão 1')
+        ->assertSeeIn('[data-slot="drawer-content"]', '15 peças')
+        ->screenshot(fullPage: false, filename: "lote-revisao-ensacamento-{$width}")
+        ->navigate(route('stock-movements.show', StockMovement::query()->sole(), false))
+        ->assertSee('Lote de origem '.$batch->code)
+        ->screenshot(fullPage: false, filename: "historico-lote-{$width}")
+        ->navigate(route('stock-entries.create', ['product' => $product->id], false))
+        ->assertSee('Lote de origem (opcional)')
+        ->screenshot(fullPage: false, filename: "entrada-pagina-lote-{$width}")
+        ->assertNoJavaScriptErrors();
+})->with([390, 1366]);

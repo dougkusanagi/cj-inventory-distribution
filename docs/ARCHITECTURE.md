@@ -28,11 +28,18 @@ congela preços e substitui a revisão aprovada anterior em transação. A
 Modelagem consulta apenas dados técnicos. Veja o
 [ADR 0027](adr/0027-ficha-tecnica-versionada.md).
 
+A revisão aprovada fica vinculada ao lote criado e aos filhos da divisão.
+A entrada manual opcionalmente identifica o lote de origem de cada saco
+e abate a quantidade ensacada. O estorno recompõe o saldo. Veja o
+[ADR 0039](adr/0039-rastreabilidade-do-lote-ao-saco.md).
+
 ## Modelo de domínio
 
 ```mermaid
 erDiagram
     Product ||--o{ TechnicalSheet : possui
+    TechnicalSheet o|--o{ ProductionBatch : orienta
+    ProductionBatch o|--o{ StockOfferVolume : origina
     TechnicalSheet ||--o{ TechnicalSheetMaterial : usa
     TechnicalSheet ||--o{ TechnicalSheetCost : registra
     Material ||--o{ TechnicalSheetMaterial : referencia

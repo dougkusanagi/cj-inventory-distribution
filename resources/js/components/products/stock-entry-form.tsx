@@ -26,6 +26,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Label } from '@/components/ui/label';
 import {
     Select,
@@ -44,7 +45,15 @@ type EntryProduct = Pick<
     'id' | 'code' | 'name' | 'model' | 'stock_offer_type'
 >;
 
+export type BaggingBatch = {
+    id: number;
+    product_id: number;
+    code: string;
+    pending: number;
+};
+
 type StockEntryFormData = {
+    production_batch_id: number | null;
     product_id: number | null;
     reason: string;
     notes: string;
@@ -54,6 +63,7 @@ type StockEntryFormData = {
 
 type StockEntryFormProps = {
     products?: EntryProduct[];
+    baggingBatches: BaggingBatch[];
     selectedProductId?: number | null;
     fixedProduct?: EntryProduct;
     returnToProduct?: boolean;
@@ -63,6 +73,7 @@ type StockEntryFormProps = {
 
 export function StockEntryForm({
     products = [],
+    baggingBatches,
     selectedProductId = null,
     fixedProduct,
     returnToProduct = false,
@@ -72,6 +83,7 @@ export function StockEntryForm({
     const [formId] = useState(idempotencyKey);
     const form = useForm<StockEntryFormData>({
         product_id: fixedProduct?.id ?? selectedProductId,
+        production_batch_id: null,
         reason: '',
         notes: '',
         idempotency_key: `entry-${formId}`,
@@ -81,6 +93,9 @@ export function StockEntryForm({
         (fixedProduct ?? products.find((product) => product.id === productId))
             ?.stock_offer_type ?? null;
     const stockOfferType = productStockType(form.data.product_id);
+    const batches = baggingBatches.filter(
+        (batch) => batch.product_id === form.data.product_id,
+    );
     const tracksSizes = stockOfferTypeTracksSizes(stockOfferType ?? '');
 
     const changeProduct = (productId: number) => {
@@ -88,9 +103,11 @@ export function StockEntryForm({
             productStockType(productId) ?? '',
         );
 
+        form.clearErrors('production_batch_id');
         form.setData((previousData) => ({
             ...previousData,
             product_id: productId,
+            production_batch_id: null,
             reason: tracksProductSizes ? previousData.reason : '',
             stock_volumes: volumesForOfferType(
                 previousData.stock_volumes,
@@ -204,6 +221,47 @@ export function StockEntryForm({
                                 ? ' Informe os tamanhos de cada saco.'
                                 : ' Informe só o total de sacos e de peças.'}
                         </p>
+                    )}
+
+                    {(batches.length > 0 ||
+                        form.errors.production_batch_id) && (
+                        <div className="grid gap-2 sm:col-span-2">
+                            <Label htmlFor="entry-production-batch">
+                                Lote de origem (opcional)
+                            </Label>
+                            <SearchableSelect
+                                id="entry-production-batch"
+                                label="Lote de origem (opcional)"
+                                value={String(
+                                    form.data.production_batch_id ?? 'none',
+                                )}
+                                options={[
+                                    { value: 'none', label: 'Nenhum lote' },
+                                    ...batches.map((batch) => ({
+                                        value: String(batch.id),
+                                        label: `${batch.code} · ${batch.pending} a ensacar`,
+                                    })),
+                                ]}
+                                onValueChange={(value) => {
+                                    form.setData(
+                                        'production_batch_id',
+                                        value === 'none' ? null : Number(value),
+                                    );
+                                    form.clearErrors('production_batch_id');
+                                }}
+                                disabled={form.processing}
+                                invalid={Boolean(
+                                    form.errors.production_batch_id,
+                                )}
+                            />
+                            <p className="text-sm text-muted-foreground">
+                                O lote será vinculado a todos os sacos desta
+                                entrada.
+                            </p>
+                            <InputError
+                                message={form.errors.production_batch_id}
+                            />
+                        </div>
                     )}
 
                     {tracksSizes && (

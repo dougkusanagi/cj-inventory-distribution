@@ -187,10 +187,10 @@ Branch sugerida: `feat/ficha-tecnica-impressao`.
 
 ### Fase 6 — Integrações leves
 
-- [ ] O lote guarda a ficha aprovada vigente no momento da criação
+- [x] O lote guarda a ficha aprovada vigente no momento da criação
       (`technical_sheet_id` nulo para lotes sem ficha). Mudanças posteriores
       na ficha não alteram o lote.
-- [ ] No cadastro manual de um saco, permitir indicar o lote de origem
+- [x] No cadastro manual de um saco, permitir indicar o lote de origem
       (opcional), para abater "aguardando ensacamento". O saco nunca é criado
       automaticamente.
 
@@ -244,5 +244,10 @@ conferência completa passou nos 469 testes da aplicação e registrou um
 timeout no cenário de divisão de lotes em 1366 px. Os testes de impressão
 passaram após corrigir o nome do insumo no dado de teste.
 
-A próxima fase vincula a revisão aprovada ao lote e permite informar o
-lote de origem no cadastro manual de um saco.
+A fase 6 foi implementada em `feat/ficha-tecnica-lotes` sobre a fase 5.
+O [ADR 0039](../adr/0039-rastreabilidade-do-lote-ao-saco.md) registra o
+vínculo da revisão ao lote e o abatimento pelo cadastro manual de sacos.
+A conferência completa passou com 473 testes de aplicação e 169 de
+navegador. O fluxo com lote foi verificado em 390 e 1366 px. A migration
+passou em SQLite, inclusive no rollback e na reaplicação.
+A integração e a implantação das fases seguem pendentes.

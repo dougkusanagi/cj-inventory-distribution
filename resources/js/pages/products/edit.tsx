@@ -1,3 +1,4 @@
+import type { BaggingBatch } from '@/components/products/stock-entry-form';
 import { Head } from '@inertiajs/react';
 import { TShirtIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
@@ -12,7 +13,9 @@ export default function EditProduct({
     product,
     categories,
     washTypes,
+    baggingBatches,
 }: {
+    baggingBatches: BaggingBatch[];
     product: Product;
     categories: Category[];
     washTypes: WashType[];
@@ -61,6 +64,7 @@ export default function EditProduct({
                     onOpenChange={setIsRemovalOpen}
                 />
                 <StockEntryModal
+                    baggingBatches={baggingBatches}
                     product={product}
                     open={isEntryOpen}
                     onOpenChange={setIsEntryOpen}

@@ -1,12 +1,9 @@
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { XIcon } from '@phosphor-icons/react';
+import { useRef } from 'react';
+import { Button } from '@/components/ui/button';
 import {
     Drawer,
+    DrawerClose,
     DrawerContent,
     DrawerDescription,
     DrawerHeader,
@@ -14,62 +11,72 @@ import {
 } from '@/components/ui/drawer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { Product } from '@/types';
-import { StockEntryForm } from './stock-entry-form';
+import { StockEntryForm, type BaggingBatch } from './stock-entry-form';
 
 export function StockEntryModal({
     product,
+    baggingBatches,
     open,
     onOpenChange,
 }: {
     product: Product;
+    baggingBatches: BaggingBatch[];
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
-    const isMobile = useIsMobile();
-    const description = `Adicione os sacos recebidos para ${product.name}.`;
-    const form = (
-        <StockEntryForm
-            key={open ? 'open' : 'closed'}
-            fixedProduct={product}
-            returnToProduct
-            onCancel={() => onOpenChange(false)}
-            onSuccess={() => onOpenChange(false)}
-        />
-    );
-
-    if (isMobile) {
-        return (
-            <Drawer open={open} onOpenChange={onOpenChange}>
-                <DrawerContent
-                    className="max-h-[95dvh]"
-                    data-testid="stock-entry-drawer"
-                >
-                    <DrawerHeader>
-                        <DrawerTitle>Registrar entrada</DrawerTitle>
-                        <DrawerDescription>{description}</DrawerDescription>
-                    </DrawerHeader>
-                    <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5">
-                        {form}
-                    </div>
-                </DrawerContent>
-            </Drawer>
-        );
-    }
+    const trigger = useRef<HTMLElement | null>(null);
+    const side = useIsMobile() ? 'bottom' : 'right';
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent
-                className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden p-0 sm:max-w-4xl"
-                data-testid="stock-entry-dialog"
+        <Drawer
+            open={open}
+            onOpenChange={onOpenChange}
+            direction={side}
+            autoFocus
+        >
+            <DrawerContent
+                side={side}
+                className={side === 'bottom' ? 'max-h-[95dvh]' : 'max-w-2xl'}
+                onOpenAutoFocus={() => {
+                    const active = document.activeElement;
+                    trigger.current =
+                        active instanceof HTMLElement ? active : null;
+                }}
+                onCloseAutoFocus={(event) => {
+                    if (trigger.current?.isConnected) {
+                        event.preventDefault();
+                        trigger.current.focus();
+                    }
+                }}
+                data-testid="stock-entry-drawer"
             >
-                <DialogHeader className="shrink-0 border-b px-5 py-4 pr-14 sm:px-6 sm:py-5">
-                    <DialogTitle>Registrar entrada</DialogTitle>
-                    <DialogDescription>{description}</DialogDescription>
-                </DialogHeader>
-                <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
-                    {form}
+                <DrawerClose asChild>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-4 right-4"
+                        aria-label="Fechar entrada"
+                    >
+                        <XIcon weight="bold" />
+                    </Button>
+                </DrawerClose>
+                <DrawerHeader className="pr-16">
+                    <DrawerTitle>Registrar entrada</DrawerTitle>
+                    <DrawerDescription>
+                        Adicione os sacos recebidos para {product.name}.
+                    </DrawerDescription>
+                </DrawerHeader>
+                <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5 sm:px-6">
+                    <StockEntryForm
+                        fixedProduct={product}
+                        baggingBatches={baggingBatches}
+                        returnToProduct
+                        onCancel={() => onOpenChange(false)}
+                        onSuccess={() => onOpenChange(false)}
+                    />
                 </div>
-            </DialogContent>
-        </Dialog>
+            </DrawerContent>
+        </Drawer>
     );
 }

@@ -12,6 +12,7 @@ use App\Http\Requests\Products\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductionBatch;
 use App\Models\WashType;
 use App\Support\NormalizedSearch;
 use Illuminate\Database\Eloquent\Builder;
@@ -105,6 +106,7 @@ class ProductController extends Controller
                 'washType:id,name,is_active',
                 'media',
             ]))->resolve(),
+            'baggingBatches' => ProductionBatch::baggingOptions($product->id),
             'categories' => $this->categoryOptions($product->category_id),
             'washTypes' => WashType::options($product->wash_type_id),
         ]);

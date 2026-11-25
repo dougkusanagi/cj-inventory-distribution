@@ -225,6 +225,14 @@ export default function StockMovementShow({
                                                                 'não informado'}
                                                         </span>
                                                     </span>
+                                                    {item.production_batch_code && (
+                                                        <span>
+                                                            Lote de origem{' '}
+                                                            {
+                                                                item.production_batch_code
+                                                            }
+                                                        </span>
+                                                    )}
                                                 </p>
                                             </div>
                                             {offerTypeLabel(

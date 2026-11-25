@@ -3,8 +3,10 @@
 namespace App\Actions\Production;
 
 use App\Enums\ProductionStage;
+use App\Enums\TechnicalSheetStatus;
 use App\Models\Product;
 use App\Models\ProductionBatch;
+use App\Models\TechnicalSheet;
 use App\Models\User;
 use App\Models\Workshop;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -34,6 +36,10 @@ class ManageProductionBatch
             $batch = ProductionBatch::query()->create([
                 'code' => 'TEMP-'.Str::uuid(),
                 'product_id' => $product->id,
+                'technical_sheet_id' => TechnicalSheet::query()
+                    ->where('product_id', $product->id)
+                    ->where('status', TechnicalSheetStatus::Approved)
+                    ->value('id'),
                 'quantity' => $quantity,
                 'stage' => ProductionStage::Planning,
                 'stage_entered_at' => now(),
@@ -160,6 +166,7 @@ class ManageProductionBatch
                 $workshop = $workshops->get($allocation['workshop_id']);
                 $child = ProductionBatch::query()->create([
                     'code' => 'TEMP-'.Str::uuid(), 'product_id' => $batch->product_id,
+                    'technical_sheet_id' => $batch->technical_sheet_id,
                     'parent_id' => $batch->id, 'quantity' => $allocation['quantity'],
                     'stage' => $target, 'stage_entered_at' => now(), 'workshop_id' => $workshop->id,
                     'notes' => $batch->notes, 'created_by' => $actor->id, 'version' => 1,
@@ -200,6 +207,9 @@ class ManageProductionBatch
             Gate::forUser($actor)->authorize('undo', $batch);
             $this->assertNotSplit($batch);
             $this->assertVersion($batch, $version);
+            if ($batch->stage === ProductionStage::Completed && $batch->stockVolumes()->whereNotNull('bagged_quantity')->exists()) {
+                throw ValidationException::withMessages(['batch' => 'Estorne as entradas vinculadas antes de desfazer a chegada do lote ao Estoque.']);
+            }
             $reason = trim($reason);
             if ($reason === '') {
                 throw ValidationException::withMessages(['reason' => 'Informe o motivo para desfazer o avanço.']);

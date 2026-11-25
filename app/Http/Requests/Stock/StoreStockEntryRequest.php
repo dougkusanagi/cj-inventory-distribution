@@ -32,6 +32,7 @@ class StoreStockEntryRequest extends FormRequest
                 'integer',
                 Rule::exists(Product::class, 'id')->whereNull('deleted_at'),
             ],
+            'production_batch_id' => ['nullable', 'integer', 'min:1'],
             'reason' => [
                 'nullable',
                 Rule::requiredIf(fn (): bool => Product::query()
@@ -99,6 +100,8 @@ class StoreStockEntryRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'production_batch_id.integer' => 'Selecione um lote de origem válido.',
+            'production_batch_id.min' => 'Selecione um lote de origem válido.',
             'product_id.exists' => 'Selecione um produto válido.',
             'reason.required' => 'Informe o motivo da entrada.',
             'idempotency_key.required' => 'Não foi possível registrar a entrada. Atualize a página e tente novamente.',

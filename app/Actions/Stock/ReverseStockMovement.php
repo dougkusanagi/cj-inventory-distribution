@@ -154,6 +154,6 @@ class ReverseStockMovement
             ]);
         }
 
-        $volume->update(['consumed_at' => now()]);
+        $volume->update(['consumed_at' => now(), 'bagged_quantity' => null]);
     }
 }

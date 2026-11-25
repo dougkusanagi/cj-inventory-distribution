@@ -2,10 +2,12 @@
 
 namespace App\Actions\Stock;
 
+use App\Enums\ProductionStage;
 use App\Enums\StockMovementSource;
 use App\Enums\StockMovementType;
 use App\Enums\StockOfferType;
 use App\Models\Product;
+use App\Models\ProductionBatch;
 use App\Models\StockMovement;
 use App\Models\StockOfferVolume;
 use App\Models\User;
@@ -47,9 +49,10 @@ class CreateStockEntry
             ]);
         }
 
-        $payloadHash = $this->payloadHash($product, $type, $volumes, $notes, $reason);
+        $batchId = isset($data['production_batch_id']) ? (int) $data['production_batch_id'] : null;
+        $payloadHash = $this->payloadHash($product, $type, $volumes, $notes, $reason, $batchId);
 
-        return StockMutation::run(function () use ($product, $volumes, $notes, $reason, $idempotencyKey, $payloadHash, $actor, $allowZero): StockMovement {
+        return StockMutation::run(function () use ($product, $volumes, $notes, $reason, $idempotencyKey, $payloadHash, $actor, $allowZero, $batchId): StockMovement {
             $existing = $this->recorder->findIdempotent($idempotencyKey, $payloadHash);
 
             if ($existing !== null) {
@@ -62,6 +65,23 @@ class CreateStockEntry
                 throw ValidationException::withMessages([
                     'product_id' => 'O produto selecionado está excluído.',
                 ]);
+            }
+
+            $remaining = null;
+            if ($batchId !== null) {
+                $batch = ProductionBatch::query()->whereKey($batchId)
+                    ->where('product_id', $lockedProduct->id)
+                    ->where('stage', ProductionStage::Completed)
+                    ->whereNull('split_at')
+                    ->lockForUpdate()->first();
+
+                if ($batch === null) {
+                    throw ValidationException::withMessages([
+                        'production_batch_id' => 'Selecione um lote deste produto que já chegou ao Estoque.',
+                    ]);
+                }
+
+                $remaining = $batch->quantity - (int) $batch->stockVolumes()->sum('bagged_quantity');
             }
 
             $nextSortOrder = ((int) $lockedProduct->stockVolumes()->max('sort_order')) + 1;
@@ -78,7 +98,18 @@ class CreateStockEntry
                     ]);
                 }
 
+                if ($remaining !== null) {
+                    $remaining -= $totalQuantity;
+                    if ($remaining < 0) {
+                        throw ValidationException::withMessages([
+                            'production_batch_id' => 'O total da entrada supera as peças que aguardam ensacamento no lote.',
+                        ]);
+                    }
+                }
+
                 $volume = $lockedProduct->stockVolumes()->create([
+                    'production_batch_id' => $batchId,
+                    'bagged_quantity' => $batchId === null ? null : $totalQuantity,
                     'sort_order' => $nextSortOrder + $offset,
                     'total_quantity' => $totalQuantity,
                 ]);
@@ -215,7 +246,7 @@ class CreateStockEntry
     }
 
     /** @param Collection<int, array<string, mixed>> $volumes */
-    private function payloadHash(Product $product, StockOfferType $type, Collection $volumes, ?string $notes, ?string $reason): string
+    private function payloadHash(Product $product, StockOfferType $type, Collection $volumes, ?string $notes, ?string $reason, ?int $batchId): string
     {
         return hash('sha256', json_encode([
             'product_id' => $product->getKey(),
@@ -223,6 +254,7 @@ class CreateStockEntry
             'notes' => $notes,
             'reason' => $reason,
             'stock_volumes' => $volumes->all(),
+            ...($batchId === null ? [] : ['production_batch_id' => $batchId]),
         ], JSON_THROW_ON_ERROR));
     }
 

@@ -6,6 +6,7 @@ use App\Actions\Stock\CreateStockEntry;
 use App\Http\Requests\Stock\StoreStockEntryRequest;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductionBatch;
 use App\Models\StockMovement;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,6 +39,7 @@ class StockEntryController extends Controller
                     'stock_offer_type' => $product->stock_offer_type->value,
                 ])->values()->all(),
             'categories' => Category::query()->orderBy('name')->get(['id', 'name'])->toArray(),
+            'baggingBatches' => ProductionBatch::baggingOptions(),
             'selectedProductId' => $selectedProductId,
         ]);
     }

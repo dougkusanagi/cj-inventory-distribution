@@ -1,3 +1,4 @@
+import type { BaggingBatch } from '@/components/products/stock-entry-form';
 import { Head } from '@inertiajs/react';
 import { PlusCircleIcon } from '@phosphor-icons/react';
 import { StockEntryForm } from '@/components/products/stock-entry-form';
@@ -16,7 +17,9 @@ type EntryProduct = {
 export default function StockEntry({
     products,
     selectedProductId,
+    baggingBatches,
 }: {
+    baggingBatches: BaggingBatch[];
     products: EntryProduct[];
     selectedProductId: number | null;
 }) {
@@ -42,6 +45,7 @@ export default function StockEntry({
                 <StockEntryForm
                     products={products}
                     selectedProductId={selectedProductId}
+                    baggingBatches={baggingBatches}
                 />
             </div>
         </>

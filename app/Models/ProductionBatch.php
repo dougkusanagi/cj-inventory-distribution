@@ -16,6 +16,8 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property string $code
+ * @property int|null $technical_sheet_id
+ * @property int|null $bagged_pieces
  * @property int $product_id
  * @property int $quantity
  * @property ProductionStage $stage
@@ -32,7 +34,7 @@ use Illuminate\Support\Carbon;
  * @property int $version
  * @property int $created_by
  */
-#[Fillable(['code', 'product_id', 'quantity', 'stage', 'stage_entered_at', 'completed_at', 'received_at', 'received_by', 'workshop_id', 'parent_id', 'split_at', 'notes', 'version', 'created_by'])]
+#[Fillable(['code', 'product_id', 'technical_sheet_id', 'quantity', 'stage', 'stage_entered_at', 'completed_at', 'received_at', 'received_by', 'workshop_id', 'parent_id', 'split_at', 'notes', 'version', 'created_by'])]
 class ProductionBatch extends Model
 {
     public const MAX_QUANTITY = 1000000;
@@ -68,6 +70,47 @@ class ProductionBatch extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class)->withTrashed();
+    }
+
+    /** @return BelongsTo<TechnicalSheet, $this> */
+    public function technicalSheet(): BelongsTo
+    {
+        return $this->belongsTo(TechnicalSheet::class);
+    }
+
+    /** @return HasMany<StockOfferVolume, $this> */
+    public function stockVolumes(): HasMany
+    {
+        return $this->hasMany(StockOfferVolume::class)->withTrashed();
+    }
+
+    public function pendingBagging(): int
+    {
+        return max(0, $this->quantity - (int) $this->bagged_pieces);
+    }
+
+    /** @return list<array{id: int, product_id: int, code: string, pending: int}> */
+    public static function baggingOptions(?int $productId = null): array
+    {
+        $options = self::query()
+            ->where('stage', ProductionStage::Completed)
+            ->whereNull('split_at')
+            ->when($productId !== null, fn (Builder $query) => $query->where('product_id', $productId))
+            ->where('quantity', '>', StockOfferVolume::withTrashed()
+                ->selectRaw('coalesce(sum(bagged_quantity), 0)')
+                ->whereColumn('production_batch_id', 'production_batches.id'))
+            ->select(['id', 'product_id', 'code', 'quantity'])
+            ->withSum('stockVolumes as bagged_pieces', 'bagged_quantity')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (self $batch): array => [
+                'id' => $batch->id,
+                'product_id' => $batch->product_id,
+                'code' => $batch->code,
+                'pending' => $batch->pendingBagging(),
+            ])->all();
+
+        return array_values($options);
     }
 
     /** @return BelongsTo<Workshop, $this> */

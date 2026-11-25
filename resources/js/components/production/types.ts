@@ -23,6 +23,8 @@ export type Event = {
     sizes_after: BatchSize[] | null;
 };
 export type Batch = {
+    pending_bagging: number | null;
+    technical_sheet: { id: number; revision: number } | null;
     id: number;
     code: string;
     product_id: number;

@@ -68,6 +68,13 @@ A ficha técnica usa a lavagem cadastrada no produto, preservando os IDs.
 Na página da revisão, é possível imprimir a ficha técnica ou um modelo em
 branco em A4. Administradores também podem imprimir custos. Ao imprimir pelo
 editor, a ficha inclui os valores em edição e indica alterações não salvas.
+Ao criar um lote, o sistema registra a revisão aprovada naquele momento,
+quando disponível. A revisão fica nos detalhes do lote e é herdada na divisão.
+
+Na entrada manual de estoque, selecione o lote de origem se todos os sacos
+vierem dele. O lote precisa estar na etapa Estoque. A entrada abate as peças
+que aguardam ensacamento e o histórico mostra o código do lote. O estorno
+da entrada devolve as peças ao saldo de ensacamento.
 
 ### Tamanho
 

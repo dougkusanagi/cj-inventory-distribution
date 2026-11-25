@@ -14,6 +14,8 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * @property int $id
+ * @property int|null $production_batch_id
+ * @property int|null $bagged_quantity
  * @property int $product_id
  * @property int $sort_order
  * @property int $total_quantity
@@ -24,7 +26,7 @@ use Illuminate\Validation\ValidationException;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['code', 'product_id', 'sort_order', 'total_quantity', 'current_order_id', 'consumed_at'])]
+#[Fillable(['code', 'product_id', 'sort_order', 'total_quantity', 'production_batch_id', 'bagged_quantity', 'current_order_id', 'consumed_at'])]
 class StockOfferVolume extends Model
 {
     /** @use HasFactory<StockOfferVolumeFactory> */
@@ -67,6 +69,12 @@ class StockOfferVolume extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class)->withTrashed();
+    }
+
+    /** @return BelongsTo<ProductionBatch, $this> */
+    public function productionBatch(): BelongsTo
+    {
+        return $this->belongsTo(ProductionBatch::class)->withTrashed();
     }
 
     /**

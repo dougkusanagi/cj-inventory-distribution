@@ -7,8 +7,10 @@ O roadmap descreve direção, não compromisso de implementação imediata.
 O [painel de produção](plans/painel-de-producao.md) já está implantado.
 As [fichas técnicas](plans/ficha-tecnica.md) têm catálogo de insumos,
 histórico de preços, custos-base, revisões por produto e impressão em A4.
-Antes de iniciar o uso na fábrica, falta vincular a revisão aos lotes.
-A produção não cria sacos automaticamente.
+A revisão aprovada é vinculada ao lote na criação. A equipe pode abater
+peças que aguardam ensacamento ao vincular o lote à entrada manual dos
+sacos. A adoção pela fábrica depende da integração e implantação dessas
+mudanças.
 
 Lojas, acesso das vendedoras, vários estoques, conferência com as lojas e
 RFID estão no [plano de lojas, estoques e RFID](plans/lojas-estoques-rfid.md),

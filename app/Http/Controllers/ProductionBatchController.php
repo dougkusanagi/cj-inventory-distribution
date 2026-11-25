@@ -57,7 +57,7 @@ class ProductionBatchController extends Controller
         ]);
         $search = trim((string) ($filters['search'] ?? ''));
         $query = ProductionBatch::query()->whereNull('split_at')->whereIn('stage', $allowedStages)
-            ->with(['product:id,name,code,model,deleted_at', 'workshop:id,name,deleted_at', 'items', 'events.actor:id,name,deleted_at', 'parent.events.actor:id,name,deleted_at']);
+            ->with(['product:id,name,code,model,deleted_at', 'workshop:id,name,deleted_at', 'technicalSheet:id,revision', 'items', 'events.actor:id,name,deleted_at', 'parent.events.actor:id,name,deleted_at']);
         $summary = (clone $query)->selectRaw('stage, count(*) as batches, sum(quantity) as pieces')->groupBy('stage')->toBase()->get()->keyBy('stage');
         $awaiting = (clone $query)->whereNull('received_at')->selectRaw('stage, count(*) as batches, sum(quantity) as pieces')->groupBy('stage')->toBase()->get()->keyBy('stage');
         $stalled = (clone $query)->stalled()->selectRaw('stage, count(*) as batches')->groupBy('stage')->toBase()->get()->keyBy('stage');
@@ -71,6 +71,7 @@ class ProductionBatchController extends Controller
             ->when($recentCompletedOnly, fn ($query) => $query->where(fn ($query) => $query
                 ->where('stage', '!=', ProductionStage::Completed)
                 ->orWhere('stage_entered_at', '>=', now()->subDays(self::FLOW_COMPLETED_DAYS))))
+            ->withSum('stockVolumes as bagged_pieces', 'bagged_quantity')
             ->orderBy('stage_entered_at')->orderBy('id')->get();
 
         return [
@@ -90,6 +91,8 @@ class ProductionBatchController extends Controller
                 'product_id' => $batch->product_id,
                 'product_name' => $batch->product->name,
                 'quantity' => $batch->quantity,
+                'pending_bagging' => $batch->stage === ProductionStage::Completed ? $batch->pendingBagging() : null,
+                'technical_sheet' => $batch->technicalSheet?->only(['id', 'revision']),
                 'stage' => $batch->stage->value,
                 'version' => $batch->version,
                 'stage_entered_at' => $batch->stage_entered_at->toISOString(),
@@ -101,7 +104,7 @@ class ProductionBatchController extends Controller
                 'notes' => $batch->notes,
                 'sizes' => $batch->items->toBase()->map(fn ($item): array => ['size' => $item->size, 'quantity' => $item->quantity]),
                 'can_delete' => $batch->parent_id === null && $batch->events->every(fn ($event): bool => $event->from_stage === null),
-                'can_undo' => ($last = $batch->events->last(fn ($event): bool => $event->from_stage !== $event->to_stage)) && $last->from_stage !== null && $last->from_stage->canMoveTo($last->to_stage),
+                'can_undo' => ! $batch->bagged_pieces && ($last = $batch->events->last(fn ($event): bool => $event->from_stage !== $event->to_stage)) && $last->from_stage !== null && $last->from_stage->canMoveTo($last->to_stage),
                 'events' => $batch->events->toBase()->map(fn (ProductionBatchEvent $event): array => $this->eventProps($event)),
             ]),
             'filterProducts' => $filterProducts,

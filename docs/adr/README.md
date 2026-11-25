@@ -73,3 +73,5 @@ ADRs iniciais:
 - [0035 — Produção somente em canvas](0035-producao-somente-canvas.md)
 
 - [0036 — Etapas de produção unificadas](0036-etapas-de-producao-unificadas.md)
+
+- [0039 — Rastreabilidade do lote ao saco](0039-rastreabilidade-do-lote-ao-saco.md)

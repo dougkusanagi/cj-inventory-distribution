@@ -1,4 +1,4 @@
-import { useForm, usePage } from '@inertiajs/react';
+import { Link, useForm, usePage } from '@inertiajs/react';
 import { ImagesIcon, XIcon } from '@phosphor-icons/react';
 import {
     useEffect,
@@ -40,6 +40,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ProductPicker } from '@/components/production/product-picker';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { show as showSheet } from '@/routes/technical-sheets';
 import { cn } from '@/lib/utils';
 
 export function DetailsDrawer({
@@ -54,6 +55,7 @@ export function DetailsDrawer({
 }) {
     const mobile = useIsMobile();
     const days = daysInStage(batch);
+    const { auth } = usePage().props;
     return (
         <Drawer
             open
@@ -113,6 +115,41 @@ export function DetailsDrawer({
                                     {batch.stalled && ' · parado'}
                                 </dd>
                             </div>
+                            {batch.pending_bagging !== null && (
+                                <div className="grid gap-0.5">
+                                    <dt>Aguardando ensacamento</dt>
+                                    <dd className="font-semibold text-foreground tabular-nums">
+                                        {pluralize(
+                                            batch.pending_bagging,
+                                            'peça',
+                                            'peças',
+                                        )}
+                                    </dd>
+                                </div>
+                            )}
+                            {batch.technical_sheet && (
+                                <div className="grid gap-0.5">
+                                    <dt>Ficha técnica</dt>
+                                    <dd className="font-semibold text-foreground">
+                                        {auth.can.viewTechnicalSheets ? (
+                                            <Link
+                                                href={showSheet(
+                                                    batch.technical_sheet.id,
+                                                )}
+                                                className="underline underline-offset-2"
+                                            >
+                                                Revisão{' '}
+                                                {batch.technical_sheet.revision}
+                                            </Link>
+                                        ) : (
+                                            <>
+                                                Revisão{' '}
+                                                {batch.technical_sheet.revision}
+                                            </>
+                                        )}
+                                    </dd>
+                                </div>
+                            )}
                             {batch.workshop && (
                                 <div className="col-span-2 grid gap-0.5">
                                     <dt>Oficina</dt>
